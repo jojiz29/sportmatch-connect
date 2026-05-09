@@ -17,7 +17,7 @@ const PINS: Pin[] = [
   ...MATCHES.slice(0, 2).map((m, i) => ({ id: m.id, x: 55 + i * 20, y: 20 + i * 30, type: "match" as const, label: m.title, sub: m.date })),
 ];
 
-export default function MapPage() {
+function MapPage() {
   const [selected, setSelected] = useState<Pin | null>(PINS[0]);
 
   return (
@@ -108,4 +108,3 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-export { MapPage as component };
