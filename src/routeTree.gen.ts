@@ -13,8 +13,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppWalletRouteImport } from './routes/app.wallet'
+import { Route as AppProfileRouteImport } from './routes/app.profile'
 import { Route as AppMatchRouteImport } from './routes/app.match'
 import { Route as AppMapRouteImport } from './routes/app.map'
+import { Route as AppIotRouteImport } from './routes/app.iot'
+import { Route as AppCourtsRouteImport } from './routes/app.courts'
+import { Route as AppChatRouteImport } from './routes/app.chat'
+import { Route as AppAdminRouteImport } from './routes/app.admin'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -36,6 +42,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWalletRoute = AppWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMatchRoute = AppMatchRouteImport.update({
   id: '/match',
   path: '/match',
@@ -46,20 +62,52 @@ const AppMapRoute = AppMapRouteImport.update({
   path: '/map',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIotRoute = AppIotRouteImport.update({
+  id: '/iot',
+  path: '/iot',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCourtsRoute = AppCourtsRouteImport.update({
+  id: '/courts',
+  path: '/courts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChatRoute = AppChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/chat': typeof AppChatRoute
+  '/app/courts': typeof AppCourtsRoute
+  '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/match': typeof AppMatchRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/wallet': typeof AppWalletRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/chat': typeof AppChatRoute
+  '/app/courts': typeof AppCourtsRoute
+  '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/match': typeof AppMatchRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/wallet': typeof AppWalletRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -67,16 +115,58 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/admin': typeof AppAdminRoute
+  '/app/chat': typeof AppChatRoute
+  '/app/courts': typeof AppCourtsRoute
+  '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/match': typeof AppMatchRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/wallet': typeof AppWalletRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/app/map' | '/app/match' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/admin'
+    | '/app/chat'
+    | '/app/courts'
+    | '/app/iot'
+    | '/app/map'
+    | '/app/match'
+    | '/app/profile'
+    | '/app/wallet'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/app/map' | '/app/match' | '/app'
-  id: '__root__' | '/' | '/app' | '/login' | '/app/map' | '/app/match' | '/app/'
+  to:
+    | '/'
+    | '/login'
+    | '/app/admin'
+    | '/app/chat'
+    | '/app/courts'
+    | '/app/iot'
+    | '/app/map'
+    | '/app/match'
+    | '/app/profile'
+    | '/app/wallet'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/admin'
+    | '/app/chat'
+    | '/app/courts'
+    | '/app/iot'
+    | '/app/map'
+    | '/app/match'
+    | '/app/profile'
+    | '/app/wallet'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -115,6 +205,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/wallet': {
+      id: '/app/wallet'
+      path: '/wallet'
+      fullPath: '/app/wallet'
+      preLoaderRoute: typeof AppWalletRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/match': {
       id: '/app/match'
       path: '/match'
@@ -129,18 +233,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMapRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/iot': {
+      id: '/app/iot'
+      path: '/iot'
+      fullPath: '/app/iot'
+      preLoaderRoute: typeof AppIotRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/courts': {
+      id: '/app/courts'
+      path: '/courts'
+      fullPath: '/app/courts'
+      preLoaderRoute: typeof AppCourtsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/chat': {
+      id: '/app/chat'
+      path: '/chat'
+      fullPath: '/app/chat'
+      preLoaderRoute: typeof AppChatRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/admin': {
+      id: '/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
+  AppChatRoute: typeof AppChatRoute
+  AppCourtsRoute: typeof AppCourtsRoute
+  AppIotRoute: typeof AppIotRoute
   AppMapRoute: typeof AppMapRoute
   AppMatchRoute: typeof AppMatchRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppWalletRoute: typeof AppWalletRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
+  AppChatRoute: AppChatRoute,
+  AppCourtsRoute: AppCourtsRoute,
+  AppIotRoute: AppIotRoute,
   AppMapRoute: AppMapRoute,
   AppMatchRoute: AppMatchRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppWalletRoute: AppWalletRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
