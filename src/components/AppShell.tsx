@@ -1,0 +1,99 @@
+import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  Home,
+  Users,
+  Map,
+  CalendarCheck,
+  MessageSquare,
+  Trophy,
+  Activity,
+  LayoutDashboard,
+  User,
+  Zap,
+} from "lucide-react";
+import { ME } from "@/lib/mock";
+
+const NAV = [
+  { to: "/app", label: "Inicio", icon: Home, end: true },
+  { to: "/app/match", label: "Matchmaking", icon: Users },
+  { to: "/app/map", label: "Mapa", icon: Map },
+  { to: "/app/courts", label: "Reservas", icon: CalendarCheck },
+  { to: "/app/chat", label: "Chat", icon: MessageSquare },
+  { to: "/app/wallet", label: "FitCoins", icon: Trophy },
+  { to: "/app/iot", label: "Telemetría", icon: Activity },
+  { to: "/app/profile", label: "Perfil", icon: User },
+  { to: "/app/admin", label: "Admin", icon: LayoutDashboard },
+];
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+
+  return (
+    <div className="min-h-screen bg-background bg-gradient-hero">
+      {/* Sidebar (desktop) */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col glass border-r border-border z-30">
+        <Link to="/app" className="px-6 py-6 flex items-center gap-2">
+          <div className="h-9 w-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
+            <Zap className="h-5 w-5 text-white" />
+          </div>
+          <span className="font-bold text-lg tracking-tight">SportMatch</span>
+        </Link>
+        <nav className="flex-1 px-3 space-y-1">
+          {NAV.map((item) => {
+            const active = item.end ? path === item.to : path.startsWith(item.to);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  active
+                    ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="p-4 m-3 rounded-2xl bg-gradient-card border border-border">
+          <div className="flex items-center gap-3">
+            <img src={ME.avatar} alt="" className="h-10 w-10 rounded-full bg-muted" />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate">{ME.name}</div>
+              <div className="text-xs text-neon flex items-center gap-1">
+                <Trophy className="h-3 w-3" /> {ME.fitcoins} FC
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile bottom nav */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border">
+        <div className="grid grid-cols-5 px-2 py-2">
+          {NAV.slice(0, 5).map((item) => {
+            const active = item.end ? path === item.to : path.startsWith(item.to);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex flex-col items-center gap-1 py-1 text-[10px] ${
+                  active ? "text-neon" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <main className="lg:pl-64 pb-24 lg:pb-10 min-h-screen">{children}</main>
+    </div>
+  );
+}
