@@ -1,0 +1,93 @@
+{
+  "login": {
+    "title_signin": "Sign In",
+    "title_signup": "Create Account",
+    "subtitle": "Access the largest sports network",
+    "email": "Email",
+    "password": "Password",
+    "btn_signin": "Login",
+    "btn_signup": "Sign Up",
+    "toggle_signup": "Don't have an account? Sign up",
+    "toggle_signin": "Already have an account? Sign in",
+    "success_toast": "Welcome back!",
+    "error_toast": "Error logging in. Please check your credentials."
+  },
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Complete your sports onboarding",
+    "fullName": "Full Name",
+    "email": "Email",
+    "password": "Password",
+    "sports": "Preferred Sports",
+    "btn_register": "Register and Start",
+    "success_toast": "Welcome to SportMatch!",
+    "error_toast": "Error registering. Please try again.",
+    "select_sports_error": "Please select at least one preferred sport"
+  },
+  "dashboard": {
+    "title": "Main Dashboard",
+    "balance": "FitCoins Balance",
+    "recent_activity": "Recent Activity"
+  },
+  "matchmaking": {
+    "title": "AI Matchmaking",
+    "subtitle": "Swipe to find your next ideal rival",
+    "filters": "Filters",
+    "empty": "No more suggestions",
+    "compatibility": "AI Compatibility",
+    "level": "Level",
+    "distance": "Distance",
+    "reputation": "Reputation",
+    "like_toast": "Like sent!",
+    "match_toast": "It's a Match!"
+  },
+  "map": {
+    "title": "Live Map",
+    "subtitle": "Courts, matches and players near you",
+    "near_you": "Near you",
+    "view_court": "View Court"
+  },
+  "chat": {
+    "title": "Messages",
+    "search": "Search chats...",
+    "online": "participants online",
+    "empty": "Select a conversation to chat",
+    "placeholder": "Type a message..."
+  },
+  "wallet": {
+    "title": "FitCoins & Rewards",
+    "subtitle": "Your gamified sports economy",
+    "balance": "Your balance",
+    "redeem": "Redeem",
+    "canjear": "Redeem",
+    "history": "History",
+    "challenges": "Active challenges",
+    "rewards": "Rewards",
+    "ranking": "Weekly ranking",
+    "confirm_title": "Redeem {{reward}}",
+    "confirm_desc": "Are you sure you want to redeem this reward for {{cost}} FitCoins?",
+    "confirm_btn": "Confirm Redeem",
+    "cancel_btn": "Cancel",
+    "success": "Redeem successful!",
+    "success_desc": "You have obtained: {{reward}}",
+    "error": "Insufficient balance",
+    "error_desc": "Keep playing to earn more FitCoins.",
+    "history_title": "Transaction History",
+    "history_subtitle": "Track your FitCoins income and expenses",
+    "back": "Back to FitCoins"
+  },
+  "profile": {
+    "title": "My profile",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "trust_score": "Trust Score",
+    "achievements": "Unlocked achievements",
+    "recent_history": "Recent history",
+    "updated": "Profile updated",
+    "placeholder_name": "Your name",
+    "placeholder_city": "Your city",
+    "placeholder_bio": "Your bio",
+    "placeholder_sports": "Sports separated by commas"
+  }
+}

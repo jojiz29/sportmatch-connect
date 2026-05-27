@@ -1,59 +1,229 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { ME, MATCHES } from "@/lib/mock";
-import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp } from "lucide-react";
+import { MOCK_MATCHES } from "@/lib/mock";
+import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp, Save, X } from "lucide-react";
+import { useProfileStore } from "@/features/profile/useProfileStore";
+import { useWalletStore } from "@/features/wallet/useWalletStore";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { Sport } from "@/entities/types";
 
 export const Route = createFileRoute("/app/profile")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
   component: Profile,
 });
 
+const BADGES = [
+  { id: 1, emoji: "🔥", name: "Racha de 7 días" },
+  { id: 2, emoji: "🤝", name: "Buen compañero" },
+  { id: 3, emoji: "🏆", name: "MVP" },
+  { id: 4, emoji: "⭐", name: "Top 10%" },
+];
+
 function Profile() {
-  const trustLevel = ME.trustScore >= 90 ? "Excelente" : ME.trustScore >= 70 ? "Bueno" : "Riesgoso";
-  const trustColor = ME.trustScore >= 90 ? "text-neon" : ME.trustScore >= 70 ? "text-warning" : "text-destructive";
+  const { t } = useTranslation();
+  const { profile, updateProfile, initProfile } = useProfileStore();
+  const { balance } = useWalletStore();
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    name: "",
+    city: "",
+    bio: "",
+    preferred_sports: "",
+  });
+
+  useEffect(() => {
+    initProfile();
+  }, [initProfile]);
+
+  useEffect(() => {
+    if (profile) {
+      setEditForm({
+        name: profile.name,
+        city: profile.city,
+        bio: profile.bio || "",
+        preferred_sports: profile.preferred_sports.join(", "),
+      });
+    }
+  }, [profile]);
+
+  if (!profile) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
+  }
+
+  const trustLevel =
+    (profile.trust_score || 0) >= 90
+      ? "Excelente"
+      : (profile.trust_score || 0) >= 70
+        ? "Bueno"
+        : "Riesgoso";
+  const trustColor =
+    (profile.trust_score || 0) >= 90
+      ? "text-neon"
+      : (profile.trust_score || 0) >= 70
+        ? "text-warning"
+        : "text-destructive";
+
+  const handleStartEdit = () => {
+    setEditForm({
+      name: profile.name,
+      city: profile.city,
+      bio: profile.bio || "",
+      preferred_sports: profile.preferred_sports.join(", "),
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    updateProfile({
+      name: editForm.name,
+      city: editForm.city,
+      bio: editForm.bio,
+      preferred_sports: editForm.preferred_sports
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean) as Sport[],
+    });
+    setIsEditing(false);
+    toast.success(t("profile.updated"));
+  };
+
+  const userMatches = MOCK_MATCHES.filter(
+    (m) => m.creator_id === profile.id || m.current_players?.some((p) => p.id === profile.id),
+  );
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
-      <PageHeader title="Mi perfil" />
+      <PageHeader title={t("profile.title")} />
 
       <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card relative overflow-hidden">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-gradient-primary opacity-15 blur-3xl" />
-        <div className="flex flex-wrap items-center gap-6 relative">
-          <div className="relative">
-            <img src={ME.avatar} alt={ME.name} className="h-28 w-28 rounded-2xl bg-muted ring-4 ring-primary/30" />
-            <div className="absolute -bottom-2 -right-2 px-2 py-1 rounded-full bg-gradient-neon text-neon-foreground text-xs font-bold">{ME.level}</div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold">{ME.name}</h2>
-            <p className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{ME.city} · {ME.age} años</p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {ME.sports.map((s) => (
-                <span key={s} className="px-3 py-1 rounded-full bg-violet/20 text-sm border border-violet/30">{s}</span>
-              ))}
+        <div className="flex flex-wrap md:flex-nowrap items-start gap-6 relative">
+          <div className="relative shrink-0">
+            <img
+              src={profile.avatar_url}
+              alt={profile.name}
+              className="h-28 w-28 rounded-2xl bg-muted ring-4 ring-primary/30 object-cover"
+            />
+            <div className="absolute -bottom-2 -right-2 px-2 py-1 rounded-full bg-gradient-neon text-neon-foreground text-xs font-bold">
+              {profile.level}
             </div>
           </div>
-          <button className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm">
-            <Edit3 className="h-4 w-4" /> Editar
-          </button>
+          <div className="flex-1 min-w-0">
+            {isEditing ? (
+              <div className="space-y-3 mt-1">
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 font-bold text-xl focus:border-primary focus:outline-none"
+                  placeholder={t("profile.placeholder_name")}
+                />
+                <input
+                  type="text"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  placeholder={t("profile.placeholder_city")}
+                />
+                <textarea
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  placeholder={t("profile.placeholder_bio")}
+                  rows={2}
+                />
+                <input
+                  type="text"
+                  value={editForm.preferred_sports}
+                  onChange={(e) => setEditForm({ ...editForm, preferred_sports: e.target.value })}
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  placeholder={t("profile.placeholder_sports")}
+                />
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold">{profile.name}</h2>
+                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                  <MapPin className="h-3 w-3" />
+                  {profile.city} · {profile.age} años
+                </p>
+                <p className="text-sm mt-2">{profile.bio}</p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {profile.preferred_sports.map((s) => (
+                    <span
+                      key={s}
+                      className="px-3 py-1 rounded-full bg-violet/20 text-sm border border-violet/30"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="shrink-0 flex gap-2">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors"
+                >
+                  <X className="h-4 w-4" /> {t("profile.cancel")}
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground flex items-center gap-2 text-sm hover:shadow-neon transition-all font-semibold"
+                >
+                  <Save className="h-4 w-4" /> {t("profile.save")}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleStartEdit}
+                className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors"
+              >
+                <Edit3 className="h-4 w-4" /> {t("profile.edit")}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
-          <Stat icon={<Trophy className="h-4 w-4 text-neon" />} label="FitCoins" value={ME.fitcoins} />
-          <Stat icon={<TrendingUp className="h-4 w-4 text-electric" />} label="Partidos" value={ME.matches} />
-          <Stat icon={<Award className="h-4 w-4 text-warning" />} label="Logros" value={ME.badges.length} />
-          <Stat icon={<Shield className="h-4 w-4 text-neon" />} label="Trust Score" value={`${ME.trustScore}%`} />
+          <Stat icon={<Trophy className="h-4 w-4 text-neon" />} label="FitCoins" value={balance} />
+          <Stat
+            icon={<TrendingUp className="h-4 w-4 text-electric" />}
+            label="Partidos"
+            value={profile.matches_played}
+          />
+          <Stat
+            icon={<Award className="h-4 w-4 text-warning" />}
+            label={t("profile.achievements")}
+            value={BADGES.length}
+          />
+          <Stat
+            icon={<Shield className="h-4 w-4 text-neon" />}
+            label={t("profile.trust_score")}
+            value={`${profile.trust_score}%`}
+          />
         </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mt-6">
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
-          <h3 className="font-semibold flex items-center gap-2"><Shield className="h-4 w-4 text-neon" /> Trust Score</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Shield className="h-4 w-4 text-neon" /> {t("profile.trust_score")}
+          </h3>
           <div className="mt-4 text-center">
-            <div className="text-5xl font-bold text-gradient">{ME.trustScore}</div>
+            <div className="text-5xl font-bold text-gradient">{profile.trust_score}</div>
             <div className={`text-sm font-semibold mt-1 ${trustColor}`}>{trustLevel}</div>
           </div>
           <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-gradient-neon" style={{ width: `${ME.trustScore}%` }} />
+            <div className="h-full bg-gradient-neon" style={{ width: `${profile.trust_score}%` }} />
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <Metric label="Puntualidad" value={98} />
@@ -64,10 +234,13 @@ function Profile() {
         </div>
 
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
-          <h3 className="font-semibold mb-4">Logros desbloqueados</h3>
+          <h3 className="font-semibold mb-4">{t("profile.achievements")}</h3>
           <div className="grid grid-cols-2 gap-3">
-            {ME.badges.map((b) => (
-              <div key={b.id} className="text-center p-3 rounded-xl glass">
+            {BADGES.map((b) => (
+              <div
+                key={b.id}
+                className="text-center p-3 rounded-xl glass hover:ring-glow transition-all cursor-default"
+              >
                 <div className="text-3xl">{b.emoji}</div>
                 <div className="text-xs mt-1 font-semibold">{b.name}</div>
               </div>
@@ -76,20 +249,33 @@ function Profile() {
         </div>
 
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
-          <h3 className="font-semibold mb-4">Historial reciente</h3>
+          <h3 className="font-semibold mb-4">{t("profile.recent_history")}</h3>
           <div className="space-y-3">
-            {MATCHES.map((m) => (
-              <div key={m.id} className="flex items-center gap-3 text-sm">
-                <div className="h-9 w-9 rounded-lg bg-gradient-primary grid place-items-center text-xs font-bold">
-                  {m.sport.slice(0, 2)}
+            {userMatches.length > 0 ? (
+              userMatches.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 text-sm p-2 rounded-xl hover:bg-accent/50 transition-colors"
+                >
+                  <div className="h-9 w-9 rounded-lg bg-gradient-primary grid place-items-center text-xs font-bold">
+                    {m.sport.slice(0, 2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{m.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(m.date).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <span className="text-xs text-neon">
+                    +{20 + Math.floor(Math.random() * 30)} FC
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{m.title}</div>
-                  <div className="text-xs text-muted-foreground">{m.date}</div>
-                </div>
-                <span className="text-xs text-neon">+{20 + Math.floor(Math.random() * 30)} FC</span>
+              ))
+            ) : (
+              <div className="text-center py-4 text-xs text-muted-foreground">
+                No has participado en partidos aún.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -97,10 +283,20 @@ function Profile() {
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
+function Stat({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="glass rounded-xl p-4">
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">{icon} {label}</div>
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        {icon} {label}
+      </div>
       <div className="text-2xl font-bold mt-1">{value}</div>
     </div>
   );

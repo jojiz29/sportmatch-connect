@@ -1,0 +1,56 @@
+# SportMatch Connect — AI & Developer Rules
+
+This file defines the strict architectural patterns, coding guidelines, and quality standards for SportMatch Connect. All developers and AI coding assistants must adhere to these rules.
+
+---
+
+## 1. Directory Structure & Architecture (Feature-Sliced Design)
+We adhere strictly to the **Feature-Sliced Design (FSD)** architectural methodology.
+
+The project is structured into layers, ordered from bottom to top. A layer may only import from layers below it. **Cross-imports between slices in the same layer are strictly forbidden.**
+
+### Layers Hierarchy:
+1.  **`src/app`**: Root layout, global providers, global styles, and route tree configuration.
+2.  **`src/routes`**: Route definitions matching page views (using TanStack Router).
+3.  **`src/widgets`**: (Optional) Complex components combining multiple features/entities (e.g., `LiveMapPanel`).
+4.  **`src/features`**: User actions and business capabilities that bring value (e.g., `matchmaking`, `wallet/redeem`, `telemetry/simulation`, `profile/edit`).
+5.  **`src/entities`**: Core business concepts, types, and stores (e.g., `user`, `court`, `match`, `types.ts`).
+6.  **`src/shared`**: Reusable infrastructure independent of business logic (e.g., `shared/ui/` shadcn atomic components, `shared/api/` clients, `shared/i18n/` translations).
+
+### Dependency Rules:
+*   `shared` can only import from other `shared` segments.
+*   `entities` can import from `shared`.
+*   `features` can import from `entities` and `shared`.
+*   `widgets` can import from `features`, `entities`, and `shared`.
+*   `routes` and `app` can import from any layer below them.
+*   **Never import upwards** (e.g., `entities` importing from `features` is a critical architecture failure).
+
+---
+
+## 2. TypeScript Guidelines & Strict Typings
+*   **Zero Any Tolerance**: Explicitly type all variables, function arguments, hook return types, and API responses. The `any` type is strictly forbidden unless dealing with third-party library overrides that cannot be typed.
+*   **Type Casting**: Avoid unsafe type assertions (`as Type`) unless necessary (e.g. TanStack Router `Route.useLoaderData() as Type`). Prefer structural validation or interfaces.
+*   **Discriminated Unions**: Use union types for status states (e.g., `'idle' | 'loading' | 'success' | 'error'`).
+
+---
+
+## 3. Internationalization (i18n) & Localized Strings
+*   **No Hardcoded Text**: All user-facing strings in UI components must be translated.
+*   **Translation Hook**: Always use the `useTranslation()` hook from `react-i18next`.
+    *   *Correct*: `<h1>{t('login.title_signin')}</h1>`
+    *   *Incorrect*: `<h1>Iniciar Sesión</h1>`
+*   **Locale Files**: Add new translation keys to both `src/shared/i18n/locales/es.json` (Spanish) and `src/shared/i18n/locales/en.json` (English) to maintain language parity.
+
+---
+
+## 4. State Management & Data Fetching
+*   **Global Client State**: Use **Zustand** for client-only state such as active session details (`useAuthStore`), local telemetry simulations (`useTelemetryStore`), and state mutations (`useWalletStore`, `useChatStore`, `useProfileStore`).
+*   **Server State**: Use **TanStack Query** (`@tanstack/react-query`) for all network data fetching, caching, and server mutations.
+*   **Sync Zustand with Mocks**: For local mock development, ensure Zustand mutations modify both the store state and propagate changes to the memory mock lists (`MOCK_USERS`, `MOCK_TRANSACTIONS`, etc.) so that other views query updated data.
+
+---
+
+## 5. UI/UX & Tailwind Guidelines
+*   **Tailwind CSS**: Use utility classes inline. Do not create custom CSS classes unless dealing with custom complex styles or third-party wrappers (like Leaflet).
+*   **Harmony**: Adhere to the established CSS variable design system tokens (using HSL colors like `var(--primary)`, `var(--neon)`, etc.).
+*   **Animations**: Use `framer-motion` for page-level transitions and physics-based interactions (like card swiping or modal transitions). Make animations feel premium and micro-interactive.

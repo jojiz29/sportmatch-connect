@@ -1,133 +1,653 @@
-export type Sport = "Fútbol" | "Básquet" | "Tenis" | "Pádel" | "Vóley" | "Running";
+import { User, Court, Match, Transaction } from "@/entities/types";
 
-export const SPORTS: { name: Sport; emoji: string }[] = [
+const uuid = (id: number) => `00000000-0000-0000-0000-${id.toString().padStart(12, "0")}`;
+const isoNow = new Date().toISOString();
+const futureDay = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
+
+export const MOCK_USERS: User[] = [
+  {
+    id: "user-edwin-master",
+    created_at: isoNow,
+    name: "Edwin Flores",
+    age: 29,
+    city: "Surco",
+    avatar_url: "https://i.pravatar.cc/150?u=edwin",
+    bio: "Usuario Maestro Edwin.",
+    trust_score: 99,
+    matches_played: 15,
+    fitcoins_balance: 3500,
+    level: "Elite",
+    preferred_sports: ["Pádel", "Fútbol"],
+    last_location_lat: -12.14,
+    last_location_lng: -76.995,
+    email: "ejuniorfloress@gmail.com",
+    password: "EdwinFlores123?",
+  },
+  {
+    id: "user-fabiola",
+    created_at: isoNow,
+    name: "Fabiola",
+    age: 26,
+    city: "Surco",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola",
+    bio: "Buscando partidos de tenis y pádel.",
+    trust_score: 95,
+    matches_played: 8,
+    fitcoins_balance: 1200,
+    level: "Intermedio",
+    preferred_sports: ["Pádel", "Tenis"],
+    last_location_lat: -12.13,
+    last_location_lng: -76.98,
+  },
+  {
+    id: uuid(1),
+    created_at: isoNow,
+    name: "Alex Rivera",
+    age: 27,
+    city: "Surco",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
+    bio: "Amante del Pádel. Juego siempre que puedo.",
+    trust_score: 93,
+    matches_played: 12,
+    fitcoins_balance: 1850,
+    level: "Avanzado",
+    preferred_sports: ["Pádel", "Fútbol"],
+    last_location_lat: -12.1189,
+    last_location_lng: -76.995,
+  },
+  {
+    id: uuid(2),
+    created_at: isoNow,
+    name: "Camila Torres",
+    age: 24,
+    city: "Miraflores",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Camila",
+    bio: "Compito en torneos los fines de semana.",
+    trust_score: 96,
+    matches_played: 12,
+    fitcoins_balance: 1240,
+    level: "Avanzado",
+    preferred_sports: ["Pádel"],
+    last_location_lat: -12.1221,
+    last_location_lng: -77.0298,
+    distance_km: 1.2,
+  },
+  {
+    id: uuid(3),
+    created_at: isoNow,
+    name: "Diego Ramírez",
+    age: 28,
+    city: "San Borja",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Diego",
+    bio: "Mediocampista. Juego martes y jueves.",
+    trust_score: 88,
+    matches_played: 12,
+    fitcoins_balance: 860,
+    level: "Intermedio",
+    preferred_sports: ["Fútbol"],
+    last_location_lat: -12.1084,
+    last_location_lng: -76.9981,
+    distance_km: 2.4,
+  },
+  {
+    id: uuid(4),
+    created_at: isoNow,
+    name: "Sofia Silva",
+    age: 31,
+    city: "Surco",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",
+    bio: "Crossfit y Running. Empujando límites.",
+    trust_score: 99,
+    matches_played: 12,
+    fitcoins_balance: 3200,
+    level: "Avanzado",
+    preferred_sports: ["Running"],
+    last_location_lat: -12.115,
+    last_location_lng: -76.98,
+    distance_km: 0.8,
+  },
+  {
+    id: uuid(5),
+    created_at: isoNow,
+    name: "Mateo Ortiz",
+    age: 22,
+    city: "Barranco",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mateo",
+    bio: "Futbol y amigos.",
+    trust_score: 82,
+    matches_played: 12,
+    fitcoins_balance: 450,
+    level: "Principiante",
+    preferred_sports: ["Fútbol"],
+    last_location_lat: -12.14,
+    last_location_lng: -77.02,
+    distance_km: 3.5,
+  },
+  {
+    id: uuid(6),
+    created_at: isoNow,
+    name: "Valentina Vega",
+    age: 26,
+    city: "Miraflores",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina",
+    bio: "Buscando dupla de pádel femenino.",
+    trust_score: 95,
+    matches_played: 12,
+    fitcoins_balance: 1100,
+    level: "Intermedio",
+    preferred_sports: ["Pádel"],
+    last_location_lat: -12.128,
+    last_location_lng: -77.035,
+    distance_km: 1.5,
+  },
+  {
+    id: uuid(7),
+    created_at: isoNow,
+    name: "Lucas Castro",
+    age: 29,
+    city: "San Isidro",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
+    bio: "Tenis de polvo de ladrillo.",
+    trust_score: 91,
+    matches_played: 12,
+    fitcoins_balance: 2100,
+    level: "Avanzado",
+    preferred_sports: ["Tenis"],
+    last_location_lat: -12.095,
+    last_location_lng: -77.03,
+    distance_km: 4.1,
+  },
+  {
+    id: uuid(8),
+    created_at: isoNow,
+    name: "Elena Ramos",
+    age: 33,
+    city: "San Borja",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Elena",
+    bio: "Yoga y Pilates.",
+    trust_score: 98,
+    matches_played: 12,
+    fitcoins_balance: 400,
+    level: "Intermedio",
+    preferred_sports: ["Running"],
+    last_location_lat: -12.1,
+    last_location_lng: -77.0,
+    distance_km: 2.1,
+  },
+  {
+    id: uuid(9),
+    created_at: isoNow,
+    name: "Martin Luna",
+    age: 25,
+    city: "Surco",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Martin",
+    bio: "Defensa central duro pero limpio.",
+    trust_score: 85,
+    matches_played: 12,
+    fitcoins_balance: 600,
+    level: "Avanzado",
+    preferred_sports: ["Fútbol"],
+    last_location_lat: -12.13,
+    last_location_lng: -76.99,
+    distance_km: 1.1,
+  },
+  {
+    id: uuid(10),
+    created_at: isoNow,
+    name: "Julia Soto",
+    age: 27,
+    city: "Miraflores",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Julia",
+    bio: "Revés a dos manos.",
+    trust_score: 92,
+    matches_played: 12,
+    fitcoins_balance: 1550,
+    level: "Intermedio",
+    preferred_sports: ["Tenis"],
+    last_location_lat: -12.12,
+    last_location_lng: -77.025,
+    distance_km: 1.8,
+  },
+];
+
+export const MOCK_COURTS: Court[] = [
+  {
+    id: uuid(101),
+    created_at: isoNow,
+    name: "Pádel Center Surco",
+    sport: "Pádel",
+    price_per_hour: 40,
+    rating: 4.8,
+    reviews_count: 312,
+    lat: -12.145,
+    lng: -77.0,
+    image_url: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+    amenities: ["Iluminación", "Vestuarios", "Parking", "Cafetería"],
+    is_available: true,
+    distance_km: 0.6,
+  },
+  {
+    id: uuid(102),
+    created_at: isoNow,
+    name: "Complejo Deportivo Jorge Chávez",
+    sport: "Fútbol",
+    price_per_hour: 120,
+    rating: 4.6,
+    reviews_count: 480,
+    lat: -12.155,
+    lng: -77.005,
+    image_url: "https://images.unsplash.com/photo-1551958219-acbc608c6377",
+    amenities: ["Pasto sintético", "Gradas", "Duchas"],
+    is_available: true,
+    distance_km: 1.4,
+  },
+  {
+    id: uuid(103),
+    created_at: isoNow,
+    name: "Tenis Club San Borja",
+    sport: "Tenis",
+    price_per_hour: 35,
+    rating: 4.9,
+    reviews_count: 150,
+    lat: -12.1,
+    lng: -76.99,
+    image_url: "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0",
+    amenities: ["Polvo de ladrillo", "Árbitro"],
+    is_available: false,
+    distance_km: 2.2,
+  },
+  {
+    id: uuid(104),
+    created_at: isoNow,
+    name: "Pádel Rooftop Jockey",
+    sport: "Pádel",
+    price_per_hour: 55,
+    rating: 4.7,
+    reviews_count: 220,
+    lat: -12.085,
+    lng: -76.975,
+    image_url: "https://images.unsplash.com/photo-1622279457486-62dcc4a631d6",
+    amenities: ["Vista panorámica", "Alquiler de paletas"],
+    is_available: true,
+    distance_km: 3.8,
+  },
+  {
+    id: uuid(105),
+    created_at: isoNow,
+    name: "Polideportivo Limatambo",
+    sport: "Fútbol",
+    price_per_hour: 80,
+    rating: 4.3,
+    reviews_count: 512,
+    lat: -12.109,
+    lng: -77.012,
+    image_url: "https://images.unsplash.com/photo-1518605368461-1ee7e5302a40",
+    amenities: ["Fútbol 7", "Kiosko"],
+    is_available: true,
+    distance_km: 1.9,
+  },
+];
+
+export const MOCK_MATCHES: Match[] = [
+  {
+    id: uuid(211),
+    created_at: isoNow,
+    creator_id: "user-edwin-master",
+    court_id: uuid(101),
+    sport: "Pádel",
+    title: "Pádel Edwin Masterclass",
+    date: futureDay(1).split("T")[0],
+    time: "20:00",
+    max_players: 4,
+    required_level: "Elite",
+    court: MOCK_COURTS[0],
+    current_players: [MOCK_USERS[0], MOCK_USERS[1]],
+  },
+  {
+    id: uuid(212),
+    created_at: isoNow,
+    creator_id: "user-edwin-master",
+    court_id: uuid(102),
+    sport: "Fútbol",
+    title: "Fútbol 7 con Edwin",
+    date: futureDay(2).split("T")[0],
+    time: "21:00",
+    max_players: 14,
+    required_level: "Avanzado",
+    court: MOCK_COURTS[1],
+    current_players: [MOCK_USERS[0], MOCK_USERS[2], MOCK_USERS[3]],
+  },
+  {
+    id: uuid(201),
+    created_at: isoNow,
+    creator_id: uuid(1),
+    court_id: uuid(101),
+    sport: "Pádel",
+    title: "Doble Mixto Semipro",
+    date: futureDay(1).split("T")[0],
+    time: "18:00",
+    max_players: 4,
+    required_level: "Avanzado",
+    court: MOCK_COURTS[0],
+    current_players: [MOCK_USERS[0], MOCK_USERS[1], MOCK_USERS[5]],
+  },
+  {
+    id: uuid(202),
+    created_at: isoNow,
+    creator_id: uuid(3),
+    court_id: uuid(102),
+    sport: "Fútbol",
+    title: "Pichanga Jueves Noche",
+    date: futureDay(2).split("T")[0],
+    time: "18:00",
+    max_players: 14,
+    required_level: "Intermedio",
+    court: MOCK_COURTS[1],
+    current_players: [MOCK_USERS[2], MOCK_USERS[4], MOCK_USERS[8]],
+  },
+  {
+    id: uuid(203),
+    created_at: isoNow,
+    creator_id: uuid(7),
+    court_id: uuid(103),
+    sport: "Tenis",
+    title: "Singles Práctica",
+    date: futureDay(0.5).split("T")[0],
+    time: "18:00",
+    max_players: 2,
+    required_level: "Avanzado",
+    court: MOCK_COURTS[2],
+    current_players: [MOCK_USERS[6]],
+  },
+  {
+    id: uuid(204),
+    created_at: isoNow,
+    creator_id: uuid(6),
+    court_id: uuid(101),
+    sport: "Pádel",
+    title: "Pádel Femenino Relax",
+    date: futureDay(3).split("T")[0],
+    time: "18:00",
+    max_players: 4,
+    required_level: "Intermedio",
+    court: MOCK_COURTS[0],
+    current_players: [MOCK_USERS[5]],
+  },
+  {
+    id: uuid(205),
+    created_at: isoNow,
+    creator_id: uuid(9),
+    court_id: uuid(105),
+    sport: "Fútbol",
+    title: "Fútbol 7 - San Borja",
+    date: futureDay(1.5).split("T")[0],
+    time: "18:00",
+    max_players: 14,
+    required_level: "Avanzado",
+    court: MOCK_COURTS[4],
+    current_players: [MOCK_USERS[8], MOCK_USERS[2]],
+  },
+  {
+    id: uuid(206),
+    created_at: isoNow,
+    creator_id: uuid(10),
+    court_id: uuid(103),
+    sport: "Tenis",
+    title: "Dobles Mixtos",
+    date: futureDay(4).split("T")[0],
+    time: "18:00",
+    max_players: 4,
+    required_level: "Intermedio",
+    court: MOCK_COURTS[2],
+    current_players: [MOCK_USERS[9], MOCK_USERS[6]],
+  },
+  {
+    id: uuid(207),
+    created_at: isoNow,
+    creator_id: uuid(4),
+    court_id: uuid(102),
+    sport: "Fútbol",
+    title: "Entrenamiento Funcional / Fútbol",
+    date: futureDay(0.2).split("T")[0],
+    time: "18:00",
+    max_players: 10,
+    required_level: "Avanzado",
+    court: MOCK_COURTS[1],
+    current_players: [MOCK_USERS[3], MOCK_USERS[4]],
+  },
+  {
+    id: uuid(208),
+    created_at: isoNow,
+    creator_id: uuid(1),
+    court_id: uuid(104),
+    sport: "Pádel",
+    title: "Torneo Interno Rooftop",
+    date: futureDay(5).split("T")[0],
+    time: "18:00",
+    max_players: 4,
+    required_level: "Avanzado",
+    court: MOCK_COURTS[3],
+    current_players: [MOCK_USERS[0], MOCK_USERS[1], MOCK_USERS[5], MOCK_USERS[6]],
+  },
+  {
+    id: uuid(209),
+    created_at: isoNow,
+    creator_id: uuid(2),
+    court_id: uuid(101),
+    sport: "Pádel",
+    title: "Práctica Saques",
+    date: futureDay(6).split("T")[0],
+    time: "18:00",
+    max_players: 2,
+    required_level: "Intermedio",
+    court: MOCK_COURTS[0],
+    current_players: [MOCK_USERS[1]],
+  },
+  {
+    id: uuid(210),
+    created_at: isoNow,
+    creator_id: uuid(8),
+    court_id: uuid(105),
+    sport: "Running",
+    title: "Trote Grupal Parque Sur",
+    date: futureDay(0.1).split("T")[0],
+    time: "18:00",
+    max_players: 20,
+    required_level: "Principiante",
+    court: MOCK_COURTS[4],
+    current_players: [MOCK_USERS[7], MOCK_USERS[3]],
+  },
+];
+
+export const MOCK_TRANSACTIONS: Transaction[] = [
+  {
+    id: uuid(305),
+    created_at: isoNow,
+    user_id: "user-edwin-master",
+    amount: 500,
+    description: "Bono de bienvenida",
+    type: "EARN",
+  },
+  {
+    id: uuid(306),
+    created_at: isoNow,
+    user_id: "user-edwin-master",
+    amount: 150,
+    description: "Reto completado: 3 Partidos de Tenis",
+    type: "EARN",
+  },
+  {
+    id: uuid(307),
+    created_at: isoNow,
+    user_id: "user-edwin-master",
+    amount: -100,
+    description: "Canje: Bebida isotónica",
+    type: "SPEND",
+  },
+  {
+    id: uuid(301),
+    created_at: isoNow,
+    user_id: uuid(1),
+    amount: 150,
+    description: "Reto semanal completado",
+    type: "EARN",
+  },
+  {
+    id: uuid(302),
+    created_at: isoNow,
+    user_id: uuid(1),
+    amount: -500,
+    description: "Canje: Hora gratis de Pádel",
+    type: "SPEND",
+  },
+  {
+    id: uuid(303),
+    created_at: isoNow,
+    user_id: uuid(1),
+    amount: 50,
+    description: "Puntualidad en partido",
+    type: "EARN",
+  },
+  {
+    id: uuid(304),
+    created_at: isoNow,
+    user_id: uuid(1),
+    amount: 200,
+    description: "MVP del partido",
+    type: "EARN",
+  },
+];
+
+// Current session user (Mock Auth)
+export const ME = MOCK_USERS[0];
+
+export const SPORTS = [
+  { name: "Pádel", emoji: "🎾" },
   { name: "Fútbol", emoji: "⚽" },
-  { name: "Básquet", emoji: "🏀" },
   { name: "Tenis", emoji: "🎾" },
-  { name: "Pádel", emoji: "🏓" },
-  { name: "Vóley", emoji: "🏐" },
   { name: "Running", emoji: "🏃" },
 ];
 
-export type Player = {
+export const LEADERBOARD = MOCK_USERS.map((u, i) => ({
+  rank: i + 1,
+  name: u.name,
+  avatar: u.avatar_url,
+  coins: u.fitcoins_balance,
+}))
+  .sort((a, b) => b.coins - a.coins)
+  .map((u, i) => ({ ...u, rank: i + 1 }));
+
+export type Message = {
+  id: string;
+  sender_id: string;
+  text: string;
+  created_at: string;
+};
+
+export type Chat = {
   id: string;
   name: string;
-  age: number;
-  distanceKm: number;
-  sport: Sport;
-  level: "Principiante" | "Intermedio" | "Avanzado" | "Elite";
-  trustScore: number; // 0-100
-  fitcoins: number;
-  matches: number;
-  bio: string;
   avatar: string;
-  available: string;
+  current_players: string[];
+  messages: Message[];
+  unread: number;
 };
 
-const avatars = (seed: string) =>
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=7c3aed,2563eb,059669,db2777`;
-
-export const PLAYERS: Player[] = [
-  { id: "p1", name: "Camila Torres", age: 24, distanceKm: 1.2, sport: "Pádel", level: "Avanzado", trustScore: 96, fitcoins: 1240, matches: 87, bio: "Compito en torneos los fines de semana. Busco rivales constantes.", avatar: avatars("Camila"), available: "Hoy 19:00" },
-  { id: "p2", name: "Diego Ramírez", age: 28, distanceKm: 2.4, sport: "Fútbol", level: "Intermedio", trustScore: 88, fitcoins: 860, matches: 54, bio: "Mediocampista. Juego martes y jueves después del trabajo.", avatar: avatars("Diego"), available: "Mañana 20:30" },
-  { id: "p3", name: "Sofía Méndez", age: 22, distanceKm: 0.8, sport: "Tenis", level: "Avanzado", trustScore: 92, fitcoins: 1530, matches: 102, bio: "Saque potente, busco peloteo serio.", avatar: avatars("Sofia"), available: "Hoy 18:00" },
-  { id: "p4", name: "Mateo Sánchez", age: 31, distanceKm: 3.1, sport: "Básquet", level: "Elite", trustScore: 98, fitcoins: 2100, matches: 145, bio: "Ex-universitario. Pickup games todos los sábados.", avatar: avatars("Mateo"), available: "Sáb 10:00" },
-  { id: "p5", name: "Lucía Fernández", age: 26, distanceKm: 1.7, sport: "Running", level: "Avanzado", trustScore: 94, fitcoins: 980, matches: 60, bio: "10K en 45min. Busco grupo para entrenamientos largos.", avatar: avatars("Lucia"), available: "Dom 7:00" },
-  { id: "p6", name: "Andrés Pérez", age: 29, distanceKm: 2.0, sport: "Pádel", level: "Intermedio", trustScore: 81, fitcoins: 540, matches: 38, bio: "Mejorando el revés. Juego 2 veces por semana.", avatar: avatars("Andres"), available: "Hoy 21:00" },
+export const MOCK_CHATS: Chat[] = [
+  {
+    id: "chat_group_pichanga",
+    name: "Pichanga Jueves",
+    avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=PichangaGroup",
+    current_players: ["user-edwin-master", "user-fabiola", uuid(3)],
+    unread: 1,
+    messages: [
+      {
+        id: "msg_group_1",
+        sender_id: uuid(3),
+        text: "Confirmen quiénes van este jueves para separar la cancha ⚽",
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+      },
+      {
+        id: "msg_group_2",
+        sender_id: "user-edwin-master",
+        text: "¡Yo me apunto! Llevo las pelotas oficiales.",
+        created_at: new Date(Date.now() - 3000000).toISOString(),
+      },
+      {
+        id: "msg_group_3",
+        sender_id: "user-fabiola",
+        text: "¿Quién lleva la pelota?",
+        created_at: new Date(Date.now() - 1000000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: "chat_fabiola",
+    name: "Fabiola",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola",
+    current_players: ["user-edwin-master", "user-fabiola"],
+    unread: 0,
+    messages: [
+      {
+        id: "msg_fab_1",
+        sender_id: "user-fabiola",
+        text: "Hola Edwin, ¿jugamos un partido de pádel mañana?",
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: "msg_fab_2",
+        sender_id: "user-edwin-master",
+        text: "¡Hola! Claro que sí, a qué hora puedes?",
+        created_at: new Date(Date.now() - 82800000).toISOString(),
+      },
+      {
+        id: "msg_fab_3",
+        sender_id: "user-edwin-master",
+        text: "¡Amor, ya separé la cancha para hoy a las 8pm! 🎾",
+        created_at: new Date(Date.now() - 1000000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: "chat_1",
+    name: "Grupo Pádel Jueves",
+    avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=PadelGroup",
+    current_players: ["user-edwin-master", uuid(2), uuid(5)],
+    unread: 2,
+    messages: [
+      {
+        id: "msg_1",
+        sender_id: uuid(2),
+        text: "¿Alguien tiene paleta extra? La mía se rompió ayer 😭",
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+      },
+      {
+        id: "msg_2",
+        sender_id: "user-edwin-master",
+        text: "Tranqui, yo llevo dos. ¡Nos vemos 19hs en Club Central!",
+        created_at: new Date(Date.now() - 3000000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: "chat_2",
+    name: "Camila Torres",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Camila",
+    current_players: ["user-edwin-master", uuid(2)],
+    unread: 0,
+    messages: [
+      {
+        id: "msg_3",
+        sender_id: uuid(2),
+        text: "¡Buen partido ayer Edwin! A ver cuándo repetimos.",
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: "msg_4",
+        sender_id: "user-edwin-master",
+        text: "¡Estuvo buenísimo! El próximo martes te aviso si armamos otro.",
+        created_at: new Date(Date.now() - 82800000).toISOString(),
+      },
+    ],
+  },
 ];
-
-export type Court = {
-  id: string;
-  name: string;
-  sport: Sport;
-  pricePerHour: number;
-  rating: number;
-  reviews: number;
-  distanceKm: number;
-  image: string;
-  amenities: string[];
-  available: boolean;
-};
-
-const courtImg = (q: string) => `https://images.unsplash.com/${q}?auto=format&fit=crop&w=900&q=80`;
-
-export const COURTS: Court[] = [
-  { id: "c1", name: "Club Pádel Central", sport: "Pádel", pricePerHour: 28, rating: 4.8, reviews: 312, distanceKm: 0.6, image: courtImg("photo-1554068865-24cecd4e34b8"), amenities: ["Iluminación", "Vestuarios", "Parking"], available: true },
-  { id: "c2", name: "Cancha Estadio Norte", sport: "Fútbol", pricePerHour: 60, rating: 4.6, reviews: 480, distanceKm: 1.4, image: courtImg("photo-1551958219-acbc608c6377"), amenities: ["Pasto sintético", "Cafetería"], available: true },
-  { id: "c3", name: "Tennis Club Mirador", sport: "Tenis", pricePerHour: 22, rating: 4.9, reviews: 198, distanceKm: 2.1, image: courtImg("photo-1622279457486-62dcc4a431d6"), amenities: ["Polvo de ladrillo", "Pro shop"], available: false },
-  { id: "c4", name: "Arena Básquet 360", sport: "Básquet", pricePerHour: 35, rating: 4.7, reviews: 256, distanceKm: 1.8, image: courtImg("photo-1546519638-68e109498ffc"), amenities: ["Indoor", "AC"], available: true },
-];
-
-export type MatchEvent = {
-  id: string;
-  sport: Sport;
-  title: string;
-  date: string;
-  spots: { taken: number; total: number };
-  level: Player["level"];
-  court: string;
-};
-
-export const MATCHES: MatchEvent[] = [
-  { id: "m1", sport: "Pádel", title: "Doble mixto · Friendly", date: "Hoy · 19:00", spots: { taken: 3, total: 4 }, level: "Intermedio", court: "Club Pádel Central" },
-  { id: "m2", sport: "Fútbol", title: "Fútbol 7 · Liga amateur", date: "Mañana · 20:30", spots: { taken: 9, total: 14 }, level: "Avanzado", court: "Estadio Norte" },
-  { id: "m3", sport: "Básquet", title: "Pickup 5v5", date: "Sáb · 10:00", spots: { taken: 6, total: 10 }, level: "Elite", court: "Arena Básquet 360" },
-  { id: "m4", sport: "Tenis", title: "Singles competitivo", date: "Hoy · 18:00", spots: { taken: 1, total: 2 }, level: "Avanzado", court: "Tennis Club Mirador" },
-];
-
-export const ME = {
-  name: "Alex Rivera",
-  age: 27,
-  city: "Buenos Aires",
-  trustScore: 93,
-  fitcoins: 1850,
-  matches: 76,
-  level: "Avanzado" as const,
-  sports: ["Pádel", "Fútbol", "Running"] as Sport[],
-  avatar: avatars("AlexRivera"),
-  badges: [
-    { id: "b1", name: "Racha 10", emoji: "🔥" },
-    { id: "b2", name: "MVP del mes", emoji: "🏆" },
-    { id: "b3", name: "Puntual", emoji: "⏱️" },
-    { id: "b4", name: "Top 5%", emoji: "💎" },
-  ],
-};
-
-export const LEADERBOARD = [
-  { rank: 1, name: "Mateo Sánchez", coins: 2100, avatar: avatars("Mateo") },
-  { rank: 2, name: "Alex Rivera", coins: 1850, avatar: ME.avatar },
-  { rank: 3, name: "Sofía Méndez", coins: 1530, avatar: avatars("Sofia") },
-  { rank: 4, name: "Camila Torres", coins: 1240, avatar: avatars("Camila") },
-  { rank: 5, name: "Lucía Fernández", coins: 980, avatar: avatars("Lucia") },
-];
-
-export const CHATS = [
-  { id: "ch1", name: "Doble Pádel · Hoy", last: "Camila: Llego en 10 ⚡", unread: 2, group: true, avatar: avatars("Camila") },
-  { id: "ch2", name: "Diego Ramírez", last: "¿Confirmás el partido?", unread: 0, group: false, avatar: avatars("Diego") },
-  { id: "ch3", name: "Pickup 5v5", last: "Mateo: Llevo el balón", unread: 5, group: true, avatar: avatars("Mateo") },
-  { id: "ch4", name: "Sofía Méndez", last: "Buen partido 🎾", unread: 0, group: false, avatar: avatars("Sofia") },
-];
-
-export const IOT = {
-  heartRate: 142,
-  calories: 612,
-  distanceKm: 7.4,
-  pace: "5:32",
-  steps: 9120,
-  weeklyLoad: [60, 72, 45, 88, 30, 95, 70],
-};
-
-export const ADMIN_KPI = {
-  users: 12480,
-  matchesToday: 312,
-  revenue: 28450,
-  occupancy: 78,
-  weekly: [40, 55, 62, 70, 65, 88, 92],
-  sportsShare: [
-    { sport: "Pádel", value: 42 },
-    { sport: "Fútbol", value: 28 },
-    { sport: "Tenis", value: 14 },
-    { sport: "Básquet", value: 10 },
-    { sport: "Otros", value: 6 },
-  ],
-};

@@ -13,7 +13,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "SportMatch — Juega más, esperá menos" },
       {
         property: "og:description",
-        content: "Encontrá rivales, reservá canchas y desbloqueá recompensas con tu nivel deportivo.",
+        content:
+          "Encontrá rivales, reservá canchas y desbloqueá recompensas con tu nivel deportivo.",
       },
     ],
   }),
@@ -31,12 +32,20 @@ function Landing() {
           <span className="font-bold text-lg">SportMatch</span>
         </div>
         <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#features" className="hover:text-foreground">Features</a>
-          <a href="#how" className="hover:text-foreground">Cómo funciona</a>
-          <a href="#stats" className="hover:text-foreground">Comunidad</a>
+          <a href="#features" className="hover:text-foreground">
+            Features
+          </a>
+          <a href="#how" className="hover:text-foreground">
+            Cómo funciona
+          </a>
+          <a href="#stats" className="hover:text-foreground">
+            Comunidad
+          </a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link to="/login" className="text-sm px-3 py-2 rounded-lg hover:bg-accent">Ingresar</Link>
+          <Link to="/login" className="text-sm px-3 py-2 rounded-lg hover:bg-accent">
+            Ingresar
+          </Link>
           <Link
             to="/app"
             className="text-sm px-4 py-2 rounded-lg bg-gradient-primary text-primary-foreground shadow-glow font-semibold"
@@ -49,7 +58,8 @@ function Landing() {
       <section className="container mx-auto px-4 pt-12 pb-24 grid lg:grid-cols-2 gap-12 items-center">
         <div>
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-xs text-neon mb-6">
-            <span className="h-2 w-2 rounded-full bg-neon animate-pulse-ring" /> Beta · 12.480 jugadores
+            <span className="h-2 w-2 rounded-full bg-neon animate-pulse-ring" /> Beta · 12.480
+            jugadores
           </span>
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05]">
             Tu próximo <span className="text-gradient">partido</span>
@@ -57,7 +67,8 @@ function Landing() {
             está a un swipe.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-            Matchmaking inteligente para deportistas amateur. Encontrá gente compatible, reservá canchas y subí tu Trust Score con cada partido.
+            Matchmaking inteligente para deportistas amateur. Encontrá gente compatible, reservá
+            canchas y subí tu Trust Score con cada partido.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

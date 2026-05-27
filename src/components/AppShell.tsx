@@ -11,7 +11,7 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import { ME } from "@/lib/mock";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 const NAV = [
   { to: "/app", label: "Inicio", icon: Home, end: true },
@@ -27,6 +27,18 @@ const NAV = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const isRegister = path === "/app/register";
+  const currentUser = useAuthStore((s) => s.user);
+
+  if (isRegister) {
+    return (
+      <div className="min-h-screen bg-background bg-gradient-hero flex flex-col">{children}</div>
+    );
+  }
+
+  if (!currentUser) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background bg-gradient-hero">
@@ -60,11 +72,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="p-4 m-3 rounded-2xl bg-gradient-card border border-border">
           <div className="flex items-center gap-3">
-            <img src={ME.avatar} alt="" className="h-10 w-10 rounded-full bg-muted" />
+            <img src={currentUser.avatar_url} alt="" className="h-10 w-10 rounded-full bg-muted" />
             <div className="min-w-0">
-              <div className="text-sm font-semibold truncate">{ME.name}</div>
+              <div className="text-sm font-semibold truncate">{currentUser.name}</div>
               <div className="text-xs text-neon flex items-center gap-1">
-                <Trophy className="h-3 w-3" /> {ME.fitcoins} FC
+                <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
               </div>
             </div>
           </div>
@@ -93,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <main className="lg:pl-64 pb-24 lg:pb-10 min-h-screen">{children}</main>
+      <main className="lg:pl-64 pb-24 lg:pb-10 min-h-screen flex flex-col">{children}</main>
     </div>
   );
 }

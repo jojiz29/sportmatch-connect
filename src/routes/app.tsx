@@ -1,10 +1,22 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 export const Route = createFileRoute("/app")({
+  beforeLoad: ({ location }) => {
+    if (location.pathname === "/app/register") {
+      return;
+    }
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: () => (
     <AppShell>
-      <Outlet />
+      <div className="flex-1 h-full min-h-[500px] w-full flex flex-col">
+        <Outlet />
+      </div>
     </AppShell>
   ),
 });

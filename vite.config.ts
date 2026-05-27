@@ -4,8 +4,9 @@ import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import path from "node:path";
+import { visualizer } from "rollup-plugin-visualizer";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     TanStackRouterVite({
       target: "react",
@@ -16,9 +17,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
     tsconfigPaths(),
+    mode === "analyze" && visualizer({ open: false, filename: "dist/stats.html", gzipSize: true }),
   ],
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
-  server: { host: "::", port: 8080, strictPort: true },
-});
+  server: { host: "::", port: 5178, strictPort: false, open: true },
+}));

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { getRouter, queryClient } from "./router";
+import "./shared/i18n"; // i18n init
 import "./styles.css";
 
 const router = getRouter();

@@ -1,105 +1,103 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Zap, Mail, Lock, Fingerprint } from "lucide-react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useAuth } from "@/entities/user/useAuth";
 import { useState } from "react";
+import { toast } from "sonner";
+import { MapPin, Lock, Mail } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({
-    meta: [
-      { title: "Ingresar — SportMatch" },
-      { name: "description", content: "Iniciá sesión en SportMatch para jugar." },
-    ],
-  }),
   component: Login,
 });
 
 function Login() {
-  const nav = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const enter = () => {
-    setLoading(true);
-    setTimeout(() => nav({ to: "/app" }), 600);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await signIn(email, password);
+      toast.success(t("login.success_toast"));
+      navigate({ to: "/app" });
+    } catch {
+      toast.error(t("login.error_toast"));
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      await signIn();
+      toast.success(t("login.success_toast"));
+      navigate({ to: "/app" });
+    } catch {
+      toast.error(t("login.error_toast"));
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background bg-gradient-hero grid lg:grid-cols-2">
-      <div className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
-            <Zap className="h-5 w-5 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md bg-gradient-card border border-border rounded-3xl p-8 shadow-card backdrop-blur-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary shadow-glow mb-4">
+            <MapPin className="h-6 w-6 text-primary-foreground" />
           </div>
-          <span className="font-bold text-lg">SportMatch</span>
-        </Link>
-        <div>
-          <h2 className="text-5xl font-extrabold leading-tight">
-            Encontrá tu <span className="text-gradient">próximo rival</span> en segundos.
-          </h2>
-          <p className="mt-4 text-muted-foreground max-w-md">
-            Más de 12.000 jugadores compitiendo, entrenando y desbloqueando logros cada semana.
-          </p>
+          <h1 className="text-2xl font-bold">{t("login.title_signin")}</h1>
+          <p className="text-muted-foreground mt-2">{t("login.subtitle")}</p>
         </div>
-        <div className="text-xs text-muted-foreground">© 2026 SportMatch</div>
-        <div className="absolute -right-32 -bottom-32 h-96 w-96 rounded-full bg-gradient-primary opacity-30 blur-3xl" />
-      </div>
 
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-gradient-card border border-border rounded-3xl p-8 shadow-card">
-          <h1 className="text-3xl font-bold">Bienvenido de vuelta</h1>
-          <p className="text-sm text-muted-foreground mt-1">Iniciá sesión para seguir jugando</p>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button onClick={enter} className="px-4 py-3 rounded-xl glass hover:bg-accent text-sm font-semibold flex items-center justify-center gap-2">
-              <span className="text-lg">G</span> Google
-            </button>
-            <button onClick={enter} className="px-4 py-3 rounded-xl glass hover:bg-accent text-sm font-semibold flex items-center justify-center gap-2">
-              <span className="text-lg"></span> Apple
-            </button>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">{t("login.email")}</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none"
+                placeholder="tu@email.com"
+              />
+            </div>
           </div>
-
-          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" /> o con email <div className="h-px flex-1 bg-border" />
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">{t("login.password")}</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none"
+                placeholder="••••••••"
+              />
+            </div>
           </div>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              enter();
-            }}
-            className="space-y-3"
-          >
-            <label className="block">
-              <div className="text-xs text-muted-foreground mb-1">Email</div>
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-input border border-border focus-within:ring-glow">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <input className="bg-transparent outline-none text-sm flex-1" defaultValue="alex@sportmatch.app" />
-              </div>
-            </label>
-            <label className="block">
-              <div className="text-xs text-muted-foreground mb-1">Contraseña</div>
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-input border border-border focus-within:ring-glow">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                <input type="password" className="bg-transparent outline-none text-sm flex-1" defaultValue="demo1234" />
-              </div>
-            </label>
-
-            <button
-              disabled={loading}
-              className="w-full mt-2 py-3 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-95 disabled:opacity-60"
-            >
-              {loading ? "Ingresando…" : "Ingresar"}
-            </button>
-          </form>
 
           <button
-            onClick={enter}
-            className="mt-3 w-full py-3 rounded-xl glass text-sm font-semibold flex items-center justify-center gap-2 hover:bg-accent"
+            type="submit"
+            className="w-full py-3 mt-2 bg-gradient-primary text-primary-foreground font-bold rounded-xl shadow-glow cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
           >
-            <Fingerprint className="h-4 w-4 text-neon" /> Ingresar con biometría
+            {t("login.btn_signin")}
           </button>
 
-          <p className="text-xs text-center text-muted-foreground mt-6">
-            ¿No tenés cuenta? <span className="text-neon">Crear cuenta</span>
-          </p>
+          <button
+            type="button"
+            onClick={handleGuestLogin}
+            className="w-full py-3 mt-2 glass text-white font-bold rounded-xl cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-transform"
+          >
+            Probar Demo
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <Link to="/app/register" className="text-sm text-primary hover:underline">
+            {t("login.toggle_signup")}
+          </Link>
         </div>
       </div>
     </div>

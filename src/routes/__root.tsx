@@ -1,10 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-} from "@tanstack/react-router";
+import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 
 function NotFoundComponent() {
   return (
@@ -62,8 +57,32 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+import { AnimatePresence, motion } from "framer-motion";
+import { Toaster } from "@/shared/ui/sonner";
+
+function RootComponent() {
+  const router = useRouter();
+  const match = router.state.matches[router.state.matches.length - 1];
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={match?.id || "root"}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="min-h-screen bg-background"
+      >
+        <Outlet />
+      </motion.div>
+      <Toaster />
+    </AnimatePresence>
+  );
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  component: () => <Outlet />,
+  component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });

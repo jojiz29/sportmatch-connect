@@ -1,0 +1,93 @@
+{
+  "login": {
+    "title_signin": "Iniciar Sesión",
+    "title_signup": "Crear Cuenta",
+    "subtitle": "Accede a la red de deportistas más grande",
+    "email": "Email",
+    "password": "Contraseña",
+    "btn_signin": "Entrar",
+    "btn_signup": "Registrarme",
+    "toggle_signup": "¿No tienes cuenta? Regístrate",
+    "toggle_signin": "¿Ya tienes cuenta? Inicia sesión",
+    "success_toast": "¡Bienvenido de nuevo!",
+    "error_toast": "Error al iniciar sesión. Verifica tus credenciales."
+  },
+  "register": {
+    "title": "Crear Cuenta",
+    "subtitle": "Completa tu onboarding deportivo",
+    "fullName": "Nombre Completo",
+    "email": "Email",
+    "password": "Contraseña",
+    "sports": "Deportes Favoritos",
+    "btn_register": "Registrarme y Empezar",
+    "success_toast": "¡Bienvenido a SportMatch!",
+    "error_toast": "Error al registrarse. Intenta de nuevo.",
+    "select_sports_error": "Selecciona al menos un deporte favorito"
+  },
+  "dashboard": {
+    "title": "Panel Principal",
+    "balance": "Balance de FitCoins",
+    "recent_activity": "Actividad Reciente"
+  },
+  "matchmaking": {
+    "title": "Matchmaking IA",
+    "subtitle": "Deslizá para encontrar tu próximo rival ideal",
+    "filters": "Filtros",
+    "empty": "Sin más sugerencias",
+    "compatibility": "Compatibilidad IA",
+    "level": "Nivel",
+    "distance": "Distancia",
+    "reputation": "Reputación",
+    "like_toast": "¡Like enviado!",
+    "match_toast": "¡Es un Match!"
+  },
+  "map": {
+    "title": "Mapa en vivo",
+    "subtitle": "Canchas, partidos y jugadores cerca tuyo",
+    "near_you": "Cerca tuyo",
+    "view_court": "Ver Cancha"
+  },
+  "chat": {
+    "title": "Mensajes",
+    "search": "Buscar chats...",
+    "online": "participantes en línea",
+    "empty": "Selecciona una conversación para chatear",
+    "placeholder": "Escribe un mensaje..."
+  },
+  "wallet": {
+    "title": "FitCoins & Recompensas",
+    "subtitle": "Tu economía deportiva gamificada",
+    "balance": "Tu balance",
+    "redeem": "Canjear",
+    "canjear": "Canjear",
+    "history": "Historial",
+    "challenges": "Retos activos",
+    "rewards": "Recompensas",
+    "ranking": "Ranking semanal",
+    "confirm_title": "Canjear {{reward}}",
+    "confirm_desc": "¿Estás seguro de que deseas canjear esta recompensa por {{cost}} FitCoins?",
+    "confirm_btn": "Confirmar Canje",
+    "cancel_btn": "Cancelar",
+    "success": "¡Canje exitoso!",
+    "success_desc": "Has obtenido: {{reward}}",
+    "error": "Saldo insuficiente",
+    "error_desc": "Sigue jugando para ganar más FitCoins.",
+    "history_title": "Historial de Transacciones",
+    "history_subtitle": "Seguimiento de tus ingresos y gastos de FitCoins",
+    "back": "Volver a FitCoins"
+  },
+  "profile": {
+    "title": "Mi perfil",
+    "edit": "Editar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "trust_score": "Trust Score",
+    "achievements": "Logros desbloqueados",
+    "recent_history": "Historial reciente",
+    "updated": "Perfil actualizado",
+    "placeholder_name": "Tu nombre",
+    "placeholder_city": "Tu ciudad",
+    "placeholder_bio": "Tu bio",
+    "placeholder_sports": "Deportes separados por comas"
+  }
+}
