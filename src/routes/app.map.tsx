@@ -3,6 +3,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { MapFeature } from "@/features/map/MapFeature";
 import { apiClient } from "@/shared/api/apiClient";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
+import { useState, useEffect } from "react";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { searchNearbyCourts } from "@/shared/api/geoService";
+import { Court } from "@/entities/types";
 
 export const Route = createFileRoute("/app/map")({
   head: () => ({
@@ -60,6 +64,41 @@ function MapPendingComponent() {
 
 function MapPage() {
   const data = Route.useLoaderData();
+  const user = useAuthStore((state) => state.user);
+  const [courts, setCourts] = useState<Court[]>(data.courts);
+
+  useEffect(() => {
+    let baseLat = -12.14; // Default Surco lat
+    let baseLng = -76.995; // Default Surco lng
+
+    if (user && user.last_location_lat && user.last_location_lng) {
+      baseLat = user.last_location_lat;
+      baseLng = user.last_location_lng;
+    }
+
+    const loadCourts = async (latitude: number, longitude: number) => {
+      try {
+        const fetched = await searchNearbyCourts(latitude, longitude);
+        setCourts(fetched);
+      } catch (err) {
+        console.error("Error loading nearby courts from spatial search:", err);
+      }
+    };
+
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          loadCourts(position.coords.latitude, position.coords.longitude);
+        },
+        (error) => {
+          console.warn("Geolocation API unavailable or permission denied. Using profile location.", error.message);
+          loadCourts(baseLat, baseLng);
+        }
+      );
+    } else {
+      loadCourts(baseLat, baseLng);
+    }
+  }, [user?.last_location_lat, user?.last_location_lng]);
 
   if (!data || !data.courts || !data.matches) {
     return (
@@ -67,25 +106,25 @@ function MapPage() {
     );
   }
 
-  const { courts, matches } = data;
+  const { matches } = data;
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title="Mapa en vivo" subtitle="Canchas, partidos y jugadores cerca tuyo" />
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card">
+        <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card animate-fade-in">
           <ErrorBoundary>
             <MapFeature courts={courts} matches={matches} />
           </ErrorBoundary>
         </div>
 
         <div className="space-y-4">
-          <div className="bg-gradient-card border border-border rounded-2xl p-5">
-            <h3 className="font-semibold mb-3">Cerca tuyo</h3>
+          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card max-h-[560px] overflow-y-auto">
+            <h3 className="font-semibold mb-3">Cerca tuyo (Ordenado por distancia)</h3>
             <div className="space-y-3">
               {courts.map((c) => (
-                <div key={c.id} className="flex gap-3 items-center">
+                <div key={c.id} className="flex gap-3 items-center hover:bg-accent/40 p-2 rounded-xl transition-colors">
                   <img
                     src={c.image_url}
                     alt={c.name}
@@ -106,3 +145,4 @@ function MapPage() {
     </div>
   );
 }
+

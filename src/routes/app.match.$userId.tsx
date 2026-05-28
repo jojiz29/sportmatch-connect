@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MOCK_USERS } from "@/lib/mock";
-import { ArrowLeft, Star, MapPin, Activity, Award } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Activity, Award, Users } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { User } from "@/entities/types";
+import { useState, useEffect } from "react";
+import { FollowButton } from "@/features/social/ui/FollowButton";
+import { getFollowStats } from "@/shared/api/socialService";
 
 export const Route = createFileRoute("/app/match/$userId")({
   head: ({ loaderData }: { loaderData?: User }) => {
@@ -26,6 +29,25 @@ export const Route = createFileRoute("/app/match/$userId")({
 
 function UserProfileDetail() {
   const user = Route.useLoaderData() as User;
+  const [followStats, setFollowStats] = useState({ followersCount: 0, followingCount: 0 });
+
+  useEffect(() => {
+    let active = true;
+    async function loadStats() {
+      try {
+        const stats = await getFollowStats(user.id);
+        if (active) {
+          setFollowStats(stats);
+        }
+      } catch (err) {
+        console.error("Failed to load follow stats:", err);
+      }
+    }
+    loadStats();
+    return () => {
+      active = false;
+    };
+  }, [user.id]);
 
   const handleInvite = () => {
     toast.success(`¡Invitación enviada a ${user.name}!`, {
@@ -59,18 +81,35 @@ function UserProfileDetail() {
               <h1 className="text-2xl font-bold">
                 {user.name}, {user.age}
               </h1>
-              <p className="text-muted-foreground text-sm mb-4 flex items-center justify-center gap-1">
+              <p className="text-muted-foreground text-sm mb-1 flex items-center justify-center gap-1">
                 <MapPin className="h-4 w-4" /> {user.city} ({user.distance_km || 0} km)
+              </p>
+              <p className="text-xs text-muted-foreground mb-4 flex items-center justify-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                {followStats.followersCount} seguidores · {followStats.followingCount} seguidos
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon/10 text-neon text-sm font-semibold border border-neon/20 mb-6">
                 <Star className="h-4 w-4 fill-neon" /> Trust Score: {user.trust_score}
               </div>
-              <button
-                onClick={handleInvite}
-                className="w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow hover:scale-105 transition-transform"
-              >
-                Invitar a jugar
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={handleInvite}
+                  className="w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow hover:scale-105 transition-transform"
+                >
+                  Invitar a jugar
+                </button>
+                <FollowButton
+                  targetUserId={user.id}
+                  onFollowChange={(isFollowingNow) => {
+                    setFollowStats((prev) => ({
+                      ...prev,
+                      followersCount: isFollowingNow
+                        ? prev.followersCount + 1
+                        : Math.max(0, prev.followersCount - 1),
+                    }));
+                  }}
+                />
+              </div>
             </div>
           </motion.div>
         </div>

@@ -1,8 +1,9 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
 import { ME, MOCK_USERS } from "@/lib/mock";
 import { User } from "@/entities/types";
+import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
 interface AuthState {
   user: User | null;
@@ -24,9 +25,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "sportmatch-auth",
+      storage: createJSONStorage(() => safeLocalStorage),
     },
   ),
 );
+
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
 

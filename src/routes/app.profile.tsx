@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { MOCK_MATCHES } from "@/lib/mock";
-import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp, Save, X } from "lucide-react";
+import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp, Save, X, Users } from "lucide-react";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { useState, useEffect } from "react";
@@ -193,7 +193,7 @@ function Profile() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-8">
           <Stat icon={<Trophy className="h-4 w-4 text-neon" />} label="FitCoins" value={balance} />
           <Stat
             icon={<TrendingUp className="h-4 w-4 text-electric" />}
@@ -209,6 +209,16 @@ function Profile() {
             icon={<Shield className="h-4 w-4 text-neon" />}
             label={t("profile.trust_score")}
             value={`${profile.trust_score}%`}
+          />
+          <Stat
+            icon={<Users className="h-4 w-4 text-neon" />}
+            label="Seguidores"
+            value={profile.followers_count ?? 0}
+          />
+          <Stat
+            icon={<Users className="h-4 w-4 text-electric" />}
+            label="Seguidos"
+            value={profile.following_count ?? 0}
           />
         </div>
       </div>

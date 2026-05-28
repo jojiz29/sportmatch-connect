@@ -1,14 +1,17 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { MOCK_TRANSACTIONS, MOCK_USERS } from "@/lib/mock";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { MOCK_TRANSACTIONS, MOCK_USERS, syncMockUsersToStorage } from "@/lib/mock";
 import { Transaction } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { safeLocalStorage } from "@/shared/lib/safeStorage";
+import { createNotification } from "@/shared/api/notificationService";
 
 interface WalletState {
   balance: number;
   transactions: Transaction[];
   initWallet: () => void;
   redeem: (cost: number, description: string) => boolean;
+  purchaseItem: (cost: number, itemName: string, sellerId: string) => boolean;
 }
 
 export const useWalletStore = create<WalletState>()(
@@ -68,11 +71,97 @@ export const useWalletStore = create<WalletState>()(
           transactions: [newTransaction, ...transactions],
         });
 
+        syncMockUsersToStorage();
+
+        // Trigger notification
+        createNotification(
+          user.id,
+          "TRANSACTION_SUCCESS",
+          "Canje Exitoso",
+          `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
+          "/app/wallet/history"
+        ).catch((e) => console.warn(e));
+
+        return true;
+      },
+
+      purchaseItem: (cost, itemName, sellerId) => {
+        const user = useAuthStore.getState().user;
+        if (!user) return false;
+
+        const { balance, transactions } = get();
+        if (balance < cost) return false;
+
+        const newBalance = balance - cost;
+
+        // 1. Generate SPEND transaction for the buyer (Player)
+        const spendTx: Transaction = {
+          id: `txn_${Date.now()}_spend`,
+          user_id: user.id,
+          amount: -cost,
+          description: `Compra: ${itemName}`,
+          type: "SPEND",
+          created_at: new Date().toISOString(),
+        };
+        MOCK_TRANSACTIONS.unshift(spendTx);
+
+        // 2. Update buyer balance
+        user.fitcoins_balance = newBalance;
+        const buyerMock = MOCK_USERS.find((u) => u.id === user.id);
+        if (buyerMock) {
+          buyerMock.fitcoins_balance = newBalance;
+        }
+        useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
+
+        // 3. Increment seller balance & generate EARN transaction for the seller (Business)
+        const sellerMock = MOCK_USERS.find((u) => u.id === sellerId);
+        if (sellerMock) {
+          const oldSellerBalance = sellerMock.fitcoins_balance || 0;
+          const newSellerBalance = oldSellerBalance + cost;
+          sellerMock.fitcoins_balance = newSellerBalance;
+
+          const earnTx: Transaction = {
+            id: `txn_${Date.now()}_earn`,
+            user_id: sellerId,
+            amount: cost,
+            description: `Venta: ${itemName} a ${user.name}`,
+            type: "EARN",
+            created_at: new Date().toISOString(),
+          };
+          MOCK_TRANSACTIONS.unshift(earnTx);
+        }
+
+        set({
+          balance: newBalance,
+          transactions: [spendTx, ...transactions],
+        });
+
+        syncMockUsersToStorage();
+
+        // Trigger TRANSACTION_SUCCESS for buyer (Player)
+        createNotification(
+          user.id,
+          "TRANSACTION_SUCCESS",
+          "Compra Exitosa",
+          `Compraste ${itemName} por ${cost} FC.`,
+          "/app/wallet/history"
+        ).catch((e) => console.warn(e));
+
+        // Trigger TRANSACTION_SUCCESS for seller (Business)
+        createNotification(
+          sellerId,
+          "TRANSACTION_SUCCESS",
+          "Venta Completada",
+          `Vendiste ${itemName} a ${user.name} por ${cost} FC.`,
+          "/app/business"
+        ).catch((e) => console.warn(e));
+
         return true;
       },
     }),
     {
       name: "sportmatch-wallet",
+      storage: createJSONStorage(() => safeLocalStorage),
     },
   ),
 );

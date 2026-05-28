@@ -1,12 +1,14 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { User } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { MOCK_USERS } from "@/lib/mock";
+import { safeLocalStorage } from "@/shared/lib/safeStorage";
+import { getFollowStats } from "@/shared/api/socialService";
 
 interface ProfileState {
   profile: User | null;
-  initProfile: () => void;
+  initProfile: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
 }
 
@@ -14,8 +16,27 @@ export const useProfileStore = create<ProfileState>()(
   persist(
     (set) => ({
       profile: null,
-      initProfile: () => {
-        set({ profile: useAuthStore.getState().user });
+      initProfile: async () => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) return;
+        
+        // Expose immediately, then enrich with follow stats
+        set({ profile: currentUser });
+
+        try {
+          const stats = await getFollowStats(currentUser.id);
+          set((state) => ({
+            profile: state.profile
+              ? {
+                  ...state.profile,
+                  followers_count: stats.followersCount,
+                  following_count: stats.followingCount,
+                }
+              : null,
+          }));
+        } catch (error) {
+          console.error("Error loading follow stats:", error);
+        }
       },
       updateProfile: (data) => {
         const currentUser = useAuthStore.getState().user;
@@ -32,11 +53,14 @@ export const useProfileStore = create<ProfileState>()(
         // Update in auth store
         useAuthStore.setState({ user: updated });
 
-        set({ profile: updated });
+        set((state) => ({
+          profile: state.profile ? { ...state.profile, ...data } : updated,
+        }));
       },
     }),
     {
       name: "sportmatch-profile",
+      storage: createJSONStorage(() => safeLocalStorage),
     },
   ),
 );

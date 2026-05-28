@@ -22,6 +22,29 @@ export const MOCK_USERS: User[] = [
     last_location_lng: -76.995,
     email: "ejuniorfloress@gmail.com",
     password: "EdwinFlores123?",
+    user_role: "PLAYER",
+  },
+  {
+    id: "user-puka-power",
+    created_at: isoNow,
+    name: "Puka Power",
+    age: 5,
+    city: "Surco",
+    avatar_url: "https://api.dicebear.com/7.x/identicon/svg?seed=PukaPower",
+    bio: "Puka Power Oficial - Energizante Premium. ⚡🔋 Recarga tus energías y canjea tus bebidas.",
+    trust_score: 100,
+    matches_played: 0,
+    fitcoins_balance: 100000,
+    level: "Elite",
+    preferred_sports: [],
+    last_location_lat: -12.135,
+    last_location_lng: -76.99,
+    email: "puka@puka.com",
+    password: "Puka123?",
+    user_role: "BUSINESS",
+    company_name: "Puka Power S.A.C.",
+    business_category: "Bebidas",
+    is_sponsored: true,
   },
   {
     id: "user-fabiola",
@@ -38,6 +61,8 @@ export const MOCK_USERS: User[] = [
     preferred_sports: ["Pádel", "Tenis"],
     last_location_lat: -12.13,
     last_location_lng: -76.98,
+    email: "fabiola@sportmatch.app",
+    password: "Fabiola123?",
   },
   {
     id: uuid(1),
@@ -651,3 +676,33 @@ export const MOCK_CHATS: Chat[] = [
     ],
   },
 ];
+
+// Load dynamically registered users from localStorage on module initialization
+if (typeof window !== "undefined") {
+  const registeredRaw = localStorage.getItem("sportmatch-registered-users");
+  if (registeredRaw) {
+    try {
+      const registeredList = JSON.parse(registeredRaw);
+      registeredList.forEach((u: any) => {
+        if (!MOCK_USERS.some((existing) => existing.id === u.id)) {
+          MOCK_USERS.push(u);
+        }
+      });
+    } catch (e) {
+      console.error("Failed to parse registered mock users:", e);
+    }
+  }
+}
+
+// Sync current mock users back to storage
+export function syncMockUsersToStorage() {
+  if (typeof window !== "undefined") {
+    const dynamicUsers = MOCK_USERS.filter((u) => 
+      u.id !== "user-edwin-master" && 
+      u.id !== "user-fabiola" && 
+      u.id !== "user-puka-power" &&
+      !u.id.startsWith("00000000-0000-0000-0000-")
+    );
+    localStorage.setItem("sportmatch-registered-users", JSON.stringify(dynamicUsers));
+  }
+}

@@ -10,9 +10,12 @@ export const Route = createFileRoute("/app/")({
 });
 
 import { useState } from "react";
+import { NewsFeed } from "@/features/feed/ui/NewsFeed";
+import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 
 function Dashboard() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"matches" | "feed" | "squads">("matches");
   const user = useAuthStore((state) => state.user);
 
   const filteredMatches = selectedSport
@@ -85,22 +88,83 @@ function Dashboard() {
         ))}
       </div>
 
+      {/* Tabs Selector */}
+      <div className="flex gap-4 border-b border-border/50 pb-2 mb-6">
+        <button
+          onClick={() => setActiveTab("matches")}
+          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
+            activeTab === "matches"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          id="dashboard-tab-matches"
+        >
+          Partidos
+        </button>
+        <button
+          onClick={() => setActiveTab("feed")}
+          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
+            activeTab === "feed"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          id="dashboard-tab-feed"
+        >
+          Comunidad (Feed)
+        </button>
+        <button
+          onClick={() => setActiveTab("squads")}
+          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
+            activeTab === "squads"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          id="dashboard-tab-squads"
+        >
+          Squads (Clubes)
+        </button>
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recommended matches */}
+        {/* Main Column */}
         <div className="lg:col-span-2 space-y-4">
-          <PageHeader
-            title="Partidos recomendados"
-            subtitle="Curado por IA según tu nivel y horarios"
-          />
-          <div className="grid sm:grid-cols-2 gap-4">
-            {filteredMatches.length > 0 ? (
-              filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
-            ) : (
-              <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
-                No hay partidos recomendados para este deporte.
+          {activeTab === "matches" && (
+            <>
+              <PageHeader
+                title="Partidos recomendados"
+                subtitle="Curado por IA según tu nivel y horarios"
+              />
+              <div className="grid sm:grid-cols-2 gap-4">
+                {filteredMatches.length > 0 ? (
+                  filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
+                ) : (
+                  <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
+                    No hay partidos recomendados para este deporte.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
+
+          {activeTab === "feed" && (
+            <>
+              <PageHeader
+                title="Feed de Noticias"
+                subtitle="Novedades de los jugadores que sigues"
+              />
+              <NewsFeed />
+            </>
+          )}
+
+          {activeTab === "squads" && (
+            <>
+              <PageHeader
+                title="Squads y Clubes"
+                subtitle="Comunidades y equipos de tu zona"
+              />
+              <SquadExplorer />
+            </>
+          )}
         </div>
 
         {/* Side */}

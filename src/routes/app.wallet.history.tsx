@@ -17,6 +17,7 @@ function WalletHistory() {
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <Link
         to="/app/wallet"
+        search={{ buyItem: undefined }}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" /> {t("wallet.back")}
