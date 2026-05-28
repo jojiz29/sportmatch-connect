@@ -5,11 +5,12 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { MOCK_USERS } from "@/lib/mock";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { getFollowStats } from "@/shared/api/socialService";
+import { apiClient } from "@/shared/api/apiClient";
 
 interface ProfileState {
   profile: User | null;
   initProfile: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -38,9 +39,17 @@ export const useProfileStore = create<ProfileState>()(
           console.error("Error loading follow stats:", error);
         }
       },
-      updateProfile: (data) => {
+      updateProfile: async (data) => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return;
+
+        // Persist to database if mocks are off
+        try {
+          await apiClient.users.updateProfile(currentUser.id, data);
+        } catch (error) {
+          console.error("Failed to update database profile:", error);
+          throw error;
+        }
 
         const updated = { ...currentUser, ...data };
 

@@ -5,6 +5,7 @@ import { Court, Match, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
+import { Link } from "@tanstack/react-router";
 
 // Cache for Leaflet court icons to prevent memory leaks and GC overhead
 const courtIconCache = new Map<string, L.DivIcon>();
@@ -153,12 +154,12 @@ export function MapFeature({
               <div className="text-xs font-semibold text-neon flex items-center gap-1 mb-3">
                 🔥 {activeMatches} {activeMatches === 1 ? "partido activo" : "partidos activos"}
               </div>
-              <a
-                href={`/app/courts/${c.id}`}
+              <Link
+                to={`/app/courts/${c.id}`}
                 className="block w-full text-center px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-glow"
               >
                 {t("map.view_court")}
-              </a>
+              </Link>
             </div>
           </Popup>
         </Marker>
@@ -190,12 +191,12 @@ export function MapFeature({
                 {m.distance_km !== undefined ? `${m.distance_km} km de distancia` : "Cerca de ti"}
               </div>
               {isBusiness && (
-                <a
-                  href="/app/wallet"
+                <Link
+                  to="/app/wallet"
                   className="block w-full text-center px-2 py-1.5 mt-3 rounded-xl bg-gradient-primary text-primary-foreground text-[10px] font-bold hover:scale-[1.02] transition-transform"
                 >
                   Ver Catálogo
-                </a>
+                </Link>
               )}
             </div>
           </Popup>

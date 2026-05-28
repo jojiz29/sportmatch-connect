@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Activity, HeartPulse, Zap, Watch, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useIoTStore } from "@/features/iot/store";
 
 export const Route = createFileRoute("/app/iot")({
   head: () => ({ meta: [{ title: "Telemetría — SportMatch" }] }),
@@ -11,24 +12,35 @@ export const Route = createFileRoute("/app/iot")({
 const STATIC_SPEED = 12.4;
 
 function IoT() {
-  const [heartRate, setHeartRate] = useState(142);
-  const [calories, setCalories] = useState(650);
-  const [history, setHistory] = useState([60, 80, 120, 145, 130, 160, 142]);
+  const { currentData, history: storeHistory } = useIoTStore();
+
+  const heartRate = currentData?.heartRate ?? 142;
+  const calories = currentData?.calories ?? 650;
+
+  // Fallback beautiful initial points if store history is empty, otherwise map from telemetry history
+  const chartHistory = storeHistory.length > 0
+    ? storeHistory.map((d) => d.heartRate)
+    : [60, 80, 120, 145, 130, 160, heartRate];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setHeartRate((prevHr) => {
-        // Oscilar suavemente entre 110 y 165 bpm
-        const change = Math.floor(Math.random() * 7) - 3; // drift: -3 a +3
-        const nextHr = Math.max(110, Math.min(165, prevHr + change));
+      const state = useIoTStore.getState();
+      const currentHr = state.currentData?.heartRate ?? 142;
+      const currentCal = state.currentData?.calories ?? 650;
 
-        // Actualizar el historial dinámicamente
-        setHistory((prevHist) => [...prevHist.slice(1), nextHr]);
-        return nextHr;
+      // Smooth heart rate oscillation between 110 and 165 bpm
+      const change = Math.floor(Math.random() * 7) - 3; // drift: -3 to +3
+      const nextHr = Math.max(110, Math.min(165, currentHr + change));
+
+      // Accumulate +1 or +2 active calories on every tick
+      const calChange = Math.random() > 0.5 ? 2 : 1;
+      const nextCal = currentCal + calChange;
+
+      state.updateTelemetry({
+        heartRate: nextHr,
+        calories: nextCal,
+        timestamp: new Date().toISOString(),
       });
-
-      // Acumular +1 o +2 calorías en cada tick
-      setCalories((prevCal) => prevCal + (Math.random() > 0.5 ? 2 : 1));
     }, 1500);
 
     return () => {
@@ -61,7 +73,7 @@ function IoT() {
             </div>
 
             <div className="mt-8 flex items-end gap-2 h-32 relative z-10">
-              {history.map((v: number, i: number) => (
+              {chartHistory.map((v: number, i: number) => (
                 <div key={i} className="flex-1 flex flex-col justify-end items-center group">
                   <div
                     className="w-full rounded-t-lg bg-gradient-to-t from-destructive/20 to-destructive transition-all duration-500 group-hover:opacity-80"
