@@ -39,7 +39,21 @@ export const apiClient = {
   users: {
     async getMatches(): Promise<User[]> {
       if (USE_MOCKS) return Promise.resolve(MOCK_USERS.filter((_, i) => i > 0));
-      return fetchSupabase<User[]>(supabase.from("users").select("*"));
+      return fetchSupabase<User[]>(
+        supabase
+          .from("users")
+          .select(
+            "id, created_at, name, age, city, avatar_url, bio, trust_score, fitcoins_balance, level, preferred_sports, matches_played, last_location_lat, last_location_lng, user_role, company_name, business_category, is_sponsored",
+          ),
+      );
+    },
+    async updateProfile(userId: string, data: Partial<User>): Promise<User> {
+      if (USE_MOCKS) {
+        return Promise.resolve({ id: userId, ...data } as User);
+      }
+      return fetchSupabase<User>(
+        supabase.from("users").update(data).eq("id", userId).select().single(),
+      );
     },
   },
 
@@ -87,6 +101,60 @@ export const apiClient = {
           .eq("user_id", userId)
           .order("created_at", { ascending: false }),
       );
+    },
+    async createTransaction(
+      userId: string,
+      amount: number,
+      description: string,
+      type: "EARN" | "SPEND" | "PENALTY",
+    ): Promise<Transaction> {
+      if (USE_MOCKS) {
+        const newTx: Transaction = {
+          id: `txn_${Date.now()}`,
+          created_at: new Date().toISOString(),
+          user_id: userId,
+          amount,
+          description,
+          type,
+        };
+        return Promise.resolve(newTx);
+      }
+
+      // Insert transaction log
+      const txData = await fetchSupabase<Transaction>(
+        supabase
+          .from("transactions")
+          .insert([
+            {
+              id: `txn_${Date.now()}`,
+              user_id: userId,
+              amount,
+              description,
+              type,
+            },
+          ])
+          .select()
+          .single(),
+      );
+
+      // Deduct or increment user fitcoins_balance
+      const { data: userProfile, error: getErr } = await supabase
+        .from("users")
+        .select("fitcoins_balance")
+        .eq("id", userId)
+        .single();
+      if (getErr) throw new Error(getErr.message);
+
+      const currentBalance = userProfile?.fitcoins_balance || 0;
+      const newBalance = currentBalance + amount;
+
+      const { error: updateErr } = await supabase
+        .from("users")
+        .update({ fitcoins_balance: newBalance })
+        .eq("id", userId);
+      if (updateErr) throw new Error(updateErr.message);
+
+      return txData;
     },
   },
 
