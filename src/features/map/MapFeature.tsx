@@ -1,11 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Court, User } from "@/entities/types";
+import { Court, Match, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
-import { MOCK_MATCHES } from "@/lib/mock";
 
 // Generador de iconos premium personalizados usando L.divIcon
 const createCourtIcon = (sport: string) => {
@@ -59,7 +58,15 @@ const playerIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
-export function MapFeature({ courts, matches }: { courts: Court[]; matches: User[] }) {
+export function MapFeature({
+  courts,
+  players,
+  matches,
+}: {
+  courts: Court[];
+  players: User[];
+  matches: Match[];
+}) {
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
@@ -69,7 +76,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
 
   const courtMarkers = useMemo(() => {
     return courts.map((c) => {
-      const activeMatches = MOCK_MATCHES.filter((m) => m.court_id === c.id).length;
+      const activeMatches = matches.filter((m) => m.court_id === c.id).length;
       return (
         <Marker key={c.id} position={[c.lat, c.lng]} icon={createCourtIcon(c.sport)}>
           <Popup>
@@ -95,22 +102,26 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
   }, [courts, t]);
 
   const matchMarkers = useMemo(() => {
-    return matches.map((m) => {
-      if (!m.last_location_lat || !m.last_location_lng) return null;
+    return players.map((player) => {
+      if (!player.last_location_lat || !player.last_location_lng) return null;
       return (
-        <Marker key={m.id} position={[m.last_location_lat, m.last_location_lng]} icon={playerIcon}>
+        <Marker
+          key={player.id}
+          position={[player.last_location_lat, player.last_location_lng]}
+          icon={playerIcon}
+        >
           <Popup>
             <div className="p-1 font-sans">
-              <div className="font-bold text-sm text-foreground">{m.name}</div>
+              <div className="font-bold text-sm text-foreground">{player.name}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {m.distance_km} km de distancia
+                {player.distance_km} km de distancia
               </div>
             </div>
           </Popup>
         </Marker>
       );
     });
-  }, [matches]);
+  }, [players]);
 
   if (!mounted || typeof window === "undefined") {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;

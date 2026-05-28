@@ -1,23 +1,44 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { MOCK_MATCHES, MOCK_USERS, MOCK_COURTS, SPORTS } from "@/lib/mock";
+import { apiClient } from "@/shared/api/apiClient";
+import { Match, User, Court } from "@/entities/types";
 import { Trophy, Flame, MapPin, Users, ArrowRight, Calendar, Star, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
+  loader: async () => {
+    const [matches, users, courts] = await Promise.all([
+      apiClient.matches.getAll(),
+      apiClient.users.getMatches(),
+      apiClient.courts.getAll(),
+    ]);
+    return { matches, users, courts };
+  },
   component: Dashboard,
 });
-
-import { useState } from "react";
 
 function Dashboard() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
+  const { matches, users, courts } = Route.useLoaderData() as {
+    matches: Match[];
+    users: User[];
+    courts: Court[];
+  };
 
   const filteredMatches = selectedSport
-    ? MOCK_MATCHES.filter((m) => m.sport === selectedSport)
-    : MOCK_MATCHES;
+    ? matches.filter((m) => m.sport === selectedSport)
+    : matches;
+
+  const SPORTS = [
+    { name: "Pádel", emoji: "🏓" },
+    { name: "Fútbol", emoji: "⚽" },
+    { name: "Tenis", emoji: "🎾" },
+    { name: "Running", emoji: "🏃" },
+  ];
 
   if (!user) return null;
 
@@ -31,7 +52,7 @@ function Dashboard() {
             <div className="text-sm text-muted-foreground">Hola,</div>
             <h1 className="text-3xl md:text-4xl font-bold">{user.name.split(" ")[0]} 👋</h1>
             <p className="text-muted-foreground mt-1">
-              Tenés {MOCK_MATCHES.length} partidos compatibles cerca tuyo hoy.
+              Tenés {matches.length} partidos compatibles cerca tuyo hoy.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
@@ -113,7 +134,7 @@ function Dashboard() {
               </Link>
             </div>
             <div className="space-y-3">
-              {MOCK_USERS.slice(0, 4).map((p) => (
+              {users.slice(0, 4).map((p) => (
                 <div key={p.id} className="flex items-center gap-3">
                   <img src={p.avatar_url} alt="" className="h-10 w-10 rounded-full bg-muted" />
                   <div className="flex-1 min-w-0">
@@ -133,7 +154,7 @@ function Dashboard() {
           <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
             <h3 className="font-semibold mb-4">Canchas top</h3>
             <div className="space-y-3">
-              {MOCK_COURTS.slice(0, 3).map((c) => (
+              {courts.slice(0, 3).map((c) => (
                 <div key={c.id} className="flex gap-3">
                   <img
                     src={c.image_url}
@@ -177,9 +198,6 @@ function Stat({
     </div>
   );
 }
-
-import { toast } from "sonner";
-import { Match } from "@/entities/types";
 
 function MatchCard({ match }: { match: Match }) {
   const [joined, setJoined] = useState(false);
