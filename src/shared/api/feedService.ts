@@ -1,110 +1,96 @@
-import { query } from "@/shared/lib/database";
-import { Post, CatalogItem } from "@/entities/types";
-import { useFeedStore } from "@/features/feed/model/useFeedStore";
-import { useSocialStore } from "@/features/social/model/useSocialStore";
-import { MOCK_USERS } from "@/lib/mock";
+import { supabase } from "./supabase";
+import { Post } from "@/entities/types";
 import { calculateDistance } from "./geoService";
+import { createNotification } from "./notificationService";
 
-const USE_MOCKS =
-  (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
-
-/**
- * Gets the custom news feed for a given user.
- * Combines the user's own posts, posts from accounts they follow,
- * and sponsored posts from businesses within a 5km radius.
- */
-export async function getFeed(userId: string): Promise<Post[]> {
-  if (USE_MOCKS) {
-    const allPosts = useFeedStore.getState().posts;
-    const currentUser = MOCK_USERS.find((u) => u.id === userId);
-
-    const feed = allPosts.filter((p) => {
-      if (p.user_id === userId) return true;
-
-      const following = useSocialStore.getState().isFollowing(userId, p.user_id);
-      if (following) return true;
-
-      // Sponsored business injection within 5km radius
-      const postAuthor = MOCK_USERS.find((u) => u.id === p.user_id);
-      if (postAuthor && postAuthor.is_sponsored) {
-        if (!currentUser?.last_location_lat || !currentUser?.last_location_lng) return true;
-        if (!postAuthor.last_location_lat || !postAuthor.last_location_lng) return true;
-
-        const dist = calculateDistance(
-          currentUser.last_location_lat,
-          currentUser.last_location_lng,
-          postAuthor.last_location_lat,
-          postAuthor.last_location_lng,
-        );
-        return dist <= 5;
-      }
-
-      return false;
-    });
-
-    // Sort by created_at desc
-    return Promise.resolve(
-      feed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    );
-  }
-
-  const sqlQuery = `
-    SELECT 
-      p.id, 
-      p.user_id, 
-      p.content, 
-      p.type, 
-      p.created_at, 
-      p.media_url, 
-      p.sport,
-      u.name as user_name,
-      u.avatar_url as user_avatar,
-      u.is_sponsored
-    FROM public.posts p
-    JOIN public.users u ON p.user_id = u.id
-    WHERE p.user_id = $1 
-       OR p.user_id IN (SELECT following_id FROM public.followers WHERE follower_id = $1)
-       OR (u.is_sponsored = true AND u.last_location_lat IS NOT NULL AND u.last_location_lng IS NOT NULL AND (
-           SELECT ST_DWithin(
-             ST_SetSRID(ST_Point(u.last_location_lng, u.last_location_lat), 4326)::geography,
-             ST_SetSRID(ST_Point(curr.last_location_lng, curr.last_location_lat), 4326)::geography,
-             5000
-           )
-           FROM public.users curr
-           WHERE curr.id = $1
-       ))
-    ORDER BY p.created_at DESC;
-  `;
-
-  try {
-    const result = await query(sqlQuery, [userId]);
-    return (result.rows || []).map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (row: any): Post => ({
-        id: row.id,
-        user_id: row.user_id,
-        content: row.content,
-
-        type: row.type as Post["type"],
-        created_at: row.created_at,
-        media_url: row.media_url || undefined,
-        sport: row.sport || undefined,
-        user_name: row.user_name,
-        user_avatar: row.user_avatar,
-      }),
-    );
-  } catch (error) {
-    console.error("Vercel Postgres getFeed query failed:", error);
-    throw error;
-  }
+interface SupabasePost {
+  id: string;
+  user_id: string;
+  content: string;
+  type: string;
+  created_at: string;
+  media_url: string | null;
+  sport: string | null;
+  profile: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    user_role?: "PLAYER" | "BUSINESS";
+    company_name?: string | null;
+    is_sponsored?: boolean;
+    last_location_lat?: number | null;
+    last_location_lng?: number | null;
+  } | null;
 }
 
-/**
- * Creates a new post in the feed.
- * In mock mode, enriches the post and saves it to useFeedStore.
- * In production mode, inserts the post into Vercel Postgres and fetches user details.
- */
+export async function getFeed(userId: string): Promise<Post[]> {
+  // 1. Fetch user's own profile for distance calculation
+  const { data: currentUser } = await supabase
+    .from("profiles")
+    .select("last_location_lat, last_location_lng")
+    .eq("id", userId)
+    .single();
+
+  // 2. Fetch the list of followed users
+  const { data: following } = await supabase
+    .from("followers")
+    .select("following_id")
+    .eq("follower_id", userId);
+
+  const followingIds = new Set((following || []).map((f) => f.following_id));
+
+  // 3. Fetch all posts with their author profiles
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*, profile:profiles(*)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching feed from Supabase:", error);
+    throw error;
+  }
+
+  // 4. Filter posts based on logic (own, following, or sponsored within 5km)
+  const filtered = ((posts as unknown as SupabasePost[]) || []).filter((post) => {
+    const author = post.profile;
+    if (!author) return false;
+
+    // Own post
+    if (post.user_id === userId) return true;
+
+    // Following user post
+    if (followingIds.has(post.user_id)) return true;
+
+    // Sponsored post within 5km
+    if (author.is_sponsored) {
+      if (!currentUser?.last_location_lat || !currentUser?.last_location_lng) return false;
+      if (!author.last_location_lat || !author.last_location_lng) return false;
+
+      const dist = calculateDistance(
+        parseFloat(String(currentUser.last_location_lat)),
+        parseFloat(String(currentUser.last_location_lng)),
+        parseFloat(String(author.last_location_lat)),
+        parseFloat(String(author.last_location_lng)),
+      );
+      return dist <= 5;
+    }
+
+    return false;
+  });
+
+  return (filtered as SupabasePost[]).map((post) => ({
+    id: post.id,
+    user_id: post.user_id,
+    content: post.content,
+    type: post.type as Post["type"],
+    created_at: post.created_at,
+    media_url: post.media_url || undefined,
+    sport: (post.sport as Post["sport"]) || undefined,
+    user_name: post.profile?.name || "Deportista",
+    user_avatar: post.profile?.avatar_url || "",
+  }));
+}
+
 export async function createPost(
   userId: string,
   content: string,
@@ -112,81 +98,55 @@ export async function createPost(
   mediaUrl?: string,
   sport?: Post["sport"],
 ): Promise<Post> {
-  const newPost: Post = {
-    id: `post-${Date.now()}`,
-    user_id: userId,
-    content,
-    type,
-    created_at: new Date().toISOString(),
-    media_url: mediaUrl,
-    sport,
-  };
+  const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Helper function to trigger notifications for business followers
-  const notifyFollowers = async () => {
-    try {
-      let isBusiness = false;
-      let businessName = "Un negocio";
-      let itemIdToLink = "";
+  // 1. Insert post in Supabase
+  const { data: post, error } = await supabase
+    .from("posts")
+    .insert({
+      id: newPostId,
+      user_id: userId,
+      content,
+      type,
+      media_url: mediaUrl || null,
+      sport: sport || null,
+    })
+    .select("*, profile:profiles(*)")
+    .single();
 
-      if (USE_MOCKS) {
-        const author = MOCK_USERS.find((u) => u.id === userId);
-        if (author && author.user_role === "BUSINESS") {
-          isBusiness = true;
-          businessName = author.company_name || author.name;
-        }
-      } else {
-        const userRes = await query(
-          "SELECT user_role, company_name, name FROM public.users WHERE id = $1",
-          [userId],
-        );
-        if (userRes.rows?.[0] && userRes.rows[0].user_role === "BUSINESS") {
-          isBusiness = true;
-          businessName = userRes.rows[0].company_name || userRes.rows[0].name;
-        }
-      }
+  if (error || !post) {
+    console.error("Error creating post in Supabase:", error);
+    throw error || new Error("Failed to create post");
+  }
 
-      if (isBusiness) {
-        if (USE_MOCKS) {
-          const { useBusinessStore } = await import("@/features/business/model/useBusinessStore");
-          const catalogItems = useBusinessStore
-            .getState()
-            .catalogItems.filter((item: CatalogItem) => item.business_id === userId);
-          if (catalogItems.length > 0) {
-            itemIdToLink = catalogItems[0].id;
-          } else {
-            if (userId === "user-puka-power") itemIdToLink = "puka-power-bottle";
-          }
-        } else {
-          const catRes = await query(
-            "SELECT id FROM public.business_catalog WHERE business_id = $1 LIMIT 1",
-            [userId],
-          );
-          if (catRes.rows?.[0]) itemIdToLink = catRes.rows[0].id;
-        }
+  // 2. Trigger notification for business followers
+  try {
+    const author = (post as unknown as SupabasePost).profile;
+    if (author && author.user_role === "BUSINESS") {
+      const businessName = author.company_name || author.name;
 
-        const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
-        const notifTitle = `Nueva oferta de ${businessName}`;
-        const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
+      // Fetch first catalog item for deep link
+      const { data: catalogItems } = await supabase
+        .from("business_catalog")
+        .select("id")
+        .eq("business_id", userId)
+        .limit(1);
 
-        let followersList: string[] = [];
-        if (USE_MOCKS) {
-          followersList = useSocialStore
-            .getState()
-            .relationships.filter((r) => r.followingId === userId)
-            .map((r) => r.followerId);
-        } else {
-          const follRes = await query(
-            "SELECT follower_id FROM public.followers WHERE following_id = $1",
-            [userId],
-          );
-          followersList = follRes.rows.map((r) => r.follower_id);
-        }
+      const itemIdToLink = catalogItems?.[0]?.id;
+      const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
+      const notifTitle = `Nueva oferta de ${businessName}`;
+      const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
 
-        const { createNotification } = await import("@/shared/api/notificationService");
-        for (const followerId of followersList) {
+      // Fetch followers
+      const { data: followers } = await supabase
+        .from("followers")
+        .select("follower_id")
+        .eq("following_id", userId);
+
+      if (followers && followers.length > 0) {
+        for (const f of followers) {
           await createNotification(
-            followerId,
+            f.follower_id,
             "AD_IMPRESSION",
             notifTitle,
             notifContent,
@@ -194,62 +154,25 @@ export async function createPost(
           );
         }
       }
-    } catch (err) {
-      console.warn("Could not trigger B2B post notifications:", err);
     }
+  } catch (err) {
+    console.warn("Could not trigger B2B post notifications:", err);
+  }
+
+  const postAuthor = (post as unknown as SupabasePost).profile || {
+    name: "Deportista",
+    avatar_url: "",
   };
 
-  if (USE_MOCKS) {
-    // Resolve user avatar/name from MOCK_USERS
-    const user = MOCK_USERS.find((u) => u.id === userId);
-    newPost.user_name = user ? user.name : "Edwin Flores";
-    newPost.user_avatar = user
-      ? user.avatar_url
-      : "https://api.dicebear.com/7.x/avataaars/svg?seed=Edwin";
-
-    useFeedStore.getState().addPost(newPost);
-    notifyFollowers().catch((e) => console.warn(e));
-    return Promise.resolve(newPost);
-  }
-
-  const sqlQuery = `
-    INSERT INTO public.posts (id, user_id, content, type, media_url, sport)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING id, user_id, content, type, created_at, media_url, sport;
-  `;
-
-  try {
-    const result = await query(sqlQuery, [
-      newPost.id,
-      userId,
-      content,
-      type,
-      mediaUrl || null,
-      sport || null,
-    ]);
-    const row = result.rows[0];
-
-    // Enrich with user name/avatar
-    const userQuery = `SELECT name, avatar_url FROM public.users WHERE id = $1;`;
-    const userResult = await query(userQuery, [userId]);
-    const userRow = userResult.rows[0] || {};
-
-    notifyFollowers().catch((e) => console.warn(e));
-
-    return {
-      id: row.id,
-      user_id: row.user_id,
-      content: row.content,
-
-      type: row.type as Post["type"],
-      created_at: row.created_at,
-      media_url: row.media_url || undefined,
-      sport: row.sport || undefined,
-      user_name: userRow.name || "Usuario",
-      user_avatar: userRow.avatar_url || "",
-    };
-  } catch (error) {
-    console.error("Vercel Postgres createPost query failed:", error);
-    throw error;
-  }
+  return {
+    id: post.id,
+    user_id: post.user_id,
+    content: post.content,
+    type: post.type as Post["type"],
+    created_at: post.created_at,
+    media_url: post.media_url || undefined,
+    sport: post.sport || undefined,
+    user_name: postAuthor.name || "Deportista",
+    user_avatar: postAuthor.avatar_url || "",
+  };
 }

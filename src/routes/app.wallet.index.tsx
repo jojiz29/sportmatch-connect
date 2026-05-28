@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { MOCK_USERS } from "@/lib/mock";
 import { Trophy, Gift, Zap, Crown, X, ShoppingBag } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { useState, useEffect, useMemo } from "react";
@@ -9,7 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { getCatalogItems, purchaseCatalogItem } from "@/shared/api/businessService";
-import { CatalogItem } from "@/entities/types";
+import { CatalogItem, User } from "@/entities/types";
+import { apiClient } from "@/shared/api/apiClient";
 
 export const Route = createFileRoute("/app/wallet/")({
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
@@ -36,6 +36,20 @@ function Wallet() {
   const [purchasing, setPurchasing] = useState(false);
   const user = useAuthStore((state) => state.user);
   const { buyItem } = Route.useSearch();
+  const [leaderboardUsers, setLeaderboardUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.users
+      .getMatches()
+      .then((users) => {
+        if (active) setLeaderboardUsers(users);
+      })
+      .catch((err) => console.error("Error loading leaderboard users:", err));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     initWallet();
@@ -69,8 +83,8 @@ function Wallet() {
     loadCatalog();
   }, [user, buyItem]);
 
-  const handleRedeem = (reward: (typeof REWARDS)[0]) => {
-    const success = redeem(reward.cost, `Canje: ${reward.name}`);
+  const handleRedeem = async (reward: (typeof REWARDS)[0]) => {
+    const success = await redeem(reward.cost, `Canje: ${reward.name}`);
     if (success) {
       toast.success(t("wallet.success"), {
         description: t("wallet.success_desc", { reward: reward.name }),
@@ -106,15 +120,20 @@ function Wallet() {
   };
 
   const leaderboard = useMemo(() => {
-    // Sincronizar dinámicamente con los usuarios en memoria de MOCK_USERS
-    return MOCK_USERS.map((u) => ({
-      name: u.name,
-      avatar: u.avatar_url,
-      coins: u.id === user?.id ? balance : u.fitcoins_balance,
-    }))
+    const list = [...leaderboardUsers];
+    if (user && !list.some((u) => u.id === user.id)) {
+      list.push(user);
+    }
+    return list
+      .map((u) => ({
+        name: u.name,
+        avatar: u.avatar_url,
+        coins: u.id === user?.id ? balance : u.fitcoins_balance,
+        isMe: u.id === user?.id,
+      }))
       .sort((a, b) => b.coins - a.coins)
       .map((u, i) => ({ ...u, rank: i + 1 }));
-  }, [balance, user?.id]);
+  }, [leaderboardUsers, user, balance]);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">

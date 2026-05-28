@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MapPin, User as UserIcon, Mail, Lock, Check } from "lucide-react";
 import { Sport } from "@/entities/types";
-import { MOCK_USERS, syncMockUsersToStorage } from "@/lib/mock";
 
 export const Route = createFileRoute("/app/register")({
   component: RegisterPage,
@@ -94,12 +93,6 @@ function RegisterPage() {
       };
 
       await register(newUser);
-
-      // Inject to MOCK_USERS for mock state survival
-      if (import.meta.env.VITE_USE_MOCKS !== "false") {
-        MOCK_USERS.push(newUser);
-        syncMockUsersToStorage();
-      }
 
       toast.success(t("register.success_toast") || "¡Registro completado!");
       navigate({ to: "/app" });

@@ -5,8 +5,6 @@ import { User } from "@/entities/types";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
-
 export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => void) {
   const queryClient = useQueryClient();
 
@@ -20,13 +18,11 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
     initialData,
   });
 
-  // Suscripción Real-time
+  // Real-time subscription to new players
   useEffect(() => {
-    if (USE_MOCKS) return; // En mock mode no activamos webSockets
-
     const channel = supabase
-      .channel("public:users")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "users" }, () => {
+      .channel("public:profiles")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, () => {
         toast("¡Nuevo jugador en tu zona!", { description: "Un usuario acaba de unirse." });
         queryClient.invalidateQueries({ queryKey: ["matchmaking", "stack"] });
       })

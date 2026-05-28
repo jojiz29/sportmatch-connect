@@ -1,11 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { MOCK_USERS, MOCK_COURTS } from "@/lib/mock";
-import { Court } from "@/entities/types";
+import { Court, User } from "@/entities/types";
 import { Users, DollarSign, CalendarCheck, Activity, Star, MoreHorizontal } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { apiClient } from "@/shared/api/apiClient";
+import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin — SportMatch" }] }),
@@ -38,10 +39,32 @@ const ADMIN_KPI = {
 };
 
 function Admin() {
-  const [usersList, setUsersList] = useState(MOCK_USERS);
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [courtsList, setCourtsList] = useState<Court[]>([]);
 
-  const toggleAdmin = (userId: string) => {
-    const targetUser = MOCK_USERS.find((u) => u.id === userId);
+  useEffect(() => {
+    let active = true;
+    apiClient.users
+      .getMatches()
+      .then((users) => {
+        if (active) setUsersList(users);
+      })
+      .catch((err) => console.error("Error loading users for admin:", err));
+
+    apiClient.courts
+      .getAll()
+      .then((courts) => {
+        if (active) setCourtsList(courts);
+      })
+      .catch((err) => console.error("Error loading courts for admin:", err));
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleAdmin = async (userId: string) => {
+    const targetUser = usersList.find((u) => u.id === userId);
     if (!targetUser) return;
 
     if (targetUser.email === "ejuniorfloress@gmail.com" || targetUser.name === "Edwin Flores") {
@@ -50,14 +73,26 @@ function Admin() {
     }
 
     const updatedIsAdmin = !targetUser.is_admin;
-    targetUser.is_admin = updatedIsAdmin;
 
-    // Actualizar estado local para forzar render
-    setUsersList([...MOCK_USERS]);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_admin: updatedIsAdmin })
+        .eq("id", userId);
 
-    toast.success(
-      `Acceso de administrador ${updatedIsAdmin ? "otorgado" : "revocado"} para ${targetUser.name}`,
-    );
+      if (error) throw error;
+
+      setUsersList(
+        usersList.map((u) => (u.id === userId ? { ...u, is_admin: updatedIsAdmin } : u)),
+      );
+
+      toast.success(
+        `Acceso de administrador ${updatedIsAdmin ? "otorgado" : "revocado"} para ${targetUser.name}`,
+      );
+    } catch (e) {
+      console.error("Error updating admin role in Supabase:", e);
+      toast.error("Error al actualizar permisos");
+    }
   };
 
   const total = ADMIN_KPI.sportsShare.reduce(
@@ -211,7 +246,7 @@ function Admin() {
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">Top canchas</h3>
           <div className="space-y-3">
-            {MOCK_COURTS.map((c: Court) => (
+            {courtsList.map((c: Court) => (
               <div key={c.id} className="flex items-center gap-3">
                 <img src={c.image_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
