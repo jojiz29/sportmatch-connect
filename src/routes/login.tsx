@@ -22,8 +22,10 @@ function Login() {
       await signIn(email, password);
       toast.success(t("login.success_toast"));
       navigate({ to: "/app" });
-    } catch {
-      toast.error(t("login.error_toast"));
+    } catch (err: unknown) {
+      console.error("Error en login:", err);
+      const errorMessage = err instanceof Error ? err.message : t("login.error_toast");
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 
@@ -32,8 +34,10 @@ function Login() {
       await signIn();
       toast.success(t("login.success_toast"));
       navigate({ to: "/app" });
-    } catch {
-      toast.error(t("login.error_toast"));
+    } catch (err: unknown) {
+      console.error("Error en demo login:", err);
+      const errorMessage = err instanceof Error ? err.message : t("login.error_toast");
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 

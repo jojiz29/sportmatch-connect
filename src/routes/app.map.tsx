@@ -19,11 +19,12 @@ export const Route = createFileRoute("/app/map")({
     ],
   }),
   loader: async () => {
-    const [courts, matches] = await Promise.all([
+    const [courts, players, matches] = await Promise.all([
       apiClient.courts.getAll(),
       apiClient.users.getMatches(),
+      apiClient.matches.getAll(),
     ]);
-    return { courts, matches };
+    return { courts, players, matches };
   },
   pendingComponent: MapPendingComponent,
   component: MapPage,
@@ -67,7 +68,7 @@ function MapPage() {
     );
   }
 
-  const { courts, matches } = data;
+  const { courts, players, matches } = data;
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -76,7 +77,7 @@ function MapPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card">
           <ErrorBoundary>
-            <MapFeature courts={courts} matches={matches} />
+            <MapFeature courts={courts} players={players} matches={matches} />
           </ErrorBoundary>
         </div>
 
