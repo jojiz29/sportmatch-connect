@@ -6,33 +6,43 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
 
-// Generador de iconos premium personalizados usando L.divIcon
-const createCourtIcon = (sport: string) => {
+// Cache for Leaflet court icons to prevent memory leaks and GC overhead
+const courtIconCache = new Map<string, L.DivIcon>();
+
+const createCourtIcon = (sport: string, isSponsored?: boolean) => {
+  const cacheKey = `${sport}_${isSponsored}`;
+  if (courtIconCache.has(cacheKey)) {
+    return courtIconCache.get(cacheKey)!;
+  }
   const emoji =
     sport === "Pádel" ? "🏓" : sport === "Fútbol" ? "⚽" : sport === "Tenis" ? "🎾" : "🏃";
-  return L.divIcon({
+
+  // Gold ring for sponsored courts, purple for regular
+  const border = isSponsored ? "3px solid #fbbf24" : "2.5px solid #ffffff";
+  const bg = isSponsored
+    ? "linear-gradient(135deg, #f59e0b, #d97706)"
+    : "linear-gradient(135deg, #8b5cf6, #3b82f6)";
+  const shadow = isSponsored
+    ? "0 0 20px rgba(251, 191, 36, 0.9), 0 0 8px rgba(251, 191, 36, 0.5)"
+    : "0 0 15px rgba(139, 92, 246, 0.7)";
+  const sponsorBadge = isSponsored
+    ? `<div style="position:absolute;top:-6px;right:-6px;background:#fbbf24;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:8px;border:1px solid #fff">⭐</div>`
+    : "";
+
+  const icon = L.divIcon({
     html: `
-      <div style="
-        display: flex;
-        width: 40px;
-        height: 40px;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-        border: 2.5px solid #ffffff;
-        border-radius: 50%;
-        box-shadow: 0 0 15px rgba(139, 92, 246, 0.7);
-        font-size: 18px;
-        transition: transform 0.2s ease-in-out;
-      ">
+      <div style="position:relative;display:flex;width:40px;height:40px;align-items:center;justify-content:center;background:${bg};border:${border};border-radius:50%;box-shadow:${shadow};font-size:18px;">
         ${emoji}
+        ${sponsorBadge}
       </div>
     `,
-    className: "custom-court-marker-wrapper",
+    className: `custom-court-marker-wrapper${isSponsored ? " animate-pulse" : ""}`,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -20],
   });
+  courtIconCache.set(cacheKey, icon);
+  return icon;
 };
 
 const playerIcon = L.divIcon({
@@ -58,6 +68,52 @@ const playerIcon = L.divIcon({
   popupAnchor: [0, -16],
 });
 
+const businessIconCache = new Map<string, L.DivIcon>();
+
+const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
+  const key = `${isSponsored}_${category}`;
+  if (businessIconCache.has(key)) {
+    return businessIconCache.get(key)!;
+  }
+
+  const emoji =
+    category === "Canchas" ? "🏟️" : category === "Gym" ? "🏋️" : category === "Tienda" ? "🛍️" : "🥤";
+
+  const border = isSponsored ? "2.5px solid #fbbf24" : "2px solid #ffffff";
+  const shadow = isSponsored
+    ? "0 0 15px rgba(251, 191, 36, 0.9)"
+    : "0 0 10px rgba(16, 185, 129, 0.5)";
+  const bg = isSponsored
+    ? "linear-gradient(135deg, #f59e0b, #d97706)"
+    : "linear-gradient(135deg, #10b981, #059669)";
+
+  const icon = L.divIcon({
+    html: `
+      <div style="
+        display: flex;
+        width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        background: ${bg};
+        border: ${border};
+        border-radius: 50%;
+        box-shadow: ${shadow};
+        font-size: 16px;
+      ">
+        ${emoji}
+      </div>
+    `,
+    className: `custom-business-marker-wrapper ${isSponsored ? "animate-pulse" : ""}`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
+  });
+
+  businessIconCache.set(key, icon);
+  return icon;
+};
+
 export function MapFeature({
   courts,
   players,
@@ -78,12 +134,21 @@ export function MapFeature({
     return courts.map((c) => {
       const activeMatches = matches.filter((m) => m.court_id === c.id).length;
       return (
-        <Marker key={c.id} position={[c.lat, c.lng]} icon={createCourtIcon(c.sport)}>
+        <Marker
+          key={c.id}
+          position={[c.lat, c.lng]}
+          icon={createCourtIcon(c.sport, c.is_sponsored)}
+        >
           <Popup>
             <div className="p-1 min-w-[150px] font-sans">
+              {c.is_sponsored && (
+                <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-1.5">
+                  ⭐ Cancha Patrocinada
+                </span>
+              )}
               <div className="font-bold text-sm text-foreground mb-0.5">{c.name}</div>
               <div className="text-xs text-muted-foreground mb-1.5">
-                {c.sport} · ${c.price_per_hour}/h
+                {c.sport} · S/{c.price_per_hour}/h
               </div>
               <div className="text-xs font-semibold text-neon flex items-center gap-1 mb-3">
                 🔥 {activeMatches} {activeMatches === 1 ? "partido activo" : "partidos activos"}
@@ -99,23 +164,39 @@ export function MapFeature({
         </Marker>
       );
     });
-  }, [courts, t]);
+  }, [courts, matches, t]);
 
   const matchMarkers = useMemo(() => {
-    return players.map((player) => {
-      if (!player.last_location_lat || !player.last_location_lng) return null;
+    return players.map((m) => {
+      if (!m.last_location_lat || !m.last_location_lng) return null;
+
+      const isBusiness = m.user_role === "BUSINESS";
+      const icon = isBusiness
+        ? createBusinessIcon(m.is_sponsored, m.business_category)
+        : playerIcon;
+
       return (
-        <Marker
-          key={player.id}
-          position={[player.last_location_lat, player.last_location_lng]}
-          icon={playerIcon}
-        >
+        <Marker key={m.id} position={[m.last_location_lat, m.last_location_lng]} icon={icon}>
           <Popup>
-            <div className="p-1 font-sans">
-              <div className="font-bold text-sm text-foreground">{player.name}</div>
+            <div className="p-1 font-sans min-w-[150px]">
+              {isBusiness && m.is_sponsored && (
+                <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-1.5 animate-pulse">
+                  ⭐ Sponsor Premium
+                </span>
+              )}
+              <div className="font-bold text-sm text-foreground">{m.company_name || m.name}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {player.distance_km} km de distancia
+                {isBusiness ? `${m.business_category} · ` : ""}
+                {m.distance_km !== undefined ? `${m.distance_km} km de distancia` : "Cerca de ti"}
               </div>
+              {isBusiness && (
+                <a
+                  href="/app/wallet"
+                  className="block w-full text-center px-2 py-1.5 mt-3 rounded-xl bg-gradient-primary text-primary-foreground text-[10px] font-bold hover:scale-[1.02] transition-transform"
+                >
+                  Ver Catálogo
+                </a>
+              )}
             </div>
           </Popup>
         </Marker>

@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { MOCK_CHATS, Chat } from "@/lib/mock";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
 interface ChatState {
   chats: Chat[];
@@ -59,6 +60,7 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: "sportmatch-chat",
+      storage: createJSONStorage(() => safeLocalStorage),
     },
   ),
 );

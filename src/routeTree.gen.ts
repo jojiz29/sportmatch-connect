@@ -20,8 +20,10 @@ import { Route as AppMapRouteImport } from './routes/app.map'
 import { Route as AppIotRouteImport } from './routes/app.iot'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
 import { Route as AppChatRouteImport } from './routes/app.chat'
+import { Route as AppBusinessRouteImport } from './routes/app.business'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppWalletIndexRouteImport } from './routes/app.wallet.index'
+import { Route as AppMatchIndexRouteImport } from './routes/app.match.index'
 import { Route as AppWalletHistoryRouteImport } from './routes/app.wallet.history'
 import { Route as AppMatchUserIdRouteImport } from './routes/app.match.$userId'
 import { Route as AppCourtsCourtIdRouteImport } from './routes/app.courts.$courtId'
@@ -81,6 +83,11 @@ const AppChatRoute = AppChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBusinessRoute = AppBusinessRouteImport.update({
+  id: '/business',
+  path: '/business',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -90,6 +97,11 @@ const AppWalletIndexRoute = AppWalletIndexRouteImport.update({
   id: '/wallet/',
   path: '/wallet/',
   getParentRoute: () => AppRoute,
+} as any)
+const AppMatchIndexRoute = AppMatchIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppMatchRoute,
 } as any)
 const AppWalletHistoryRoute = AppWalletHistoryRouteImport.update({
   id: '/wallet/history',
@@ -112,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/iot': typeof AppIotRoute
@@ -123,23 +136,25 @@ export interface FileRoutesByFullPath {
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
+  '/app/match/': typeof AppMatchIndexRoute
   '/app/wallet/': typeof AppWalletIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
-  '/app/match': typeof AppMatchRouteWithChildren
   '/app/profile': typeof AppProfileRoute
   '/app/register': typeof AppRegisterRoute
   '/app': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
+  '/app/match': typeof AppMatchIndexRoute
   '/app/wallet': typeof AppWalletIndexRoute
 }
 export interface FileRoutesById {
@@ -148,6 +163,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/iot': typeof AppIotRoute
@@ -159,6 +175,7 @@ export interface FileRoutesById {
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
+  '/app/match/': typeof AppMatchIndexRoute
   '/app/wallet/': typeof AppWalletIndexRoute
 }
 export interface FileRouteTypes {
@@ -168,6 +185,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/app/admin'
+    | '/app/business'
     | '/app/chat'
     | '/app/courts'
     | '/app/iot'
@@ -179,23 +197,25 @@ export interface FileRouteTypes {
     | '/app/courts/$courtId'
     | '/app/match/$userId'
     | '/app/wallet/history'
+    | '/app/match/'
     | '/app/wallet/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/app/admin'
+    | '/app/business'
     | '/app/chat'
     | '/app/courts'
     | '/app/iot'
     | '/app/map'
-    | '/app/match'
     | '/app/profile'
     | '/app/register'
     | '/app'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
     | '/app/wallet/history'
+    | '/app/match'
     | '/app/wallet'
   id:
     | '__root__'
@@ -203,6 +223,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/app/admin'
+    | '/app/business'
     | '/app/chat'
     | '/app/courts'
     | '/app/iot'
@@ -214,6 +235,7 @@ export interface FileRouteTypes {
     | '/app/courts/$courtId'
     | '/app/match/$userId'
     | '/app/wallet/history'
+    | '/app/match/'
     | '/app/wallet/'
   fileRoutesById: FileRoutesById
 }
@@ -302,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/business': {
+      id: '/app/business'
+      path: '/business'
+      fullPath: '/app/business'
+      preLoaderRoute: typeof AppBusinessRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/admin': {
       id: '/app/admin'
       path: '/admin'
@@ -315,6 +344,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/wallet/'
       preLoaderRoute: typeof AppWalletIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/app/match/': {
+      id: '/app/match/'
+      path: '/'
+      fullPath: '/app/match/'
+      preLoaderRoute: typeof AppMatchIndexRouteImport
+      parentRoute: typeof AppMatchRoute
     }
     '/app/wallet/history': {
       id: '/app/wallet/history'
@@ -354,10 +390,12 @@ const AppCourtsRouteWithChildren = AppCourtsRoute._addFileChildren(
 
 interface AppMatchRouteChildren {
   AppMatchUserIdRoute: typeof AppMatchUserIdRoute
+  AppMatchIndexRoute: typeof AppMatchIndexRoute
 }
 
 const AppMatchRouteChildren: AppMatchRouteChildren = {
   AppMatchUserIdRoute: AppMatchUserIdRoute,
+  AppMatchIndexRoute: AppMatchIndexRoute,
 }
 
 const AppMatchRouteWithChildren = AppMatchRoute._addFileChildren(
@@ -366,6 +404,7 @@ const AppMatchRouteWithChildren = AppMatchRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
+  AppBusinessRoute: typeof AppBusinessRoute
   AppChatRoute: typeof AppChatRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
   AppIotRoute: typeof AppIotRoute
@@ -380,6 +419,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
+  AppBusinessRoute: AppBusinessRoute,
   AppChatRoute: AppChatRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,
   AppIotRoute: AppIotRoute,

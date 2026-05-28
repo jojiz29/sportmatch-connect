@@ -10,8 +10,10 @@ import {
   LayoutDashboard,
   User,
   Zap,
+  Store,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 
 const NAV = [
   { to: "/app", label: "Inicio", icon: Home, end: true },
@@ -22,6 +24,7 @@ const NAV = [
   { to: "/app/wallet", label: "FitCoins", icon: Trophy },
   { to: "/app/iot", label: "Telemetría", icon: Activity },
   { to: "/app/profile", label: "Perfil", icon: User },
+  { to: "/app/business", label: "Mi Negocio", icon: Store },
   { to: "/app/admin", label: "Admin", icon: LayoutDashboard },
 ];
 
@@ -40,18 +43,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  // Filter NAV items dynamically based on user role
+  const navItems = NAV.filter((item) => {
+    if (item.to === "/app/business" && currentUser.user_role !== "BUSINESS") {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-background bg-gradient-hero">
       {/* Sidebar (desktop) */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col glass border-r border-border z-30">
-        <Link to="/app" className="px-6 py-6 flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
-            <Zap className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-bold text-lg tracking-tight">SportMatch</span>
-        </Link>
+        <div className="px-6 py-6 flex items-center justify-between">
+          <Link to="/app" className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-bold text-lg tracking-tight">SportMatch</span>
+          </Link>
+          <NotificationBell />
+        </div>
         <nav className="flex-1 px-3 space-y-1">
-          {NAV.map((item) => {
+          {navItems.map((item) => {
             const active = item.end ? path === item.to : path.startsWith(item.to);
             const Icon = item.icon;
             return (
@@ -83,6 +97,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* Mobile top header with notification bell */}
+      <header className="lg:hidden fixed top-0 inset-x-0 z-40 glass border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link to="/app" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-primary grid place-items-center shadow-glow">
+              <Zap className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-bold text-sm tracking-tight">SportMatch</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-neon font-semibold flex items-center gap-1">
+              <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
+            </span>
+            <NotificationBell />
+          </div>
+        </div>
+      </header>
+
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border">
         <div className="grid grid-cols-5 px-2 py-2">
@@ -105,7 +137,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <main className="lg:pl-64 pb-24 lg:pb-10 min-h-screen flex flex-col">{children}</main>
+      <main className="lg:pl-64 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
+        {children}
+      </main>
     </div>
   );
 }
