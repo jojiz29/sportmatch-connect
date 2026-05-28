@@ -20,7 +20,18 @@ export default defineConfig(({ mode }) => ({
     mode === "analyze" && visualizer({ open: false, filename: "dist/stats.html", gzipSize: true }),
   ],
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "@vercel/postgres": path.resolve(__dirname, "./src/shared/lib/vercel-postgres-mock.ts"),
+    },
   },
-  server: { host: "::", port: 5178, strictPort: false, open: true },
+  server: {
+    host: "::",
+    port: 5178,
+    strictPort: false,
+    open: true,
+    watch: {
+      ignored: ["**/playwright-report/**", "**/test-results/**"],
+    },
+  },
 }));

@@ -20,6 +20,12 @@ export interface User {
   distance_km?: number; // Calculado en runtime o vista de BD
   email?: string;
   password?: string;
+  followers_count?: number;
+  following_count?: number;
+  user_role?: "PLAYER" | "BUSINESS";
+  company_name?: string;
+  business_category?: "Canchas" | "Gym" | "Tienda" | "Bebidas";
+  is_sponsored?: boolean;
 }
 
 export interface Court {
@@ -38,6 +44,8 @@ export interface Court {
   location?: { lat: number; lng: number }; // Added to match prompt
   address?: string; // Added to match prompt
   distance_km?: number;
+  is_sponsored?: boolean; // Patrocinador B2B — destacado en mapa con borde dorado
+  owner_id?: string;
 }
 
 export interface Match {
@@ -73,4 +81,54 @@ export interface TelemetryData {
   pace: string;
   steps: number;
   timestamp: string; // ISO 8601
+}
+
+export interface Post {
+  id: string;
+  user_id: string;
+  content: string;
+  type: "MATCH_RESULT" | "PHOTO" | "SQUAD_ANNOUNCEMENT" | "TEXT";
+  created_at: string;
+  media_url?: string;
+  sport?: Sport;
+  user_name?: string;
+  user_avatar?: string;
+}
+
+export interface Squad {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  creator_id: string;
+  avatar_url: string | null;
+  members_count?: number;
+}
+
+export interface SquadMember {
+  squad_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface CatalogItem {
+  id: string;
+  business_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  type: "PRODUCT" | "SERVICE";
+  image_url: string | null;
+  created_at: string;
+}
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: "FOLLOW" | "SQUAD_INVITE" | "TRANSACTION_SUCCESS" | "AD_IMPRESSION";
+  title: string;
+  content: string;
+  link?: string;
+  is_read: boolean;
+  created_at: string;
 }
