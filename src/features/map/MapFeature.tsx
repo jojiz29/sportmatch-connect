@@ -1,11 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Court, User } from "@/entities/types";
+import { Court, Match, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
-import { MOCK_MATCHES } from "@/lib/mock";
 
 // Cache for Leaflet court icons to prevent memory leaks and GC overhead
 const courtIconCache = new Map<string, L.DivIcon>();
@@ -125,7 +124,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
 
   const courtMarkers = useMemo(() => {
     return courts.map((c) => {
-      const activeMatches = MOCK_MATCHES.filter((m) => m.court_id === c.id).length;
+      const activeMatches = matches.filter((m) => m.court_id === c.id).length;
       return (
         <Marker
           key={c.id}
@@ -195,7 +194,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
         </Marker>
       );
     });
-  }, [matches]);
+  }, [players]);
 
   if (!mounted || typeof window === "undefined") {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;

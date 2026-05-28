@@ -1,20 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { MOCK_COURTS } from "@/lib/mock";
+import { apiClient } from "@/shared/api/apiClient";
+import { Court } from "@/entities/types";
 import { Star, MapPin, Check, QrCode } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
+  loader: async () => apiClient.courts.getAll(),
   component: Courts,
 });
 
 const SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "19:00", "20:00", "21:00"];
 
 function Courts() {
-  const [selected, setSelected] = useState(MOCK_COURTS[0]);
+  const courts = Route.useLoaderData() as Court[];
+  const [selected, setSelected] = useState<Court | null>(null);
   const [slot, setSlot] = useState<string | null>("19:00");
   const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (courts.length > 0 && !selected) {
+      setSelected(courts[0]);
+    }
+  }, [courts, selected]);
+
+  if (!selected) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -23,7 +38,7 @@ function Courts() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            {MOCK_COURTS.map((c) => (
+            {courts.map((c) => (
               <button
                 key={c.id}
                 onClick={() => {
