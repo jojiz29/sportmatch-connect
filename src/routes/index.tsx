@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Zap, MapPin, Users, Trophy, Activity, ArrowRight, Star } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,6 +24,51 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const [stats, setStats] = useState([
+    { k: "12.4K", l: "Jugadores activos" },
+    { k: "850+", l: "Canchas conectadas" },
+    { k: "200K", l: "Partidos jugados" },
+    { k: "93%", l: "Match exitoso" },
+  ]);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const [playersRes, courtsRes, matchesRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("user_role", "PLAYER"),
+          supabase.from("courts").select("id", { count: "exact", head: true }),
+          supabase.from("matches").select("id", { count: "exact", head: true }),
+        ]);
+
+        const playersCount = playersRes.count;
+        const courtsCount = courtsRes.count;
+        const matchesCount = matchesRes.count;
+
+        setStats([
+          {
+            k: playersCount !== null && playersCount !== undefined ? `${playersCount}` : "12.4K",
+            l: "Jugadores activos",
+          },
+          {
+            k: courtsCount !== null && courtsCount !== undefined ? `${courtsCount}` : "850+",
+            l: "Canchas conectadas",
+          },
+          {
+            k: matchesCount !== null && matchesCount !== undefined ? `${matchesCount}` : "200K",
+            l: "Partidos jugados",
+          },
+          { k: "93%", l: "Match exitoso" },
+        ]);
+      } catch (err) {
+        console.error("Error loading landing stats:", err);
+      }
+    }
+    fetchStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background bg-gradient-hero overflow-x-hidden">
       <header className="container mx-auto flex items-center justify-between py-6 px-4">
@@ -122,12 +169,7 @@ function Landing() {
 
       <section id="stats" className="container mx-auto px-4 pb-20">
         <div className="grid md:grid-cols-4 gap-4">
-          {[
-            { k: "12.4K", l: "Jugadores activos" },
-            { k: "850+", l: "Canchas conectadas" },
-            { k: "200K", l: "Partidos jugados" },
-            { k: "93%", l: "Match exitoso" },
-          ].map((s) => (
+          {stats.map((s) => (
             <div key={s.l} className="glass rounded-2xl p-6 text-center">
               <div className="text-4xl font-bold text-gradient-neon">{s.k}</div>
               <div className="text-sm text-muted-foreground mt-1">{s.l}</div>
