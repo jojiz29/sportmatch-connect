@@ -158,10 +158,7 @@ function Dashboard() {
 
           {activeTab === "squads" && (
             <>
-              <PageHeader
-                title="Squads y Clubes"
-                subtitle="Comunidades y equipos de tu zona"
-              />
+              <PageHeader title="Squads y Clubes" subtitle="Comunidades y equipos de tu zona" />
               <SquadExplorer />
             </>
           )}

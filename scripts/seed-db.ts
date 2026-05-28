@@ -19,7 +19,7 @@ async function seed() {
   console.log("==========================================");
   console.log("   Vercel Postgres Database Seeding       ");
   console.log("==========================================");
-  
+
   if (!process.env.POSTGRES_URL) {
     console.error("CRITICAL ERROR: POSTGRES_URL is not defined in your environment.");
     console.log("Please define it in .env.local or check your connection settings.");
@@ -166,13 +166,16 @@ async function seed() {
     `);
 
     // Ensure GiST index exists
-    await pool.query(`create index if not exists courts_location_gist_idx on public.courts using gist(location);`);
+    await pool.query(
+      `create index if not exists courts_location_gist_idx on public.courts using gist(location);`,
+    );
     console.log("Tables verified successfully.");
 
     // 2. Seed Users
     console.log(`Seeding ${MOCK_USERS.length} mock users...`);
     for (const u of MOCK_USERS) {
-      await pool.query(`
+      await pool.query(
+        `
         insert into public.users (
           id, created_at, name, age, city, avatar_url, bio, trust_score, 
           fitcoins_balance, level, preferred_sports, matches_played, 
@@ -198,19 +201,38 @@ async function seed() {
           company_name = excluded.company_name,
           business_category = excluded.business_category,
           is_sponsored = excluded.is_sponsored;
-      `, [
-        u.id, u.created_at, u.name, u.age, u.city, u.avatar_url, u.bio, u.trust_score,
-        u.fitcoins_balance, u.level, u.preferred_sports, u.matches_played,
-        u.last_location_lat, u.last_location_lng, u.email, u.password,
-        u.user_role || 'PLAYER', u.company_name || null, u.business_category || null, u.is_sponsored || false
-      ]);
+      `,
+        [
+          u.id,
+          u.created_at,
+          u.name,
+          u.age,
+          u.city,
+          u.avatar_url,
+          u.bio,
+          u.trust_score,
+          u.fitcoins_balance,
+          u.level,
+          u.preferred_sports,
+          u.matches_played,
+          u.last_location_lat,
+          u.last_location_lng,
+          u.email,
+          u.password,
+          u.user_role || "PLAYER",
+          u.company_name || null,
+          u.business_category || null,
+          u.is_sponsored || false,
+        ],
+      );
     }
     console.log("Users seeded successfully.");
 
     // 3. Seed Courts
     console.log(`Seeding ${MOCK_COURTS.length} mock courts...`);
     for (const c of MOCK_COURTS) {
-      await pool.query(`
+      await pool.query(
+        `
         insert into public.courts (
           id, created_at, name, sport, price_per_hour, rating, reviews_count, 
           lat, lng, location, image_url, amenities, is_available, address
@@ -228,10 +250,23 @@ async function seed() {
           amenities = excluded.amenities,
           is_available = excluded.is_available,
           address = excluded.address;
-      `, [
-        c.id, c.created_at, c.name, c.sport, c.price_per_hour, c.rating, c.reviews_count,
-        c.lat, c.lng, c.image_url, c.amenities, c.is_available, c.address || "Dirección no especificada"
-      ]);
+      `,
+        [
+          c.id,
+          c.created_at,
+          c.name,
+          c.sport,
+          c.price_per_hour,
+          c.rating,
+          c.reviews_count,
+          c.lat,
+          c.lng,
+          c.image_url,
+          c.amenities,
+          c.is_available,
+          c.address || "Dirección no especificada",
+        ],
+      );
     }
     console.log("Courts seeded successfully.");
 
@@ -268,7 +303,8 @@ async function seed() {
     ];
 
     for (const item of MOCK_CATALOG_ITEMS) {
-      await pool.query(`
+      await pool.query(
+        `
         insert into public.business_catalog (
           id, business_id, name, description, price, type, image_url
         ) values ($1, $2, $3, $4, $5, $6, $7)
@@ -278,25 +314,38 @@ async function seed() {
           price = excluded.price,
           type = excluded.type,
           image_url = excluded.image_url;
-      `, [item.id, item.business_id, item.name, item.description, item.price, item.type, item.image_url]);
+      `,
+        [
+          item.id,
+          item.business_id,
+          item.name,
+          item.description,
+          item.price,
+          item.type,
+          item.image_url,
+        ],
+      );
     }
     console.log("Business catalog items seeded successfully.");
 
     // 5. Seed Sponsor Premium Post
     console.log("Seeding sponsor premium post...");
-    await pool.query(`
+    await pool.query(
+      `
       insert into public.posts (
         id, user_id, content, type, media_url, sport
       ) values ($1, $2, $3, $4, $5, $6)
       on conflict (id) do nothing;
-    `, [
-      "post-puka-power-sponsor",
-      "user-puka-power",
-      "¡Llegó la hora de la recarga! Con Puka Power, saca tu máximo potencial. Consigue tu Botella Puka Power en la sección de FitCoins. ⚡🔋",
-      "TEXT",
-      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97",
-      "Pádel"
-    ]);
+    `,
+      [
+        "post-puka-power-sponsor",
+        "user-puka-power",
+        "¡Llegó la hora de la recarga! Con Puka Power, saca tu máximo potencial. Consigue tu Botella Puka Power en la sección de FitCoins. ⚡🔋",
+        "TEXT",
+        "https://images.unsplash.com/photo-1622483767028-3f66f32aef97",
+        "Pádel",
+      ],
+    );
     console.log("Sponsor premium post seeded successfully.");
 
     console.log("==========================================");

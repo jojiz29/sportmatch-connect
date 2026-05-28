@@ -137,7 +137,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <main className="lg:pl-64 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">{children}</main>
+      <main className="lg:pl-64 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
+        {children}
+      </main>
     </div>
   );
 }

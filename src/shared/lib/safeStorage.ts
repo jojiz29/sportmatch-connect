@@ -20,14 +20,16 @@ export const createSafeStorage = (): StateStorage => {
       } catch (error) {
         console.warn(
           `SafeStorage: Failed to getItem/parse "${name}". LocalStorage may be corrupted or disabled. Falling back to default state.`,
-          error
+          error,
         );
         // Clear corrupted key if possible to restore healthy state
         try {
           if (typeof window !== "undefined") {
             localStorage.removeItem(name);
           }
-        } catch (_) {}
+        } catch (removeError) {
+          console.error("Storage hydration fallback triggered:", removeError);
+        }
         return memoryStore.get(name) || null;
       }
     },

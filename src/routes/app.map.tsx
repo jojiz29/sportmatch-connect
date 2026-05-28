@@ -91,14 +91,17 @@ function MapPage() {
           loadCourts(position.coords.latitude, position.coords.longitude);
         },
         (error) => {
-          console.warn("Geolocation API unavailable or permission denied. Using profile location.", error.message);
+          console.warn(
+            "Geolocation API unavailable or permission denied. Using profile location.",
+            error.message,
+          );
           loadCourts(baseLat, baseLng);
-        }
+        },
       );
     } else {
       loadCourts(baseLat, baseLng);
     }
-  }, [user?.last_location_lat, user?.last_location_lng]);
+  }, [user, user?.last_location_lat, user?.last_location_lng]);
 
   if (!data || !data.courts || !data.matches) {
     return (
@@ -124,7 +127,10 @@ function MapPage() {
             <h3 className="font-semibold mb-3">Cerca tuyo (Ordenado por distancia)</h3>
             <div className="space-y-3">
               {courts.map((c) => (
-                <div key={c.id} className="flex gap-3 items-center hover:bg-accent/40 p-2 rounded-xl transition-colors">
+                <div
+                  key={c.id}
+                  className="flex gap-3 items-center hover:bg-accent/40 p-2 rounded-xl transition-colors"
+                >
                   <img
                     src={c.image_url}
                     alt={c.name}
@@ -145,4 +151,3 @@ function MapPage() {
     </div>
   );
 }
-

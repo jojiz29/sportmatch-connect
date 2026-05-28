@@ -21,13 +21,13 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     await page.fill("#register-business-lng", "-76.99");
     await page.fill("#register-email-input", "store@sportmatch.app");
     await page.fill("#register-password-input", "Store123?");
-    
+
     // Submit registration
     await page.click('button[type="submit"]');
 
     // 4. Verify redirection and access to B2B dashboard
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`));
-    
+
     // Sidebar should contain "Mi Negocio"
     const businessNav = page.locator("aside >> text=Mi Negocio");
     await expect(businessNav).toBeVisible();
@@ -43,11 +43,14 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     await page.fill("#catalog-item-desc", "Puka Power 500ml de pura energía");
     await page.fill("#catalog-item-price", "150");
     await page.selectOption("#catalog-item-type", "PRODUCT");
-    await page.fill("#catalog-item-image", "https://images.unsplash.com/photo-1622483767028-3f66f32aef97");
-    
+    await page.fill(
+      "#catalog-item-image",
+      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97",
+    );
+
     // Submit catalog item
     await page.click("#catalog-item-submit");
-    
+
     // Verify item is listed in the business's own catalog
     await expect(page.locator("text=Bebida Energética Puka")).toBeVisible();
     await expect(page.locator("text=150 FC")).toBeVisible();

@@ -3,7 +3,7 @@ import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { createNotification } from "@/shared/api/notificationService";
 import { MOCK_USERS } from "@/lib/mock";
 
-const USE_MOCKS = 
+const USE_MOCKS =
   (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
 
@@ -21,7 +21,7 @@ export async function followUser(followerId: string, followingId: string): Promi
   // Retrieve follower's name for notification
   let followerName = "Un usuario";
   if (USE_MOCKS) {
-    const fUser = MOCK_USERS.find(u => u.id === followerId);
+    const fUser = MOCK_USERS.find((u) => u.id === followerId);
     if (fUser) followerName = fUser.name;
     useSocialStore.getState().follow(followerId, followingId);
   } else {
@@ -40,7 +40,7 @@ export async function followUser(followerId: string, followingId: string): Promi
       "FOLLOW",
       "Nuevo Seguidor",
       `¡${followerName} comenzó a seguirte!`,
-      `/app/match/${followerId}`
+      `/app/match/${followerId}`,
     );
   } catch (error) {
     console.warn("Could not create follow notification:", error);
@@ -93,7 +93,9 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
  * In mock mode, reads from the local Zustand social store.
  * In production mode, runs a single optimized query with sub-queries to fetch both counts.
  */
-export async function getFollowStats(userId: string): Promise<{ followersCount: number; followingCount: number }> {
+export async function getFollowStats(
+  userId: string,
+): Promise<{ followersCount: number; followingCount: number }> {
   if (USE_MOCKS) {
     return Promise.resolve(useSocialStore.getState().getFollowStats(userId));
   }

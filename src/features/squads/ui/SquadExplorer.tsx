@@ -15,7 +15,7 @@ export function SquadExplorer() {
   const [squads, setSquads] = useState<Squad[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [memberships, setMemberships] = useState<Record<string, boolean>>({});
-  
+
   // Create squad form states
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -32,14 +32,14 @@ export function SquadExplorer() {
         const data = await getSquads();
         if (active) {
           setSquads(data);
-          
+
           // Check memberships in parallel
           const membershipMap: Record<string, boolean> = {};
           await Promise.all(
             data.map(async (squad) => {
               const status = await isMember(squad.id, userId);
               membershipMap[squad.id] = status;
-            })
+            }),
           );
           if (active) {
             setMemberships(membershipMap);
@@ -62,7 +62,7 @@ export function SquadExplorer() {
   const handleToggleJoin = async (squadId: string) => {
     if (!currentUser) return;
     const isCurrentlyMember = memberships[squadId];
-    
+
     // 1. Optimistic UI Updates
     setMemberships((prev) => ({ ...prev, [squadId]: !isCurrentlyMember }));
     setSquads((prev) =>
@@ -74,8 +74,8 @@ export function SquadExplorer() {
                 ? Math.max(0, (s.members_count ?? 1) - 1)
                 : (s.members_count ?? 0) + 1,
             }
-          : s
-      )
+          : s,
+      ),
     );
 
     // 2. Perform background request
@@ -99,8 +99,8 @@ export function SquadExplorer() {
                   ? (s.members_count ?? 0) + 1
                   : Math.max(0, (s.members_count ?? 1) - 1),
               }
-            : s
-        )
+            : s,
+        ),
       );
       console.error("Squad toggle failed:", error);
       toast.error("Error al procesar la solicitud de membresía");
@@ -114,10 +114,10 @@ export function SquadExplorer() {
     try {
       setSubmitting(true);
       const newSquad = await createSquad(name, description, currentUser.id);
-      
+
       setSquads((prev) => [newSquad, ...prev]);
       setMemberships((prev) => ({ ...prev, [newSquad.id]: true }));
-      
+
       setName("");
       setDescription("");
       setShowCreateForm(false);
@@ -140,7 +140,9 @@ export function SquadExplorer() {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-semibold text-sm">¿Quieres fundar tu propio club?</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Crea un Squad e invita a tus rivales.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Crea un Squad e invita a tus rivales.
+              </p>
             </div>
             <button
               onClick={() => setShowCreateForm(true)}
@@ -155,7 +157,9 @@ export function SquadExplorer() {
             <h3 className="font-semibold text-sm">Nuevo Squad</h3>
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Nombre</label>
+                <label className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+                  Nombre
+                </label>
                 <input
                   type="text"
                   value={name}
@@ -167,7 +171,9 @@ export function SquadExplorer() {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Descripción</label>
+                <label className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+                  Descripción
+                </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -215,7 +221,7 @@ export function SquadExplorer() {
           <AnimatePresence>
             {squads.map((squad) => {
               const joined = memberships[squad.id] || false;
-              
+
               return (
                 <motion.div
                   key={squad.id}
@@ -235,11 +241,15 @@ export function SquadExplorer() {
                         <h4 className="font-semibold text-sm truncate">{squad.name}</h4>
                         <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Users className="h-3 w-3" />
-                          <span className="squad-members-count">{squad.members_count || 0} miembros</span>
+                          <span className="squad-members-count">
+                            {squad.members_count || 0} miembros
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-3 line-clamp-2">{squad.description}</p>
+                    <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
+                      {squad.description}
+                    </p>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-border/50 flex justify-end">

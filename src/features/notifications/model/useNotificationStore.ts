@@ -15,7 +15,7 @@ interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       notifications: [],
 
       initNotifications: () => {
@@ -39,7 +39,7 @@ export const useNotificationStore = create<NotificationState>()(
       markAsRead: (id) => {
         set((state) => ({
           notifications: state.notifications.map((n) =>
-            n.id === id ? { ...n, is_read: true } : n
+            n.id === id ? { ...n, is_read: true } : n,
           ),
         }));
       },
@@ -49,7 +49,7 @@ export const useNotificationStore = create<NotificationState>()(
         if (!user) return;
         set((state) => ({
           notifications: state.notifications.map((n) =>
-            n.user_id === user.id ? { ...n, is_read: true } : n
+            n.user_id === user.id ? { ...n, is_read: true } : n,
           ),
         }));
       },
@@ -63,6 +63,6 @@ export const useNotificationStore = create<NotificationState>()(
     {
       name: "sportmatch-notifications",
       storage: createJSONStorage(() => safeLocalStorage),
-    }
-  )
+    },
+  ),
 );

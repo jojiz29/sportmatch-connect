@@ -17,7 +17,8 @@ export const useFeedStore = create<FeedState>()(
           user_id: "user-puka-power",
           user_name: "Puka Power",
           user_avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=PukaPower",
-          content: "¡Llegó la hora de la recarga! Con Puka Power, saca tu máximo potencial. Consigue tu Botella Puka Power en la sección de FitCoins. ⚡🔋",
+          content:
+            "¡Llegó la hora de la recarga! Con Puka Power, saca tu máximo potencial. Consigue tu Botella Puka Power en la sección de FitCoins. ⚡🔋",
           type: "TEXT",
           created_at: new Date(Date.now() - 3600 * 1000 * 0.5).toISOString(),
           sport: "Pádel",
@@ -28,7 +29,8 @@ export const useFeedStore = create<FeedState>()(
           user_id: "user-fabiola",
           user_name: "Fabiola",
           user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola",
-          content: "¡Listo para el partido de Tenis de mañana en San Borja! ¿Quién se suma a entrenar hoy?",
+          content:
+            "¡Listo para el partido de Tenis de mañana en San Borja! ¿Quién se suma a entrenar hoy?",
           type: "TEXT",
           created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(), // 2 hours ago
           sport: "Tenis",
@@ -42,7 +44,7 @@ export const useFeedStore = create<FeedState>()(
           type: "MATCH_RESULT",
           created_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(), // 1 day ago
           sport: "Pádel",
-        }
+        },
       ],
       addPost: (post) => {
         set({ posts: [post, ...get().posts] });
@@ -51,6 +53,6 @@ export const useFeedStore = create<FeedState>()(
     {
       name: "sportmatch-feed",
       storage: createJSONStorage(() => safeLocalStorage),
-    }
-  )
+    },
+  ),
 );

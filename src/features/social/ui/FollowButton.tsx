@@ -28,7 +28,7 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
       setLoading(false);
       return;
     }
-    
+
     let active = true;
     async function checkStatus() {
       if (!currentUser) return;
@@ -59,25 +59,25 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
 
   const handleToggleFollow = async () => {
     if (!currentUser) return;
-    
+
     const previousState = following;
-    
+
     // 1. Optimistic Updates
     // Update local button state
     setFollowing(!previousState);
-    
+
     // Update parent stats optimistically
     if (onFollowChange) {
       onFollowChange(!previousState);
     }
-    
+
     // Update current user's profile following count optimistically
     if (profile) {
       const currentFollowingCount = profile.following_count ?? 0;
       updateProfile({
-        following_count: previousState 
-          ? Math.max(0, currentFollowingCount - 1) 
-          : currentFollowingCount + 1
+        following_count: previousState
+          ? Math.max(0, currentFollowingCount - 1)
+          : currentFollowingCount + 1,
       });
     }
 
@@ -99,9 +99,9 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
       if (profile) {
         const currentFollowingCount = profile.following_count ?? 0;
         updateProfile({
-          following_count: previousState 
-            ? currentFollowingCount + 1 
-            : Math.max(0, currentFollowingCount - 1)
+          following_count: previousState
+            ? currentFollowingCount + 1
+            : Math.max(0, currentFollowingCount - 1),
         });
       }
       console.error("Follow operation failed:", error);

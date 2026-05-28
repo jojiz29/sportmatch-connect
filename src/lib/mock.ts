@@ -683,6 +683,7 @@ if (typeof window !== "undefined") {
   if (registeredRaw) {
     try {
       const registeredList = JSON.parse(registeredRaw);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       registeredList.forEach((u: any) => {
         if (!MOCK_USERS.some((existing) => existing.id === u.id)) {
           MOCK_USERS.push(u);
@@ -697,11 +698,12 @@ if (typeof window !== "undefined") {
 // Sync current mock users back to storage
 export function syncMockUsersToStorage() {
   if (typeof window !== "undefined") {
-    const dynamicUsers = MOCK_USERS.filter((u) => 
-      u.id !== "user-edwin-master" && 
-      u.id !== "user-fabiola" && 
-      u.id !== "user-puka-power" &&
-      !u.id.startsWith("00000000-0000-0000-0000-")
+    const dynamicUsers = MOCK_USERS.filter(
+      (u) =>
+        u.id !== "user-edwin-master" &&
+        u.id !== "user-fabiola" &&
+        u.id !== "user-puka-power" &&
+        !u.id.startsWith("00000000-0000-0000-0000-"),
     );
     localStorage.setItem("sportmatch-registered-users", JSON.stringify(dynamicUsers));
   }

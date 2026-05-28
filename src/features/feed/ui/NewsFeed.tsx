@@ -3,7 +3,7 @@ import { getFeed, createPost } from "@/shared/api/feedService";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { Post, Sport } from "@/entities/types";
 import { toast } from "sonner";
-import { Send, Loader2, Users } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -20,11 +20,7 @@ export function NewsFeed() {
   const [mediaUrl, setMediaUrl] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Allow presets for E2E tests to write to inputs
-  // We use this local hook-style binding for easy input handling
-  function setContentPreset(val: string) {
-    setContent(val);
-  }
+  // Content preset support is handled via the exported setFeedContentPreset helper below
 
   useEffect(() => {
     if (!currentUser) return;
@@ -62,9 +58,9 @@ export function NewsFeed() {
         content,
         postType,
         mediaUrl || undefined,
-        sport || undefined
+        sport || undefined,
       );
-      
+
       setPosts((prev) => [newPost, ...prev]);
       setContent("");
       setSport("");
@@ -104,7 +100,7 @@ export function NewsFeed() {
             <div className="flex flex-wrap gap-2 text-xs">
               <select
                 value={postType}
-                onChange={(e) => setPostType(e.target.value as any)}
+                onChange={(e) => setPostType(e.target.value as Post["type"])}
                 className="bg-background/80 border border-border rounded-lg px-2.5 py-1.5 focus:outline-none text-xs"
                 id="feed-post-type"
               >
@@ -116,7 +112,7 @@ export function NewsFeed() {
 
               <select
                 value={sport}
-                onChange={(e) => setSport(e.target.value as any)}
+                onChange={(e) => setSport(e.target.value as Sport | "")}
                 className="bg-background/80 border border-border rounded-lg px-2.5 py-1.5 focus:outline-none text-xs"
               >
                 <option value="">Deporte (Opcional)</option>
@@ -169,7 +165,7 @@ export function NewsFeed() {
               posts.map((post) => {
                 const isMatchResult = post.type === "MATCH_RESULT";
                 const isAnnouncement = post.type === "SQUAD_ANNOUNCEMENT";
-                
+
                 return (
                   <motion.div
                     key={post.id}
@@ -180,7 +176,9 @@ export function NewsFeed() {
                   >
                     <div className="flex gap-3">
                       <img
-                        src={post.user_avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=User"}
+                        src={
+                          post.user_avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=User"
+                        }
                         alt=""
                         className="h-10 w-10 rounded-full bg-muted"
                       />
@@ -197,22 +195,30 @@ export function NewsFeed() {
                               {post.sport}
                             </span>
                           )}
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
-                            isMatchResult 
-                              ? "bg-neon/10 text-neon border border-neon/20" 
-                              : isAnnouncement 
-                                ? "bg-electric/10 text-electric border border-electric/20" 
-                                : "bg-muted text-muted-foreground"
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
+                              isMatchResult
+                                ? "bg-neon/10 text-neon border border-neon/20"
+                                : isAnnouncement
+                                  ? "bg-electric/10 text-electric border border-electric/20"
+                                  : "bg-muted text-muted-foreground"
+                            }`}
+                          >
                             {isMatchResult ? "Resultado" : isAnnouncement ? "Anuncio" : "Comunidad"}
                           </span>
                         </div>
 
-                        <p className="text-sm text-foreground mt-3 whitespace-pre-wrap">{post.content}</p>
+                        <p className="text-sm text-foreground mt-3 whitespace-pre-wrap">
+                          {post.content}
+                        </p>
 
                         {post.media_url && (
                           <div className="mt-3 rounded-xl overflow-hidden border border-border/50 max-h-60 bg-muted">
-                            <img src={post.media_url} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={post.media_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                         )}
                       </div>
@@ -222,7 +228,8 @@ export function NewsFeed() {
               })
             ) : (
               <div className="p-8 text-center text-muted-foreground glass rounded-2xl border border-border text-sm">
-                No hay publicaciones en tu feed todavía. Sigue a otros jugadores en el Matchmaking para ver sus publicaciones.
+                No hay publicaciones en tu feed todavía. Sigue a otros jugadores en el Matchmaking
+                para ver sus publicaciones.
               </div>
             )}
           </AnimatePresence>

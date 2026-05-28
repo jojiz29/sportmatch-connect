@@ -14,14 +14,12 @@ test.describe("Core User Flow (Happy Path)", () => {
     await page.fill('input[type="password"]', "EdwinFlores123?");
     await page.click('button[type="submit"]');
 
-
     // 3. Verifica redirección a Dashboard
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`));
-    
+
     // Ir a Matchmaking
     await page.goto(`${targetURL}/app/match`);
     await expect(page.locator("h1")).toContainText("Matchmaking IA");
-
 
     // 4. Navegar a mapa usando el menú (asumiendo que existe el sidebar)
     await page.goto(`${targetURL}/app/map`);
@@ -31,4 +29,3 @@ test.describe("Core User Flow (Happy Path)", () => {
     await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 10000 });
   });
 });
-

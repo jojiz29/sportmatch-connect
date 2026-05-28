@@ -2,18 +2,39 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect, useMemo } from "react";
-import { getCatalogItems, createCatalogItem, deleteCatalogItem } from "@/shared/api/businessService";
+import {
+  getCatalogItems,
+  createCatalogItem,
+  deleteCatalogItem,
+} from "@/shared/api/businessService";
 import { CatalogItem } from "@/entities/types";
 import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { toast } from "sonner";
 import {
-  LayoutGrid, Plus, Trash2, TrendingUp, Users, DollarSign,
-  Loader2, ShieldAlert, Eye, BarChart3, Target,
+  LayoutGrid,
+  Plus,
+  Trash2,
+  TrendingUp,
+  Users,
+  DollarSign,
+  Loader2,
+  ShieldAlert,
+  Eye,
+  BarChart3,
+  Target,
 } from "lucide-react";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
 export const Route = createFileRoute("/app/business")({
@@ -158,7 +179,10 @@ function BusinessPage() {
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
-      <PageHeader title="Panel de Negocios" subtitle={`Gestiona tu marketplace y analíticas comerciales para ${user.company_name || user.name}`} />
+      <PageHeader
+        title="Panel de Negocios"
+        subtitle={`Gestiona tu marketplace y analíticas comerciales para ${user.company_name || user.name}`}
+      />
 
       {/* Metrics Banner */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -239,7 +263,10 @@ function BusinessPage() {
                       className="glass border border-border rounded-2xl p-4 flex gap-4 items-center hover:ring-glow transition-all relative group"
                     >
                       <img
-                        src={item.image_url || "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"}
+                        src={
+                          item.image_url ||
+                          "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"
+                        }
                         alt={item.name}
                         className="h-16 w-16 rounded-xl object-cover bg-muted"
                       />
@@ -247,9 +274,15 @@ function BusinessPage() {
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary-foreground font-semibold">
                           {item.type === "PRODUCT" ? "Producto" : "Servicio"}
                         </span>
-                        <h4 className="font-bold text-sm text-foreground mt-1 truncate">{item.name}</h4>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
-                        <span className="text-xs font-bold text-neon block mt-1">{item.price} FC</span>
+                        <h4 className="font-bold text-sm text-foreground mt-1 truncate">
+                          {item.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {item.description}
+                        </p>
+                        <span className="text-xs font-bold text-neon block mt-1">
+                          {item.price} FC
+                        </span>
                       </div>
                       <button
                         onClick={() => handleDeleteItem(item.id)}
@@ -275,10 +308,15 @@ function BusinessPage() {
               {mySales.length > 0 ? (
                 <div className="space-y-3">
                   {mySales.map((sale) => (
-                    <div key={sale.id} className="flex justify-between items-center py-2 border-b border-border/50 text-sm">
+                    <div
+                      key={sale.id}
+                      className="flex justify-between items-center py-2 border-b border-border/50 text-sm"
+                    >
                       <div>
                         <div className="font-semibold">{sale.item_name}</div>
-                        <div className="text-xs text-muted-foreground">Comprador: {sale.buyer_name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Comprador: {sale.buyer_name}
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-neon">+{sale.price} FC</div>
@@ -305,7 +343,9 @@ function BusinessPage() {
               </h3>
               <form onSubmit={handleCreateItem} className="space-y-4">
                 <div>
-                  <label className="text-xs font-semibold mb-1 block">Nombre del Producto / Servicio</label>
+                  <label className="text-xs font-semibold mb-1 block">
+                    Nombre del Producto / Servicio
+                  </label>
                   <input
                     type="text"
                     required
@@ -336,7 +376,9 @@ function BusinessPage() {
                       required
                       min="0"
                       value={price}
-                      onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                      onChange={(e) =>
+                        setPrice(e.target.value === "" ? "" : Number(e.target.value))
+                      }
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                       placeholder="100"
                       id="catalog-item-price"
@@ -389,7 +431,9 @@ function BusinessPage() {
             <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-neon" /> Ventas e Impresiones Semanales
             </h3>
-            <p className="text-xs text-muted-foreground mb-4">Rendimiento de los últimos 7 días en FitCoins y alcance visual.</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Rendimiento de los últimos 7 días en FitCoins y alcance visual.
+            </p>
             <div className="h-[280px] w-full" id="bi-sales-chart">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -404,8 +448,17 @@ function BusinessPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <Tooltip
                     contentStyle={{
                       background: "hsl(var(--card))",
@@ -414,8 +467,22 @@ function BusinessPage() {
                       fontSize: 12,
                     }}
                   />
-                  <Area type="monotone" dataKey="ventas" stroke="hsl(var(--neon))" fill="url(#salesGrad)" strokeWidth={2} name="Ventas (FC)" />
-                  <Area type="monotone" dataKey="impresiones" stroke="hsl(var(--electric))" fill="url(#impressionsGrad)" strokeWidth={2} name="Impresiones" />
+                  <Area
+                    type="monotone"
+                    dataKey="ventas"
+                    stroke="hsl(var(--neon))"
+                    fill="url(#salesGrad)"
+                    strokeWidth={2}
+                    name="Ventas (FC)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="impresiones"
+                    stroke="hsl(var(--electric))"
+                    fill="url(#impressionsGrad)"
+                    strokeWidth={2}
+                    name="Impresiones"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -427,8 +494,13 @@ function BusinessPage() {
               <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
                 <Target className="h-5 w-5 text-warning" /> Alcance Geográfico
               </h3>
-              <p className="text-xs text-muted-foreground mb-4">Distribución de usuarios que vieron tu local en el mapa por distancia.</p>
-              <div className="h-[220px] w-full flex items-center justify-center" id="bi-reach-chart">
+              <p className="text-xs text-muted-foreground mb-4">
+                Distribución de usuarios que vieron tu local en el mapa por distancia.
+              </p>
+              <div
+                className="h-[220px] w-full flex items-center justify-center"
+                id="bi-reach-chart"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -459,7 +531,10 @@ function BusinessPage() {
               </div>
               <div className="flex flex-wrap gap-3 justify-center mt-2">
                 {reachData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div
+                    key={d.name}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                  >
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />
                     {d.name} ({d.value}%)
                   </div>
@@ -472,12 +547,44 @@ function BusinessPage() {
               <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-electric" /> KPIs de Engagement
               </h3>
-              <p className="text-xs text-muted-foreground mb-4">Indicadores clave de rendimiento para tu marca.</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Indicadores clave de rendimiento para tu marca.
+              </p>
               <div className="space-y-4">
-                <KpiRow label="Tasa de Conversión" value={totalSalesCount > 0 ? `${((totalSalesCount / simulatedReach) * 100).toFixed(1)}%` : "0%"} barWidth={totalSalesCount > 0 ? Math.min((totalSalesCount / simulatedReach) * 100 * 20, 100) : 2} color="neon" />
-                <KpiRow label="Revenue per Impression" value={simulatedReach > 0 ? `${(totalEarned / simulatedReach).toFixed(1)} FC` : "0 FC"} barWidth={Math.min(totalEarned / Math.max(simulatedReach, 1) * 100, 100)} color="electric" />
-                <KpiRow label="Retención de Seguidores" value={`${followersCount} activos`} barWidth={Math.min(followersCount * 20, 100)} color="warning" />
-                <KpiRow label="Productos en Catálogo" value={`${items.length}`} barWidth={Math.min(items.length * 15, 100)} color="primary" />
+                <KpiRow
+                  label="Tasa de Conversión"
+                  value={
+                    totalSalesCount > 0
+                      ? `${((totalSalesCount / simulatedReach) * 100).toFixed(1)}%`
+                      : "0%"
+                  }
+                  barWidth={
+                    totalSalesCount > 0
+                      ? Math.min((totalSalesCount / simulatedReach) * 100 * 20, 100)
+                      : 2
+                  }
+                  color="neon"
+                />
+                <KpiRow
+                  label="Revenue per Impression"
+                  value={
+                    simulatedReach > 0 ? `${(totalEarned / simulatedReach).toFixed(1)} FC` : "0 FC"
+                  }
+                  barWidth={Math.min((totalEarned / Math.max(simulatedReach, 1)) * 100, 100)}
+                  color="electric"
+                />
+                <KpiRow
+                  label="Retención de Seguidores"
+                  value={`${followersCount} activos`}
+                  barWidth={Math.min(followersCount * 20, 100)}
+                  color="warning"
+                />
+                <KpiRow
+                  label="Productos en Catálogo"
+                  value={`${items.length}`}
+                  barWidth={Math.min(items.length * 15, 100)}
+                  color="primary"
+                />
               </div>
             </div>
           </div>
@@ -488,22 +595,39 @@ function BusinessPage() {
 }
 
 function MetricCard({
-  label, value, icon, accentClass, id, extra,
+  label,
+  value,
+  icon,
+  accentClass,
+  id,
+  extra,
 }: {
-  label: string; value: string; icon: React.ReactNode; accentClass: string; id?: string; extra?: string;
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accentClass: string;
+  id?: string;
+  extra?: string;
 }) {
   return (
     <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card relative overflow-hidden">
-      <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 h-20 w-20 rounded-full opacity-20 blur-2xl" style={{ background: "currentColor" }} />
+      <div
+        className="absolute right-0 top-0 translate-x-4 -translate-y-4 h-20 w-20 rounded-full opacity-20 blur-2xl"
+        style={{ background: "currentColor" }}
+      />
       <div className="flex items-center justify-between gap-2">
         <div className="space-y-1 min-w-0">
-          <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">{label}</span>
+          <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">
+            {label}
+          </span>
           <span className="text-xl md:text-2xl font-extrabold flex items-center gap-1" id={id}>
             {value}
           </span>
           {extra && <span className="text-[10px] text-warning font-semibold">{extra}</span>}
         </div>
-        <div className={`h-10 w-10 rounded-xl border grid place-items-center shrink-0 ${accentClass}`}>
+        <div
+          className={`h-10 w-10 rounded-xl border grid place-items-center shrink-0 ${accentClass}`}
+        >
           {icon}
         </div>
       </div>
@@ -511,7 +635,17 @@ function MetricCard({
   );
 }
 
-function KpiRow({ label, value, barWidth, color }: { label: string; value: string; barWidth: number; color: string }) {
+function KpiRow({
+  label,
+  value,
+  barWidth,
+  color,
+}: {
+  label: string;
+  value: string;
+  barWidth: number;
+  color: string;
+}) {
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
@@ -523,10 +657,14 @@ function KpiRow({ label, value, barWidth, color }: { label: string; value: strin
           className={`h-full rounded-full bg-${color} transition-all duration-700`}
           style={{
             width: `${Math.max(barWidth, 2)}%`,
-            background: color === "neon" ? "hsl(var(--neon))"
-              : color === "electric" ? "hsl(var(--electric))"
-              : color === "warning" ? "hsl(var(--warning))"
-              : "hsl(var(--primary))",
+            background:
+              color === "neon"
+                ? "hsl(var(--neon))"
+                : color === "electric"
+                  ? "hsl(var(--electric))"
+                  : color === "warning"
+                    ? "hsl(var(--warning))"
+                    : "hsl(var(--primary))",
           }}
         />
       </div>

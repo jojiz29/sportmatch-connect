@@ -19,7 +19,7 @@ export const useProfileStore = create<ProfileState>()(
       initProfile: async () => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return;
-        
+
         // Expose immediately, then enrich with follow stats
         set({ profile: currentUser });
 

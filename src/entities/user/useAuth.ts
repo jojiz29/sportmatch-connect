@@ -30,7 +30,6 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
 
 export function useAuth() {

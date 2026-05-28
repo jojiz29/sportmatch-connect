@@ -39,7 +39,7 @@ function RegisterPage() {
           console.warn("Geolocation failed. Using defaults.", err.message);
           setLat(-12.14);
           setLng(-76.995);
-        }
+        },
       );
     } else {
       setLat(-12.14);
@@ -70,12 +70,14 @@ function RegisterPage() {
         name: role === "BUSINESS" ? companyName : fullName,
         age: role === "BUSINESS" ? 0 : 25,
         city: "Lima",
-        avatar_url: role === "BUSINESS"
-          ? `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(companyName)}`
-          : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`,
-        bio: role === "BUSINESS"
-          ? `Perfil oficial de ${companyName}. ¡Bienvenido a nuestro catálogo!`
-          : t("profile.placeholder_bio") || "¡Listo para jugar!",
+        avatar_url:
+          role === "BUSINESS"
+            ? `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(companyName)}`
+            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`,
+        bio:
+          role === "BUSINESS"
+            ? `Perfil oficial de ${companyName}. ¡Bienvenido a nuestro catálogo!`
+            : t("profile.placeholder_bio") || "¡Listo para jugar!",
         trust_score: 100,
         fitcoins_balance: role === "BUSINESS" ? 0 : 500,
         level: "Intermedio" as const,
@@ -185,7 +187,9 @@ function RegisterPage() {
                 <label className="text-sm font-semibold mb-2 block">Categoría de Negocio</label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
+                  onChange={(e) =>
+                    setCategory(e.target.value as "Canchas" | "Gym" | "Tienda" | "Bebidas")
+                  }
                   className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
                   id="register-business-category"
                 >
@@ -197,7 +201,9 @@ function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold mb-2 block">Ubicación GPS (Coordenadas)</label>
+                <label className="text-sm font-semibold mb-2 block">
+                  Ubicación GPS (Coordenadas)
+                </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <span className="text-[10px] text-muted-foreground block mb-1">Latitud</span>

@@ -5,7 +5,7 @@ import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { MOCK_USERS } from "@/lib/mock";
 import { calculateDistance } from "./geoService";
 
-const USE_MOCKS = 
+const USE_MOCKS =
   (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
 
@@ -18,10 +18,10 @@ export async function getFeed(userId: string): Promise<Post[]> {
   if (USE_MOCKS) {
     const allPosts = useFeedStore.getState().posts;
     const currentUser = MOCK_USERS.find((u) => u.id === userId);
-    
+
     const feed = allPosts.filter((p) => {
       if (p.user_id === userId) return true;
-      
+
       const following = useSocialStore.getState().isFollowing(userId, p.user_id);
       if (following) return true;
 
@@ -30,22 +30,22 @@ export async function getFeed(userId: string): Promise<Post[]> {
       if (postAuthor && postAuthor.is_sponsored) {
         if (!currentUser?.last_location_lat || !currentUser?.last_location_lng) return true;
         if (!postAuthor.last_location_lat || !postAuthor.last_location_lng) return true;
-        
+
         const dist = calculateDistance(
           currentUser.last_location_lat,
           currentUser.last_location_lng,
           postAuthor.last_location_lat,
-          postAuthor.last_location_lng
+          postAuthor.last_location_lng,
         );
         return dist <= 5;
       }
-      
+
       return false;
     });
-    
+
     // Sort by created_at desc
     return Promise.resolve(
-      feed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      feed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
     );
   }
 
@@ -79,17 +79,21 @@ export async function getFeed(userId: string): Promise<Post[]> {
 
   try {
     const result = await query(sqlQuery, [userId]);
-    return (result.rows || []).map((row: any) => ({
-      id: row.id,
-      user_id: row.user_id,
-      content: row.content,
-      type: row.type as any,
-      created_at: row.created_at,
-      media_url: row.media_url || undefined,
-      sport: row.sport || undefined,
-      user_name: row.user_name,
-      user_avatar: row.user_avatar,
-    }));
+    return (result.rows || []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (row: any): Post => ({
+        id: row.id,
+        user_id: row.user_id,
+        content: row.content,
+
+        type: row.type as Post["type"],
+        created_at: row.created_at,
+        media_url: row.media_url || undefined,
+        sport: row.sport || undefined,
+        user_name: row.user_name,
+        user_avatar: row.user_avatar,
+      }),
+    );
   } catch (error) {
     console.error("Vercel Postgres getFeed query failed:", error);
     throw error;
@@ -106,7 +110,7 @@ export async function createPost(
   content: string,
   type: Post["type"],
   mediaUrl?: string,
-  sport?: Post["sport"]
+  sport?: Post["sport"],
 ): Promise<Post> {
   const newPost: Post = {
     id: `post-${Date.now()}`,
@@ -126,13 +130,16 @@ export async function createPost(
       let itemIdToLink = "";
 
       if (USE_MOCKS) {
-        const author = MOCK_USERS.find(u => u.id === userId);
+        const author = MOCK_USERS.find((u) => u.id === userId);
         if (author && author.user_role === "BUSINESS") {
           isBusiness = true;
           businessName = author.company_name || author.name;
         }
       } else {
-        const userRes = await query("SELECT user_role, company_name, name FROM public.users WHERE id = $1", [userId]);
+        const userRes = await query(
+          "SELECT user_role, company_name, name FROM public.users WHERE id = $1",
+          [userId],
+        );
         if (userRes.rows?.[0] && userRes.rows[0].user_role === "BUSINESS") {
           isBusiness = true;
           businessName = userRes.rows[0].company_name || userRes.rows[0].name;
@@ -142,14 +149,19 @@ export async function createPost(
       if (isBusiness) {
         if (USE_MOCKS) {
           const { useBusinessStore } = await import("@/features/business/model/useBusinessStore");
-          const catalogItems = useBusinessStore.getState().catalogItems.filter((item: CatalogItem) => item.business_id === userId);
+          const catalogItems = useBusinessStore
+            .getState()
+            .catalogItems.filter((item: CatalogItem) => item.business_id === userId);
           if (catalogItems.length > 0) {
             itemIdToLink = catalogItems[0].id;
           } else {
             if (userId === "user-puka-power") itemIdToLink = "puka-power-bottle";
           }
         } else {
-          const catRes = await query("SELECT id FROM public.business_catalog WHERE business_id = $1 LIMIT 1", [userId]);
+          const catRes = await query(
+            "SELECT id FROM public.business_catalog WHERE business_id = $1 LIMIT 1",
+            [userId],
+          );
           if (catRes.rows?.[0]) itemIdToLink = catRes.rows[0].id;
         }
 
@@ -159,17 +171,27 @@ export async function createPost(
 
         let followersList: string[] = [];
         if (USE_MOCKS) {
-          followersList = useSocialStore.getState().relationships
-            .filter(r => r.followingId === userId)
-            .map(r => r.followerId);
+          followersList = useSocialStore
+            .getState()
+            .relationships.filter((r) => r.followingId === userId)
+            .map((r) => r.followerId);
         } else {
-          const follRes = await query("SELECT follower_id FROM public.followers WHERE following_id = $1", [userId]);
-          followersList = follRes.rows.map(r => r.follower_id);
+          const follRes = await query(
+            "SELECT follower_id FROM public.followers WHERE following_id = $1",
+            [userId],
+          );
+          followersList = follRes.rows.map((r) => r.follower_id);
         }
 
         const { createNotification } = await import("@/shared/api/notificationService");
         for (const followerId of followersList) {
-          await createNotification(followerId, "AD_IMPRESSION", notifTitle, notifContent, notifLink);
+          await createNotification(
+            followerId,
+            "AD_IMPRESSION",
+            notifTitle,
+            notifContent,
+            notifLink,
+          );
         }
       }
     } catch (err) {
@@ -179,12 +201,14 @@ export async function createPost(
 
   if (USE_MOCKS) {
     // Resolve user avatar/name from MOCK_USERS
-    const user = MOCK_USERS.find(u => u.id === userId);
+    const user = MOCK_USERS.find((u) => u.id === userId);
     newPost.user_name = user ? user.name : "Edwin Flores";
-    newPost.user_avatar = user ? user.avatar_url : "https://api.dicebear.com/7.x/avataaars/svg?seed=Edwin";
-    
+    newPost.user_avatar = user
+      ? user.avatar_url
+      : "https://api.dicebear.com/7.x/avataaars/svg?seed=Edwin";
+
     useFeedStore.getState().addPost(newPost);
-    notifyFollowers().catch(e => console.warn(e));
+    notifyFollowers().catch((e) => console.warn(e));
     return Promise.resolve(newPost);
   }
 
@@ -195,21 +219,29 @@ export async function createPost(
   `;
 
   try {
-    const result = await query(sqlQuery, [newPost.id, userId, content, type, mediaUrl || null, sport || null]);
+    const result = await query(sqlQuery, [
+      newPost.id,
+      userId,
+      content,
+      type,
+      mediaUrl || null,
+      sport || null,
+    ]);
     const row = result.rows[0];
-    
+
     // Enrich with user name/avatar
     const userQuery = `SELECT name, avatar_url FROM public.users WHERE id = $1;`;
     const userResult = await query(userQuery, [userId]);
     const userRow = userResult.rows[0] || {};
 
-    notifyFollowers().catch(e => console.warn(e));
+    notifyFollowers().catch((e) => console.warn(e));
 
     return {
       id: row.id,
       user_id: row.user_id,
       content: row.content,
-      type: row.type as any,
+
+      type: row.type as Post["type"],
       created_at: row.created_at,
       media_url: row.media_url || undefined,
       sport: row.sport || undefined,

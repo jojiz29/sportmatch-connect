@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { LEADERBOARD } from "@/lib/mock";
 import { Trophy, Gift, Zap, Crown, X, ShoppingBag } from "lucide-react";
@@ -61,7 +61,9 @@ function Wallet() {
             setSelectedItem(target);
             // Scroll to marketplace section
             setTimeout(() => {
-              document.getElementById("marketplace-section")?.scrollIntoView({ behavior: "smooth" });
+              document
+                .getElementById("marketplace-section")
+                ?.scrollIntoView({ behavior: "smooth" });
             }, 300);
           }
         }
@@ -216,7 +218,10 @@ function Wallet() {
                     className="bg-gradient-card border border-border rounded-2xl p-4 flex items-center gap-3 hover:ring-glow transition-all"
                   >
                     <img
-                      src={item.image_url || "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"}
+                      src={
+                        item.image_url ||
+                        "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"
+                      }
                       alt={item.name}
                       className="h-16 w-16 rounded-xl object-cover bg-muted shrink-0"
                     />
@@ -225,7 +230,9 @@ function Wallet() {
                         {item.type === "PRODUCT" ? "Producto" : "Servicio"}
                       </span>
                       <div className="text-sm font-semibold truncate mt-1">{item.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {item.description}
+                      </div>
                       <div className="text-xs font-bold text-neon mt-0.5">{item.price} FC</div>
                     </div>
                     <button
@@ -364,15 +371,17 @@ function Wallet() {
               </button>
 
               <img
-                src={selectedItem.image_url || "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"}
+                src={
+                  selectedItem.image_url ||
+                  "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"
+                }
                 alt=""
                 className="h-24 w-24 rounded-full mx-auto object-cover mb-4 border border-border bg-muted"
               />
-              <h2 className="text-xl font-bold mb-2">
-                Confirmar Compra
-              </h2>
+              <h2 className="text-xl font-bold mb-2">Confirmar Compra</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                ¿Deseas comprar <strong>{selectedItem.name}</strong> por <strong>{selectedItem.price} FC</strong>?
+                ¿Deseas comprar <strong>{selectedItem.name}</strong> por{" "}
+                <strong>{selectedItem.price} FC</strong>?
               </p>
 
               <div className="flex flex-col gap-2">

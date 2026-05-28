@@ -3,7 +3,7 @@ import { Squad, User } from "@/entities/types";
 import { useSquadStore } from "@/features/squads/model/useSquadStore";
 import { MOCK_USERS } from "@/lib/mock";
 
-const USE_MOCKS = 
+const USE_MOCKS =
   (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
 
@@ -16,7 +16,7 @@ export async function createSquad(
   name: string,
   description: string,
   creatorId: string,
-  avatarUrl?: string
+  avatarUrl?: string,
 ): Promise<Squad> {
   const newSquad: Squad = {
     id: `squad-${Date.now()}`,
@@ -65,10 +65,10 @@ export async function getSquads(): Promise<Squad[]> {
   if (USE_MOCKS) {
     const squads = useSquadStore.getState().squads;
     return Promise.resolve(
-      squads.map(s => ({
+      squads.map((s) => ({
         ...s,
         members_count: useSquadStore.getState().getMembersCount(s.id),
-      }))
+      })),
     );
   }
 
@@ -89,15 +89,18 @@ export async function getSquads(): Promise<Squad[]> {
 
   try {
     const result = await query(sqlQuery);
-    return (result.rows || []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      created_at: row.created_at,
-      creator_id: row.creator_id,
-      avatar_url: row.avatar_url,
-      members_count: row.members_count,
-    }));
+    return (result.rows || []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (row: any): Squad => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        created_at: row.created_at,
+        creator_id: row.creator_id,
+        avatar_url: row.avatar_url,
+        members_count: row.members_count,
+      }),
+    );
   } catch (error) {
     console.error("Vercel Postgres getSquads query failed:", error);
     throw error;
@@ -178,9 +181,9 @@ export async function isMember(squadId: string, userId: string): Promise<boolean
  */
 export async function getSquadMembers(squadId: string): Promise<User[]> {
   if (USE_MOCKS) {
-    const memberships = useSquadStore.getState().memberships.filter(m => m.squad_id === squadId);
-    const memberIds = memberships.map(m => m.user_id);
-    const members = MOCK_USERS.filter(u => memberIds.includes(u.id));
+    const memberships = useSquadStore.getState().memberships.filter((m) => m.squad_id === squadId);
+    const memberIds = memberships.map((m) => m.user_id);
+    const members = MOCK_USERS.filter((u) => memberIds.includes(u.id));
     return Promise.resolve(members);
   }
 
@@ -193,22 +196,26 @@ export async function getSquadMembers(squadId: string): Promise<User[]> {
 
   try {
     const result = await query(sqlQuery, [squadId]);
-    return (result.rows || []).map((row: any) => ({
-      id: row.id,
-      created_at: row.created_at,
-      name: row.name,
-      age: parseInt(row.age, 10),
-      city: row.city,
-      avatar_url: row.avatar_url,
-      bio: row.bio,
-      trust_score: parseInt(row.trust_score, 10),
-      fitcoins_balance: parseInt(row.fitcoins_balance, 10),
-      level: row.level as any,
-      preferred_sports: row.preferred_sports || [],
-      matches_played: parseInt(row.matches_played, 10),
-      last_location_lat: row.last_location_lat ? parseFloat(row.last_location_lat) : null,
-      last_location_lng: row.last_location_lng ? parseFloat(row.last_location_lng) : null,
-    }));
+    return (result.rows || []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (row: any): User => ({
+        id: row.id,
+        created_at: row.created_at,
+        name: row.name,
+        age: parseInt(row.age, 10),
+        city: row.city,
+        avatar_url: row.avatar_url,
+        bio: row.bio,
+        trust_score: parseInt(row.trust_score, 10),
+        fitcoins_balance: parseInt(row.fitcoins_balance, 10),
+
+        level: row.level as User["level"],
+        preferred_sports: row.preferred_sports || [],
+        matches_played: parseInt(row.matches_played, 10),
+        last_location_lat: row.last_location_lat ? parseFloat(row.last_location_lat) : null,
+        last_location_lng: row.last_location_lng ? parseFloat(row.last_location_lng) : null,
+      }),
+    );
   } catch (error) {
     console.error("Vercel Postgres getSquadMembers query failed:", error);
     throw error;

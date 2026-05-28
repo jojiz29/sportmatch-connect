@@ -79,7 +79,7 @@ export const useWalletStore = create<WalletState>()(
           "TRANSACTION_SUCCESS",
           "Canje Exitoso",
           `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
-          "/app/wallet/history"
+          "/app/wallet/history",
         ).catch((e) => console.warn(e));
 
         return true;
@@ -144,7 +144,7 @@ export const useWalletStore = create<WalletState>()(
           "TRANSACTION_SUCCESS",
           "Compra Exitosa",
           `Compraste ${itemName} por ${cost} FC.`,
-          "/app/wallet/history"
+          "/app/wallet/history",
         ).catch((e) => console.warn(e));
 
         // Trigger TRANSACTION_SUCCESS for seller (Business)
@@ -153,7 +153,7 @@ export const useWalletStore = create<WalletState>()(
           "TRANSACTION_SUCCESS",
           "Venta Completada",
           `Vendiste ${itemName} a ${user.name} por ${cost} FC.`,
-          "/app/business"
+          "/app/business",
         ).catch((e) => console.warn(e));
 
         return true;

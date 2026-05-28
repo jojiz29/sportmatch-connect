@@ -140,9 +140,7 @@ export function NotificationBell() {
                     key={notif.id}
                     onClick={() => handleNotifClick(notif)}
                     className={`w-full text-left px-4 py-3 flex gap-3 items-start border-b border-border/30 transition-colors cursor-pointer ${
-                      notif.is_read
-                        ? "hover:bg-accent/30"
-                        : "bg-primary/5 hover:bg-primary/10"
+                      notif.is_read ? "hover:bg-accent/30" : "bg-primary/5 hover:bg-primary/10"
                     }`}
                     id={`notif-item-${notif.id}`}
                   >
@@ -155,14 +153,18 @@ export function NotificationBell() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`text-xs font-semibold truncate ${notif.is_read ? "text-muted-foreground" : "text-foreground"}`}>
+                        <span
+                          className={`text-xs font-semibold truncate ${notif.is_read ? "text-muted-foreground" : "text-foreground"}`}
+                        >
                           {notif.title}
                         </span>
                         <span className="text-[10px] text-muted-foreground shrink-0">
                           {timeAgo(notif.created_at)}
                         </span>
                       </div>
-                      <p className={`text-[11px] mt-0.5 line-clamp-2 ${notif.is_read ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-[11px] mt-0.5 line-clamp-2 ${notif.is_read ? "text-muted-foreground/70" : "text-muted-foreground"}`}
+                      >
                         {notif.content}
                       </p>
                       {!notif.is_read && (

@@ -78,7 +78,9 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     // Create a new post as Puka Power
     const postInput = page.locator('textarea[placeholder*="compartir"]').first();
     if (await postInput.isVisible()) {
-      await postInput.fill("🎉 ¡OFERTA FLASH! Llévate tu Botella Puka Power con 20% de descuento. ¡Solo hoy!");
+      await postInput.fill(
+        "🎉 ¡OFERTA FLASH! Llévate tu Botella Puka Power con 20% de descuento. ¡Solo hoy!",
+      );
       const publishBtn = page.locator('button:has-text("Publicar")').first();
       await publishBtn.click();
       await page.waitForTimeout(500);
@@ -100,9 +102,11 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     // Check the notification bell is visible
     await expect(page.locator("#notification-bell-btn")).toBeVisible();
 
-    // Check for notification badge (unread count)
-    const badge = page.locator("#notification-badge");
-    const hasBadge = await badge.isVisible().catch(() => false);
+    // Soft check — badge may not be visible on first run, never throws
+    await page
+      .locator("#notification-badge")
+      .isVisible()
+      .catch(() => false);
 
     // Click the notification bell to open the panel
     await page.click("#notification-bell-btn");

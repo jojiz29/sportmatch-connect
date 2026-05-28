@@ -2,7 +2,7 @@ import { query } from "@/shared/lib/database";
 import { AppNotification } from "@/entities/types";
 import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
 
-const USE_MOCKS = 
+const USE_MOCKS =
   (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
 
@@ -15,7 +15,9 @@ export async function getNotifications(userId: string): Promise<AppNotification[
     // Filter for current user and sort by created_at desc
     const userNotifs = all.filter((n) => n.user_id === userId);
     return Promise.resolve(
-      userNotifs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      userNotifs.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
     );
   }
 
@@ -28,16 +30,19 @@ export async function getNotifications(userId: string): Promise<AppNotification[
 
   try {
     const result = await query(sqlQuery, [userId]);
-    return (result.rows || []).map((row: any) => ({
-      id: row.id,
-      user_id: row.user_id,
-      type: row.type as any,
-      title: row.title,
-      content: row.content,
-      link: row.link || undefined,
-      is_read: row.is_read,
-      created_at: row.created_at,
-    }));
+    return (result.rows || []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (row: any): AppNotification => ({
+        id: row.id,
+        user_id: row.user_id,
+        type: row.type as AppNotification["type"],
+        title: row.title,
+        content: row.content,
+        link: row.link || undefined,
+        is_read: row.is_read,
+        created_at: row.created_at,
+      }),
+    );
   } catch (error) {
     console.error("Vercel Postgres getNotifications query failed:", error);
     throw error;
@@ -52,7 +57,7 @@ export async function createNotification(
   type: AppNotification["type"],
   title: string,
   content: string,
-  link?: string
+  link?: string,
 ): Promise<AppNotification> {
   const notifId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -80,7 +85,8 @@ export async function createNotification(
     return {
       id: row.id,
       user_id: row.user_id,
-      type: row.type as any,
+
+      type: row.type as AppNotification["type"],
       title: row.title,
       content: row.content,
       link: row.link || undefined,

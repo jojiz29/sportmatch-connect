@@ -32,26 +32,32 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
 
     // 6. Verify courts are ordered by proximity for Surco
     // Under Surco (-12.14, -76.995), the closest court is "Pádel Center Surco" (~0.77km)
-    const listContainer = page.locator("div.bg-gradient-card", { hasText: "Cerca tuyo (Ordenado por distancia)" });
+    const listContainer = page.locator("div.bg-gradient-card", {
+      hasText: "Cerca tuyo (Ordenado por distancia)",
+    });
     await expect(listContainer).toBeVisible();
 
     const firstCourt = listContainer.locator("div.flex.gap-3.items-center").first();
     await expect(firstCourt.locator(".text-sm.font-semibold")).toContainText("Pádel Center Surco");
     await expect(firstCourt.locator(".text-xs.text-muted-foreground")).toContainText("0.78 km");
 
-
     // 7. Move user to San Borja center (-12.10, -76.99)
-    await context.setGeolocation({ latitude: -12.10, longitude: -76.99 });
-    
+    await context.setGeolocation({ latitude: -12.1, longitude: -76.99 });
+
     // Reload page to trigger fresh geolocation resolution
     await page.reload();
     await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 10000 });
 
     // 8. Verify the closest court has updated to "Tenis Club San Borja" (0.00 km)
-    const listContainerSanBorja = page.locator("div.bg-gradient-card", { hasText: "Cerca tuyo (Ordenado por distancia)" });
+    const listContainerSanBorja = page.locator("div.bg-gradient-card", {
+      hasText: "Cerca tuyo (Ordenado por distancia)",
+    });
     const firstCourtSanBorja = listContainerSanBorja.locator("div.flex.gap-3.items-center").first();
-    await expect(firstCourtSanBorja.locator(".text-sm.font-semibold")).toContainText("Tenis Club San Borja");
-    await expect(firstCourtSanBorja.locator(".text-xs.text-muted-foreground")).toContainText("0 km");
-
+    await expect(firstCourtSanBorja.locator(".text-sm.font-semibold")).toContainText(
+      "Tenis Club San Borja",
+    );
+    await expect(firstCourtSanBorja.locator(".text-xs.text-muted-foreground")).toContainText(
+      "0 km",
+    );
   });
 });

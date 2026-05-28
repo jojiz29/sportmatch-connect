@@ -25,7 +25,7 @@ export const useSocialStore = create<SocialState>()(
         }
         const current = get().relationships;
         const exists = current.some(
-          (r) => r.followerId === followerId && r.followingId === followingId
+          (r) => r.followerId === followerId && r.followingId === followingId,
         );
         if (!exists) {
           set({
@@ -37,13 +37,13 @@ export const useSocialStore = create<SocialState>()(
         const current = get().relationships;
         set({
           relationships: current.filter(
-            (r) => !(r.followerId === followerId && r.followingId === followingId)
+            (r) => !(r.followerId === followerId && r.followingId === followingId),
           ),
         });
       },
       isFollowing: (followerId, followingId) => {
         return get().relationships.some(
-          (r) => r.followerId === followerId && r.followingId === followingId
+          (r) => r.followerId === followerId && r.followingId === followingId,
         );
       },
       getFollowStats: (userId) => {
@@ -56,6 +56,6 @@ export const useSocialStore = create<SocialState>()(
     {
       name: "sportmatch-social",
       storage: createJSONStorage(() => safeLocalStorage),
-    }
-  )
+    },
+  ),
 );
