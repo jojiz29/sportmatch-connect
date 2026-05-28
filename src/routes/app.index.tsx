@@ -6,6 +6,8 @@ import { Match, User, Court } from "@/entities/types";
 import { Trophy, Flame, MapPin, Users, ArrowRight, Calendar, Star, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
+import { NewsFeed } from "@/features/feed/ui/NewsFeed";
+import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
@@ -19,10 +21,6 @@ export const Route = createFileRoute("/app/")({
   },
   component: Dashboard,
 });
-
-import { useState } from "react";
-import { NewsFeed } from "@/features/feed/ui/NewsFeed";
-import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 
 function Dashboard() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);

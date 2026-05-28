@@ -69,10 +69,6 @@ function RegisterPage() {
         created_at: new Date().toISOString(),
         name: role === "BUSINESS" ? companyName : fullName,
         age: role === "BUSINESS" ? 0 : 25,
-        name: fullName,
-        email: email,
-        password: password,
-        age: 25,
         city: "Lima",
         avatar_url:
           role === "BUSINESS"

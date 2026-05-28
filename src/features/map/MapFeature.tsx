@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Court, User } from "@/entities/types";
+import { Court, Match, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
@@ -114,7 +114,15 @@ const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
   return icon;
 };
 
-export function MapFeature({ courts, matches }: { courts: Court[]; matches: User[] }) {
+export function MapFeature({
+  courts,
+  players,
+  matches,
+}: {
+  courts: Court[];
+  players: User[];
+  matches: Match[];
+}) {
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
@@ -159,7 +167,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
   }, [courts, matches, t]);
 
   const matchMarkers = useMemo(() => {
-    return matches.map((m) => {
+    return players.map((m) => {
       if (!m.last_location_lat || !m.last_location_lng) return null;
 
       const isBusiness = m.user_role === "BUSINESS";
@@ -194,7 +202,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
         </Marker>
       );
     });
-  }, [matches]);
+  }, [players]);
 
   if (!mounted || typeof window === "undefined") {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;
