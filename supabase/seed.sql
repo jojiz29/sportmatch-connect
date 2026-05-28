@@ -1,205 +1,203 @@
--- Supabase Row Level Security (RLS) Policies para SportMatch Connect
+-- =====================================================================
+-- 🏆 SPORTMATCH CONNECT — SUPABASE SEED DATA DEFINITIVO
+-- 💻 Copiar y pegar COMPLETO en el SQL Editor de Supabase
+-- =====================================================================
 
--- Habilitar RLS en todas las tablas
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.courts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-
--- 1. USERS
--- Los perfiles son públicos (para poder ver avatares en matchmaking y mapa)
-CREATE POLICY "Profiles are viewable by everyone" ON public.users FOR SELECT USING (true);
--- Los usuarios solo pueden actualizar su propio perfil
-CREATE POLICY "Users can insert their own profile" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
-
--- 2. MATCHES
--- Los partidos son públicos
-CREATE POLICY "Matches are viewable by everyone" ON public.matches FOR SELECT USING (true);
--- Solo los usuarios logueados pueden crear partidos
-CREATE POLICY "Authenticated users can create matches" ON public.matches FOR INSERT WITH CHECK (auth.role() = 'authenticated');
--- Solo los dueños (o participantes en el futuro) pueden editar/borrar
-CREATE POLICY "Owners can update their matches" ON public.matches FOR UPDATE USING (auth.uid() = creator_id);
-CREATE POLICY "Owners can delete their matches" ON public.matches FOR DELETE USING (auth.uid() = creator_id);
-
--- 3. COURTS
--- Las canchas son públicas pero solo las puede editar el admin
-CREATE POLICY "Courts are viewable by everyone" ON public.courts FOR SELECT USING (true);
--- (Opcional) Restringir INSERT/UPDATE/DELETE a rol admin
--- CREATE POLICY "Admins can modify courts" ON public.courts FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
-
--- 4. TRANSACTIONS (FitCoins)
--- ALTA SEGURIDAD: Los usuarios SOLO pueden ver sus propias transacciones
-CREATE POLICY "Users can only see their own transactions" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
--- IMPORTANTE: Bloquear INSERT desde el cliente para evitar fraude. 
--- Los INSERTS deberían hacerse SÓLO a través de Supabase Edge Functions con Service Role.
--- Si queremos permitir inserts directos para la PoC:
-CREATE POLICY "Users can insert their own transactions" ON public.transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- SEED DATA: Usuarios de Prueba
--- =========================
--- USERS (12 usuarios en formato correcto Supabase)
--- =========================
-INSERT INTO public.users (
+-- ─────────────────────────────────────────────────────────────────────
+-- 👤 1. SEED DATA: PERFILES (PROFILES)
+-- ─────────────────────────────────────────────────────────────────────
+-- Respetando la regla de B2B: nombres humanos en 'name' y marcas en 'company_name'
+-- =====================================================================
+INSERT INTO public.profiles (
   id, created_at, name, age, city, avatar_url, bio, 
   trust_score, matches_played, fitcoins_balance, level, 
   preferred_sports, last_location_lat, last_location_lng, 
-  email, password
+  user_role, company_name, business_category, is_sponsored, is_admin
 ) VALUES
-('00000000-0000-0000-0000-000000000000', now(), 'Edwin Flores', 29, 'Surco', 'https://i.pravatar.cc/150?u=edwin', 'Usuario Maestro Edwin.', 99, 15, 3500, 'Elite', ARRAY['Pádel','Fútbol'], -12.14, -76.995, 'ejuniorfloress@gmail.com', 'EdwinFlores123?'),
-('00000000-0000-0000-0000-000000000011', now(), 'Fabiola', 26, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola', 'Buscando partidos de tenis y pádel.', 95, 8, 1200, 'Intermedio', ARRAY['Pádel','Tenis'], -12.13, -76.98, NULL, NULL),
-('00000000-0000-0000-0000-000000000001', now(), 'Alex Rivera', 27, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', 'Amante del Pádel. Juego siempre que puedo.', 93, 12, 1850, 'Avanzado', ARRAY['Pádel','Fútbol'], -12.1189, -76.995, NULL, NULL),
-('00000000-0000-0000-0000-000000000002', now(), 'Camila Torres', 24, 'Miraflores', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Camila', 'Compito en torneos los fines de semana.', 96, 12, 1240, 'Avanzado', ARRAY['Pádel'], -12.1221, -77.0298, NULL, NULL),
-('00000000-0000-0000-0000-000000000003', now(), 'Diego Ramírez', 28, 'San Borja', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diego', 'Mediocampista. Juego martes y jueves.', 88, 12, 860, 'Intermedio', ARRAY['Fútbol'], -12.1084, -76.9981, NULL, NULL),
-('00000000-0000-0000-0000-000000000004', now(), 'Sofia Silva', 31, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia', 'Crossfit y Running. Empujando límites.', 99, 12, 3200, 'Avanzado', ARRAY['Running'], -12.115, -76.98, NULL, NULL),
-('00000000-0000-0000-0000-000000000005', now(), 'Mateo Ortiz', 22, 'Barranco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mateo', 'Futbol y amigos.', 82, 12, 450, 'Principiante', ARRAY['Fútbol'], -12.14, -77.02, NULL, NULL),
-('00000000-0000-0000-0000-000000000006', now(), 'Valentina Vega', 26, 'Miraflores', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina', 'Buscando dupla de pádel femenino.', 95, 12, 1100, 'Intermedio', ARRAY['Pádel'], -12.128, -77.035, NULL, NULL),
-('00000000-0000-0000-0000-000000000007', now(), 'Lucas Castro', 29, 'San Isidro', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas', 'Tenis de polvo de ladrillo.', 91, 12, 2100, 'Avanzado', ARRAY['Tenis'], -12.095, -77.03, NULL, NULL),
-('00000000-0000-0000-0000-000000000008', now(), 'Elena Ramos', 33, 'San Borja', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena', 'Yoga y Pilates.', 98, 12, 400, 'Intermedio', ARRAY['Running'], -12.1, -77.0, NULL, NULL),
-('00000000-0000-0000-0000-000000000009', now(), 'Martin Luna', 25, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Martin', 'Defensa central duro pero limpio.', 85, 12, 600, 'Avanzado', ARRAY['Fútbol'], -12.13, -76.99, NULL, NULL),
-('00000000-0000-0000-0000-000000000010', now(), 'Julia Soto', 27, 'Miraflores', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Julia', 'Revés a dos manos.', 92, 12, 1550, 'Intermedio', ARRAY['Tenis'], -12.12, -77.025, NULL, NULL);
+-- Administradores y Jugadores Humanos (user_role = 'PLAYER')
+('00000000-0000-0000-0000-000000000000', now(), 'Edwin Flores', 29, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Edwin', 'Administrador Principal de la plataforma.', 100, 15, 5000, 'Elite', ARRAY['Pádel','Fútbol'], -12.14, -76.995, 'PLAYER', NULL, NULL, false, true),
+('00000000-0000-0000-0000-000000000010', now(), 'Juan Alonso', 26, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Juan', 'Arquitecto UI/UX. Jugando tenis los fines de semana.', 95, 8, 1500, 'Intermedio', ARRAY['Pádel','Tenis'], -12.13, -76.98, 'PLAYER', NULL, NULL, false, false),
+('00000000-0000-0000-0000-000000000020', now(), 'Erick Espinoza', 27, 'Surco', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Erick', 'Desarrollador backend. Buscando retos de fútbol 7.', 92, 12, 1850, 'Avanzado', ARRAY['Pádel','Fútbol'], -12.1189, -76.995, 'PLAYER', NULL, NULL, false, false),
+('00000000-0000-0000-0000-000000000030', now(), 'Camila Torres', 24, 'Miraflores', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Camila', 'Compito en torneos los fines de semana.', 96, 12, 1240, 'Avanzado', ARRAY['Pádel'], -12.1221, -77.0298, 'PLAYER', NULL, NULL, false, false),
+('00000000-0000-0000-0000-000000000040', now(), 'Diego Ramírez', 28, 'San Borja', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Diego', 'Mediocampista. Juego martes y jueves.', 88, 12, 860, 'Intermedio', ARRAY['Fútbol'], -12.1084, -76.9981, 'PLAYER', NULL, NULL, false, false),
 
--- =========================
--- COURTS (3 canchas de prueba)
--- =========================
+-- Cuentas Corporativas B2B (user_role = 'BUSINESS' / is_sponsored = true)
+('00000000-0000-0000-0000-000000000080', now(), 'Manuel Puka', 42, 'Surco', 'https://api.dicebear.com/7.x/identicon/svg?seed=Puka', 'Representante de bebidas premium energéticas.', 100, 0, 10000, 'Elite', ARRAY[]::text[], -12.086, -76.975, 'BUSINESS', 'Puka Power Inc.', 'Bebidas', true, false),
+('00000000-0000-0000-0000-000000000090', now(), 'Roberto Arena', 38, 'Surco', 'https://api.dicebear.com/7.x/identicon/svg?seed=Arena', 'Gestión de complejos deportivos de alta gama.', 100, 0, 15000, 'Elite', ARRAY[]::text[], -12.148, -77.019, 'BUSINESS', 'SportMatch Arena Surco', 'Canchas', true, false)
 
+ON CONFLICT (id) DO UPDATE SET
+  name = excluded.name,
+  age = excluded.age,
+  city = excluded.city,
+  avatar_url = excluded.avatar_url,
+  bio = excluded.bio,
+  trust_score = excluded.trust_score,
+  fitcoins_balance = excluded.fitcoins_balance,
+  level = excluded.level,
+  preferred_sports = excluded.preferred_sports,
+  last_location_lat = excluded.last_location_lat,
+  last_location_lng = excluded.last_location_lng,
+  user_role = excluded.user_role,
+  company_name = excluded.company_name,
+  business_category = excluded.business_category,
+  is_sponsored = excluded.is_sponsored,
+  is_admin = excluded.is_admin;
+
+-- ─────────────────────────────────────────────────────────────────────
+-- 🏟️ 2. SEED DATA: CANCHAS (COURTS)
+-- ─────────────────────────────────────────────────────────────────────
+-- Coordenadas estrictas de Santiago de Surco usando st_setsrid(st_point(lng, lat), 4326)::geography
+-- Nota: Longitud primero, Latitud segundo.
+-- Vinculadas al negocio patrocinador 'SportMatch Arena Surco' (owner_id = '...0090')
+-- =====================================================================
 INSERT INTO public.courts (
   id, created_at, name, sport, price_per_hour, rating, 
-  reviews_count, lat, lng, image_url, amenities, is_available
+  reviews_count, lat, lng, location, image_url, amenities, is_available, address, owner_id
 ) VALUES
-('00000000-0000-0000-0000-000000000101', now(), 'Pádel Center Surco', 'Pádel', 40, 4.8, 312, -12.145, -77.0, 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8', ARRAY['Iluminación','Vestuarios','Parking','Cafetería'], true),
-('00000000-0000-0000-0000-000000000102', now(), 'Complejo Deportivo Jorge Chávez', 'Fútbol', 120, 4.6, 480, -12.155, -77.005, 'https://images.unsplash.com/photo-1551958219-acbc608c6377', ARRAY['Pasto sintético','Gradas','Duchas'], true),
-('00000000-0000-0000-0000-000000000103', now(), 'Tenis Club San Borja', 'Tenis', 35, 4.9, 215, -12.1084, -77.0025, 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8', ARRAY['Vestuarios','Cafetería','Parking'], true),
-('00000000-0000-0000-0000-000000000104', now(), 'Arena Pádel La Molina', 'Pádel', 45, 4.7, 221, -12.083, -76.945, 'https://images.unsplash.com/photo-1546519638-68e109498ffc', ARRAY['Iluminación','Parking','Cafetería'], true),
-('00000000-0000-0000-0000-000000000105', now(), 'Club Atlético Miraflores', 'Fútbol', 110, 4.5, 398, -12.121, -77.031, 'https://images.unsplash.com/photo-1574629810360-7efbbe195018', ARRAY['Pasto sintético','Duchas','Gradas'], true),
-('00000000-0000-0000-0000-000000000106', now(), 'Top Spin Tennis Club', 'Tenis', 50, 4.9, 167, -12.097, -77.018, 'https://images.unsplash.com/photo-1622279457486-28f6b847b8e6', ARRAY['Vestuarios','Pro Shop','Cafetería'], true),
-('00000000-0000-0000-0000-000000000107', now(), 'Running Hub Costa Verde', 'Running', 20, 4.8, 145, -12.134, -77.028, 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5', ARRAY['Lockers','Hidratación','Parking'], true),
-('00000000-0000-0000-0000-000000000108', now(), 'Fútbol Pro Surquillo', 'Fútbol', 95, 4.4, 284, -12.112, -77.021, 'https://images.unsplash.com/photo-1486286701208-1d58e9338013', ARRAY['Pasto sintético','Iluminación'], true),
-('00000000-0000-0000-0000-000000000109', now(), 'Pádel House Barranco', 'Pádel', 55, 4.9, 502, -12.145, -77.021, 'https://images.unsplash.com/photo-1526232761682-d26e03ac148e', ARRAY['Bar','Parking','Streaming'], true),
-('00000000-0000-0000-0000-000000000110', now(), 'Centro Deportivo San Isidro', 'Fútbol', 130, 4.7, 620, -12.098, -77.036, 'https://images.unsplash.com/photo-1517466787929-bc90951d0974', ARRAY['Duchas','Gradas','Cafetería'], true),
-('00000000-0000-0000-0000-000000000111', now(), 'Elite Tennis Academy', 'Tenis', 60, 5.0, 190, -12.089, -77.014, 'https://images.unsplash.com/photo-1531315396756-905d68d21b56', ARRAY['Coach','Vestuarios','Parking'], true),
-('00000000-0000-0000-0000-000000000112', now(), 'Circuito Runner Surco', 'Running', 15, 4.6, 88, -12.139, -76.991, 'https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf', ARRAY['Iluminación','Seguridad'], true),
-('00000000-0000-0000-0000-000000000113', now(), 'Pádel Point San Borja', 'Pádel', 48, 4.7, 331, -12.104, -76.998, 'https://images.unsplash.com/photo-1517649763962-0c623066013b', ARRAY['Cafetería','Parking'], true),
-('00000000-0000-0000-0000-000000000114', now(), 'Cancha 10 La Victoria', 'Fútbol', 85, 4.3, 172, -12.073, -77.013, 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d', ARRAY['Iluminación','Gradas'], false),
-('00000000-0000-0000-0000-000000000115', now(), 'Ace Club Miraflores', 'Tenis', 42, 4.8, 260, -12.117, -77.033, 'https://images.unsplash.com/photo-1517649763962-0c623066013b', ARRAY['Vestuarios','Cafetería'], true);
+(
+  '00000000-0000-0000-0000-000000000101', 
+  now(), 
+  'Pádel Center Surco', 
+  'Pádel', 
+  40, 4.8, 312, 
+  -12.086, -76.975, -- Cerca al Jockey Plaza
+  st_setsrid(st_point(-76.975, -12.086), 4326)::geography, 
+  'https://images.unsplash.com/photo-1554068865-24cecd4e34b8', 
+  ARRAY['Iluminación','Vestuarios','Parking','Cafetería'], 
+  true, 
+  'CC Jockey Plaza, Santiago de Surco', 
+  '00000000-0000-0000-0000-000000000090'
+),
+(
+  '00000000-0000-0000-0000-000000000102', 
+  now(), 
+  'Complejo Deportivo Jorge Chávez', 
+  'Fútbol', 
+  120, 4.6, 480, 
+  -12.148, -77.019, -- Cerca a Makro de Jorge Chávez
+  st_setsrid(st_point(-77.019, -12.148), 4326)::geography, 
+  'https://images.unsplash.com/photo-1551958219-acbc608c6377', 
+  ARRAY['Pasto sintético','Gradas','Duchas'], 
+  true, 
+  'Av. Jorge Chávez 456, Santiago de Surco', 
+  '00000000-0000-0000-0000-000000000090'
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = excluded.name,
+  sport = excluded.sport,
+  price_per_hour = excluded.price_per_hour,
+  rating = excluded.rating,
+  reviews_count = excluded.reviews_count,
+  lat = excluded.lat,
+  lng = excluded.lng,
+  location = excluded.location,
+  image_url = excluded.image_url,
+  amenities = excluded.amenities,
+  is_available = excluded.is_available,
+  address = excluded.address,
+  owner_id = excluded.owner_id;
 
+-- ─────────────────────────────────────────────────────────────────────
+-- 🛍️ 3. SEED DATA: CATÁLOGO B2B (BUSINESS CATALOG)
+-- ─────────────────────────────────────────────────────────────────────
+-- Productos vinculados de manera consistente a 'Puka Power Inc.' (business_id = '...0080')
+-- =====================================================================
+INSERT INTO public.business_catalog (
+  id, created_at, business_id, name, description, price, type, image_url
+) VALUES
+(
+  'puka-power-bottle', 
+  now(), 
+  '00000000-0000-0000-0000-000000000080', 
+  'Botella Puka Power', 
+  'Bebida energética de 500ml para máxima resistencia.', 
+  150, 
+  'PRODUCT', 
+  'https://images.unsplash.com/photo-1622483767028-3f66f32aef97'
+),
+(
+  'puka-pack-6', 
+  now(), 
+  '00000000-0000-0000-0000-000000000080', 
+  'Puka Pack (6 botellas)', 
+  'Caja de 6 botellas para compartir con tu squad.', 
+  800, 
+  'PRODUCT', 
+  'https://images.unsplash.com/photo-1546429070-1fc422f1d77a'
+),
+(
+  'puka-vip-pass', 
+  now(), 
+  '00000000-0000-0000-0000-000000000080', 
+  'Acceso VIP Arena Puka', 
+  'Entrada exclusiva para eventos de pádel patrocinados.', 
+  2500, 
+  'SERVICE', 
+  'https://images.unsplash.com/photo-1554068865-24cecd4e34b8'
+)
+ON CONFLICT (id) DO UPDATE SET
+  business_id = excluded.business_id,
+  name = excluded.name,
+  description = excluded.description,
+  price = excluded.price,
+  type = excluded.type,
+  image_url = excluded.image_url;
 
--- SEED DATA: Partidos de Prueba (Corregido)
-INSERT INTO public.matches (id, created_at, court_id, sport, title, date, time, max_players, required_level, creator_id) VALUES
-('00000000-0000-0000-0000-000000000201', now(), '00000000-0000-0000-0000-000000000101', 'Pádel', 'Dobles mixto tarde', '2026-06-05', '18:00', 4, 'Intermedio', '00000000-0000-0000-0000-000000000000'), -- Cambiado a UUID de Edwin
-('00000000-0000-0000-0000-000000000202', now(), '00000000-0000-0000-0000-000000000102', 'Fútbol', '5 vs 5 nocturno', '2026-06-06', '20:00', 10, 'Avanzado', '00000000-0000-0000-0000-000000000001'),
-('00000000-0000-0000-0000-000000000203', now(), '00000000-0000-0000-0000-000000000103', 'Tenis', 'Singles mañana', '2026-06-07', '09:00', 2, 'Intermedio', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000204', now(), '00000000-0000-0000-0000-000000000104', 'Pádel', 'Retas nivel avanzado', '2026-06-08', '19:00', 4, 'Avanzado', '00000000-0000-0000-0000-000000000001'),
-('00000000-0000-0000-0000-000000000205', now(), '00000000-0000-0000-0000-000000000105', 'Fútbol', 'Pichanga miércoles', '2026-06-09', '21:00', 10, 'Intermedio', '00000000-0000-0000-0000-000000000003'),
-('00000000-0000-0000-0000-000000000206', now(), '00000000-0000-0000-0000-000000000106', 'Tenis', 'Singles competitivo', '2026-06-10', '10:00', 2, 'Avanzado', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000207', now(), '00000000-0000-0000-0000-000000000107', 'Running', '5K Costa Verde', '2026-06-10', '06:30', 15, 'Principiante', '00000000-0000-0000-0000-000000000004'),
-('00000000-0000-0000-0000-000000000208', now(), '00000000-0000-0000-0000-000000000109', 'Pádel', 'Mix femenino/masculino', '2026-06-11', '20:00', 4, 'Intermedio', '00000000-0000-0000-0000-000000000006'),
-('00000000-0000-0000-0000-000000000209', now(), '00000000-0000-0000-0000-000000000110', 'Fútbol', 'Full cancha sábado', '2026-06-12', '18:00', 14, 'Avanzado', '00000000-0000-0000-0000-000000000009'),
-('00000000-0000-0000-0000-000000000210', now(), '00000000-0000-0000-0000-000000000111', 'Tenis', 'Dobles relajado', '2026-06-13', '16:00', 4, 'Intermedio', '00000000-0000-0000-0000-000000000010'),
-('00000000-0000-0000-0000-000000000211', now(), '00000000-0000-0000-0000-000000000113', 'Pádel', 'Americana nocturna', '2026-06-13', '20:30', 8, 'Intermedio', '00000000-0000-0000-0000-000000000011'),
-('00000000-0000-0000-0000-000000000212', now(), '00000000-0000-0000-0000-000000000112', 'Running', '10K entrenamiento', '2026-06-14', '07:00', 20, 'Avanzado', '00000000-0000-0000-0000-000000000004'),
-('00000000-0000-0000-0000-000000000213', now(), '00000000-0000-0000-0000-000000000108', 'Fútbol', 'Pichanga after office', '2026-06-15', '20:00', 10, 'Principiante', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000214', now(), '00000000-0000-0000-0000-000000000115', 'Tenis', 'Tie break challenge', '2026-06-16', '11:00', 2, 'Avanzado', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000215', now(), '00000000-0000-0000-0000-000000000101', 'Pádel', 'Clase + partido', '2026-06-17', '17:00', 4, 'Principiante', '00000000-0000-0000-0000-000000000000'),
-('00000000-0000-0000-0000-000000000216', now(), '00000000-0000-0000-0000-000000000102', 'Fútbol', 'Torneo relámpago', '2026-06-18', '19:00', 16, 'Intermedio', '00000000-0000-0000-0000-000000000003'),
-('00000000-0000-0000-0000-000000000217', now(), '00000000-0000-0000-0000-000000000103', 'Tenis', 'Singles amateur', '2026-06-18', '09:00', 2, 'Principiante', '00000000-0000-0000-0000-000000000010'),
-('00000000-0000-0000-0000-000000000218', now(), '00000000-0000-0000-0000-000000000109', 'Pádel', 'Retas express', '2026-06-19', '21:00', 4, 'Avanzado', '00000000-0000-0000-0000-000000000001'),
-('00000000-0000-0000-0000-000000000219', now(), '00000000-0000-0000-0000-000000000105', 'Fútbol', 'Fútbol dominguero', '2026-06-20', '10:00', 12, 'Principiante', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000220', now(), '00000000-0000-0000-0000-000000000111', 'Tenis', 'Duelos rápidos', '2026-06-20', '15:00', 4, 'Intermedio', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000221', now(), '00000000-0000-0000-0000-000000000107', 'Running', 'Running sunset', '2026-06-21', '18:30', 25, 'Intermedio', '00000000-0000-0000-0000-000000000008'),
-('00000000-0000-0000-0000-000000000222', now(), '00000000-0000-0000-0000-000000000110', 'Fútbol', 'Liga amateur', '2026-06-22', '20:00', 14, 'Avanzado', '00000000-0000-0000-0000-000000000009'),
-('00000000-0000-0000-0000-000000000223', now(), '00000000-0000-0000-0000-000000000113', 'Pádel', 'Partido femenino', '2026-06-23', '19:00', 4, 'Intermedio', '00000000-0000-0000-0000-000000000006');
+-- ─────────────────────────────────────────────────────────────────────
+-- 🏟️ 4. SEED DATA: PARTIDOS (MATCHES)
+-- ─────────────────────────────────────────────────────────────────────
+-- Partidos creados con estatus por defecto 'Open' y asignados a sus creadores
+-- =====================================================================
+INSERT INTO public.matches (
+  id, created_at, court_id, creator_id, sport, title, date, time, max_players, required_level, status
+) VALUES
+(
+  '00000000-0000-0000-0000-000000000201', 
+  now(), 
+  '00000000-0000-0000-0000-000000000101', 
+  '00000000-0000-0000-0000-000000000000', -- Creado por Edwin
+  'Pádel', 
+  'Dobles mixto tarde', 
+  '2026-06-05', 
+  '18:00', 
+  4, 
+  'Intermedio', 
+  'Open'
+),
+(
+  '00000000-0000-0000-0000-000000000202', 
+  now(), 
+  '00000000-0000-0000-0000-000000000102', 
+  '00000000-0000-0000-0000-000000000020', -- Creado por Erick
+  'Fútbol', 
+  '5 vs 5 nocturno', 
+  '2026-06-06', 
+  '20:00', 
+  10, 
+  'Avanzado', 
+  'Open'
+)
+ON CONFLICT (id) DO UPDATE SET
+  court_id = excluded.court_id,
+  creator_id = excluded.creator_id,
+  sport = excluded.sport,
+  title = excluded.title,
+  date = excluded.date,
+  time = excluded.time,
+  max_players = excluded.max_players,
+  required_level = excluded.required_level,
+  status = excluded.status;
 
-
--- SEED DATA: Jugadores en Partidos (Corregido)
-INSERT INTO public.match_players (match_id, user_id) VALUES
-('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000000'), -- Cambiado a UUID de Edwin
-('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000006'),
-('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000001'),
-('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000007'),
--- Match 204
-('00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000001'),
-('00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000006'),
-('00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000011'),
-
--- Match 205
-('00000000-0000-0000-0000-000000000205', '00000000-0000-0000-0000-000000000003'),
-('00000000-0000-0000-0000-000000000205', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000205', '00000000-0000-0000-0000-000000000009'),
-
--- Match 206
-('00000000-0000-0000-0000-000000000206', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000206', '00000000-0000-0000-0000-000000000010'),
-
--- Match 207
-('00000000-0000-0000-0000-000000000207', '00000000-0000-0000-0000-000000000004'),
-('00000000-0000-0000-0000-000000000207', '00000000-0000-0000-0000-000000000008'),
-
--- Match 208
-('00000000-0000-0000-0000-000000000208', '00000000-0000-0000-0000-000000000006'),
-('00000000-0000-0000-0000-000000000208', '00000000-0000-0000-0000-000000000011'),
-('00000000-0000-0000-0000-000000000208', '00000000-0000-0000-0000-000000000001'),
-
--- Match 209
-('00000000-0000-0000-0000-000000000209', '00000000-0000-0000-0000-000000000009'),
-('00000000-0000-0000-0000-000000000209', '00000000-0000-0000-0000-000000000003'),
-('00000000-0000-0000-0000-000000000209', '00000000-0000-0000-0000-000000000005'),
-
--- Match 210
-('00000000-0000-0000-0000-000000000210', '00000000-0000-0000-0000-000000000010'),
-('00000000-0000-0000-0000-000000000210', '00000000-0000-0000-0000-000000000007'),
-
--- Match 211
-('00000000-0000-0000-0000-000000000211', '00000000-0000-0000-0000-000000000011'),
-('00000000-0000-0000-0000-000000000211', '00000000-0000-0000-0000-000000000006'),
-('00000000-0000-0000-0000-000000000211', '00000000-0000-0000-0000-000000000000'),
-
--- Match 212
-('00000000-0000-0000-0000-000000000212', '00000000-0000-0000-0000-000000000004'),
-('00000000-0000-0000-0000-000000000212', '00000000-0000-0000-0000-000000000008'),
-
--- Match 213
-('00000000-0000-0000-0000-000000000213', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000213', '00000000-0000-0000-0000-000000000003'),
-
--- Match 214
-('00000000-0000-0000-0000-000000000214', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000214', '00000000-0000-0000-0000-000000000010'),
-
--- Match 215
-('00000000-0000-0000-0000-000000000215', '00000000-0000-0000-0000-000000000000'),
-('00000000-0000-0000-0000-000000000215', '00000000-0000-0000-0000-000000000011'),
-
--- Match 216
-('00000000-0000-0000-0000-000000000216', '00000000-0000-0000-0000-000000000003'),
-('00000000-0000-0000-0000-000000000216', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000216', '00000000-0000-0000-0000-000000000009'),
-
--- Match 217
-('00000000-0000-0000-0000-000000000217', '00000000-0000-0000-0000-000000000010'),
-
--- Match 218
-('00000000-0000-0000-0000-000000000218', '00000000-0000-0000-0000-000000000001'),
-('00000000-0000-0000-0000-000000000218', '00000000-0000-0000-0000-000000000006'),
-
--- Match 219
-('00000000-0000-0000-0000-000000000219', '00000000-0000-0000-0000-000000000005'),
-('00000000-0000-0000-0000-000000000219', '00000000-0000-0000-0000-000000000009'),
-
--- Match 220
-('00000000-0000-0000-0000-000000000220', '00000000-0000-0000-0000-000000000007'),
-('00000000-0000-0000-0000-000000000220', '00000000-0000-0000-0000-000000000010'),
-
--- Match 221
-('00000000-0000-0000-0000-000000000221', '00000000-0000-0000-0000-000000000004'),
-('00000000-0000-0000-0000-000000000221', '00000000-0000-0000-0000-000000000008'),
-
--- Match 222
-('00000000-0000-0000-0000-000000000222', '00000000-0000-0000-0000-000000000009'),
-('00000000-0000-0000-0000-000000000222', '00000000-0000-0000-0000-000000000003'),
-
--- Match 223
-('00000000-0000-0000-0000-000000000223', '00000000-0000-0000-0000-000000000006'),
-('00000000-0000-0000-0000-000000000223', '00000000-0000-0000-0000-000000000011');
-
+-- ─────────────────────────────────────────────────────────────────────
+-- 👥 5. SEED DATA: PARTICIPANTES (MATCH PARTICIPANTS)
+-- ─────────────────────────────────────────────────────────────────────
+-- Agrega a los jugadores en los partidos creados de manera consistente
+-- =====================================================================
+INSERT INTO public.match_participants (
+  match_id, user_id, status, joined_at
+) VALUES
+('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000000', 'ACCEPTED', now()),
+('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000010', 'ACCEPTED', now()),
+('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000020', 'ACCEPTED', now()),
+('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000030', 'ACCEPTED', now())
+ON CONFLICT (match_id, user_id) DO NOTHING;
