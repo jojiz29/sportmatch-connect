@@ -74,8 +74,8 @@ function Wallet() {
     loadCatalog();
   }, [user, buyItem]);
 
-  const handleRedeem = (reward: (typeof REWARDS)[0]) => {
-    const success = redeem(reward.cost, `Canje: ${reward.name}`);
+  const handleRedeem = async (reward: (typeof REWARDS)[0]) => {
+    const success = await redeem(reward.cost, `Canje: ${reward.name}`);
     if (success) {
       toast.success(t("wallet.success"), {
         description: t("wallet.success_desc", { reward: reward.name }),
