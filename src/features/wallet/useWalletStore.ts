@@ -5,13 +5,26 @@ import { Transaction } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { createNotification } from "@/shared/api/notificationService";
+import { toast } from "sonner";
+
+export interface Challenge {
+  id: string;
+  name: string;
+  progress: number;
+  total: number;
+  reward: number;
+  claimed: boolean;
+}
 
 interface WalletState {
   balance: number;
   transactions: Transaction[];
+  challenges: Challenge[];
   initWallet: () => void;
   redeem: (cost: number, description: string) => boolean;
   purchaseItem: (cost: number, itemName: string, sellerId: string) => boolean;
+  progressChallenge: (id: string) => void;
+  claimChallenge: (id: string) => void;
 }
 
 export const useWalletStore = create<WalletState>()(
@@ -19,12 +32,69 @@ export const useWalletStore = create<WalletState>()(
     (set, get) => ({
       balance: 0,
       transactions: [],
+      challenges: [
+        {
+          id: "ch1",
+          name: "Jugá 3 partidos esta semana",
+          progress: 2,
+          total: 3,
+          reward: 150,
+          claimed: false,
+        },
+        {
+          id: "ch2",
+          name: "Mantené Trust Score > 90",
+          progress: 93,
+          total: 100,
+          reward: 200,
+          claimed: false,
+        },
+        {
+          id: "ch3",
+          name: "Invitá a 2 amigos",
+          progress: 1,
+          total: 2,
+          reward: 300,
+          claimed: false,
+        },
+      ],
 
       initWallet: () => {
         const user = useAuthStore.getState().user;
         if (user) {
+          const state = get();
+          const currentChallenges =
+            state.challenges && state.challenges.length > 0
+              ? state.challenges
+              : [
+                  {
+                    id: "ch1",
+                    name: "Jugá 3 partidos esta semana",
+                    progress: 2,
+                    total: 3,
+                    reward: 150,
+                    claimed: false,
+                  },
+                  {
+                    id: "ch2",
+                    name: "Mantené Trust Score > 90",
+                    progress: 93,
+                    total: 100,
+                    reward: 200,
+                    claimed: false,
+                  },
+                  {
+                    id: "ch3",
+                    name: "Invitá a 2 amigos",
+                    progress: 1,
+                    total: 2,
+                    reward: 300,
+                    claimed: false,
+                  },
+                ];
           set({
             balance: user.fitcoins_balance,
+            challenges: currentChallenges,
             transactions: MOCK_TRANSACTIONS.filter((t) => t.user_id === user.id),
           });
         } else {
@@ -157,6 +227,66 @@ export const useWalletStore = create<WalletState>()(
         ).catch((e) => console.warn(e));
 
         return true;
+      },
+
+      progressChallenge: (id) => {
+        set((state) => {
+          const updated = state.challenges.map((c) => {
+            if (c.id === id) {
+              const newProgress = Math.min(c.progress + 1, c.total);
+              return { ...c, progress: newProgress };
+            }
+            return c;
+          });
+          return { challenges: updated };
+        });
+      },
+
+      claimChallenge: (id) => {
+        const { challenges, balance, transactions } = get();
+        const challenge = challenges.find((c) => c.id === id);
+        if (!challenge || challenge.claimed || challenge.progress < challenge.total) return;
+
+        const user = useAuthStore.getState().user;
+        if (!user) return;
+
+        const newBalance = balance + challenge.reward;
+
+        const newTransaction: Transaction = {
+          id: `txn_${Date.now()}`,
+          user_id: user.id,
+          amount: challenge.reward,
+          description: `Reto completado: ${challenge.name}`,
+          type: "EARN",
+          created_at: new Date().toISOString(),
+        };
+
+        // Add to mock transactions array
+        MOCK_TRANSACTIONS.unshift(newTransaction);
+
+        // Update user balances
+        user.fitcoins_balance = newBalance;
+        const foundInMock = MOCK_USERS.find((u) => u.id === user.id);
+        if (foundInMock) {
+          foundInMock.fitcoins_balance = newBalance;
+        }
+
+        useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
+
+        const updatedChallenges = challenges.map((c) => {
+          if (c.id === id) {
+            return { ...c, claimed: true };
+          }
+          return c;
+        });
+
+        set({
+          balance: newBalance,
+          challenges: updatedChallenges,
+          transactions: [newTransaction, ...transactions],
+        });
+
+        toast.success(`¡Reclamaste +${challenge.reward} FitCoins! 🏆`);
       },
     }),
     {

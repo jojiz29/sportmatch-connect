@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { LEADERBOARD } from "@/lib/mock";
+import { MOCK_USERS } from "@/lib/mock";
 import { Trophy, Gift, Zap, Crown, X, ShoppingBag } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -26,15 +26,10 @@ const REWARDS = [
   { id: "r4", name: "Pelota oficial", cost: 800, emoji: "⚽" },
 ];
 
-const CHALLENGES = [
-  { id: "ch1", name: "Jugá 3 partidos esta semana", progress: 2, total: 3, reward: 150 },
-  { id: "ch2", name: "Mantené Trust Score > 90", progress: 93, total: 100, reward: 200 },
-  { id: "ch3", name: "Invitá a 2 amigos", progress: 1, total: 2, reward: 300 },
-];
-
 function Wallet() {
   const { t } = useTranslation();
-  const { balance, redeem, initWallet } = useWalletStore();
+  const { balance, redeem, initWallet, challenges, progressChallenge, claimChallenge } =
+    useWalletStore();
   const [selectedReward, setSelectedReward] = useState<(typeof REWARDS)[0] | null>(null);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -110,6 +105,17 @@ function Wallet() {
     }
   };
 
+  const leaderboard = useMemo(() => {
+    // Sincronizar dinámicamente con los usuarios en memoria de MOCK_USERS
+    return MOCK_USERS.map((u) => ({
+      name: u.name,
+      avatar: u.avatar_url,
+      coins: u.id === user?.id ? balance : u.fitcoins_balance,
+    }))
+      .sort((a, b) => b.coins - a.coins)
+      .map((u, i) => ({ ...u, rank: i + 1 }));
+  }, [balance, user?.id]);
+
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title={t("wallet.title")} subtitle={t("wallet.subtitle")} />
@@ -153,28 +159,64 @@ function Wallet() {
               <Zap className="h-4 w-4 text-neon" /> {t("wallet.challenges")}
             </h3>
             <div className="space-y-3">
-              {CHALLENGES.map((c) => (
-                <div
-                  key={c.id}
-                  className="bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium text-sm">{c.name}</div>
-                    <div className="text-xs text-neon flex items-center gap-1">
-                      <Trophy className="h-3 w-3" /> +{c.reward}
+              {challenges?.map((c) => {
+                const isCompleted = c.progress >= c.total;
+                return (
+                  <div
+                    key={c.id}
+                    className="bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="font-medium text-sm">{c.name}</div>
+                        {c.claimed && (
+                          <span className="text-[10px] text-neon bg-neon/10 border border-neon/20 px-2 py-0.5 rounded-full mt-1 inline-block">
+                            Reclamado
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-neon flex items-center gap-1 font-semibold">
+                        <Trophy className="h-3 w-3" /> +{c.reward}
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden mb-3">
+                      <div
+                        className="h-full bg-gradient-neon"
+                        style={{ width: `${(c.progress / c.total) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {c.progress} / {c.total}
+                      </span>
+                      {!c.claimed ? (
+                        <div className="flex gap-2">
+                          {c.progress < c.total && (
+                            <button
+                              onClick={() => progressChallenge(c.id)}
+                              className="px-2.5 py-1 rounded-lg bg-accent text-[11px] font-semibold hover:bg-accent/80 transition-colors cursor-pointer"
+                            >
+                              Avanzar
+                            </button>
+                          )}
+                          {isCompleted && (
+                            <button
+                              onClick={() => claimChallenge(c.id)}
+                              className="px-2.5 py-1 rounded-lg bg-gradient-neon text-neon-foreground text-[11px] font-bold hover:shadow-neon transition-shadow cursor-pointer"
+                            >
+                              Reclamar
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic font-semibold text-neon">
+                          ✓ Completado
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-neon"
-                      style={{ width: `${(c.progress / c.total) * 100}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {c.progress} / {c.total}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -259,7 +301,7 @@ function Wallet() {
             <Crown className="h-4 w-4 text-warning" /> {t("wallet.ranking")}
           </h3>
           <div className="bg-gradient-card border border-border rounded-2xl p-3 space-y-1">
-            {LEADERBOARD.map((u) => {
+            {leaderboard.map((u) => {
               const me = u.name === user?.name;
               return (
                 <div
@@ -287,7 +329,7 @@ function Wallet() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold truncate">{u.name}</div>
                   </div>
-                  <div className="text-xs text-neon">{me ? balance : u.coins}</div>
+                  <div className="text-xs text-neon">{u.coins}</div>
                 </div>
               );
             })}

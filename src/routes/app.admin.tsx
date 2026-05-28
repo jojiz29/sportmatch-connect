@@ -1,11 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { MOCK_USERS, MOCK_COURTS } from "@/lib/mock";
 import { Court } from "@/entities/types";
 import { Users, DollarSign, CalendarCheck, Activity, Star, MoreHorizontal } from "lucide-react";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin — SportMatch" }] }),
+  beforeLoad: () => {
+    const user = useAuthStore.getState().user;
+    const isAdmin =
+      user?.email === "ejuniorfloress@gmail.com" || user?.name === "Edwin Flores" || user?.is_admin;
+    if (!isAdmin) {
+      throw redirect({ to: "/app" });
+    }
+  },
   component: Admin,
 });
 
@@ -27,6 +38,28 @@ const ADMIN_KPI = {
 };
 
 function Admin() {
+  const [usersList, setUsersList] = useState(MOCK_USERS);
+
+  const toggleAdmin = (userId: string) => {
+    const targetUser = MOCK_USERS.find((u) => u.id === userId);
+    if (!targetUser) return;
+
+    if (targetUser.email === "ejuniorfloress@gmail.com" || targetUser.name === "Edwin Flores") {
+      toast.error("No se puede revocar el acceso del administrador principal.");
+      return;
+    }
+
+    const updatedIsAdmin = !targetUser.is_admin;
+    targetUser.is_admin = updatedIsAdmin;
+
+    // Actualizar estado local para forzar render
+    setUsersList([...MOCK_USERS]);
+
+    toast.success(
+      `Acceso de administrador ${updatedIsAdmin ? "otorgado" : "revocado"} para ${targetUser.name}`,
+    );
+  };
+
   const total = ADMIN_KPI.sportsShare.reduce(
     (a: number, b: { sport: string; value: number }) => a + b.value,
     0,
@@ -113,30 +146,56 @@ function Admin() {
                   <th>Deporte</th>
                   <th>Trust</th>
                   <th>Partidos</th>
+                  <th>Acceso Admin</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {MOCK_USERS.map((p) => (
+                {usersList.map((p) => (
                   <tr key={p.id} className="border-t border-border">
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <img src={p.avatar_url} alt="" className="h-8 w-8 rounded-full bg-muted" />
+                        <img
+                          src={p.avatar_url}
+                          alt=""
+                          className="h-8 w-8 rounded-full bg-muted object-cover"
+                        />
                         <div>
                           <div className="font-medium">{p.name}</div>
                           <div className="text-xs text-muted-foreground">{p.level}</div>
                         </div>
                       </div>
                     </td>
-                    <td>{p.preferred_sports[0]}</td>
+                    <td>{p.preferred_sports[0] || "Ninguno"}</td>
                     <td>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${(p.trust_score || 0) >= 90 ? "bg-neon/20 text-neon" : "bg-warning/20 text-warning"}`}
                       >
-                        {p.trust_score}
+                        {p.trust_score}%
                       </span>
                     </td>
                     <td>10</td>
+                    <td>
+                      <button
+                        onClick={() => toggleAdmin(p.id)}
+                        disabled={
+                          p.email === "ejuniorfloress@gmail.com" || p.name === "Edwin Flores"
+                        }
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          p.is_admin ||
+                          p.email === "ejuniorfloress@gmail.com" ||
+                          p.name === "Edwin Flores"
+                            ? "bg-neon text-neon-foreground hover:shadow-neon"
+                            : "bg-muted text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        {p.is_admin ||
+                        p.email === "ejuniorfloress@gmail.com" ||
+                        p.name === "Edwin Flores"
+                          ? "Admin"
+                          : "Hacer Admin"}
+                      </button>
+                    </td>
                     <td>
                       <button className="p-1 rounded hover:bg-accent">
                         <MoreHorizontal className="h-4 w-4" />

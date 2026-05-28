@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
 
-export function useMatchmaking(initialData?: User[]) {
+export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => void) {
   const queryClient = useQueryClient();
 
   const {
@@ -53,8 +53,16 @@ export function useMatchmaking(initialData?: User[]) {
       }
       return { previousStack };
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables, context) => {
       if (data.action === "like") {
+        const isMatch = Math.random() > 0.4;
+        if (isMatch && onMatch && context?.previousStack) {
+          const matchedUser = context.previousStack.find((u) => u.id === data.userId);
+          if (matchedUser) {
+            onMatch(matchedUser);
+            return;
+          }
+        }
         toast.success("¡Like enviado!", { description: "Te avisaremos si hay Match." });
       }
     },

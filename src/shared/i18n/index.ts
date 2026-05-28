@@ -13,10 +13,15 @@ i18n
       es: { translation: es },
       en: { translation: en },
     },
-    lng: "es",
     fallbackLng: "es",
+    supportedLngs: ["es", "en"],
+    load: "languageOnly",
     interpolation: {
       escapeValue: false, // React ya se encarga de esto
+    },
+    detection: {
+      order: ["localStorage", "navigator", "htmlTag"],
+      caches: ["localStorage"],
     },
   });
 

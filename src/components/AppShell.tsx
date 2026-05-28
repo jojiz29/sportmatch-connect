@@ -48,6 +48,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (item.to === "/app/business" && currentUser.user_role !== "BUSINESS") {
       return false;
     }
+    if (item.to === "/app/admin") {
+      return (
+        currentUser.email === "ejuniorfloress@gmail.com" ||
+        currentUser.name === "Edwin Flores" ||
+        currentUser.is_admin
+      );
+    }
     return true;
   });
 

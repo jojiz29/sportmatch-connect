@@ -78,8 +78,8 @@ function RegisterPage() {
           role === "BUSINESS"
             ? `Perfil oficial de ${companyName}. ¡Bienvenido a nuestro catálogo!`
             : t("profile.placeholder_bio") || "¡Listo para jugar!",
-        trust_score: 100,
-        fitcoins_balance: role === "BUSINESS" ? 0 : 500,
+        trust_score: 50,
+        fitcoins_balance: 0,
         level: "Intermedio" as const,
         preferred_sports: role === "BUSINESS" ? [] : selectedSports,
         matches_played: 0,

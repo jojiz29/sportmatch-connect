@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { MOCK_CHATS, Chat } from "@/lib/mock";
+import { MOCK_CHATS, MOCK_USERS, Chat } from "@/lib/mock";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
 interface ChatState {
   chats: Chat[];
   activeConversationId: string | null;
-  setActiveConversation: (id: string) => void;
+  setActiveConversation: (id: string | null) => void;
   sendMessage: (chatId: string, text: string) => void;
+  createChat: (userId: string) => string;
   initChat: () => void;
 }
 
@@ -57,6 +58,44 @@ export const useChatStore = create<ChatState>()(
 
           return { chats: updatedChats };
         }),
+      createChat: (targetUserId) => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) return "";
+
+        const existingChat = get().chats.find(
+          (c) =>
+            c.current_players.length === 2 &&
+            c.current_players.includes(currentUser.id) &&
+            c.current_players.includes(targetUserId),
+        );
+
+        if (existingChat) {
+          set({ activeConversationId: existingChat.id });
+          return existingChat.id;
+        }
+
+        const targetUser = MOCK_USERS.find((u) => u.id === targetUserId);
+        const name = targetUser ? targetUser.name : "Chat";
+        const avatar = targetUser ? targetUser.avatar_url : "";
+
+        const newChat: Chat = {
+          id: `chat_${Date.now()}`,
+          name,
+          avatar,
+          current_players: [currentUser.id, targetUserId],
+          messages: [],
+          unread: 0,
+        };
+
+        // Sync to mock and state
+        MOCK_CHATS.push(newChat);
+        set((state) => ({
+          chats: [...state.chats, newChat],
+          activeConversationId: newChat.id,
+        }));
+
+        return newChat.id;
+      },
     }),
     {
       name: "sportmatch-chat",

@@ -26,6 +26,7 @@ export interface User {
   company_name?: string;
   business_category?: "Canchas" | "Gym" | "Tienda" | "Bebidas";
   is_sponsored?: boolean;
+  is_admin?: boolean;
 }
 
 export interface Court {
