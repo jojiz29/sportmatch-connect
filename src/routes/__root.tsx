@@ -65,19 +65,21 @@ function RootComponent() {
   const match = router.state.matches[router.state.matches.length - 1];
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={match?.id || "root"}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="min-h-screen bg-background"
-      >
-        <Outlet />
-      </motion.div>
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={match?.id || "root"}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="min-h-screen bg-background"
+        >
+          <Outlet />
+        </motion.div>
+      </AnimatePresence>
       <Toaster />
-    </AnimatePresence>
+    </>
   );
 }
 

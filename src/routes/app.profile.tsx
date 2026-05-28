@@ -4,10 +4,11 @@ import { MOCK_MATCHES } from "@/lib/mock";
 import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp, Save, X, Users } from "lucide-react";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
+import { apiClient } from "@/shared/api/apiClient";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Sport } from "@/entities/types";
+import { Match, Sport } from "@/entities/types";
 
 export const Route = createFileRoute("/app/profile")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -26,6 +27,7 @@ function Profile() {
   const { profile, updateProfile, initProfile } = useProfileStore();
   const { balance } = useWalletStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [userMatches, setUserMatches] = useState<Match[]>([]);
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -46,6 +48,11 @@ function Profile() {
         bio: profile.bio || "",
         preferred_sports: profile.preferred_sports.join(", "),
       });
+
+      apiClient.matches
+        .getUserMatches(profile.id)
+        .then(setUserMatches)
+        .catch(() => setUserMatches([]));
     }
   }, [profile]);
 
@@ -91,10 +98,6 @@ function Profile() {
     setIsEditing(false);
     toast.success(t("profile.updated"));
   };
-
-  const userMatches = MOCK_MATCHES.filter(
-    (m) => m.creator_id === profile.id || m.current_players?.some((p) => p.id === profile.id),
-  );
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">

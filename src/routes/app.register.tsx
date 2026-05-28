@@ -69,6 +69,10 @@ function RegisterPage() {
         created_at: new Date().toISOString(),
         name: role === "BUSINESS" ? companyName : fullName,
         age: role === "BUSINESS" ? 0 : 25,
+        name: fullName,
+        email: email,
+        password: password,
+        age: 25,
         city: "Lima",
         avatar_url: role === "BUSINESS"
           ? `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(companyName)}`
@@ -101,8 +105,10 @@ function RegisterPage() {
 
       toast.success(t("register.success_toast") || "¡Registro completado!");
       navigate({ to: "/app" });
-    } catch {
-      toast.error(t("register.error_toast") || "Error en el registro");
+    } catch (err: unknown) {
+      console.error("Error en registro:", err);
+      const errorMessage = err instanceof Error ? err.message : t("register.error_toast");
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 
