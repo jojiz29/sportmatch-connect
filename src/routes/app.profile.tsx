@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { MOCK_MATCHES } from "@/lib/mock";
 import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp, Save, X, Users } from "lucide-react";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { Court, Match, User } from "@/entities/types";
+import { Court, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
@@ -156,7 +156,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
         </Marker>
       );
     });
-  }, [courts, t]);
+  }, [courts, matches, t]);
 
   const matchMarkers = useMemo(() => {
     return matches.map((m) => {
@@ -194,7 +194,7 @@ export function MapFeature({ courts, matches }: { courts: Court[]; matches: User
         </Marker>
       );
     });
-  }, [players]);
+  }, [matches]);
 
   if (!mounted || typeof window === "undefined") {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;
