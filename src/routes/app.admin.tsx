@@ -1,11 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { MOCK_USERS, MOCK_COURTS } from "@/lib/mock";
-import { Court } from "@/entities/types";
+import { Court, User } from "@/entities/types";
 import { Users, DollarSign, CalendarCheck, Activity, Star, MoreHorizontal } from "lucide-react";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { apiClient } from "@/shared/api/apiClient";
+import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin — SportMatch" }] }),
+  beforeLoad: () => {
+    const user = useAuthStore.getState().user;
+    const isAdmin =
+      user?.email === "ejuniorfloress@gmail.com" || user?.name === "Edwin Flores" || user?.is_admin;
+    if (!isAdmin) {
+      throw redirect({ to: "/app" });
+    }
+  },
   component: Admin,
 });
 
@@ -27,6 +39,62 @@ const ADMIN_KPI = {
 };
 
 function Admin() {
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [courtsList, setCourtsList] = useState<Court[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.users
+      .getMatches()
+      .then((users) => {
+        if (active) setUsersList(users);
+      })
+      .catch((err) => console.error("Error loading users for admin:", err));
+
+    apiClient.courts
+      .getAll()
+      .then((courts) => {
+        if (active) setCourtsList(courts);
+      })
+      .catch((err) => console.error("Error loading courts for admin:", err));
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleAdmin = async (userId: string) => {
+    const targetUser = usersList.find((u) => u.id === userId);
+    if (!targetUser) return;
+
+    if (targetUser.email === "ejuniorfloress@gmail.com" || targetUser.name === "Edwin Flores") {
+      toast.error("No se puede revocar el acceso del administrador principal.");
+      return;
+    }
+
+    const updatedIsAdmin = !targetUser.is_admin;
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_admin: updatedIsAdmin })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setUsersList(
+        usersList.map((u) => (u.id === userId ? { ...u, is_admin: updatedIsAdmin } : u)),
+      );
+
+      toast.success(
+        `Acceso de administrador ${updatedIsAdmin ? "otorgado" : "revocado"} para ${targetUser.name}`,
+      );
+    } catch (e) {
+      console.error("Error updating admin role in Supabase:", e);
+      toast.error("Error al actualizar permisos");
+    }
+  };
+
   const total = ADMIN_KPI.sportsShare.reduce(
     (a: number, b: { sport: string; value: number }) => a + b.value,
     0,
@@ -113,30 +181,56 @@ function Admin() {
                   <th>Deporte</th>
                   <th>Trust</th>
                   <th>Partidos</th>
+                  <th>Acceso Admin</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {MOCK_USERS.map((p) => (
+                {usersList.map((p) => (
                   <tr key={p.id} className="border-t border-border">
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <img src={p.avatar_url} alt="" className="h-8 w-8 rounded-full bg-muted" />
+                        <img
+                          src={p.avatar_url}
+                          alt=""
+                          className="h-8 w-8 rounded-full bg-muted object-cover"
+                        />
                         <div>
                           <div className="font-medium">{p.name}</div>
                           <div className="text-xs text-muted-foreground">{p.level}</div>
                         </div>
                       </div>
                     </td>
-                    <td>{p.preferred_sports[0]}</td>
+                    <td>{p.preferred_sports[0] || "Ninguno"}</td>
                     <td>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${(p.trust_score || 0) >= 90 ? "bg-neon/20 text-neon" : "bg-warning/20 text-warning"}`}
                       >
-                        {p.trust_score}
+                        {p.trust_score}%
                       </span>
                     </td>
                     <td>10</td>
+                    <td>
+                      <button
+                        onClick={() => toggleAdmin(p.id)}
+                        disabled={
+                          p.email === "ejuniorfloress@gmail.com" || p.name === "Edwin Flores"
+                        }
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          p.is_admin ||
+                          p.email === "ejuniorfloress@gmail.com" ||
+                          p.name === "Edwin Flores"
+                            ? "bg-neon text-neon-foreground hover:shadow-neon"
+                            : "bg-muted text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        {p.is_admin ||
+                        p.email === "ejuniorfloress@gmail.com" ||
+                        p.name === "Edwin Flores"
+                          ? "Admin"
+                          : "Hacer Admin"}
+                      </button>
+                    </td>
                     <td>
                       <button className="p-1 rounded hover:bg-accent">
                         <MoreHorizontal className="h-4 w-4" />
@@ -152,7 +246,7 @@ function Admin() {
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">Top canchas</h3>
           <div className="space-y-3">
-            {MOCK_COURTS.map((c: Court) => (
+            {courtsList.map((c: Court) => (
               <div key={c.id} className="flex items-center gap-3">
                 <img src={c.image_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">

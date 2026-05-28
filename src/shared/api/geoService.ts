@@ -1,25 +1,11 @@
-/**
- * geoService.ts
- * Servicio de geolocalización con Hybrid Mode:
- *
- * - PRODUCCIÓN (Supabase configurado): Llama a supabase.rpc('search_nearby_courts')
- *   que ejecuta la función PostGIS en Supabase. El profesor puede auditarlo.
- *
- * - DEMO / MOCK (sin Supabase): Usa la fórmula de Haversine sobre MOCK_COURTS.
- *   La demo nunca falla, incluso sin internet.
- *
- * PostGIS query interna usa ST_DWithin con GEOGRAPHY(Point, 4326) — tipo espacial real.
- */
-
-import { supabase, USE_SUPABASE } from "@/lib/supabase";
+import { supabase } from "./supabase";
 import { Court } from "@/entities/types";
-import { MOCK_COURTS } from "@/lib/mock";
 
 // ──────────────────────────────────────────────────────────────
-// HAVERSINE (fallback local, igual que PostGIS ST_Distance)
+// HAVERSINE (utilidad geométrica)
 // ──────────────────────────────────────────────────────────────
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
+  const R = 6371; // Radio de la Tierra en km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -28,9 +14,7 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ──────────────────────────────────────────────────────────────
-// IN-MEMORY CACHE (1 min TTL — evita compute excesivo)
-// ──────────────────────────────────────────────────────────────
+// In-memory cache for courts
 interface CacheEntry {
   timestamp: number;
   data: Court[];
@@ -42,29 +26,11 @@ function getCacheKey(lat: number, lng: number, dist: number) {
   return `${lat.toFixed(4)}_${lng.toFixed(4)}_${dist}`;
 }
 
-// ──────────────────────────────────────────────────────────────
-// MAIN: searchNearbyCourts
-// ──────────────────────────────────────────────────────────────
 export async function searchNearbyCourts(
   latitude: number,
   longitude: number,
   maxDistanceMeters: number = 50_000,
 ): Promise<Court[]> {
-  // ── MOCK MODE (Supabase no configurado) ──
-  if (!USE_SUPABASE) {
-    const results = MOCK_COURTS.map((court) => ({
-      ...court,
-      distance_km: parseFloat(
-        calculateDistance(latitude, longitude, court.lat, court.lng).toFixed(2),
-      ),
-    }))
-      .filter((c) => c.distance_km * 1000 <= maxDistanceMeters)
-      .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
-
-    return results;
-  }
-
-  // ── SUPABASE MODE — usa RPC con PostGIS ──
   const cacheKey = getCacheKey(latitude, longitude, maxDistanceMeters);
   const cached = courtCache.get(cacheKey);
 
@@ -84,14 +50,8 @@ export async function searchNearbyCourts(
   });
 
   if (error) {
-    console.error("[GeoService] RPC error — falling back to mocks:", error.message);
-    // Fallback automático a mocks si Supabase falla (demo resiliente)
-    return MOCK_COURTS.map((court) => ({
-      ...court,
-      distance_km: parseFloat(
-        calculateDistance(latitude, longitude, court.lat, court.lng).toFixed(2),
-      ),
-    })).sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
+    console.error("[GeoService] RPC error fetching nearby courts:", error.message);
+    throw new Error(`Failed to search nearby courts: ${error.message}`);
   }
 
   const courts: Court[] = (data ?? []).map(
@@ -134,13 +94,7 @@ export async function searchNearbyCourts(
   return courts;
 }
 
-// ──────────────────────────────────────────────────────────────
-// SPONSORED COURTS — para destacar patrocinadores en el mapa
-// Devuelve primero los patrocinados (is_sponsored = true)
-// ──────────────────────────────────────────────────────────────
 export async function getSponsoredCourts(latitude: number, longitude: number): Promise<Court[]> {
   const all = await searchNearbyCourts(latitude, longitude, 100_000);
-  // Los patrocinados ya vienen primero del ORDER BY is_sponsored DESC en la RPC.
-  // Para mocks, los filtramos manualmente.
-  return all.filter((c) => (c as Court & { is_sponsored?: boolean }).is_sponsored === true);
+  return all.filter((c) => c.is_sponsored === true);
 }

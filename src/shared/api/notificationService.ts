@@ -1,57 +1,30 @@
-import { query } from "@/shared/lib/database";
+import { supabase } from "./supabase";
 import { AppNotification } from "@/entities/types";
-import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
 
-const USE_MOCKS =
-  (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
-
-/**
- * Gets all notifications for a specific user.
- */
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
-  if (USE_MOCKS) {
-    const all = useNotificationStore.getState().notifications;
-    // Filter for current user and sort by created_at desc
-    const userNotifs = all.filter((n) => n.user_id === userId);
-    return Promise.resolve(
-      userNotifs.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      ),
-    );
-  }
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  const sqlQuery = `
-    SELECT id, user_id, type, title, content, link, is_read, created_at
-    FROM public.notifications
-    WHERE user_id = $1
-    ORDER BY created_at DESC;
-  `;
-
-  try {
-    const result = await query(sqlQuery, [userId]);
-    return (result.rows || []).map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (row: any): AppNotification => ({
-        id: row.id,
-        user_id: row.user_id,
-        type: row.type as AppNotification["type"],
-        title: row.title,
-        content: row.content,
-        link: row.link || undefined,
-        is_read: row.is_read,
-        created_at: row.created_at,
-      }),
-    );
-  } catch (error) {
-    console.error("Vercel Postgres getNotifications query failed:", error);
+  if (error) {
+    console.error("Error fetching notifications from Supabase:", error);
     throw error;
   }
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    user_id: row.user_id as string,
+    type: row.type as AppNotification["type"],
+    title: row.title as string,
+    content: row.content as string,
+    link: (row.link as string) || undefined,
+    is_read: row.is_read as boolean,
+    created_at: row.created_at as string,
+  })) as AppNotification[];
 }
 
-/**
- * Creates and logs a new notification.
- */
 export async function createNotification(
   userId: string,
   type: AppNotification["type"],
@@ -61,86 +34,54 @@ export async function createNotification(
 ): Promise<AppNotification> {
   const notifId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  if (USE_MOCKS) {
-    const created = useNotificationStore.getState().addNotification({
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert({
       id: notifId,
       user_id: userId,
       type,
       title,
       content,
-      link,
-    });
-    return Promise.resolve(created);
-  }
+      link: link || null,
+      is_read: false,
+    })
+    .select()
+    .single();
 
-  const sqlQuery = `
-    INSERT INTO public.notifications (id, user_id, type, title, content, link)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING id, user_id, type, title, content, link, is_read, created_at;
-  `;
-
-  try {
-    const result = await query(sqlQuery, [notifId, userId, type, title, content, link || null]);
-    const row = result.rows[0];
-    return {
-      id: row.id,
-      user_id: row.user_id,
-
-      type: row.type as AppNotification["type"],
-      title: row.title,
-      content: row.content,
-      link: row.link || undefined,
-      is_read: row.is_read,
-      created_at: row.created_at,
-    };
-  } catch (error) {
-    console.error("Vercel Postgres createNotification query failed:", error);
+  if (error) {
+    console.error("Error creating notification in Supabase:", error);
     throw error;
   }
+
+  return {
+    id: data.id,
+    user_id: data.user_id,
+    type: data.type as AppNotification["type"],
+    title: data.title,
+    content: data.content,
+    link: data.link || undefined,
+    is_read: data.is_read,
+    created_at: data.created_at,
+  };
 }
 
-/**
- * Marks a notification as read.
- */
 export async function markNotificationRead(id: string): Promise<void> {
-  if (USE_MOCKS) {
-    useNotificationStore.getState().markAsRead(id);
-    return Promise.resolve();
-  }
+  const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
 
-  const sqlQuery = `
-    UPDATE public.notifications
-    SET is_read = true
-    WHERE id = $1;
-  `;
-
-  try {
-    await query(sqlQuery, [id]);
-  } catch (error) {
-    console.error("Vercel Postgres markNotificationRead query failed:", error);
+  if (error) {
+    console.error("Error marking notification read in Supabase:", error);
     throw error;
   }
 }
 
-/**
- * Marks all notifications for a user as read.
- */
 export async function markAllNotificationsRead(userId: string): Promise<void> {
-  if (USE_MOCKS) {
-    useNotificationStore.getState().markAllAsRead();
-    return Promise.resolve();
-  }
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", userId);
 
-  const sqlQuery = `
-    UPDATE public.notifications
-    SET is_read = true
-    WHERE user_id = $1;
-  `;
-
-  try {
-    await query(sqlQuery, [userId]);
-  } catch (error) {
-    console.error("Vercel Postgres markAllNotificationsRead query failed:", error);
+  if (error) {
+    console.error("Error marking all notifications read in Supabase:", error);
     throw error;
   }
 }

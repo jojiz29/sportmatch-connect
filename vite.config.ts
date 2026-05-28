@@ -22,7 +22,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@vercel/postgres": path.resolve(__dirname, "./src/shared/lib/vercel-postgres-mock.ts"),
     },
   },
   server: {

@@ -5,9 +5,7 @@ import { User } from "@/entities/types";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
-
-export function useMatchmaking(initialData?: User[]) {
+export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => void) {
   const queryClient = useQueryClient();
 
   const {
@@ -20,13 +18,11 @@ export function useMatchmaking(initialData?: User[]) {
     initialData,
   });
 
-  // Suscripción Real-time
+  // Real-time subscription to new players
   useEffect(() => {
-    if (USE_MOCKS) return; // En mock mode no activamos webSockets
-
     const channel = supabase
-      .channel("public:users")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "users" }, () => {
+      .channel("public:profiles")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, () => {
         toast("¡Nuevo jugador en tu zona!", { description: "Un usuario acaba de unirse." });
         queryClient.invalidateQueries({ queryKey: ["matchmaking", "stack"] });
       })
@@ -53,8 +49,16 @@ export function useMatchmaking(initialData?: User[]) {
       }
       return { previousStack };
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables, context) => {
       if (data.action === "like") {
+        const isMatch = Math.random() > 0.4;
+        if (isMatch && onMatch && context?.previousStack) {
+          const matchedUser = context.previousStack.find((u) => u.id === data.userId);
+          if (matchedUser) {
+            onMatch(matchedUser);
+            return;
+          }
+        }
         toast.success("¡Like enviado!", { description: "Te avisaremos si hay Match." });
       }
     },

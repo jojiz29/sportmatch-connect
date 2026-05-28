@@ -33,6 +33,7 @@ function Profile() {
     city: "",
     bio: "",
     preferred_sports: "",
+    avatar_url: "",
   });
 
   useEffect(() => {
@@ -46,6 +47,7 @@ function Profile() {
         city: profile.city,
         bio: profile.bio || "",
         preferred_sports: profile.preferred_sports.join(", "),
+        avatar_url: profile.avatar_url || "",
       });
 
       apiClient.matches
@@ -80,6 +82,7 @@ function Profile() {
       city: profile.city,
       bio: profile.bio || "",
       preferred_sports: profile.preferred_sports.join(", "),
+      avatar_url: profile.avatar_url || "",
     });
     setIsEditing(true);
   };
@@ -89,6 +92,7 @@ function Profile() {
       name: editForm.name,
       city: editForm.city,
       bio: editForm.bio,
+      avatar_url: editForm.avatar_url,
       preferred_sports: editForm.preferred_sports
         .split(",")
         .map((s) => s.trim())
@@ -96,6 +100,18 @@ function Profile() {
     });
     setIsEditing(false);
     toast.success(t("profile.updated"));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditForm((prev) => ({ ...prev, avatar_url: reader.result as string }));
+        toast.success("Foto seleccionada. Recuerda guardar los cambios.");
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -107,10 +123,22 @@ function Profile() {
         <div className="flex flex-wrap md:flex-nowrap items-start gap-6 relative">
           <div className="relative shrink-0">
             <img
-              src={profile.avatar_url}
+              src={isEditing ? editForm.avatar_url : profile.avatar_url}
               alt={profile.name}
               className="h-28 w-28 rounded-2xl bg-muted ring-4 ring-primary/30 object-cover"
             />
+            {isEditing && (
+              <label className="absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors">
+                <span>Cambiar</span>
+                <span>Foto</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            )}
             <div className="absolute -bottom-2 -right-2 px-2 py-1 rounded-full bg-gradient-neon text-neon-foreground text-xs font-bold">
               {profile.level}
             </div>

@@ -1,11 +1,20 @@
-import { Link } from "@tanstack/react-router";
-import { Heart, X, Star, MapPin, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Heart, X, Star, MapPin, Sparkles, MessageSquare } from "lucide-react";
 import { useMatchmaking } from "./useMatchmaking";
 import { User } from "@/entities/types";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { useChatStore } from "@/features/chat/useChatStore";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
-  const { stack, isLoading, swipe } = useMatchmaking(initialStack);
+  const navigate = useNavigate();
+  const currentUser = useAuthStore((s) => s.user);
+  const [matchedUser, setMatchedUser] = useState<User | null>(null);
+
+  const { stack, isLoading, swipe } = useMatchmaking(initialStack, (user) => {
+    setMatchedUser(user);
+  });
   const top = stack[0];
 
   return (
@@ -126,6 +135,93 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
           )}
         </div>
       </div>
+
+      {/* Match Overlay Modal */}
+      <AnimatePresence>
+        {matchedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/90 backdrop-blur-md"
+              onClick={() => setMatchedUser(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 50 }}
+              className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-8 text-center shadow-card overflow-hidden z-10"
+            >
+              {/* Background glows */}
+              <div className="absolute -right-20 -top-20 h-48 w-48 rounded-full bg-neon/20 blur-3xl" />
+              <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
+
+              <div className="text-neon text-xs font-bold uppercase tracking-wider mb-2 animate-pulse">
+                ¡Es un Match! 🎉
+              </div>
+              <h2 className="text-3xl font-extrabold bg-gradient-neon bg-clip-text text-transparent mb-6">
+                ¡Conexión Deportiva!
+              </h2>
+
+              <div className="flex items-center justify-center gap-6 mb-8 relative">
+                {/* Current User Avatar */}
+                <div className="relative">
+                  <img
+                    src={currentUser?.avatar_url}
+                    alt=""
+                    className="h-24 w-24 rounded-full bg-muted object-cover border-4 border-primary shadow-glow animate-bounce-slow"
+                  />
+                  <span className="absolute -bottom-2 right-2 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                    Tú
+                  </span>
+                </div>
+
+                {/* Heart Icon */}
+                <div className="relative z-10 h-12 w-12 rounded-full bg-gradient-neon flex items-center justify-center shadow-neon animate-pulse">
+                  <Heart className="h-6 w-6 text-neon-foreground fill-neon-foreground" />
+                </div>
+
+                {/* Matched User Avatar */}
+                <div className="relative">
+                  <img
+                    src={matchedUser.avatar_url}
+                    alt=""
+                    className="h-24 w-24 rounded-full bg-muted object-cover border-4 border-neon shadow-neon animate-bounce-slow delay-150"
+                  />
+                  <span className="absolute -bottom-2 left-2 px-2 py-0.5 rounded-full bg-neon text-neon-foreground text-[10px] font-bold">
+                    {matchedUser.name}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-6">
+                A ti y a <strong>{matchedUser.name}</strong> les gusta el mismo deporte (
+                <strong>{matchedUser.preferred_sports?.[0]}</strong>). ¡Empiecen a chatear ahora!
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={async () => {
+                    await useChatStore.getState().createChat(matchedUser.id);
+                    setMatchedUser(null);
+                    navigate({ to: "/app/chat" });
+                  }}
+                  className="w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-glow flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <MessageSquare className="h-4 w-4" /> Enviar Mensaje
+                </button>
+                <button
+                  onClick={() => setMatchedUser(null)}
+                  className="w-full py-3 rounded-xl glass border border-border text-sm font-semibold hover:bg-accent transition-colors cursor-pointer"
+                >
+                  Seguir Deslizando
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

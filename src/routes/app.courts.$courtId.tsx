@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MOCK_COURTS } from "@/lib/mock";
 import { ArrowLeft, Star, MapPin, Calendar as CalendarIcon, Clock, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Court } from "@/entities/types";
+import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/courts/$courtId")({
   head: ({ loaderData }: { loaderData?: Court }) => {
@@ -22,10 +22,18 @@ export const Route = createFileRoute("/app/courts/$courtId")({
       ],
     };
   },
-  loader: ({ params }: { params: { courtId: string } }) => {
-    const court = MOCK_COURTS.find((c) => c.id === params.courtId);
-    if (!court) throw new Error("Cancha no encontrada");
-    return court;
+  loader: async ({ params }: { params: { courtId: string } }) => {
+    const { data: court, error } = await supabase
+      .from("courts")
+      .select("*")
+      .eq("id", params.courtId)
+      .single();
+
+    if (error || !court) {
+      console.error("Court details not found in Supabase:", error);
+      throw new Error("Cancha no encontrada");
+    }
+    return court as Court;
   },
   component: CourtDetail,
 });

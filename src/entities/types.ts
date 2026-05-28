@@ -26,6 +26,7 @@ export interface User {
   company_name?: string;
   business_category?: "Canchas" | "Gym" | "Tienda" | "Bebidas";
   is_sponsored?: boolean;
+  is_admin?: boolean;
 }
 
 export interface Court {
@@ -59,10 +60,18 @@ export interface Match {
   max_players: number;
   required_level: Level;
   creator_id: string; // Faltaba para hacer match con RLS
+  status?: "Open" | "Full" | "Finished" | "Cancelled";
 
   // Relaciones
   court?: Court;
   current_players?: User[];
+}
+
+export interface MatchParticipant {
+  match_id: string;
+  user_id: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  joined_at: string;
 }
 
 export interface Transaction {

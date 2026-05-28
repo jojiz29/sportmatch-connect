@@ -1,21 +1,38 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { MOCK_CHATS, Chat } from "@/lib/mock";
+import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
+
+export interface ChatMessage {
+  id: string;
+  sender_id: string;
+  text: string;
+  created_at: string;
+}
+
+export interface Chat {
+  id: string;
+  name: string;
+  avatar: string;
+  current_players: string[];
+  messages: ChatMessage[];
+  unread: number;
+}
 
 interface ChatState {
   chats: Chat[];
   activeConversationId: string | null;
-  setActiveConversation: (id: string) => void;
+  setActiveConversation: (id: string | null) => void;
   sendMessage: (chatId: string, text: string) => void;
+  createChat: (userId: string) => Promise<string>;
   initChat: () => void;
 }
 
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
-      chats: MOCK_CHATS,
+      chats: [],
       activeConversationId: null,
       setActiveConversation: (id) => set({ activeConversationId: id }),
       initChat: () => {
@@ -23,7 +40,6 @@ export const useChatStore = create<ChatState>()(
         if (user) {
           const userChats = get().chats.filter((c) => c.current_players.includes(user.id));
           const currentActive = get().activeConversationId;
-          // Only reset active conversation if the current one is not part of the user's chats
           if (!currentActive || !userChats.some((c) => c.id === currentActive)) {
             set({ activeConversationId: userChats[0]?.id || null });
           }
@@ -49,14 +65,57 @@ export const useChatStore = create<ChatState>()(
             return chat;
           });
 
-          // Sync to global mock array to persist
-          const idx = MOCK_CHATS.findIndex((c) => c.id === chatId);
-          if (idx !== -1) {
-            MOCK_CHATS[idx].messages.push(newMessage);
-          }
-
           return { chats: updatedChats };
         }),
+      createChat: async (targetUserId) => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) return "";
+
+        const existingChat = get().chats.find(
+          (c) =>
+            c.current_players.length === 2 &&
+            c.current_players.includes(currentUser.id) &&
+            c.current_players.includes(targetUserId),
+        );
+
+        if (existingChat) {
+          set({ activeConversationId: existingChat.id });
+          return existingChat.id;
+        }
+
+        // Fetch target user profile dynamically from Supabase profiles
+        let name = "Deportista";
+        let avatar = "";
+        try {
+          const { data } = await supabase
+            .from("profiles")
+            .select("name, avatar_url")
+            .eq("id", targetUserId)
+            .single();
+          if (data) {
+            name = data.name;
+            avatar = data.avatar_url || "";
+          }
+        } catch (e) {
+          console.warn("Failed to fetch target user profile for chat:", e);
+        }
+
+        const newChat: Chat = {
+          id: `chat_${Date.now()}`,
+          name,
+          avatar,
+          current_players: [currentUser.id, targetUserId],
+          messages: [],
+          unread: 0,
+        };
+
+        set((state) => ({
+          chats: [...state.chats, newChat],
+          activeConversationId: newChat.id,
+        }));
+
+        return newChat.id;
+      },
     }),
     {
       name: "sportmatch-chat",
@@ -65,7 +124,7 @@ export const useChatStore = create<ChatState>()(
   ),
 );
 
-// Subscribe to useAuthStore to reset active chat appropriately
+// Subscribe to useAuthStore
 useAuthStore.subscribe(() => {
   useChatStore.getState().initChat();
 });

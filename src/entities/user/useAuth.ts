@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
-import { ME, MOCK_USERS } from "@/lib/mock";
 import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
@@ -13,7 +12,6 @@ interface AuthState {
   register: (user: User) => void;
 }
 
-// Estado local de sesión (principalmente para el Mock Mode)
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -30,98 +28,152 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
-
 export function useAuth() {
   const store = useAuthStore();
 
   const signIn = async (email?: string, password?: string) => {
-    if (USE_MOCKS) {
-      if (email && password) {
-        const found = MOCK_USERS.find((u) => u.email === email && u.password === password);
-        if (found) {
-          store.login(found);
-          return;
-        }
-        throw new Error("Credenciales incorrectas");
-      }
-      // Login simulado como guest (Edwin por defecto)
-      store.login(ME);
-      return;
-    }
-
-    // Lógica real de Supabase - Query directo a tabla users
     if (email && password) {
-      try {
-        const { data, error } = await supabase.from("users").select("*").eq("email", email);
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) {
-          console.error("Error en Supabase:", error);
-          throw new Error(`Supabase error: ${error.message}`);
-        }
-
-        if (!data || data.length === 0) {
-          throw new Error("Usuario no encontrado");
-        }
-
-        // Comparar password (en producción usa bcrypt)
-        if (data[0].password !== password) {
-          throw new Error("Contraseña incorrecta");
-        }
-
-        store.login(data[0] as User);
-      } catch (err: unknown) {
-        console.error("Error durante signIn:", err);
-        throw err;
+      if (authError) {
+        console.error("Error en Supabase Auth signIn:", authError);
+        throw authError;
       }
+
+      if (!authData.user) {
+        throw new Error("Usuario no encontrado");
+      }
+
+      // Fetch user profile from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error loading profile:", profileError);
+        throw profileError;
+      }
+
+      store.login(profile as User);
       return;
     }
 
-    // Login de demo (sin credenciales)
+    // Demo/Guest login fallback using first available profile
     try {
-      // Obtener el primer usuario disponible (no usar .single() si la tabla está vacía)
-      const { data, error } = await supabase.from("users").select("*").limit(1);
+      const { data: profiles, error: pError } = await supabase
+        .from("profiles")
+        .select("*")
+        .limit(1);
 
-      if (error) {
-        console.error("Error demo login:", error);
-        throw new Error(`Error al obtener usuario demo: ${error.message}`);
+      if (pError) {
+        console.error("Error demo login:", pError);
+        throw pError;
       }
 
-      if (data && data.length > 0) {
-        store.login(data[0] as User);
+      if (profiles && profiles.length > 0) {
+        store.login(profiles[0] as User);
       } else {
-        throw new Error(
-          "No hay usuarios disponibles en la base de datos. Por favor, contacta al administrador.",
-        );
+        throw new Error("No hay perfiles disponibles en la base de datos.");
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.error("Error en demo login:", err);
       throw err;
     }
   };
 
   const signUp = async (newUser: User) => {
-    if (USE_MOCKS) {
-      // Registro simulado, persistido en el store
-      store.register(newUser);
-      return;
+    if (!newUser.email || !newUser.password) {
+      throw new Error("Email y contraseña son obligatorios");
     }
 
-    // Lógica real de Supabase - Insertar nuevo usuario
     try {
-      console.log("Intentando registrar usuario:", newUser);
-      const { data, error } = await supabase.from("users").insert([newUser]).select().single();
+      console.log("Intentando registrar usuario en Supabase Auth:", newUser.email);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: {
+            name: newUser.name,
+            user_role: newUser.user_role || "PLAYER",
+          },
+        },
+      });
 
-      if (error) {
-        console.error("Error en signUp:", error);
-        throw new Error(`Error al registrar: ${error.message}`);
+      if (authError) {
+        console.error("Error en Supabase Auth signUp:", authError);
+        throw authError;
       }
 
-      if (data) {
-        console.log("Usuario registrado exitosamente:", data);
-        store.register(data as User);
+      if (!authData.user) {
+        throw new Error("El registro en Supabase Auth falló.");
       }
-    } catch (err: unknown) {
+
+      // Supabase trigger handle_new_user should automatically create the public.profiles record.
+      // We attempt to fetch this record with a retry mechanism.
+      let profile = null;
+      for (let i = 0; i < 5; i++) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authData.user.id)
+          .single();
+        if (data) {
+          profile = data;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // If the trigger hasn't run or is missing, manually insert the profile row.
+      if (!profile) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: authData.user.id,
+            name: newUser.name,
+            avatar_url: newUser.avatar_url,
+            user_role: newUser.user_role || "PLAYER",
+            trust_score: newUser.trust_score ?? 50,
+            fitcoins_balance: newUser.fitcoins_balance ?? 0,
+            level: newUser.level ?? "Intermedio",
+            preferred_sports: newUser.preferred_sports ?? [],
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Error manually inserting profile:", insertError);
+          throw insertError;
+        }
+        profile = inserted;
+      } else {
+        // Enforce extra metadata fields that the automatic trigger might not have updated
+        const { data: updated } = await supabase
+          .from("profiles")
+          .update({
+            age: newUser.age,
+            city: newUser.city,
+            bio: newUser.bio,
+            trust_score: newUser.trust_score ?? 50,
+            fitcoins_balance: newUser.fitcoins_balance ?? 0,
+            level: newUser.level ?? "Intermedio",
+            preferred_sports: newUser.preferred_sports ?? [],
+          })
+          .eq("id", authData.user.id)
+          .select()
+          .single();
+        if (updated) {
+          profile = updated;
+        }
+      }
+
+      store.register(profile as User);
+    } catch (err) {
       console.error("Error durante registro:", err);
       throw err;
     }
@@ -132,9 +184,10 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    if (USE_MOCKS) {
-      store.logout();
-      return;
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("Supabase Auth signOut warning:", e);
     }
     store.logout();
   };

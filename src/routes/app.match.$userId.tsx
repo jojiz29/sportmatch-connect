@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MOCK_USERS } from "@/lib/mock";
 import { ArrowLeft, Star, MapPin, Activity, Award, Users } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -7,6 +6,7 @@ import { User } from "@/entities/types";
 import { useState, useEffect } from "react";
 import { FollowButton } from "@/features/social/ui/FollowButton";
 import { getFollowStats } from "@/shared/api/socialService";
+import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/match/$userId")({
   head: ({ loaderData }: { loaderData?: User }) => {
@@ -19,10 +19,18 @@ export const Route = createFileRoute("/app/match/$userId")({
       meta: [{ title: `Perfil de ${loaderData.name} — SportMatch` }],
     };
   },
-  loader: ({ params }: { params: { userId: string } }) => {
-    const user = MOCK_USERS.find((u) => u.id === params.userId);
-    if (!user) throw new Error("Usuario no encontrado");
-    return user;
+  loader: async ({ params }: { params: { userId: string } }) => {
+    const { data: user, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", params.userId)
+      .single();
+
+    if (error || !user) {
+      console.error("User profile not found in Supabase:", error);
+      throw new Error("Usuario no encontrado");
+    }
+    return user as User;
   },
   component: UserProfileDetail,
 });
