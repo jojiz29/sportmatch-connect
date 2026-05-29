@@ -271,7 +271,14 @@ export const useWalletStore = create<WalletState>()(
   ),
 );
 
-// Subscribe to useAuthStore changes
-useAuthStore.subscribe(() => {
-  useWalletStore.getState().initWallet();
+// Subscribe to useAuthStore changes.
+// Only triggers initWallet when the user ID actually changes (login/logout),
+// preventing redundant fetches on unrelated auth state ticks.
+let _prevWalletUserId: string | null = null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.id ?? null;
+  if (userId !== _prevWalletUserId) {
+    _prevWalletUserId = userId;
+    useWalletStore.getState().initWallet();
+  }
 });

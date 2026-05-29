@@ -124,7 +124,14 @@ export const useChatStore = create<ChatState>()(
   ),
 );
 
-// Subscribe to useAuthStore
-useAuthStore.subscribe(() => {
-  useChatStore.getState().initChat();
+// Subscribe to useAuthStore.
+// Only re-initializes chat when the user ID actually changes (login/logout),
+// preventing redundant resets on unrelated auth ticks.
+let _prevChatUserId: string | null = null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.id ?? null;
+  if (userId !== _prevChatUserId) {
+    _prevChatUserId = userId;
+    useChatStore.getState().initChat();
+  }
 });

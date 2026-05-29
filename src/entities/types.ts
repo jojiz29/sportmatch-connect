@@ -80,7 +80,7 @@ export interface Transaction {
   user_id: string;
   amount: number; // Positivo (ganancia) o Negativo (gasto)
   description: string;
-  type: "EARN" | "SPEND" | "EARN" | "SPEND" | "PENALTY"; // Added EARN and SPEND
+  type: "EARN" | "SPEND" | "PENALTY";
 }
 
 export interface TelemetryData {

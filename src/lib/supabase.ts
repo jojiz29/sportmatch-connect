@@ -98,6 +98,23 @@ function createFallbackClient(): SupabaseClient {
           console.warn("Called supabase.removeChannel but Supabase is not configured.");
         };
       }
+      if (prop === "storage") {
+        const dummyStorageBucket = {
+          upload: () =>
+            Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
+          getPublicUrl: () => ({
+            data: { publicUrl: "" },
+          }),
+          remove: () =>
+            Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
+        };
+        return {
+          from: () => {
+            console.warn(`Called supabase.storage.from() but Supabase is not configured.`);
+            return dummyStorageBucket;
+          },
+        };
+      }
 
       // Default fallback for any other method
       return () => {

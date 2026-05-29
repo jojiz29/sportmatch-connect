@@ -28,6 +28,35 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
+/**
+ * Purges all persisted Zustand stores and clears localStorage keys.
+ * Called during sign-out to ensure a clean session state.
+ */
+export function purgeAllStores() {
+  // Clear all known localStorage keys for this app
+  const STORE_KEYS = [
+    "sportmatch-auth",
+    "sportmatch-profile",
+    "sportmatch-wallet",
+    "sportmatch-chat",
+    "sportmatch-notifications",
+  ];
+  try {
+    STORE_KEYS.forEach((key) => {
+      try {
+        safeLocalStorage.removeItem(key);
+      } catch {
+        // Ignore individual key failures
+      }
+    });
+  } catch {
+    // Ignore storage access errors
+  }
+
+  // Reset Zustand auth store state
+  useAuthStore.setState({ user: null, isAuthenticated: false });
+}
+
 export function useAuth() {
   const store = useAuthStore();
 
@@ -189,7 +218,8 @@ export function useAuth() {
     } catch (e) {
       console.warn("Supabase Auth signOut warning:", e);
     }
-    store.logout();
+    // Purge all Zustand stores and localStorage keys for a clean session exit
+    purgeAllStores();
   };
 
   return {

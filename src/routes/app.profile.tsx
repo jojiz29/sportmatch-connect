@@ -1,9 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { Edit3, MapPin, Trophy, Award, Shield, TrendingUp, Save, X, Users } from "lucide-react";
+import {
+  Edit3,
+  MapPin,
+  Trophy,
+  Award,
+  Shield,
+  TrendingUp,
+  Save,
+  X,
+  Users,
+  Camera,
+} from "lucide-react";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { apiClient } from "@/shared/api/apiClient";
+import { supabase } from "@/shared/api/supabase";
+import { compressToWebP } from "@/shared/lib/imageUtils";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -27,6 +40,7 @@ function Profile() {
   const { balance } = useWalletStore();
   const [isEditing, setIsEditing] = useState(false);
   const [userMatches, setUserMatches] = useState<Match[]>([]);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -102,15 +116,47 @@ function Profile() {
     toast.success(t("profile.updated"));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditForm((prev) => ({ ...prev, avatar_url: reader.result as string }));
-        toast.success("Foto seleccionada. Recuerda guardar los cambios.");
-      };
-      reader.readAsDataURL(file);
+    if (!file || !profile) return;
+
+    setIsUploadingAvatar(true);
+    const toastId = toast.loading("Subiendo foto de perfil...");
+
+    try {
+      // 1. Compress to WebP via Canvas (max 400px, quality 0.8)
+      const webpBlob = await compressToWebP(file, 400, 0.8);
+
+      // 2. Upload to Supabase Storage bucket 'avatars'
+      const filePath = `public/${profile.id}.webp`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, webpBlob, {
+          contentType: "image/webp",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 3. Get public URL with cache-busting timestamp
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+      // 4. Persist the URL to profiles table via the store
+      await updateProfile({ avatar_url: publicUrl });
+
+      // 5. Update the edit form to show the new avatar immediately
+      setEditForm((prev) => ({ ...prev, avatar_url: publicUrl }));
+
+      toast.success("Foto actualizada correctamente.", { id: toastId });
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      toast.error("Error al subir la foto. Intenta de nuevo.", { id: toastId });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset file input so the same file can be selected again if needed
+      e.target.value = "";
     }
   };
 
@@ -128,14 +174,25 @@ function Profile() {
               className="h-28 w-28 rounded-2xl bg-muted ring-4 ring-primary/30 object-cover"
             />
             {isEditing && (
-              <label className="absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors">
-                <span>Cambiar</span>
-                <span>Foto</span>
+              <label
+                className={`absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors ${
+                  isUploadingAvatar ? "pointer-events-none" : ""
+                }`}
+              >
+                {isUploadingAvatar ? (
+                  <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <>
+                    <Camera className="h-5 w-5 mb-1" />
+                    <span>Cambiar foto</span>
+                  </>
+                )}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
                   className="hidden"
+                  disabled={isUploadingAvatar}
                 />
               </label>
             )}
