@@ -3,11 +3,14 @@ import { Heart, X, Star, MapPin, Sparkles, MessageSquare } from "lucide-react";
 import { useMatchmaking } from "./useMatchmaking";
 import { User } from "@/entities/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { useTranslation } from "react-i18next";
+import { calculateDistance } from "@/shared/api/geoService";
 
 export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
@@ -16,6 +19,36 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     setMatchedUser(user);
   });
   const top = stack[0];
+
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn(
+            "Geolocation API unavailable or permission denied for matchmaking.",
+            error.message,
+          );
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+  }, []);
+
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (currentUser && currentUser.last_location_lat && currentUser.last_location_lng) {
+      return { lat: currentUser.last_location_lat, lng: currentUser.last_location_lng };
+    }
+    return null;
+  }, [userCoords, currentUser]);
 
   return (
     <div className="grid lg:grid-cols-3 gap-8">
@@ -27,7 +60,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             <div className="absolute inset-0 grid place-items-center bg-gradient-card border border-border rounded-3xl">
               <div className="text-center">
                 <Sparkles className="h-10 w-10 mx-auto text-neon mb-3" />
-                <div className="font-semibold">Sin más sugerencias</div>
+                <div className="font-semibold">{t("matchmaking.empty_stack")}</div>
               </div>
             </div>
           ) : (
@@ -38,6 +71,16 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                 .map((p, i, arr) => {
                   const idx = arr.length - 1 - i;
                   const isTop = idx === 0;
+                  const dist =
+                    baseLocation && p.last_location_lat && p.last_location_lng
+                      ? calculateDistance(
+                          baseLocation.lat,
+                          baseLocation.lng,
+                          p.last_location_lat,
+                          p.last_location_lng,
+                        )
+                      : p.distance_km || 0;
+
                   return (
                     <motion.div
                       key={p.id}
@@ -60,7 +103,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     >
                       <div className="relative h-2/3 bg-gradient-primary">
                         <Link
-                          to="/app/match/$userId"
+                          to="/app/profile/$userId"
                           params={{ userId: p.id }}
                           className="absolute inset-0 z-10"
                         >
@@ -73,7 +116,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                         <div className="absolute top-4 left-4 flex gap-2">
                           <span className="px-2 py-1 rounded-full glass text-xs">
-                            {p.preferred_sports?.[0] || "Deporte"}
+                            {p.preferred_sports?.[0] || t("matchmaking.sport_default")}
                           </span>
                           <span className="px-2 py-1 rounded-full glass text-xs text-neon flex items-center gap-1">
                             <Star className="h-3 w-3 fill-neon" /> {p.trust_score || 0}
@@ -81,10 +124,11 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         </div>
                         <div className="absolute bottom-4 left-4 right-4">
                           <h2 className="text-2xl font-bold">
-                            {p.name || "Usuario"}, {p.age || "?"}
+                            {p.name || t("matchmaking.user_default")}, {p.age || "?"}
                           </h2>
-                          <p className="text-xs text-white/80 flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" /> {p.distance_km || 0} km
+                          <p className="text-xs text-white/80 flex items-center gap-1 mt-1 font-sans">
+                            <MapPin className="h-3 w-3 text-neon" /> A {dist.toFixed(1)} km de tu
+                            ubicación
                           </p>
                         </div>
                       </div>
@@ -99,13 +143,13 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           <div className="mt-4 flex items-center justify-center gap-4">
                             <button
                               onClick={() => swipe(p.id, "pass")}
-                              className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center hover:bg-destructive/20"
+                              className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center hover:bg-destructive/20 cursor-pointer"
                             >
                               <X className="h-6 w-6 text-destructive" />
                             </button>
                             <button
                               onClick={() => swipe(p.id, "like")}
-                              className="h-16 w-16 rounded-full bg-gradient-neon grid place-items-center shadow-neon animate-pulse-ring"
+                              className="h-16 w-16 rounded-full bg-gradient-neon grid place-items-center shadow-neon animate-pulse-ring cursor-pointer"
                             >
                               <Heart className="h-7 w-7 text-neon-foreground fill-neon-foreground" />
                             </button>
@@ -123,14 +167,29 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
       <div className="space-y-4">
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-neon" /> Compatibilidad IA
+            <Sparkles className="h-4 w-4 text-neon" /> {t("matchmaking.compatibility")}
           </h3>
           {top && (
             <div className="mt-4 space-y-3">
-              <Bar label="Nivel" value={88} />
-              <Bar label="Horario" value={94} />
-              <Bar label="Distancia" value={Math.max(40, 100 - (top.distance_km || 0) * 20)} />
-              <Bar label="Reputación" value={top.trust_score} />
+              <Bar label={t("matchmaking.level")} value={88} />
+              <Bar label={t("matchmaking.schedule")} value={94} />
+              <Bar
+                label={t("matchmaking.distance")}
+                value={Math.max(
+                  40,
+                  100 -
+                    (baseLocation && top.last_location_lat && top.last_location_lng
+                      ? calculateDistance(
+                          baseLocation.lat,
+                          baseLocation.lng,
+                          top.last_location_lat,
+                          top.last_location_lng,
+                        )
+                      : top.distance_km || 0) *
+                      20,
+                )}
+              />
+              <Bar label={t("matchmaking.reputation")} value={top.trust_score} />
             </div>
           )}
         </div>
@@ -158,10 +217,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
 
               <div className="text-neon text-xs font-bold uppercase tracking-wider mb-2 animate-pulse">
-                ¡Es un Match! 🎉
+                {t("matchmaking.its_a_match")}
               </div>
               <h2 className="text-3xl font-extrabold bg-gradient-neon bg-clip-text text-transparent mb-6">
-                ¡Conexión Deportiva!
+                {t("matchmaking.sport_connection")}
               </h2>
 
               <div className="flex items-center justify-center gap-6 mb-8 relative">
@@ -173,7 +232,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     className="h-24 w-24 rounded-full bg-muted object-cover border-4 border-primary shadow-glow animate-bounce-slow"
                   />
                   <span className="absolute -bottom-2 right-2 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
-                    Tú
+                    {t("matchmaking.me")}
                   </span>
                 </div>
 
@@ -196,8 +255,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               </div>
 
               <p className="text-sm text-muted-foreground mb-6">
-                A ti y a <strong>{matchedUser.name}</strong> les gusta el mismo deporte (
-                <strong>{matchedUser.preferred_sports?.[0]}</strong>). ¡Empiecen a chatear ahora!
+                {t("matchmaking.match_desc", {
+                  name: matchedUser.name,
+                  sport: matchedUser.preferred_sports?.[0] || t("matchmaking.sport_default"),
+                })}
               </p>
 
               <div className="flex flex-col gap-2">
@@ -214,13 +275,13 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   }}
                   className="w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-glow flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <MessageSquare className="h-4 w-4" /> Enviar Mensaje
+                  <MessageSquare className="h-4 w-4" /> {t("matchmaking.send_message")}
                 </button>
                 <button
                   onClick={() => setMatchedUser(null)}
                   className="w-full py-3 rounded-xl glass border border-border text-sm font-semibold hover:bg-accent transition-colors cursor-pointer"
                 >
-                  Seguir Deslizando
+                  {t("matchmaking.keep_swiping")}
                 </button>
               </div>
             </motion.div>

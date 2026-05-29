@@ -45,7 +45,9 @@ function Wallet() {
       .then((users) => {
         if (active) setLeaderboardUsers(users);
       })
-      .catch((err) => console.error("Error loading leaderboard users:", err));
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error("Error loading leaderboard users:", err);
+      });
     return () => {
       active = false;
     };
@@ -77,17 +79,18 @@ function Wallet() {
           }
         }
       } catch (err) {
-        console.error("Failed to load catalog:", err);
+        if (import.meta.env.DEV) console.error("Failed to load catalog:", err);
       }
     }
     loadCatalog();
   }, [user, buyItem]);
 
   const handleRedeem = async (reward: (typeof REWARDS)[0]) => {
-    const success = await redeem(reward.cost, `Canje: ${reward.name}`);
+    const rewardName = t(`wallet.reward_${reward.id}_name`, { defaultValue: reward.name });
+    const success = await redeem(reward.cost, `Canje: ${rewardName}`);
     if (success) {
       toast.success(t("wallet.success"), {
-        description: t("wallet.success_desc", { reward: reward.name }),
+        description: t("wallet.success_desc", { reward: rewardName }),
       });
       setSelectedReward(null);
     } else {
@@ -101,19 +104,19 @@ function Wallet() {
       setPurchasing(true);
       const success = await purchaseCatalogItem(user.id, item.id);
       if (success) {
-        toast.success("¡Compra completada con éxito!", {
-          description: `Canjeaste: ${item.name}`,
+        toast.success(t("wallet.purchase_success"), {
+          description: t("wallet.purchase_success_desc", { name: item.name }),
         });
         initWallet();
         setSelectedItem(null);
       } else {
-        toast.error("Saldo insuficiente", {
-          description: "No tienes suficientes FitCoins para este artículo.",
+        toast.error(t("wallet.purchase_error"), {
+          description: t("wallet.purchase_error_desc"),
         });
       }
     } catch (err) {
-      console.error(err);
-      toast.error("Error al procesar la compra");
+      if (import.meta.env.DEV) console.error(err);
+      toast.error(t("wallet.purchase_failed"));
     } finally {
       setPurchasing(false);
     }
@@ -126,6 +129,7 @@ function Wallet() {
     }
     return list
       .map((u) => ({
+        id: u.id,
         name: u.name,
         avatar: u.avatar_url,
         coins: u.id === user?.id ? balance : u.fitcoins_balance,
@@ -155,7 +159,9 @@ function Wallet() {
               {balance}
               <Trophy className="h-10 w-10 text-neon" />
             </div>
-            <div className="text-sm text-white/80 mt-2">+185 esta semana ↗</div>
+            <div className="text-sm text-white/80 mt-2">
+              {t("wallet.this_week_gain", { amount: 185 })}
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -196,7 +202,7 @@ function Wallet() {
                         <div className="font-medium text-sm">{c.name}</div>
                         {c.claimed && (
                           <span className="text-[10px] text-neon bg-neon/10 border border-neon/20 px-2 py-0.5 rounded-full mt-1 inline-block">
-                            Reclamado
+                            {t("wallet.claimed")}
                           </span>
                         )}
                       </div>
@@ -221,7 +227,7 @@ function Wallet() {
                               onClick={() => progressChallenge(c.id)}
                               className="px-2.5 py-1 rounded-lg bg-accent text-[11px] font-semibold hover:bg-accent/80 transition-colors cursor-pointer"
                             >
-                              Avanzar
+                              {t("wallet.advance")}
                             </button>
                           )}
                           {isCompleted && (
@@ -229,13 +235,13 @@ function Wallet() {
                               onClick={() => claimChallenge(c.id)}
                               className="px-2.5 py-1 rounded-lg bg-gradient-neon text-neon-foreground text-[11px] font-bold hover:shadow-neon transition-shadow cursor-pointer"
                             >
-                              Reclamar
+                              {t("wallet.claim")}
                             </button>
                           )}
                         </div>
                       ) : (
                         <span className="text-xs text-muted-foreground italic font-semibold text-neon">
-                          ✓ Completado
+                          {t("wallet.completed")}
                         </span>
                       )}
                     </div>
@@ -251,31 +257,34 @@ function Wallet() {
               <Gift className="h-4 w-4 text-electric" /> {t("wallet.rewards")}
             </h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              {REWARDS.map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-gradient-card border border-border rounded-2xl p-4 flex items-center gap-3 hover:ring-glow transition-all"
-                >
-                  <div className="text-4xl">{r.emoji}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate">{r.name}</div>
-                    <div className="text-xs text-neon">{r.cost} FC</div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedReward(r)}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform cursor-pointer"
+              {REWARDS.map((r) => {
+                const rewardName = t(`wallet.reward_${r.id}_name`, { defaultValue: r.name });
+                return (
+                  <div
+                    key={r.id}
+                    className="bg-gradient-card border border-border rounded-2xl p-4 flex items-center gap-3 hover:ring-glow transition-all"
                   >
-                    {t("wallet.redeem")}
-                  </button>
-                </div>
-              ))}
+                    <div className="text-4xl">{r.emoji}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">{rewardName}</div>
+                      <div className="text-xs text-neon">{r.cost} FC</div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedReward(r)}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform cursor-pointer"
+                    >
+                      {t("wallet.redeem")}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* B2B Business Marketplace Catalog */}
           <div className="mt-8" id="marketplace-section">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4 text-neon" /> Tienda de Negocios (Marketplace B2B)
+              <ShoppingBag className="h-4 w-4 text-neon" /> {t("wallet.business_marketplace")}
             </h3>
             {catalog.length > 0 ? (
               <div className="grid sm:grid-cols-2 gap-3 animate-fade-in">
@@ -294,7 +303,7 @@ function Wallet() {
                     />
                     <div className="flex-1 min-w-0">
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-neon/10 text-neon border border-neon/20 font-semibold uppercase">
-                        {item.type === "PRODUCT" ? "Producto" : "Servicio"}
+                        {item.type === "PRODUCT" ? t("wallet.product") : t("wallet.service")}
                       </span>
                       <div className="text-sm font-semibold truncate mt-1">{item.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
@@ -307,14 +316,14 @@ function Wallet() {
                       className="px-3 py-1.5 rounded-lg bg-gradient-neon text-neon-foreground text-xs font-semibold hover:scale-105 transition-transform shrink-0 cursor-pointer"
                       id={`purchase-btn-${item.id}`}
                     >
-                      Comprar
+                      {t("wallet.buy")}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="p-8 text-center text-muted-foreground glass border border-border rounded-2xl text-xs">
-                No hay productos comerciales disponibles en este momento.
+                {t("wallet.no_products")}
               </div>
             )}
           </div>
@@ -328,10 +337,15 @@ function Wallet() {
           <div className="bg-gradient-card border border-border rounded-2xl p-3 space-y-1">
             {leaderboard.map((u) => {
               const me = u.name === user?.name;
+              const toPath = me ? "/app/profile" : "/app/profile/$userId";
+              const linkParams = me ? undefined : { userId: u.id || "" };
+
               return (
-                <div
+                <Link
                   key={u.rank}
-                  className={`flex items-center gap-3 p-2 rounded-xl transition-all ${me ? "bg-gradient-primary/20 ring-1 ring-primary/40" : "hover:bg-accent/50"}`}
+                  to={toPath}
+                  params={linkParams}
+                  className={`flex items-center gap-3 p-2 rounded-xl transition-all ${me ? "bg-gradient-primary/20 ring-1 ring-primary/40" : "hover:bg-accent/50"} cursor-pointer w-full text-left`}
                 >
                   <div
                     className={`h-7 w-7 rounded-full grid place-items-center text-xs font-bold ${
@@ -355,7 +369,7 @@ function Wallet() {
                     <div className="text-sm font-semibold truncate">{u.name}</div>
                   </div>
                   <div className="text-xs text-neon">{u.coins}</div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -388,7 +402,11 @@ function Wallet() {
 
               <div className="text-6xl mb-4">{selectedReward.emoji}</div>
               <h2 className="text-xl font-bold mb-2">
-                {t("wallet.confirm_title", { reward: selectedReward.name })}
+                {t("wallet.confirm_title", {
+                  reward: t(`wallet.reward_${selectedReward.id}_name`, {
+                    defaultValue: selectedReward.name,
+                  }),
+                })}
               </h2>
               <p className="text-sm text-muted-foreground mb-6">
                 {t("wallet.confirm_desc", { cost: selectedReward.cost })}
@@ -445,10 +463,12 @@ function Wallet() {
                 alt=""
                 className="h-24 w-24 rounded-full mx-auto object-cover mb-4 border border-border bg-muted"
               />
-              <h2 className="text-xl font-bold mb-2">Confirmar Compra</h2>
+              <h2 className="text-xl font-bold mb-2">{t("wallet.confirm_purchase_title")}</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                ¿Deseas comprar <strong>{selectedItem.name}</strong> por{" "}
-                <strong>{selectedItem.price} FC</strong>?
+                {t("wallet.confirm_purchase_desc", {
+                  name: selectedItem.name,
+                  price: selectedItem.price,
+                })}
               </p>
 
               <div className="flex flex-col gap-2">
@@ -458,13 +478,13 @@ function Wallet() {
                   className="w-full py-3 rounded-xl bg-gradient-neon text-neon-foreground font-semibold hover:shadow-neon transition-shadow cursor-pointer"
                   id="confirm-purchase-btn"
                 >
-                  {purchasing ? "Procesando..." : "Confirmar Compra"}
+                  {purchasing ? t("wallet.processing") : t("wallet.confirm_purchase_title")}
                 </button>
                 <button
                   onClick={() => setSelectedItem(null)}
                   className="w-full py-3 rounded-xl glass border border-border font-semibold hover:bg-accent transition-colors cursor-pointer"
                 >
-                  Cancelar
+                  {t("wallet.cancel")}
                 </button>
               </div>
             </motion.div>

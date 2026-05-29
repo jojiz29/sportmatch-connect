@@ -9,13 +9,16 @@ import {
   Image as ImageIcon,
   Smile,
   Plus,
+  Users,
 } from "lucide-react";
 import { useChatStore } from "@/features/chat/useChatStore";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient } from "@/shared/api/apiClient";
 import { User } from "@/entities/types";
+import { useSocialStore } from "@/features/social/model/useSocialStore";
+import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/chat")({
   head: () => ({ meta: [{ title: "Chat — SportMatch" }] }),
@@ -36,10 +39,57 @@ function Chat() {
   const [text, setText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [isCreateSquadModalOpen, setIsCreateSquadModalOpen] = useState(false);
+  const [squadName, setSquadName] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const currentUser = useAuthStore((s) => s.user);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+
+  const relationships = useSocialStore((state) => state.relationships);
+  const createGroupChat = useChatStore((state) => state.createGroupChat);
+
+  useEffect(() => {
+    if (!currentUser || useAuthStore.getState().isDemoMode) return;
+
+    async function syncRelationships() {
+      try {
+        const { data: followRows } = await supabase
+          .from("followers")
+          .select("follower_id, following_id");
+
+        if (followRows) {
+          const mapped = followRows.map((r) => ({
+            followerId: r.follower_id,
+            followingId: r.following_id,
+          }));
+          useSocialStore.setState({ relationships: mapped });
+        }
+      } catch (err) {
+        console.warn("Could not sync follow relationships for squad chat:", err);
+      }
+    }
+    syncRelationships();
+  }, [currentUser]);
+
+  const socialUserIds = useMemo(() => {
+    if (!currentUser) return [];
+    const followingIds = relationships
+      .filter((r) => r.followerId === currentUser.id)
+      .map((r) => r.followingId);
+    const followerIds = relationships
+      .filter((r) => r.followingId === currentUser.id)
+      .map((r) => r.followerId);
+
+    return Array.from(new Set([...followingIds, ...followerIds])).filter(
+      (id) => id !== currentUser.id,
+    );
+  }, [relationships, currentUser]);
+
+  const socialUsers = useMemo(() => {
+    return registeredUsers.filter((u) => socialUserIds.includes(u.id));
+  }, [registeredUsers, socialUserIds]);
 
   useEffect(() => {
     let active = true;
@@ -105,11 +155,22 @@ function Chat() {
             </div>
             <button
               onClick={() => {
+                setSquadName("");
+                setSelectedUserIds([]);
+                setIsCreateSquadModalOpen(true);
+              }}
+              className="p-2 rounded-xl bg-accent text-accent-foreground border border-border hover:bg-accent/80 hover:shadow-glow transition-all cursor-pointer flex items-center justify-center"
+              title="Crear Squad (Grupo)"
+            >
+              <Users className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
                 setUserSearchQuery("");
                 setIsNewChatModalOpen(true);
               }}
-              className="p-2 rounded-xl bg-neon text-neon-foreground hover:shadow-neon transition-shadow cursor-pointer"
-              title="Nuevo Chat"
+              className="p-2 rounded-xl bg-neon text-neon-foreground hover:shadow-neon transition-shadow cursor-pointer flex items-center justify-center"
+              title={t("chat.new_message")}
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -157,7 +218,7 @@ function Chat() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground truncate">
-                        {lastMessage ? lastMessage.text : "Sin mensajes"}
+                        {lastMessage ? lastMessage.text : t("chat.no_messages")}
                       </span>
                       {c.unread > 0 && (
                         <span className="h-5 w-5 rounded-full bg-neon text-neon-foreground text-[10px] font-bold grid place-items-center ml-2 shrink-0">
@@ -213,6 +274,17 @@ function Chat() {
 
               <div className="flex-1 p-6 overflow-y-auto space-y-4">
                 {activeChat.messages.map((msg) => {
+                  const isSystem = msg.sender_id === "system";
+                  if (isSystem) {
+                    return (
+                      <div key={msg.id} className="flex justify-center my-4 w-full">
+                        <div className="bg-accent/40 border border-border/60 text-muted-foreground text-xs px-4 py-2 rounded-full max-w-[90%] text-center shadow-sm">
+                          {msg.text}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const isMe = msg.sender_id === currentUser.id;
                   const sender = registeredUsers.find((u) => u.id === msg.sender_id) || {
                     name: activeChat.name,
@@ -231,7 +303,7 @@ function Chat() {
                     >
                       {isMe ? (
                         <div className="h-8 w-8 rounded-full bg-gradient-primary grid place-items-center text-white text-xs font-bold shrink-0">
-                          YO
+                          {t("chat.me")}
                         </div>
                       ) : (
                         <img
@@ -281,7 +353,7 @@ function Chat() {
                   </button>
                   <button
                     onClick={handleSend}
-                    className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2"
+                    className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer"
                   >
                     <Send className="h-4 w-4 ml-0.5" />
                   </button>
@@ -304,7 +376,7 @@ function Chat() {
           />
           <div className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card overflow-hidden flex flex-col max-h-[80vh] z-10 animate-fade-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">Nuevo mensaje</h3>
+              <h3 className="font-bold text-lg">{t("chat.new_message")}</h3>
               <button
                 onClick={() => setIsNewChatModalOpen(false)}
                 className="h-8 w-8 rounded-full bg-muted grid place-items-center hover:bg-accent transition-colors cursor-pointer"
@@ -317,7 +389,7 @@ function Chat() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Buscar usuarios..."
+                placeholder={t("chat.search_users")}
                 value={userSearchQuery}
                 onChange={(e) => setUserSearchQuery(e.target.value)}
                 className="w-full bg-background border border-border rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary"
@@ -348,14 +420,116 @@ function Chat() {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm truncate">{u.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {u.bio || "Deportista"}
+                        {u.bio || t("register.role_player")}
                       </div>
                     </div>
-                    <div className="h-7 px-3 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold grid place-items-center shadow-glow">
-                      Chatear
+                    <div className="h-7 px-3 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold grid place-items-center shadow-glow shrink-0">
+                      {t("chat.chat_btn")}
                     </div>
                   </button>
                 ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Squad Modal Overlay */}
+      {isCreateSquadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setIsCreateSquadModalOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card overflow-hidden flex flex-col max-h-[80vh] z-10 animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg">{t("chat.create_squad")}</h3>
+              <button
+                onClick={() => setIsCreateSquadModalOpen(false)}
+                className="h-8 w-8 rounded-full bg-muted grid place-items-center hover:bg-accent transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4 rotate-45" />
+              </button>
+            </div>
+
+            <div className="space-y-4 flex flex-col flex-1 overflow-hidden">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">
+                  {t("chat.squad_name")}
+                </label>
+                <input
+                  type="text"
+                  placeholder={t("chat.squad_placeholder")}
+                  value={squadName}
+                  onChange={(e) => setSquadName(e.target.value)}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[200px]">
+                <label className="text-xs text-muted-foreground block mb-1">
+                  {t("chat.select_members")}
+                </label>
+                {socialUsers.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-8 text-center">
+                    {t("chat.no_contacts")}
+                  </div>
+                ) : (
+                  socialUsers.map((u) => {
+                    const isSelected = selectedUserIds.includes(u.id);
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedUserIds(selectedUserIds.filter((id) => id !== u.id));
+                          } else {
+                            setSelectedUserIds([...selectedUserIds, u.id]);
+                          }
+                        }}
+                        className={`w-full p-2.5 rounded-xl border flex items-center gap-3 transition-all text-left cursor-pointer ${
+                          isSelected
+                            ? "bg-primary/10 border-primary"
+                            : "hover:bg-accent/40 border-transparent"
+                        }`}
+                      >
+                        <img
+                          src={u.avatar_url}
+                          alt={u.name}
+                          className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm truncate">{u.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {u.bio || t("register.role_player")}
+                          </div>
+                        </div>
+                        <div
+                          className={`h-5 w-5 rounded border flex items-center justify-center transition-all ${
+                            isSelected
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-muted-foreground"
+                          }`}
+                        >
+                          {isSelected && <span className="text-[10px] font-bold">✓</span>}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={!squadName.trim() || selectedUserIds.length === 0}
+                onClick={async () => {
+                  await createGroupChat(squadName, selectedUserIds);
+                  setIsCreateSquadModalOpen(false);
+                }}
+                className="w-full py-3 rounded-xl bg-neon text-neon-foreground font-bold hover:shadow-neon transition-shadow disabled:opacity-50 disabled:pointer-events-none cursor-pointer text-center"
+              >
+                {t("chat.create_squad_btn", { count: selectedUserIds.length })}
+              </button>
             </div>
           </div>
         </div>

@@ -7,6 +7,11 @@ import { safeLocalStorage } from "@/shared/lib/safeStorage";
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  /**
+   * SEC-02: isDemoMode is intentionally NOT persisted to localStorage.
+   * Keeping it ephemeral (in-memory only) prevents attackers from setting
+   * isDemoMode=true via DevTools to bypass all Supabase queries.
+   */
   isDemoMode: boolean;
   login: (user: User) => void;
   logout: () => void;
@@ -28,6 +33,12 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "sportmatch-auth",
       storage: createJSONStorage(() => safeLocalStorage),
+      // SEC-02: Explicitly exclude isDemoMode from persisted state.
+      // It will always reset to false on a page refresh, preventing localStorage manipulation.
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     },
   ),
 );
@@ -72,7 +83,7 @@ export function useAuth() {
       });
 
       if (authError) {
-        console.error("Error en Supabase Auth signIn:", authError);
+        if (import.meta.env.DEV) console.error("Error en Supabase Auth signIn:", authError);
         throw authError;
       }
 
@@ -88,7 +99,7 @@ export function useAuth() {
         .single();
 
       if (profileError) {
-        console.error("Error loading profile:", profileError);
+        if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
         throw profileError;
       }
 
@@ -124,7 +135,8 @@ export function useAuth() {
     }
 
     try {
-      console.log("Intentando registrar usuario en Supabase Auth:", newUser.email);
+      if (import.meta.env.DEV)
+        console.log("Intentando registrar usuario en Supabase Auth:", newUser.email);
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUser.email,
         password: newUser.password,
@@ -137,7 +149,7 @@ export function useAuth() {
       });
 
       if (authError) {
-        console.error("Error en Supabase Auth signUp:", authError);
+        if (import.meta.env.DEV) console.error("Error en Supabase Auth signUp:", authError);
         throw authError;
       }
 
@@ -179,7 +191,7 @@ export function useAuth() {
           .single();
 
         if (insertError) {
-          console.error("Error manually inserting profile:", insertError);
+          if (import.meta.env.DEV) console.error("Error manually inserting profile:", insertError);
           throw insertError;
         }
         profile = inserted;
@@ -206,7 +218,7 @@ export function useAuth() {
 
       store.register(profile as User);
     } catch (err) {
-      console.error("Error durante registro:", err);
+      if (import.meta.env.DEV) console.error("Error durante registro:", err);
       throw err;
     }
   };
@@ -219,7 +231,7 @@ export function useAuth() {
     try {
       await supabase.auth.signOut();
     } catch (e) {
-      console.warn("Supabase Auth signOut warning:", e);
+      if (import.meta.env.DEV) console.warn("Supabase Auth signOut warning:", e);
     }
     // Purge all Zustand stores and localStorage keys for a clean session exit
     purgeAllStores();

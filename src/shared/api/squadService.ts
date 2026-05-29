@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import { Squad, User } from "@/entities/types";
 
 export async function createSquad(
@@ -25,7 +25,7 @@ export async function createSquad(
     .single();
 
   if (squadError || !squad) {
-    console.error("Error creating squad in Supabase:", squadError);
+    if (import.meta.env.DEV) console.error("Error creating squad in Supabase:", squadError);
     throw squadError || new Error("Failed to create squad");
   }
 
@@ -36,7 +36,7 @@ export async function createSquad(
   });
 
   if (memberError) {
-    console.error("Error adding creator to squad members:", memberError);
+    if (import.meta.env.DEV) console.error("Error adding creator to squad members:", memberError);
     throw memberError;
   }
 
@@ -58,7 +58,7 @@ export async function getSquads(): Promise<Squad[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching squads from Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error fetching squads from Supabase:", error);
     throw error;
   }
 
@@ -81,7 +81,7 @@ export async function joinSquad(squadId: string, userId: string): Promise<void> 
 
   if (error && error.code !== "23505") {
     // Ignore unique constraint violation (on conflict do nothing)
-    console.error("Error joining squad:", error);
+    if (import.meta.env.DEV) console.error("Error joining squad:", error);
     throw error;
   }
 }
@@ -94,7 +94,7 @@ export async function leaveSquad(squadId: string, userId: string): Promise<void>
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error leaving squad:", error);
+    if (import.meta.env.DEV) console.error("Error leaving squad:", error);
     throw error;
   }
 }
@@ -108,7 +108,7 @@ export async function isMember(squadId: string, userId: string): Promise<boolean
     .limit(1);
 
   if (error) {
-    console.error("Error checking squad membership:", error);
+    if (import.meta.env.DEV) console.error("Error checking squad membership:", error);
     throw error;
   }
 
@@ -122,7 +122,7 @@ export async function getSquadMembers(squadId: string): Promise<User[]> {
     .eq("squad_id", squadId);
 
   if (error) {
-    console.error("Error getting squad members:", error);
+    if (import.meta.env.DEV) console.error("Error getting squad members:", error);
     throw error;
   }
 
