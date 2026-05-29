@@ -8,6 +8,9 @@ import { FollowButton } from "@/features/social/ui/FollowButton";
 import { getFollowStats } from "@/shared/api/socialService";
 import { supabase } from "@/shared/api/supabase";
 
+import { useAuthStore } from "@/entities/user/useAuth";
+import { MOCK_USERS } from "@/shared/api/apiClient";
+
 export const Route = createFileRoute("/app/match/$userId")({
   head: ({ loaderData }: { loaderData?: User }) => {
     if (!loaderData) {
@@ -20,6 +23,14 @@ export const Route = createFileRoute("/app/match/$userId")({
     };
   },
   loader: async ({ params }: { params: { userId: string } }) => {
+    if (useAuthStore.getState().isDemoMode) {
+      const user = MOCK_USERS.find((u) => u.id === params.userId);
+      if (!user) {
+        throw new Error("Usuario no encontrado");
+      }
+      return user as User;
+    }
+
     const { data: user, error } = await supabase
       .from("profiles")
       .select("*")

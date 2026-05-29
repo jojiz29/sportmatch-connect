@@ -14,8 +14,34 @@ const createCourtIcon = (sport: string, isSponsored?: boolean) => {
   if (courtIconCache.has(cacheKey)) {
     return courtIconCache.get(cacheKey)!;
   }
-  const emoji =
-    sport === "Pádel" ? "🏓" : sport === "Fútbol" ? "⚽" : sport === "Tenis" ? "🎾" : "🏃";
+  const getSportEmoji = (name: string) => {
+    switch (name.toLowerCase()) {
+      case "paddle":
+      case "padel":
+      case "pádel":
+        return "🏓";
+      case "football":
+      case "futbol":
+      case "fútbol":
+        return "⚽";
+      case "tennis":
+      case "tenis":
+        return "🎾";
+      case "running":
+        return "🏃";
+      case "basketball":
+      case "basquet":
+      case "básquet":
+        return "🏀";
+      case "volleyball":
+      case "voley":
+      case "vóley":
+        return "🏐";
+      default:
+        return "🏆";
+    }
+  };
+  const emoji = getSportEmoji(sport);
 
   // Gold ring for sponsored courts, purple for regular
   const border = isSponsored ? "3px solid #fbbf24" : "2.5px solid #ffffff";
@@ -158,6 +184,14 @@ export function MapFeature({
                 className="block w-full text-center px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-glow"
               >
                 {t("map.view_court")}
+              </a>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center px-3 py-2 mt-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-neon"
+              >
+                Cómo llegar
               </a>
             </div>
           </Popup>

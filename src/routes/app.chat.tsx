@@ -24,8 +24,15 @@ export const Route = createFileRoute("/app/chat")({
 
 function Chat() {
   const { t } = useTranslation();
-  const { chats, activeConversationId, setActiveConversation, sendMessage, createChat, initChat } =
-    useChatStore();
+  const {
+    chats,
+    activeConversationId,
+    setActiveConversation,
+    sendMessage,
+    createChat,
+    initChat,
+    subscribeToChat,
+  } = useChatStore();
   const [text, setText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
@@ -57,6 +64,14 @@ function Chat() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages]);
+
+  // Subscribe to Realtime messages for the active conversation.
+  // Cleanup is automatic on unmount or when activeConversationId changes.
+  useEffect(() => {
+    if (!activeConversationId) return;
+    const unsubscribe = subscribeToChat(activeConversationId);
+    return unsubscribe;
+  }, [activeConversationId, subscribeToChat]);
 
   const handleSend = () => {
     if (!text.trim() || !activeConversationId) return;

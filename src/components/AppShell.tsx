@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Home,
   Users,
@@ -11,8 +11,9 @@ import {
   User,
   Zap,
   Store,
+  LogOut,
 } from "lucide-react";
-import { useAuthStore } from "@/entities/user/useAuth";
+import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 
 const NAV = [
@@ -32,6 +33,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const isRegister = path === "/app/register";
   const currentUser = useAuthStore((s) => s.user);
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate({ to: "/login" });
+  };
 
   if (isRegister) {
     return (
@@ -93,13 +101,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="p-4 m-3 rounded-2xl bg-gradient-card border border-border">
           <div className="flex items-center gap-3">
-            <img src={currentUser.avatar_url} alt="" className="h-10 w-10 rounded-full bg-muted" />
-            <div className="min-w-0">
+            <img
+              src={currentUser.avatar_url}
+              alt={currentUser.name}
+              className="h-10 w-10 rounded-full bg-muted object-cover"
+            />
+            <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold truncate">{currentUser.name}</div>
               <div className="text-xs text-neon flex items-center gap-1">
                 <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
               </div>
             </div>
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>

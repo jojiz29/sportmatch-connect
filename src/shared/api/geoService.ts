@@ -26,11 +26,22 @@ function getCacheKey(lat: number, lng: number, dist: number) {
   return `${lat.toFixed(4)}_${lng.toFixed(4)}_${dist}`;
 }
 
+import { useAuthStore } from "@/entities/user/useAuth";
+import { MOCK_COURTS } from "./apiClient";
+
 export async function searchNearbyCourts(
   latitude: number,
   longitude: number,
   maxDistanceMeters: number = 50_000,
 ): Promise<Court[]> {
+  if (useAuthStore.getState().isDemoMode) {
+    const courts = MOCK_COURTS.map((c) => ({
+      ...c,
+      distance_km: parseFloat(calculateDistance(latitude, longitude, c.lat, c.lng).toFixed(2)),
+    }));
+    return courts.sort((a, b) => a.distance_km - b.distance_km);
+  }
+
   const cacheKey = getCacheKey(latitude, longitude, maxDistanceMeters);
   const cached = courtCache.get(cacheKey);
 

@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, ArrowUpRight, ArrowDownRight, TrendingUp, Trophy } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/app/wallet/history")({
   head: () => ({ meta: [{ title: "Historial de FitCoins — SportMatch" }] }),
@@ -11,7 +12,11 @@ export const Route = createFileRoute("/app/wallet/history")({
 
 function WalletHistory() {
   const { t } = useTranslation();
-  const { balance, transactions } = useWalletStore();
+  const { balance, transactions, initWallet } = useWalletStore();
+
+  useEffect(() => {
+    initWallet();
+  }, [initWallet]);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -43,40 +48,66 @@ function WalletHistory() {
               <TrendingUp className="h-4 w-4 text-neon" /> Movimientos recientes
             </div>
             <div className="divide-y divide-border">
-              {transactions.map((t) => (
-                <div
-                  key={t.id}
-                  className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`h-10 w-10 rounded-full grid place-items-center ${
-                        t.amount > 0 ? "bg-neon/10 text-neon" : "bg-destructive/10 text-destructive"
-                      }`}
-                    >
-                      {t.amount > 0 ? (
-                        <ArrowUpRight className="h-5 w-5" />
-                      ) : (
-                        <ArrowDownRight className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">{t.description}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(t.created_at).toLocaleDateString("es-AR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+              {transactions.map((t) => {
+                const isEarn = t.type === "EARN";
+                const isPenalty = t.type === "PENALTY";
+
+                let badgeStyle = "bg-electric/10 text-electric border-electric/20";
+                let typeLabel = "Gasto";
+                let icon = <ArrowDownRight className="h-5 w-5" />;
+
+                if (isEarn) {
+                  badgeStyle = "bg-neon/10 text-neon border-neon/20";
+                  typeLabel = "Ingreso";
+                  icon = <ArrowUpRight className="h-5 w-5" />;
+                } else if (isPenalty) {
+                  badgeStyle = "bg-red-500/10 text-red-500 border-red-500/20";
+                  typeLabel = "Penalización";
+                  icon = <ArrowDownRight className="h-5 w-5 text-red-500" />;
+                }
+
+                return (
+                  <div
+                    key={t.id}
+                    className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`h-10 w-10 rounded-full grid place-items-center ${
+                          isEarn
+                            ? "bg-neon/10 text-neon"
+                            : isPenalty
+                              ? "bg-red-500/10 text-red-500"
+                              : "bg-electric/10 text-electric"
+                        }`}
+                      >
+                        {icon}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm flex flex-wrap items-center gap-2">
+                          <span>{t.description}</span>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase border ${badgeStyle}`}
+                          >
+                            {typeLabel}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(t.created_at).toLocaleDateString("es-AR", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
                       </div>
                     </div>
+                    <div className={`font-bold ${isEarn ? "text-neon" : "text-foreground"}`}>
+                      {isEarn ? "+" : ""}
+                      {t.amount} FC
+                    </div>
                   </div>
-                  <div className={`font-bold ${t.amount > 0 ? "text-neon" : "text-foreground"}`}>
-                    {t.amount > 0 ? "+" : ""}
-                    {t.amount} FC
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

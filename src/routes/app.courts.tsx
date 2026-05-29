@@ -2,8 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { Court } from "@/entities/types";
-import { Star, MapPin, Check, QrCode } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Star, MapPin, Check, QrCode, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/shared/api/supabase";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { toast } from "sonner";
+import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
+import { calculateDistance } from "@/shared/api/geoService";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
@@ -11,13 +16,43 @@ export const Route = createFileRoute("/app/courts")({
   component: Courts,
 });
 
-const SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "19:00", "20:00", "21:00"];
-
 function Courts() {
   const courts = Route.useLoaderData() as Court[];
+  const user = useAuthStore((s) => s.user);
   const [selected, setSelected] = useState<Court | null>(null);
-  const [slot, setSlot] = useState<string | null>("19:00");
+  const [slot, setSlot] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn("Geolocation API unavailable or permission denied.", error.message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+  }, []);
+
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (user && user.last_location_lat && user.last_location_lng) {
+      return { lat: user.last_location_lat, lng: user.last_location_lng };
+    }
+    return null;
+  }, [userCoords, user]);
 
   useEffect(() => {
     if (courts.length > 0 && !selected) {
@@ -25,11 +60,136 @@ function Courts() {
     }
   }, [courts, selected]);
 
-  if (!selected) {
+  useEffect(() => {
+    if (!selected) return;
+
+    const courtId = selected.id;
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    async function fetchBookedSlots() {
+      try {
+        setLoadingBookings(true);
+        const booked = await apiClient.bookings.getByCourtAndDate(courtId, todayStr);
+        setBookedSlots(booked);
+      } catch (err) {
+        console.error("Error loading booked slots:", err);
+      } finally {
+        setLoadingBookings(false);
+      }
+    }
+    fetchBookedSlots();
+
+    // Subscribe to Postgres changes for bookings of this court on today's date
+    const channel = supabase
+      .channel(`public:bookings:court_id=eq.${courtId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bookings",
+          filter: `court_id=eq.${courtId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newBooking = payload.new as { date: string; time_slot: string };
+            if (newBooking.date === todayStr) {
+              setBookedSlots((prev) => {
+                if (prev.includes(newBooking.time_slot)) return prev;
+                return [...prev, newBooking.time_slot];
+              });
+            }
+          } else if (payload.eventType === "DELETE") {
+            const oldBooking = payload.old as { date: string; time_slot: string };
+            if (oldBooking.date === todayStr) {
+              setBookedSlots((prev) => prev.filter((s) => s !== oldBooking.time_slot));
+            }
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selected]);
+
+  if (!selected || !user) {
     return (
       <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
     );
   }
+
+  // Dynamic slots based on court metadata
+  const slots = selected.operating_hours || [
+    "08:00",
+    "10:00",
+    "12:00",
+    "14:00",
+    "16:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
+  ];
+
+  // Dynamic players limit based on court metadata
+  const maxPlayers = selected.max_players || 4;
+  const pricePerPerson = (selected.price_per_hour + 3) / maxPlayers;
+
+  const handleConfirmBooking = async () => {
+    if (!slot) {
+      toast.error("Por favor selecciona un horario.");
+      return;
+    }
+    if (!user) {
+      toast.error("Debes iniciar sesión para realizar una reserva.");
+      return;
+    }
+
+    const cost = Math.ceil(pricePerPerson);
+    if (user.fitcoins_balance < cost) {
+      setIsBalanceModalOpen(true);
+      return;
+    }
+
+    try {
+      setIsBooking(true);
+      const todayStr = new Date().toISOString().split("T")[0];
+
+      // 1. Double Booking Prevention: Check availability in database
+      const booked = await apiClient.bookings.getByCourtAndDate(selected.id, todayStr);
+      if (booked.includes(slot)) {
+        toast.error("Este horario ya ha sido reservado. Por favor elige otro.");
+        setBookedSlots(booked); // Sync state
+        setIsBooking(false);
+        return;
+      }
+
+      // 2. Perform INSERT
+      await apiClient.bookings.create({
+        court_id: selected.id,
+        user_id: user.id,
+        date: todayStr,
+        time_slot: slot,
+      });
+
+      setConfirmed(true);
+      toast.success("¡Reserva confirmada con éxito!", {
+        description: `Turno reservado para hoy a las ${slot} hrs.`,
+      });
+    } catch (err: unknown) {
+      console.error("Booking error:", err);
+      const pgErr = err as { code?: string };
+      if (pgErr?.code === "23505") {
+        toast.error("Este horario ya ha sido reservado por otro usuario.");
+      } else {
+        toast.error("Error al procesar la reserva. Por favor intenta de nuevo.");
+      }
+    } finally {
+      setIsBooking(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -43,6 +203,7 @@ function Courts() {
                 key={c.id}
                 onClick={() => {
                   setSelected(c);
+                  setSlot(null);
                   setConfirmed(false);
                 }}
                 className={`text-left rounded-2xl overflow-hidden border transition-all ${
@@ -74,7 +235,9 @@ function Courts() {
                     <div className="text-xs text-white/80 flex items-center gap-2 mt-0.5">
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {c.distance_km} km
+                        {baseLocation
+                          ? `${calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng).toFixed(1)} km`
+                          : `${c.distance_km ?? 0} km`}
                       </span>
                       <span className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-warning text-warning" />
@@ -86,7 +249,7 @@ function Courts() {
                 </div>
                 <div className="p-3 bg-card">
                   <div className="flex flex-wrap gap-1">
-                    {c.amenities.map((a) => (
+                    {c.amenities?.map((a) => (
                       <span key={a} className="text-xs px-2 py-0.5 rounded-full bg-accent">
                         {a}
                       </span>
@@ -106,15 +269,20 @@ function Courts() {
             </p>
 
             <div className="mt-4">
-              <div className="text-xs text-muted-foreground mb-2">Hoy · Selecciona horario</div>
+              <div className="text-xs text-muted-foreground mb-2 flex justify-between items-center">
+                <span>Hoy · Selecciona horario</span>
+                {loadingBookings && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+              </div>
               <div className="grid grid-cols-3 gap-2">
-                {SLOTS.map((s) => {
-                  const taken = ["12:00", "16:00"].includes(s);
+                {slots.map((s) => {
+                  const taken = bookedSlots.includes(s);
                   return (
                     <button
                       key={s}
                       disabled={taken}
-                      onClick={() => setSlot(s)}
+                      onClick={() => {
+                        if (!confirmed) setSlot(s);
+                      }}
                       className={`py-2 rounded-lg text-sm transition-all ${
                         taken
                           ? "bg-muted/40 text-muted-foreground/50 line-through cursor-not-allowed"
@@ -133,19 +301,28 @@ function Courts() {
             <div className="mt-5 pt-4 border-t border-border space-y-2 text-sm">
               <Row label="Cancha" value={`$${selected.price_per_hour}`} />
               <Row label="Servicio" value="$3" />
-              <Row label="Dividir entre" value="4 jugadores" />
+              <Row label="Dividir entre" value={`${maxPlayers} jugadores`} />
               <div className="flex justify-between font-semibold pt-2 border-t border-border">
                 <span>Tu parte</span>
-                <span className="text-neon">${((selected.price_per_hour + 3) / 4).toFixed(2)}</span>
+                <span className="text-neon">${pricePerPerson.toFixed(2)}</span>
               </div>
             </div>
 
             <button
-              onClick={() => setConfirmed(true)}
-              disabled={!slot}
-              className="mt-5 w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow disabled:opacity-50"
+              onClick={handleConfirmBooking}
+              disabled={!slot || isBooking || confirmed}
+              className="mt-5 w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              {confirmed ? "Reserva confirmada ✓" : "Confirmar reserva"}
+              {isBooking ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Procesando...</span>
+                </>
+              ) : confirmed ? (
+                "Reserva confirmada ✓"
+              ) : (
+                "Confirmar reserva"
+              )}
             </button>
           </div>
 
@@ -163,6 +340,13 @@ function Courts() {
           )}
         </div>
       </div>
+
+      <InsufficientBalanceModal
+        isOpen={isBalanceModalOpen}
+        onOpenChange={setIsBalanceModalOpen}
+        cost={Math.ceil(pricePerPerson)}
+        balance={user?.fitcoins_balance ?? 0}
+      />
     </div>
   );
 }
