@@ -70,7 +70,7 @@ export interface Match {
   max_players: number;
   required_level: Level;
   creator_id: string; // Faltaba para hacer match con RLS
-  status?: "Open" | "Full" | "Finished" | "Cancelled";
+  status?: "Open" | "Full" | "Finished" | "Cancelled" | "IN_PROGRESS";
 
   // Relaciones
   court?: Court;
@@ -80,7 +80,7 @@ export interface Match {
 export interface MatchParticipant {
   match_id: string;
   user_id: string;
-  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "ATTENDED";
   joined_at: string;
 }
 

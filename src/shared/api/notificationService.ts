@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import { AppNotification } from "@/entities/types";
 
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
@@ -9,7 +9,7 @@ export async function getNotifications(userId: string): Promise<AppNotification[
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching notifications from Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error fetching notifications from Supabase:", error);
     throw error;
   }
 
@@ -49,7 +49,7 @@ export async function createNotification(
     .single();
 
   if (error) {
-    console.error("Error creating notification in Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error creating notification in Supabase:", error);
     throw error;
   }
 
@@ -69,7 +69,7 @@ export async function markNotificationRead(id: string): Promise<void> {
   const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
 
   if (error) {
-    console.error("Error marking notification read in Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error marking notification read in Supabase:", error);
     throw error;
   }
 }
@@ -81,7 +81,8 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error marking all notifications read in Supabase:", error);
+    if (import.meta.env.DEV)
+      console.error("Error marking all notifications read in Supabase:", error);
     throw error;
   }
 }

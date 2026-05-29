@@ -4,6 +4,7 @@ import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { MOCK_USERS } from "@/shared/api/apiClient";
+import { Match } from "@/entities/types";
 
 export interface ChatMessage {
   id: string;
@@ -27,6 +28,8 @@ interface ChatState {
   setActiveConversation: (id: string | null) => void;
   sendMessage: (chatId: string, text: string) => void;
   createChat: (userId: string) => Promise<string>;
+  createGroupChat: (name: string, targetUserIds: string[]) => Promise<string>;
+  createMatchGroupChat: (match: Match) => void;
   initChat: () => void;
 
   /**
@@ -140,6 +143,80 @@ export const useChatStore = create<ChatState>()(
         }));
 
         return newChat.id;
+      },
+
+      createGroupChat: async (name, targetUserIds) => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) return "";
+
+        const newChat: Chat = {
+          id: `chat_squad_${Date.now()}`,
+          name,
+          avatar: "👥",
+          current_players: [currentUser.id, ...targetUserIds],
+          messages: [
+            {
+              id: `msg_system_${Date.now()}`,
+              sender_id: "system",
+              text: `Squad "${name}" creado por ${currentUser.name}. ¡Comiencen a chatear!`,
+              created_at: new Date().toISOString(),
+            },
+          ],
+          unread: 0,
+        };
+
+        set((state) => ({
+          chats: [...state.chats, newChat],
+          activeConversationId: newChat.id,
+        }));
+
+        return newChat.id;
+      },
+
+      createMatchGroupChat: (match) => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) return;
+
+        const participantIds = match.current_players?.map((p) => p.id) || [];
+        if (!participantIds.includes(match.creator_id)) {
+          participantIds.push(match.creator_id);
+        }
+
+        // We only create if currentUser is a participant/creator of this match
+        if (!participantIds.includes(currentUser.id)) return;
+
+        const chatId = `chat_match_${match.id}`;
+        const existing = get().chats.some((c) => c.id === chatId);
+        if (existing) return;
+
+        const sportEmoji =
+          match.sport === "Fútbol"
+            ? "⚽"
+            : match.sport === "Tenis"
+              ? "🎾"
+              : match.sport === "Pádel"
+                ? "🏓"
+                : "🏆";
+
+        const newChat: Chat = {
+          id: chatId,
+          name: `Partido: ${match.title}`,
+          avatar: sportEmoji,
+          current_players: participantIds,
+          messages: [
+            {
+              id: `msg_system_${Date.now()}`,
+              sender_id: "system",
+              text: `Grupo creado para coordinar el partido "${match.title}". ¡Buena suerte!`,
+              created_at: new Date().toISOString(),
+            },
+          ],
+          unread: 0,
+        };
+
+        set((state) => ({
+          chats: [...state.chats, newChat],
+        }));
       },
 
       subscribeToChat: (chatId) => {

@@ -1,31 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import {
-  Edit3,
   MapPin,
   Trophy,
   Award,
   Shield,
   TrendingUp,
-  Save,
-  X,
   Users,
-  Camera,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
-import { useProfileStore } from "@/features/profile/useProfileStore";
-import { useWalletStore } from "@/features/wallet/useWalletStore";
+import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { apiClient } from "@/shared/api/apiClient";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { compressToWebP } from "@/shared/lib/imageUtils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Match, Sport, User } from "@/entities/types";
+import { Match, User } from "@/entities/types";
 
-export const Route = createFileRoute("/app/profile")({
-  head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
-  component: Profile,
+export const Route = createFileRoute("/app/profile/$userId")({
+  head: () => ({ meta: [{ title: "Perfil de Jugador — SportMatch" }] }),
+  component: UserProfile,
 });
 
 const BADGES = [
@@ -62,46 +58,108 @@ const BADGES = [
   },
 ];
 
-function Profile() {
+function UserProfile() {
+  const { userId } = Route.useParams();
   const { t } = useTranslation();
-  const { profile, updateProfile, initProfile } = useProfileStore();
-  const { balance } = useWalletStore();
-  const [isEditing, setIsEditing] = useState(false);
+  const currentUser = useAuthStore((s) => s.user);
+
+  const [profile, setProfile] = useState<User | null>(null);
   const [userMatches, setUserMatches] = useState<Match[]>([]);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    city: "",
-    bio: "",
-    preferred_sports: "",
-    avatar_url: "",
-  });
+  const relationships = useSocialStore((state) => state.relationships);
+  const follow = useSocialStore((state) => state.follow);
+  const unfollow = useSocialStore((state) => state.unfollow);
+
+  const isMe = currentUser?.id === userId;
+
+  const isFollowing = useMemo(() => {
+    if (!currentUser) return false;
+    return relationships.some((r) => r.followerId === currentUser.id && r.followingId === userId);
+  }, [relationships, currentUser, userId]);
 
   useEffect(() => {
-    initProfile();
-  }, [initProfile]);
+    let active = true;
+    setIsLoading(true);
 
-  useEffect(() => {
-    if (profile) {
-      setEditForm({
-        name: profile.name,
-        city: profile.city,
-        bio: profile.bio || "",
-        preferred_sports: profile.preferred_sports.join(", "),
-        avatar_url: profile.avatar_url || "",
-      });
+    async function loadData() {
+      try {
+        let userProfile: User | null = null;
+        if (useAuthStore.getState().isDemoMode) {
+          const { MOCK_USERS } = await import("@/shared/api/apiClient");
+          userProfile = MOCK_USERS.find((u) => u.id === userId) || null;
+        } else {
+          const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+          if (data) {
+            userProfile = data as User;
+          }
+        }
 
-      apiClient.matches
-        .getUserMatches(profile.id)
-        .then(setUserMatches)
-        .catch(() => setUserMatches([]));
+        if (active) {
+          setProfile(userProfile);
+          if (userProfile) {
+            const matchesData = await apiClient.matches.getUserMatches(userId);
+            setUserMatches(matchesData);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading public profile:", err);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [profile]);
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  const handleFollowToggle = async () => {
+    if (!currentUser) return;
+    try {
+      if (isFollowing) {
+        if (!useAuthStore.getState().isDemoMode) {
+          await supabase
+            .from("followers")
+            .delete()
+            .eq("follower_id", currentUser.id)
+            .eq("following_id", userId);
+        }
+        unfollow(currentUser.id, userId);
+        toast.success(
+          t("profile.unfollow_success", { defaultValue: "Dejaste de seguir a este usuario." }),
+        );
+      } else {
+        if (!useAuthStore.getState().isDemoMode) {
+          await supabase.from("followers").insert({
+            follower_id: currentUser.id,
+            following_id: userId,
+          });
+        }
+        follow(currentUser.id, userId);
+        toast.success(
+          t("profile.follow_success", { defaultValue: "¡Ahora sigues a este usuario!" }),
+        );
+      }
+    } catch {
+      toast.error(t("profile.follow_error", { defaultValue: "Error al procesar la solicitud." }));
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
+  }
 
   if (!profile) {
     return (
-      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+      <div className="container mx-auto px-4 lg:px-8 py-8 text-center text-muted-foreground">
+        {t("profile.user_not_found", { defaultValue: "Usuario no encontrado." })}
+      </div>
     );
   }
 
@@ -119,213 +177,71 @@ function Profile() {
         ? "text-warning"
         : "text-destructive";
 
-  const handleStartEdit = () => {
-    setEditForm({
-      name: profile.name,
-      city: profile.city,
-      bio: profile.bio || "",
-      preferred_sports: profile.preferred_sports.join(", "),
-      avatar_url: profile.avatar_url || "",
-    });
-    setIsEditing(true);
-  };
-
-  const handleSave = () => {
-    updateProfile({
-      name: editForm.name,
-      city: editForm.city,
-      bio: editForm.bio,
-      avatar_url: editForm.avatar_url,
-      preferred_sports: editForm.preferred_sports
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean) as Sport[],
-    });
-    setIsEditing(false);
-    toast.success(t("profile.updated"));
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const target = e.target;
-    const file = target?.files?.[0];
-    if (!file || !profile) return;
-
-    setIsUploadingAvatar(true);
-    const toastId = toast.loading(t("profile.uploading_photo"));
-
-    try {
-      if (useAuthStore.getState().isDemoMode) {
-        const localUrl = URL.createObjectURL(file);
-        await updateProfile({ avatar_url: localUrl });
-        setEditForm((prev) => ({ ...prev, avatar_url: localUrl }));
-        toast.success(t("profile.photo_updated_demo"), { id: toastId });
-        return;
-      }
-
-      // 1. Compress to WebP via Canvas (max 400px, quality 0.8)
-      const webpBlob = await compressToWebP(file, 400, 0.8);
-
-      // 2. Upload to Supabase Storage bucket 'avatars'
-      const filePath = `public/${profile.id}.webp`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, webpBlob, {
-          contentType: "image/webp",
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // 3. Get public URL with cache-busting timestamp
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-      const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-
-      // 4. Persist the URL to profiles table via the store
-      await updateProfile({ avatar_url: publicUrl });
-
-      // 5. Update the edit form to show the new avatar immediately
-      setEditForm((prev) => ({ ...prev, avatar_url: publicUrl }));
-
-      toast.success(t("profile.photo_updated"), { id: toastId });
-    } catch (err) {
-      if (import.meta.env.DEV) console.error("Avatar upload error:", err);
-      toast.error(t("profile.photo_error"), { id: toastId });
-    } finally {
-      setIsUploadingAvatar(false);
-      // Reset file input safely so the same file can be selected again if needed
-      if (target) {
-        try {
-          target.value = "";
-        } catch (resetErr) {
-          if (import.meta.env.DEV) console.warn("Could not reset input file value:", resetErr);
-        }
-      }
-    }
-  };
-
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
-      <PageHeader title={t("profile.title")} />
+      <PageHeader title={profile.name} />
 
       <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card relative overflow-hidden">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-gradient-primary opacity-15 blur-3xl" />
         <div className="flex flex-wrap md:flex-nowrap items-start gap-6 relative">
           <div className="relative shrink-0">
             <img
-              src={isEditing ? editForm.avatar_url : profile.avatar_url}
+              src={profile.avatar_url}
               alt={profile.name}
               className="h-28 w-28 rounded-2xl bg-muted ring-4 ring-primary/30 object-cover"
             />
-            {isEditing && (
-              <label
-                className={`absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors ${
-                  isUploadingAvatar ? "pointer-events-none" : ""
-                }`}
-              >
-                {isUploadingAvatar ? (
-                  <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                ) : (
-                  <>
-                    <Camera className="h-5 w-5 mb-1" />
-                    <span>{t("profile.change_photo")}</span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={isUploadingAvatar}
-                />
-              </label>
-            )}
             <div className="absolute -bottom-2 -right-2 px-2 py-1 rounded-full bg-gradient-neon text-neon-foreground text-xs font-bold">
               {profile.level}
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            {isEditing ? (
-              <div className="space-y-3 mt-1">
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 font-bold text-xl focus:border-primary focus:outline-none"
-                  placeholder={t("profile.placeholder_name")}
-                />
-                <input
-                  type="text"
-                  value={editForm.city}
-                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                  placeholder={t("profile.placeholder_city")}
-                />
-                <textarea
-                  value={editForm.bio}
-                  onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                  placeholder={t("profile.placeholder_bio")}
-                  rows={2}
-                />
-                <input
-                  type="text"
-                  value={editForm.preferred_sports}
-                  onChange={(e) => setEditForm({ ...editForm, preferred_sports: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                  placeholder={t("profile.placeholder_sports")}
-                />
-              </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-bold">{profile.name}</h2>
-                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin className="h-3 w-3" />
-                  {profile.city} · {t("profile.age_label", { age: profile.age })}
-                </p>
-                <p className="text-sm mt-2">{profile.bio}</p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {profile.preferred_sports.map((s) => (
-                    <span
-                      key={s}
-                      className="px-3 py-1 rounded-full bg-violet/20 text-sm border border-violet/30"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
+            <h2 className="text-2xl font-bold">{profile.name}</h2>
+            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+              <MapPin className="h-3 w-3" />
+              {profile.city} · {t("profile.age_label", { age: profile.age })}
+            </p>
+            <p className="text-sm mt-2">{profile.bio || t("register.default_player_bio")}</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {profile.preferred_sports.map((s) => (
+                <span
+                  key={s}
+                  className="px-3 py-1 rounded-full bg-violet/20 text-sm border border-violet/30"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="shrink-0 flex gap-2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" /> {t("profile.cancel")}
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground flex items-center gap-2 text-sm hover:shadow-neon transition-all font-semibold cursor-pointer"
-                >
-                  <Save className="h-4 w-4" /> {t("profile.save")}
-                </button>
-              </>
-            ) : (
+          {!isMe && (
+            <div className="shrink-0 flex gap-2">
               <button
-                onClick={handleStartEdit}
-                className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                onClick={handleFollowToggle}
+                className={`px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all hover:shadow-glow cursor-pointer ${
+                  isFollowing
+                    ? "bg-accent text-accent-foreground border border-border hover:bg-accent/80"
+                    : "bg-gradient-neon text-neon-foreground hover:shadow-neon"
+                }`}
               >
-                <Edit3 className="h-4 w-4" /> {t("profile.edit")}
+                {isFollowing ? (
+                  <>
+                    <UserMinus className="h-4 w-4" /> {t("profile.unfollow")}
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" /> {t("profile.follow")}
+                  </>
+                )}
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-8">
-          <Stat icon={<Trophy className="h-4 w-4 text-neon" />} label="FitCoins" value={balance} />
+          <Stat
+            icon={<Trophy className="h-4 w-4 text-neon" />}
+            label="FitCoins"
+            value={profile.fitcoins_balance}
+          />
           <Stat
             icon={<TrendingUp className="h-4 w-4 text-electric" />}
             label={t("profile.matches")}
@@ -344,12 +260,12 @@ function Profile() {
           <Stat
             icon={<Users className="h-4 w-4 text-neon" />}
             label={t("profile.followers")}
-            value={profile.followers_count ?? 0}
+            value={relationships.filter((r) => r.followingId === profile.id).length}
           />
           <Stat
             icon={<Users className="h-4 w-4 text-electric" />}
             label={t("profile.following")}
-            value={profile.following_count ?? 0}
+            value={relationships.filter((r) => r.followerId === profile.id).length}
           />
         </div>
       </div>
@@ -448,10 +364,10 @@ function Profile() {
                       }`}
                     >
                       {m.status === "Finished"
-                        ? "Finalizado"
+                        ? t("profile.status_finished", { defaultValue: "Finalizado" })
                         : m.status === "IN_PROGRESS"
-                          ? "En Curso"
-                          : "Abierto"}
+                          ? t("profile.status_in_progress", { defaultValue: "En Curso" })
+                          : t("profile.status_open", { defaultValue: "Abierto" })}
                     </span>
                   </div>
                 </div>

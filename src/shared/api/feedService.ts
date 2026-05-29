@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import { Post } from "@/entities/types";
 import { calculateDistance } from "./geoService";
 import { createNotification } from "./notificationService";
@@ -87,7 +87,7 @@ export async function getFeed(userId: string): Promise<Post[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching feed from Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error fetching feed from Supabase:", error);
     throw error;
   }
 
@@ -140,6 +140,7 @@ export async function createPost(
   sport?: Post["sport"],
 ): Promise<Post> {
   if (useAuthStore.getState().isDemoMode) {
+    const currentUser = useAuthStore.getState().user;
     const newPost: Post = {
       id: `post-demo-${Date.now()}`,
       user_id: userId,
@@ -147,8 +148,8 @@ export async function createPost(
       type,
       media_url: mediaUrl,
       sport,
-      user_name: useAuthStore.getState().user?.name || "Edwin (Demo)",
-      user_avatar: useAuthStore.getState().user?.avatar_url || "",
+      user_name: currentUser?.name || "Usuario Demo",
+      user_avatar: currentUser?.avatar_url || "",
       created_at: new Date().toISOString(),
     };
     MOCK_POSTS.unshift(newPost);
@@ -171,7 +172,7 @@ export async function createPost(
     .single();
 
   if (error || !post) {
-    console.error("Error creating post in Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error creating post in Supabase:", error);
     throw error || new Error("Failed to create post");
   }
 
@@ -212,7 +213,7 @@ export async function createPost(
       }
     }
   } catch (err) {
-    console.warn("Could not trigger B2B post notifications:", err);
+    if (import.meta.env.DEV) console.warn("Could not trigger B2B post notifications:", err);
   }
 
   const postAuthor = (post as unknown as SupabasePost).profile || {

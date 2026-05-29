@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import { Court } from "@/entities/types";
 
 // ──────────────────────────────────────────────────────────────
@@ -46,13 +46,14 @@ export async function searchNearbyCourts(
   const cached = courtCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    console.log(`[GeoService] Cache hit: ${cacheKey}`);
+    if (import.meta.env.DEV) console.log(`[GeoService] Cache hit: ${cacheKey}`);
     return cached.data;
   }
 
-  console.log(
-    `[GeoService] Supabase RPC search_nearby_courts (lat=${latitude}, lng=${longitude}, dist=${maxDistanceMeters}m)`,
-  );
+  if (import.meta.env.DEV)
+    console.log(
+      `[GeoService] Supabase RPC search_nearby_courts (lat=${latitude}, lng=${longitude}, dist=${maxDistanceMeters}m)`,
+    );
 
   const { data, error } = await supabase.rpc("search_nearby_courts", {
     latitude,
@@ -61,7 +62,8 @@ export async function searchNearbyCourts(
   });
 
   if (error) {
-    console.error("[GeoService] RPC error fetching nearby courts:", error.message);
+    if (import.meta.env.DEV)
+      console.error("[GeoService] RPC error fetching nearby courts:", error.message);
     throw new Error(`Failed to search nearby courts: ${error.message}`);
   }
 

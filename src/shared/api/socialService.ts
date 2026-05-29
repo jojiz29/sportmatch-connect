@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import { createNotification } from "@/shared/api/notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
 
@@ -19,7 +19,7 @@ export async function followUser(followerId: string, followingId: string): Promi
       followerName = data.name;
     }
   } catch (e) {
-    console.warn("Could not query follower name for notification:", e);
+    if (import.meta.env.DEV) console.warn("Could not query follower name for notification:", e);
   }
 
   // 2. Trigger FOLLOW notification
@@ -32,7 +32,7 @@ export async function followUser(followerId: string, followingId: string): Promi
       `/app/match/${followerId}`,
     );
   } catch (error) {
-    console.warn("Could not create follow notification:", error);
+    if (import.meta.env.DEV) console.warn("Could not create follow notification:", error);
   }
 
   // 3. Insert follower relation in Supabase
@@ -43,7 +43,7 @@ export async function followUser(followerId: string, followingId: string): Promi
 
   if (error && error.code !== "23505") {
     // Ignore unique constraint violation (on conflict do nothing)
-    console.error("Error inserting follower relation:", error);
+    if (import.meta.env.DEV) console.error("Error inserting follower relation:", error);
     throw error;
   }
 }
@@ -60,7 +60,7 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
     .eq("following_id", followingId);
 
   if (error) {
-    console.error("Error unfollowUser from Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error unfollowUser from Supabase:", error);
     throw error;
   }
 }
@@ -79,7 +79,7 @@ export async function getFollowStats(
     .eq("following_id", userId);
 
   if (followersError) {
-    console.error("Error getting followers count:", followersError);
+    if (import.meta.env.DEV) console.error("Error getting followers count:", followersError);
     throw followersError;
   }
 
@@ -90,7 +90,7 @@ export async function getFollowStats(
     .eq("follower_id", userId);
 
   if (followingError) {
-    console.error("Error getting following count:", followingError);
+    if (import.meta.env.DEV) console.error("Error getting following count:", followingError);
     throw followingError;
   }
 
@@ -113,7 +113,7 @@ export async function isFollowing(followerId: string, followingId: string): Prom
     .limit(1);
 
   if (error) {
-    console.error("Error checking isFollowing:", error);
+    if (import.meta.env.DEV) console.error("Error checking isFollowing:", error);
     throw error;
   }
 

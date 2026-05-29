@@ -45,30 +45,30 @@ function WalletHistory() {
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-gradient-card border border-border rounded-2xl shadow-card overflow-hidden">
             <div className="p-4 border-b border-border bg-card/50 flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp className="h-4 w-4 text-neon" /> Movimientos recientes
+              <TrendingUp className="h-4 w-4 text-neon" /> {t("wallet.recent_movements")}
             </div>
             <div className="divide-y divide-border">
-              {transactions.map((t) => {
-                const isEarn = t.type === "EARN";
-                const isPenalty = t.type === "PENALTY";
+              {transactions.map((tItem) => {
+                const isEarn = tItem.type === "EARN";
+                const isPenalty = tItem.type === "PENALTY";
 
                 let badgeStyle = "bg-electric/10 text-electric border-electric/20";
-                let typeLabel = "Gasto";
+                let typeLabel = t("wallet.spend");
                 let icon = <ArrowDownRight className="h-5 w-5" />;
 
                 if (isEarn) {
                   badgeStyle = "bg-neon/10 text-neon border-neon/20";
-                  typeLabel = "Ingreso";
+                  typeLabel = t("wallet.earn");
                   icon = <ArrowUpRight className="h-5 w-5" />;
                 } else if (isPenalty) {
                   badgeStyle = "bg-red-500/10 text-red-500 border-red-500/20";
-                  typeLabel = "Penalización";
+                  typeLabel = t("wallet.penalty");
                   icon = <ArrowDownRight className="h-5 w-5 text-red-500" />;
                 }
 
                 return (
                   <div
-                    key={t.id}
+                    key={tItem.id}
                     className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
@@ -85,7 +85,7 @@ function WalletHistory() {
                       </div>
                       <div>
                         <div className="font-semibold text-sm flex flex-wrap items-center gap-2">
-                          <span>{t.description}</span>
+                          <span>{tItem.description}</span>
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase border ${badgeStyle}`}
                           >
@@ -93,7 +93,7 @@ function WalletHistory() {
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(t.created_at).toLocaleDateString("es-AR", {
+                          {new Date(tItem.created_at).toLocaleDateString("es-AR", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
@@ -103,7 +103,7 @@ function WalletHistory() {
                     </div>
                     <div className={`font-bold ${isEarn ? "text-neon" : "text-foreground"}`}>
                       {isEarn ? "+" : ""}
-                      {t.amount} FC
+                      {tItem.amount} FC
                     </div>
                   </div>
                 );
@@ -114,18 +114,18 @@ function WalletHistory() {
 
         <div>
           <div className="bg-gradient-card border border-border rounded-2xl p-6 shadow-card sticky top-8">
-            <h3 className="font-semibold mb-4">Resumen Mensual</h3>
+            <h3 className="font-semibold mb-4">{t("wallet.monthly_summary")}</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 rounded-xl glass border border-neon/30">
-                <span className="text-sm text-muted-foreground">Ingresos</span>
+                <span className="text-sm text-muted-foreground">{t("wallet.income")}</span>
                 <span className="text-neon font-bold">+400 FC</span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-xl glass border border-destructive/30">
-                <span className="text-sm text-muted-foreground">Egresos</span>
+                <span className="text-sm text-muted-foreground">{t("wallet.expenses")}</span>
                 <span className="text-foreground font-bold">-500 FC</span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-xl bg-accent">
-                <span className="text-sm font-semibold">Balance neto</span>
+                <span className="text-sm font-semibold">{t("wallet.net_balance")}</span>
                 <span className="font-bold text-destructive">-100 FC</span>
               </div>
             </div>

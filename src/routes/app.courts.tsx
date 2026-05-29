@@ -9,6 +9,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
+import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
@@ -28,6 +29,12 @@ function Courts() {
   const [isBooking, setIsBooking] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const { isProcessing, transactionId, processPayment, resetPayment } = usePaymentGatewayStore();
+
+  useEffect(() => {
+    resetPayment();
+  }, [slot, selected?.id, resetPayment]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -166,12 +173,22 @@ function Courts() {
         return;
       }
 
-      // 2. Perform INSERT
+      // 2. Process Simulated Payment
+      const paymentSuccess = await processPayment(cost, selected.name);
+      if (!paymentSuccess) {
+        const currentError = usePaymentGatewayStore.getState().error;
+        toast.error(currentError || "El pago no pudo ser procesado.");
+        setIsBooking(false);
+        return;
+      }
+
+      // 3. Perform INSERT
       await apiClient.bookings.create({
         court_id: selected.id,
         user_id: user.id,
         date: todayStr,
         time_slot: slot,
+        operating_hours: selected.operating_hours,
       });
 
       setConfirmed(true);
@@ -327,19 +344,104 @@ function Courts() {
           </div>
 
           {confirmed && (
-            <div className="bg-gradient-card border border-neon/40 rounded-2xl p-5 text-center shadow-neon">
-              <div className="h-14 w-14 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3">
-                <Check className="h-7 w-7 text-neon" />
+            <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-4 relative overflow-hidden font-sans">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
+
+              <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
+                <Check className="h-6 w-6 text-neon" />
               </div>
-              <div className="font-semibold">¡Listo, {slot}!</div>
-              <p className="text-xs text-muted-foreground mt-1">Mostrá este QR al ingresar</p>
-              <div className="mt-4 mx-auto h-32 w-32 rounded-xl bg-white grid place-items-center">
-                <QrCode className="h-24 w-24 text-black" />
+              <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
+              <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
+
+              {/* Ticket separator dashed line */}
+              <div className="my-5 border-t-2 border-dashed border-border/60 relative">
+                <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
+                <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
+              </div>
+
+              <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
+                <div className="flex justify-between items-center pb-2 border-b border-border/30">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    Transacción
+                  </span>
+                  <span className="font-mono text-xs font-bold text-neon">
+                    {transactionId || "TXN-DEMO123"}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="font-bold text-foreground text-sm">{selected.name}</div>
+                  <div className="text-[11px] text-muted-foreground leading-normal">
+                    {selected.address}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
+                    <div className="text-xs font-bold text-foreground">{selected.sport}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground font-semibold">
+                      Fecha y Hora
+                    </div>
+                    <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border/30 space-y-1.5">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Detalle del Pago
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Precio Cancha / Hora</span>
+                    <span>S/ {selected.price_per_hour.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Comisión de Servicio</span>
+                    <span>S/ 3.00</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Descuento (FitCoins gastados)</span>
+                    <span className="text-neon">-S/ {Math.ceil(pricePerPerson).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
+                    <span>Total Pagado</span>
+                    <span>S/ 0.00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR Code section */}
+              <div className="mt-5 space-y-2">
+                <p className="text-[10px] text-muted-foreground">
+                  Mostrá este QR de check-in al ingresar al club
+                </p>
+                <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
+                  <QrCode className="h-28 w-28 text-black" />
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {isProcessing && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex flex-col items-center justify-center space-y-6">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-gradient-primary blur-xl opacity-50 animate-pulse"></div>
+            <div className="relative bg-card border border-border p-6 rounded-full shadow-glow">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          </div>
+          <div className="text-center space-y-2 max-w-sm px-6">
+            <h3 className="text-xl font-bold text-foreground">Procesando Pago</h3>
+            <p className="text-sm text-muted-foreground animate-pulse">
+              Conectando de forma segura con la pasarela de pago (Niubiz/Stripe)...
+            </p>
+          </div>
+        </div>
+      )}
 
       <InsufficientBalanceModal
         isOpen={isBalanceModalOpen}

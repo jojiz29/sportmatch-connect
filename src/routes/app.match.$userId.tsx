@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Star, MapPin, Activity, Award, Users } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/app/match/$userId")({
       .single();
 
     if (error || !user) {
-      console.error("User profile not found in Supabase:", error);
+      if (import.meta.env.DEV) console.error("User profile not found in Supabase:", error);
       throw new Error("Usuario no encontrado");
     }
     return user as User;
@@ -59,7 +59,7 @@ function UserProfileDetail() {
           setFollowStats(stats);
         }
       } catch (err) {
-        console.error("Failed to load follow stats:", err);
+        if (import.meta.env.DEV) console.error("Failed to load follow stats:", err);
       }
     }
     loadStats();

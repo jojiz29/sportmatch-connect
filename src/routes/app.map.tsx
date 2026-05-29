@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { MapFeature } from "@/features/map/MapFeature";
 import { apiClient } from "@/shared/api/apiClient";
@@ -82,7 +82,8 @@ function MapPage() {
         const fetched = await searchNearbyCourts(latitude, longitude);
         setCourts(fetched);
       } catch (err) {
-        console.error("Error loading nearby courts from spatial search:", err);
+        if (import.meta.env.DEV)
+          console.error("Error loading nearby courts from spatial search:", err);
       }
     };
 
@@ -92,10 +93,11 @@ function MapPage() {
           loadCourts(position.coords.latitude, position.coords.longitude);
         },
         (error) => {
-          console.warn(
-            "Geolocation API unavailable or permission denied. Using profile location.",
-            error.message,
-          );
+          if (import.meta.env.DEV)
+            console.warn(
+              "Geolocation API unavailable or permission denied. Using profile location.",
+              error.message,
+            );
           loadCourts(baseLat, baseLng);
         },
       );

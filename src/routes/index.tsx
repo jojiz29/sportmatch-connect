@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import { Zap, MapPin, Users, Trophy, Activity, ArrowRight, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/shared/api/supabase";
@@ -63,7 +63,7 @@ function Landing() {
           { k: "93%", l: "Match exitoso" },
         ]);
       } catch (err) {
-        console.error("Error loading landing stats:", err);
+        if (import.meta.env.DEV) console.error("Error loading landing stats:", err);
       }
     }
     fetchStats();

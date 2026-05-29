@@ -180,19 +180,27 @@ export function MapFeature({
                 🔥 {activeMatches} {activeMatches === 1 ? "partido activo" : "partidos activos"}
               </div>
               <a
-                href={`/app/courts/${c.id}`}
-                className="block w-full text-center px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-glow"
+                href={`/app/courts/${c.id}?book=true`}
+                className="block w-full text-center px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-glow mb-2"
               >
-                {t("map.view_court")}
+                RESERVAR AHORA
               </a>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center px-3 py-2 mt-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-neon"
-              >
-                Cómo llegar
-              </a>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={`/app/courts/${c.id}`}
+                  className="block text-center px-2 py-1.5 rounded-xl bg-accent hover:bg-accent/80 text-foreground text-[10px] font-bold transition-all"
+                >
+                  {t("map.view_court")}
+                </a>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center px-2 py-1.5 rounded-xl bg-gradient-neon text-neon-foreground text-[10px] font-bold hover:scale-[1.02] transition-all shadow-neon"
+                >
+                  Cómo llegar
+                </a>
+              </div>
             </div>
           </Popup>
         </Marker>

@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import { CatalogItem } from "@/entities/types";
 import { createNotification } from "./notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
@@ -53,7 +53,7 @@ export async function getCatalogItems(businessId?: string): Promise<CatalogItem[
   const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching catalog items from Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error fetching catalog items from Supabase:", error);
     throw error;
   }
 
@@ -87,7 +87,7 @@ export async function createCatalogItem(
     .single();
 
   if (error) {
-    console.error("Error creating catalog item in Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error creating catalog item in Supabase:", error);
     throw error;
   }
 
@@ -106,7 +106,7 @@ export async function deleteCatalogItem(itemId: string): Promise<void> {
   const { error } = await supabase.from("business_catalog").delete().eq("id", itemId);
 
   if (error) {
-    console.error("Error deleting catalog item from Supabase:", error);
+    if (import.meta.env.DEV) console.error("Error deleting catalog item from Supabase:", error);
     throw error;
   }
 }
@@ -132,7 +132,9 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
       "Compra Exitosa (Demo)",
       `Compraste ${item.name} por ${item.price} FC.`,
       "/app/wallet/history",
-    ).catch((e) => console.warn("Failed to create buyer notification:", e));
+    ).catch((e) => {
+      if (import.meta.env.DEV) console.warn("Failed to create buyer notification:", e);
+    });
 
     return true;
   }
@@ -145,7 +147,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     .single();
 
   if (itemError || !item) {
-    console.error("Item not found for purchase:", itemError);
+    if (import.meta.env.DEV) console.error("Item not found for purchase:", itemError);
     throw new Error("Item not found");
   }
 
@@ -157,7 +159,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     .single();
 
   if (buyerError || !buyer) {
-    console.error("Buyer profile not found:", buyerError);
+    if (import.meta.env.DEV) console.error("Buyer profile not found:", buyerError);
     throw new Error("Buyer not found");
   }
 
@@ -173,7 +175,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     .eq("id", buyerId);
 
   if (updateBuyerError) {
-    console.error("Error updating buyer balance:", updateBuyerError);
+    if (import.meta.env.DEV) console.error("Error updating buyer balance:", updateBuyerError);
     throw updateBuyerError;
   }
 
@@ -185,7 +187,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     .single();
 
   if (sellerError || !seller) {
-    console.error("Seller profile not found:", sellerError);
+    if (import.meta.env.DEV) console.error("Seller profile not found:", sellerError);
     throw new Error("Seller not found");
   }
 
@@ -196,7 +198,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     .eq("id", item.business_id);
 
   if (updateSellerError) {
-    console.error("Error updating seller balance:", updateSellerError);
+    if (import.meta.env.DEV) console.error("Error updating seller balance:", updateSellerError);
     throw updateSellerError;
   }
 
@@ -220,7 +222,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
   const { error: txError } = await supabase.from("wallet_transactions").insert([spendTx, earnTx]);
 
   if (txError) {
-    console.error("Error inserting transactions:", txError);
+    if (import.meta.env.DEV) console.error("Error inserting transactions:", txError);
     throw txError;
   }
 
@@ -231,7 +233,9 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     "Compra Exitosa",
     `Compraste ${item.name} por ${item.price} FC.`,
     "/app/wallet/history",
-  ).catch((e) => console.warn("Failed to create buyer notification:", e));
+  ).catch((e) => {
+    if (import.meta.env.DEV) console.warn("Failed to create buyer notification:", e);
+  });
 
   createNotification(
     item.business_id,
@@ -239,7 +243,9 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     "Venta Completada",
     `Vendiste ${item.name} a ${buyer.name} por ${item.price} FC.`,
     "/app/business",
-  ).catch((e) => console.warn("Failed to create seller notification:", e));
+  ).catch((e) => {
+    if (import.meta.env.DEV) console.warn("Failed to create seller notification:", e);
+  });
 
   return true;
 }
