@@ -203,7 +203,12 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               <div className="flex flex-col gap-2">
                 <button
                   onClick={async () => {
-                    await useChatStore.getState().createChat(matchedUser.id);
+                    // Create (or open existing) chat and immediately activate it
+                    const chatStore = useChatStore.getState();
+                    const chatId = await chatStore.createChat(matchedUser.id);
+                    if (chatId) {
+                      chatStore.setActiveConversation(chatId);
+                    }
                     setMatchedUser(null);
                     navigate({ to: "/app/chat" });
                   }}

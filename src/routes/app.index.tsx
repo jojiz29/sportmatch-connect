@@ -2,46 +2,174 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
-import { Match, User, Court } from "@/entities/types";
-import { Trophy, Flame, MapPin, Users, ArrowRight, Calendar, Star, Sparkles } from "lucide-react";
+import { Match, User, Court, SportCatalog, Level } from "@/entities/types";
+import {
+  Trophy,
+  Flame,
+  MapPin,
+  Users,
+  ArrowRight,
+  Calendar,
+  Star,
+  Sparkles,
+  Plus,
+} from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
 import { NewsFeed } from "@/features/feed/ui/NewsFeed";
 import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
+import { supabase } from "@/shared/api/supabase";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
-    const [matches, users, courts] = await Promise.all([
+    const [matches, users, courts, sports] = await Promise.all([
       apiClient.matches.getAll(),
       apiClient.users.getMatches(),
       apiClient.courts.getAll(),
+      apiClient.sports.getAll(),
     ]);
-    return { matches, users, courts };
+    return { matches, users, courts, sports };
   },
   component: Dashboard,
 });
+
+function getSportEmoji(name: string) {
+  switch (name.toLowerCase()) {
+    case "paddle":
+    case "padel":
+    case "pádel":
+      return "🏓";
+    case "football":
+    case "futbol":
+    case "fútbol":
+      return "⚽";
+    case "tennis":
+    case "tenis":
+      return "🎾";
+    case "running":
+      return "🏃";
+    case "basketball":
+    case "basquet":
+    case "básquet":
+      return "🏀";
+    case "volleyball":
+    case "voley":
+    case "vóley":
+      return "🏐";
+    default:
+      return "🏆";
+  }
+}
 
 function Dashboard() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"matches" | "feed" | "squads">("matches");
   const user = useAuthStore((state) => state.user);
-  const { matches, users, courts } = Route.useLoaderData() as {
+  const { matches, users, courts, sports } = Route.useLoaderData() as {
     matches: Match[];
     users: User[];
     courts: Court[];
+    sports: SportCatalog[];
   };
 
   const filteredMatches = selectedSport
     ? matches.filter((m) => m.sport === selectedSport)
     : matches;
 
-  const SPORTS = [
-    { name: "Pádel", emoji: "🏓" },
-    { name: "Fútbol", emoji: "⚽" },
-    { name: "Tenis", emoji: "🎾" },
-    { name: "Running", emoji: "🏃" },
-  ];
+  const SPORTS =
+    sports.length > 0
+      ? sports.map((s) => ({ name: s.name, emoji: getSportEmoji(s.name) }))
+      : [
+          { name: "Pádel", emoji: "🏓" },
+          { name: "Fútbol", emoji: "⚽" },
+          { name: "Tenis", emoji: "🎾" },
+          { name: "Running", emoji: "🏃" },
+        ];
+
+  // Match creation state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [matchTitle, setMatchTitle] = useState("");
+  const [matchSport, setMatchSport] = useState("");
+  const [matchCourtId, setMatchCourtId] = useState("");
+  const [matchDate, setMatchDate] = useState("");
+  const [matchTime, setMatchTime] = useState("");
+  const [matchMaxPlayers, setMatchMaxPlayers] = useState<number>(4);
+  const [matchLevel, setMatchLevel] = useState<Level>("Intermedio");
+  const [isCreatingMatch, setIsCreatingMatch] = useState(false);
+
+  const handleCreateMatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Debes iniciar sesión para crear un partido.");
+      return;
+    }
+    if (!matchTitle || !matchSport || !matchDate || !matchTime || !matchMaxPlayers || !matchLevel) {
+      toast.error("Por favor completa todos los campos requeridos.");
+      return;
+    }
+
+    try {
+      setIsCreatingMatch(true);
+      const { data: newMatch, error: matchError } = await supabase
+        .from("matches")
+        .insert({
+          title: matchTitle,
+          sport: matchSport,
+          court_id: matchCourtId || null,
+          date: matchDate,
+          time: matchTime,
+          max_players: Number(matchMaxPlayers),
+          required_level: matchLevel,
+          creator_id: user.id,
+          status: "Open",
+        })
+        .select()
+        .single();
+
+      if (matchError || !newMatch) {
+        throw matchError || new Error("No se pudo crear el partido.");
+      }
+
+      // Automatically join the creator to match_participants
+      const { error: partError } = await supabase.from("match_participants").insert({
+        match_id: newMatch.id,
+        user_id: user.id,
+        status: "ACCEPTED",
+      });
+
+      if (partError) {
+        console.error("Error joining creator to match:", partError);
+      }
+
+      toast.success("¡Partido creado con éxito!");
+      setIsCreateModalOpen(false);
+
+      // Clear form
+      setMatchTitle("");
+      setMatchSport("");
+      setMatchCourtId("");
+      setMatchDate("");
+      setMatchTime("");
+      setMatchMaxPlayers(4);
+      setMatchLevel("Intermedio");
+
+      window.location.reload();
+    } catch (err: unknown) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Error al crear el partido: " + msg);
+    } finally {
+      setIsCreatingMatch(false);
+    }
+  };
 
   if (!user) return null;
 
@@ -154,6 +282,14 @@ function Dashboard() {
               <PageHeader
                 title="Partidos recomendados"
                 subtitle="Curado por IA según tu nivel y horarios"
+                action={
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Crear Partido
+                  </button>
+                }
               />
               <div className="grid sm:grid-cols-2 gap-4">
                 {filteredMatches.length > 0 ? (
@@ -237,6 +373,143 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Dialog for Match Creation */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-md bg-background border border-border rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Crear nuevo partido</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Completa los detalles para invitar a otros jugadores.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateMatch} className="space-y-4 mt-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                Título del partido
+              </label>
+              <input
+                type="text"
+                required
+                value={matchTitle}
+                onChange={(e) => setMatchTitle(e.target.value)}
+                placeholder="Ej. Dobles de Pádel"
+                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Deporte
+                </label>
+                <select
+                  required
+                  value={matchSport}
+                  onChange={(e) => {
+                    setMatchSport(e.target.value);
+                    setMatchCourtId("");
+                  }}
+                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                >
+                  <option value="">Selecciona...</option>
+                  {sports.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Nivel requerido
+                </label>
+                <select
+                  required
+                  value={matchLevel}
+                  onChange={(e) => setMatchLevel(e.target.value as Level)}
+                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                >
+                  <option value="Principiante">Principiante</option>
+                  <option value="Intermedio">Intermedio</option>
+                  <option value="Avanzado">Avanzado</option>
+                  <option value="Elite">Elite</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                Cancha (Opcional)
+              </label>
+              <select
+                value={matchCourtId}
+                onChange={(e) => setMatchCourtId(e.target.value)}
+                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+              >
+                <option value="">Ninguna (Sin Cancha Reservada)</option>
+                {courts
+                  .filter((c) => !matchSport || c.sport === matchSport)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} (${c.price_per_hour}/h)
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Fecha
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={matchDate}
+                  onChange={(e) => setMatchDate(e.target.value)}
+                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Hora
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={matchTime}
+                  onChange={(e) => setMatchTime(e.target.value)}
+                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                Máx. Jugadores
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                value={matchMaxPlayers}
+                onChange={(e) => setMatchMaxPlayers(Number(e.target.value))}
+                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isCreatingMatch}
+              className="w-full py-3 mt-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow disabled:opacity-50 transition-all"
+            >
+              {isCreatingMatch ? "Creando..." : "Crear Partido"}
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

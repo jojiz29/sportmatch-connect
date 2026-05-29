@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { getSquads, joinSquad, leaveSquad, isMember, createSquad } from "@/shared/api/squadService";
+import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { Squad } from "@/entities/types";
 import { toast } from "sonner";
-import { Plus, Users, Loader2, Check } from "lucide-react";
+import { Plus, Users, Loader2, Check, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -58,6 +59,52 @@ export function SquadExplorer() {
       active = false;
     };
   }, [currentUser]);
+
+  // ── Realtime: broadcast new squads created by other users ────────────────
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const channel = supabase
+      .channel(`squads-realtime-${currentUser.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "squads" }, (payload) => {
+        const newRow = payload.new as {
+          id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          creator_id: string;
+          avatar_url: string | null;
+        };
+
+        // Skip squads we just created — handleCreateSquad already added them
+        if (newRow.creator_id === currentUser.id) return;
+
+        const newSquad: Squad = {
+          id: newRow.id,
+          name: newRow.name,
+          description: newRow.description,
+          created_at: newRow.created_at,
+          creator_id: newRow.creator_id,
+          avatar_url: newRow.avatar_url,
+          members_count: 1,
+        };
+
+        setSquads((prev) => {
+          if (prev.some((s) => s.id === newSquad.id)) return prev;
+          return [newSquad, ...prev];
+        });
+
+        toast(`Nuevo Squad disponible: ${newSquad.name}`, {
+          description: "¡Puedes unirte ahora!",
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   const handleToggleJoin = async (squadId: string) => {
     if (!currentUser) return;
@@ -208,6 +255,12 @@ export function SquadExplorer() {
             </div>
           </form>
         )}
+      </div>
+
+      {/* Live indicator */}
+      <div className="flex items-center gap-2 text-xs text-electric font-semibold mb-2">
+        <Zap className="h-3 w-3 animate-pulse" />
+        <span>En vivo — Nuevos squads aparecen al instante</span>
       </div>
 
       {/* Discover Squads List */}

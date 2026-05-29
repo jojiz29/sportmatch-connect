@@ -1,5 +1,13 @@
 export type Sport = "Fútbol" | "Básquet" | "Tenis" | "Pádel" | "Vóley" | "Running";
 
+export interface SportCatalog {
+  id: string;
+  name: string;
+  icon_slug: string;
+  default_max_players: number;
+  created_at: string;
+}
+
 export type Level = "Principiante" | "Intermedio" | "Avanzado" | "Elite";
 
 export interface User {
@@ -33,7 +41,7 @@ export interface Court {
   id: string; // UUID
   created_at: string;
   name: string;
-  sport: Sport;
+  sport: string; // Changed to string to support dynamic sports
   price_per_hour: number;
   rating: number;
   reviews_count: number;
@@ -47,6 +55,8 @@ export interface Court {
   distance_km?: number;
   is_sponsored?: boolean; // Patrocinador B2B — destacado en mapa con borde dorado
   owner_id?: string;
+  max_players?: number; // Added for dynamic cost calculation
+  operating_hours?: string[]; // Added for unique court schedules
 }
 
 export interface Match {

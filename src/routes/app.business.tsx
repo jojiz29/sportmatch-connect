@@ -7,10 +7,12 @@ import {
   createCatalogItem,
   deleteCatalogItem,
 } from "@/shared/api/businessService";
-import { CatalogItem } from "@/entities/types";
+import { CatalogItem, Court, SportCatalog } from "@/entities/types";
 import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { toast } from "sonner";
+import { supabase } from "@/shared/api/supabase";
+import { apiClient } from "@/shared/api/apiClient";
 import {
   LayoutGrid,
   Plus,
@@ -68,7 +70,24 @@ function BusinessPage() {
 
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"catalog" | "analytics">("catalog");
+  const [activeTab, setActiveTab] = useState<"catalog" | "analytics" | "courts">("catalog");
+
+  // Tab canchas
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [loadingCourts, setLoadingCourts] = useState(true);
+  const [sportsList, setSportsList] = useState<SportCatalog[]>([]);
+
+  // Form states for new court
+  const [courtName, setCourtName] = useState("");
+  const [courtAddress, setCourtAddress] = useState("");
+  const [courtLat, setCourtLat] = useState<number | "">("");
+  const [courtLng, setCourtLng] = useState<number | "">("");
+  const [courtPrice, setCourtPrice] = useState<number | "">("");
+  const [courtSport, setCourtSport] = useState("");
+  const [courtMaxPlayers, setCourtMaxPlayers] = useState<number | "">("");
+  const [courtAmenities, setCourtAmenities] = useState("");
+  const [courtImage, setCourtImage] = useState("");
+  const [registeringCourt, setRegisteringCourt] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -77,6 +96,124 @@ function BusinessPage() {
   const [type, setType] = useState<"PRODUCT" | "SERVICE">("PRODUCT");
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const handleAutofillLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCourtLat(pos.coords.latitude);
+          setCourtLng(pos.coords.longitude);
+          toast.success("Ubicación actual obtenida con éxito.");
+        },
+        (err) => {
+          console.error(err);
+          toast.error("No se pudo obtener la ubicación actual.");
+        },
+      );
+    } else {
+      toast.error("La geolocalización no está soportada en este navegador.");
+    }
+  };
+
+  const handleCreateCourt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Debes iniciar sesión.");
+      return;
+    }
+    if (
+      !courtName ||
+      !courtSport ||
+      courtPrice === "" ||
+      !courtAddress ||
+      courtLat === "" ||
+      courtLng === ""
+    ) {
+      toast.error("Por favor completa los campos obligatorios.");
+      return;
+    }
+
+    try {
+      setRegisteringCourt(true);
+      const latVal = Number(courtLat);
+      const lngVal = Number(courtLng);
+      const priceVal = Number(courtPrice);
+      const maxPlayersVal = courtMaxPlayers !== "" ? Number(courtMaxPlayers) : 4;
+
+      const { data: newCourt, error: insertErr } = await supabase
+        .from("courts")
+        .insert({
+          name: courtName,
+          sport: courtSport,
+          price_per_hour: priceVal,
+          lat: latVal,
+          lng: lngVal,
+          location: `POINT(${lngVal} ${latVal})`, // WKT point for PostGIS geography (lng first, lat second)
+          address: courtAddress,
+          max_players: maxPlayersVal,
+          operating_hours: [
+            "08:00",
+            "10:00",
+            "12:00",
+            "14:00",
+            "16:00",
+            "18:00",
+            "19:00",
+            "20:00",
+            "21:00",
+          ], // default slots
+          image_url: courtImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+          amenities: courtAmenities
+            ? courtAmenities
+                .split(",")
+                .map((a) => a.trim())
+                .filter(Boolean)
+            : ["Iluminación", "Estacionamiento"],
+          owner_id: user.id,
+          is_available: true,
+          rating: 5.0,
+          reviews_count: 0,
+        })
+        .select()
+        .single();
+
+      if (insertErr) {
+        throw insertErr;
+      }
+
+      setCourts((prev) => [...prev, newCourt as Court]);
+      setCourtName("");
+      setCourtAddress("");
+      setCourtLat("");
+      setCourtLng("");
+      setCourtPrice("");
+      setCourtSport("");
+      setCourtMaxPlayers("");
+      setCourtAmenities("");
+      setCourtImage("");
+
+      toast.success("¡Cancha registrada con éxito!");
+    } catch (err: unknown) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Error al registrar cancha: " + msg);
+    } finally {
+      setRegisteringCourt(false);
+    }
+  };
+
+  const handleDeleteCourt = async (id: string) => {
+    try {
+      const { error } = await supabase.from("courts").delete().eq("id", id);
+      if (error) throw error;
+      setCourts((prev) => prev.filter((c) => c.id !== id));
+      toast.success("Cancha eliminada con éxito");
+    } catch (err: unknown) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Error al eliminar la cancha: " + msg);
+    }
+  };
 
   // Analytics data
   const salesData = useMemo(() => generateSalesData(), []);
@@ -88,18 +225,34 @@ function BusinessPage() {
 
     const businessId = user.id;
 
-    async function loadCatalog() {
+    async function loadBusinessData() {
       try {
         setLoading(true);
-        const data = await getCatalogItems(businessId);
-        setItems(data);
+        setLoadingCourts(true);
+        // Load catalog
+        const catalogData = await getCatalogItems(businessId);
+        setItems(catalogData);
+
+        // Load courts
+        const { data: courtsData, error: courtsErr } = await supabase
+          .from("courts")
+          .select("*")
+          .eq("owner_id", businessId);
+        if (courtsErr) throw courtsErr;
+        setCourts((courtsData || []) as Court[]);
+
+        // Load sports catalog
+        const sportsData = await apiClient.sports.getAll();
+        setSportsList(sportsData);
       } catch (err) {
-        console.error("Failed to load catalog:", err);
+        console.error("Failed to load business dashboard data:", err);
+        toast.error("Error al cargar datos del negocio");
       } finally {
         setLoading(false);
+        setLoadingCourts(false);
       }
     }
-    loadCatalog();
+    loadBusinessData();
   }, [user]);
 
   if (!user) return null;
@@ -239,6 +392,17 @@ function BusinessPage() {
           id="business-tab-analytics"
         >
           📊 Business Intelligence
+        </button>
+        <button
+          onClick={() => setActiveTab("courts")}
+          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
+            activeTab === "courts"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          id="business-tab-courts"
+        >
+          🎾 Mis Canchas
         </button>
       </div>
 
@@ -417,6 +581,234 @@ function BusinessPage() {
                   id="catalog-item-submit"
                 >
                   {submitting ? "Publicando..." : "Publicar en Marketplace"}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "courts" && (
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Courts List */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
+              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                🎾 Mis Canchas Registradas
+              </h3>
+              {loadingCourts ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-neon" />
+                  <span>Cargando canchas...</span>
+                </div>
+              ) : courts.length > 0 ? (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {courts.map((court) => (
+                    <div
+                      key={court.id}
+                      className="glass border border-border rounded-2xl p-4 flex gap-4 items-center hover:ring-glow transition-all relative group"
+                    >
+                      <img
+                        src={
+                          court.image_url ||
+                          "https://images.unsplash.com/photo-1554068865-24cecd4e34b8"
+                        }
+                        alt={court.name}
+                        className="h-16 w-16 rounded-xl object-cover bg-muted"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary-foreground font-semibold">
+                          {court.sport}
+                        </span>
+                        <h4 className="font-bold text-sm text-foreground mt-1 truncate">
+                          {court.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {court.address}
+                        </p>
+                        <span className="text-xs font-bold text-neon block mt-1">
+                          {court.price_per_hour} FC/h · {court.max_players} jugadores
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteCourt(court.id)}
+                        className="h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2"
+                        title="Eliminar cancha"
+                        id={`delete-court-${court.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-12 text-center text-muted-foreground border border-dashed border-border rounded-2xl text-sm">
+                  No has registrado ninguna cancha todavía.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Add Court Form */}
+          <div>
+            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card sticky top-8">
+              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <Plus className="h-5 w-5 text-primary" /> Registrar Cancha
+              </h3>
+              <form onSubmit={handleCreateCourt} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Nombre de la Cancha</label>
+                  <input
+                    type="text"
+                    required
+                    value={courtName}
+                    onChange={(e) => setCourtName(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="Ej. Cancha de Pádel Pro #1"
+                    id="court-register-name"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Deporte</label>
+                    <select
+                      required
+                      value={courtSport}
+                      onChange={(e) => setCourtSport(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                      id="court-register-sport"
+                    >
+                      <option value="">Selecciona...</option>
+                      {sportsList.map((sport) => (
+                        <option key={sport.id} value={sport.name}>
+                          {sport.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Precio por hora (FC)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={courtPrice}
+                      onChange={(e) =>
+                        setCourtPrice(e.target.value === "" ? "" : Number(e.target.value))
+                      }
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                      placeholder="80"
+                      id="court-register-price"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Max Jugadores</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={courtMaxPlayers}
+                      onChange={(e) =>
+                        setCourtMaxPlayers(e.target.value === "" ? "" : Number(e.target.value))
+                      }
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                      placeholder="4"
+                      id="court-register-max-players"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">
+                      Amenities (Separados por coma)
+                    </label>
+                    <input
+                      type="text"
+                      value={courtAmenities}
+                      onChange={(e) => setCourtAmenities(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                      placeholder="Luz, Vestuarios"
+                      id="court-register-amenities"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Dirección Física</label>
+                  <input
+                    type="text"
+                    required
+                    value={courtAddress}
+                    onChange={(e) => setCourtAddress(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="Av. Principal 123, Ciudad"
+                    id="court-register-address"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-semibold">Coordenadas de Ubicación</label>
+                    <button
+                      type="button"
+                      onClick={handleAutofillLocation}
+                      className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1"
+                    >
+                      📍 Usar GPS actual
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        placeholder="Latitud"
+                        value={courtLat}
+                        onChange={(e) =>
+                          setCourtLat(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                        id="court-register-lat"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        placeholder="Longitud"
+                        value={courtLng}
+                        onChange={(e) =>
+                          setCourtLng(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                        id="court-register-lng"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Imagen URL</label>
+                  <input
+                    type="text"
+                    value={courtImage}
+                    onChange={(e) => setCourtImage(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="https://images.unsplash.com/..."
+                    id="court-register-image"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={registeringCourt}
+                  className="w-full py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer"
+                  id="court-register-submit"
+                >
+                  {registeringCourt ? "Registrando..." : "Registrar Cancha"}
                 </button>
               </form>
             </div>

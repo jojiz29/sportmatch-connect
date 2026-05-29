@@ -4,6 +4,7 @@ import { Filter } from "lucide-react";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { apiClient } from "@/shared/api/apiClient";
 import { MatchmakingFeature } from "@/features/matchmaking/MatchmakingFeature";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 export const Route = createFileRoute("/app/match/")({
   head: () => ({
@@ -22,7 +23,12 @@ export const Route = createFileRoute("/app/match/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => apiClient.users.getMatches(),
+  loader: () => {
+    // Exclude the current authenticated user from the swipe stack.
+    // useAuthStore.getState() is safe here — loaders run outside React rendering.
+    const currentUserId = useAuthStore.getState().user?.id;
+    return apiClient.users.getMatches(currentUserId);
+  },
   pendingComponent: MatchPendingComponent,
   component: Match,
 });

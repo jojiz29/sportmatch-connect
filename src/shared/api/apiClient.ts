@@ -1,14 +1,23 @@
 import { supabase } from "./supabase";
-import { User, Court, Match, Transaction } from "@/entities/types";
+import { User, Court, Match, Transaction, SportCatalog } from "@/entities/types";
 
 export const apiClient = {
   users: {
-    async getMatches(): Promise<User[]> {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_role", "PLAYER")
-        .limit(20);
+    /**
+     * Fetch player profiles for matchmaking.
+     * Excludes the current authenticated user from the result so they
+     * never see themselves in their own swipe stack.
+     */
+    async getMatches(excludeUserId?: string): Promise<User[]> {
+      let query = supabase.from("profiles").select("*").eq("user_role", "PLAYER").limit(30);
+
+      // Server-side exclusion: filter out the current user's own profile.
+      // Falls back gracefully when no userId is provided (e.g. guest/SSR).
+      if (excludeUserId) {
+        query = query.neq("id", excludeUserId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching users/profiles:", error);
@@ -28,7 +37,7 @@ export const apiClient = {
       }
       return (data || []).map((m: Record<string, unknown>) => ({
         ...m,
-        current_players: [], // Default to empty array as match_players is not defined in schema
+        current_players: [],
       })) as unknown as Match[];
     },
 
@@ -88,6 +97,48 @@ export const apiClient = {
         throw error;
       }
       return (data || []) as Court[];
+    },
+  },
+
+  sports: {
+    async getAll(): Promise<SportCatalog[]> {
+      const { data, error } = await supabase.from("sports").select("*").order("name");
+
+      if (error) {
+        console.error("Error fetching sports:", error);
+        throw error;
+      }
+      return (data || []) as SportCatalog[];
+    },
+  },
+
+  bookings: {
+    async getByCourtAndDate(courtId: string, date: string): Promise<string[]> {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("time_slot")
+        .eq("court_id", courtId)
+        .eq("date", date);
+
+      if (error) {
+        console.error("Error fetching bookings:", error);
+        throw error;
+      }
+      return (data || []).map((b) => b.time_slot);
+    },
+
+    async create(booking: {
+      court_id: string;
+      date: string;
+      time_slot: string;
+      user_id: string;
+    }): Promise<void> {
+      const { error } = await supabase.from("bookings").insert(booking);
+
+      if (error) {
+        console.error("Error creating booking:", error);
+        throw error;
+      }
     },
   },
 };

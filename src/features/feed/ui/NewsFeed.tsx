@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getFeed, createPost } from "@/shared/api/feedService";
+import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { Post, Sport } from "@/entities/types";
 import { toast } from "sonner";
-import { Send, Loader2 } from "lucide-react";
+import { apiClient } from "@/shared/api/apiClient";
+import { Send, Loader2, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
- * NewsFeed component with post creation, dynamic listing, and real-time community updates.
- * Features an integrated sport and type tag builder.
+ * NewsFeed component with post creation, dynamic listing, and real-time updates.
+ * Subscribes to Supabase Realtime on the `posts` table to append new posts
+ * from followed users without requiring a page refresh.
  */
 export function NewsFeed() {
   const currentUser = useAuthStore((state) => state.user);
@@ -16,16 +19,40 @@ export function NewsFeed() {
   const [loading, setLoading] = useState<boolean>(true);
   const [content, setContent] = useState<string>(contentPreset || "");
   const [sport, setSport] = useState<Sport | "">("");
+  const [sportsList, setSportsList] = useState<string[]>([
+    "Pádel",
+    "Fútbol",
+    "Tenis",
+    "Básquet",
+    "Vóley",
+    "Running",
+  ]);
+
+  useEffect(() => {
+    apiClient.sports
+      .getAll()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setSportsList(data.map((s) => s.name));
+        }
+      })
+      .catch((err) => console.error("Error loading sports in NewsFeed:", err));
+  }, []);
   const [postType, setPostType] = useState<Post["type"]>("TEXT");
   const [mediaUrl, setMediaUrl] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Content preset support is handled via the exported setFeedContentPreset helper below
+  // Track current user ID in a ref so the Realtime callback can reference it
+  // without being included in the subscription's dependency array.
+  const currentUserIdRef = useRef<string | null>(null);
+  currentUserIdRef.current = currentUser?.id ?? null;
 
+  // ── Initial feed load ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUser) return;
     const userId = currentUser.id;
     let active = true;
+
     async function loadFeed() {
       try {
         setLoading(true);
@@ -41,12 +68,75 @@ export function NewsFeed() {
         }
       }
     }
+
     loadFeed();
     return () => {
       active = false;
     };
   }, [currentUser]);
 
+  // ── Realtime subscription: append new posts as they are inserted ────────────
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Key the channel on user ID so re-renders don't create duplicates.
+    const channelName = `feed-realtime-${currentUser.id}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "posts" },
+        async (payload) => {
+          const newRow = payload.new as {
+            id: string;
+            user_id: string;
+            content: string;
+            type: string;
+            created_at: string;
+            media_url: string | null;
+            sport: string | null;
+          };
+
+          // Skip own posts — already added optimistically by handleSubmit
+          if (newRow.user_id === currentUserIdRef.current) return;
+
+          // Fetch the author profile for display
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, avatar_url")
+            .eq("id", newRow.user_id)
+            .single();
+
+          const post: Post = {
+            id: newRow.id,
+            user_id: newRow.user_id,
+            content: newRow.content,
+            type: newRow.type as Post["type"],
+            created_at: newRow.created_at,
+            media_url: newRow.media_url || undefined,
+            sport: (newRow.sport as Post["sport"]) || undefined,
+            user_name: profile?.name || "Deportista",
+            user_avatar: profile?.avatar_url || "",
+          };
+
+          setPosts((prev) => {
+            // Deduplicate: skip if this post is already in state
+            if (prev.some((p) => p.id === post.id)) return prev;
+            return [post, ...prev];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // Only re-subscribe when the user identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  // ── Post submission ─────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !content.trim()) return;
@@ -61,7 +151,11 @@ export function NewsFeed() {
         sport || undefined,
       );
 
-      setPosts((prev) => [newPost, ...prev]);
+      // Optimistic prepend — Realtime will skip it via the user_id guard above
+      setPosts((prev) => {
+        if (prev.some((p) => p.id === newPost.id)) return prev;
+        return [newPost, ...prev];
+      });
       setContent("");
       setSport("");
       setPostType("TEXT");
@@ -83,7 +177,11 @@ export function NewsFeed() {
       <div className="bg-gradient-card border border-border rounded-3xl p-5 shadow-card">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex gap-3">
-            <img src={currentUser.avatar_url} alt="" className="h-10 w-10 rounded-full bg-muted" />
+            <img
+              src={currentUser.avatar_url}
+              alt=""
+              className="h-10 w-10 rounded-full bg-muted object-cover"
+            />
             <div className="flex-1">
               <textarea
                 value={content}
@@ -116,12 +214,11 @@ export function NewsFeed() {
                 className="bg-background/80 border border-border rounded-lg px-2.5 py-1.5 focus:outline-none text-xs"
               >
                 <option value="">Deporte (Opcional)</option>
-                <option value="Fútbol">Fútbol</option>
-                <option value="Básquet">Básquet</option>
-                <option value="Tenis">Tenis</option>
-                <option value="Pádel">Pádel</option>
-                <option value="Vóley">Vóley</option>
-                <option value="Running">Running</option>
+                {sportsList.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
 
               {postType === "PHOTO" && (
@@ -152,6 +249,12 @@ export function NewsFeed() {
         </form>
       </div>
 
+      {/* Live indicator */}
+      <div className="flex items-center gap-2 text-xs text-neon font-semibold">
+        <Zap className="h-3 w-3 animate-pulse" />
+        <span>En vivo — Los nuevos posts aparecen automáticamente</span>
+      </div>
+
       {/* Feed List */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm gap-2">
@@ -165,6 +268,7 @@ export function NewsFeed() {
               posts.map((post) => {
                 const isMatchResult = post.type === "MATCH_RESULT";
                 const isAnnouncement = post.type === "SQUAD_ANNOUNCEMENT";
+                const timeAgo = getTimeAgo(post.created_at);
 
                 return (
                   <motion.div
@@ -180,14 +284,12 @@ export function NewsFeed() {
                           post.user_avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=User"
                         }
                         alt=""
-                        className="h-10 w-10 rounded-full bg-muted"
+                        className="h-10 w-10 rounded-full bg-muted object-cover"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm truncate">{post.user_name}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            Hace unos instantes
-                          </span>
+                          <span className="text-[10px] text-muted-foreground">{timeAgo}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           {post.sport && (
@@ -239,9 +341,20 @@ export function NewsFeed() {
   );
 }
 
-// Support preset content for Playwright E2E bindings
-let contentPreset = "";
-export function setFeedContentPreset(val: string) {
-  contentPreset = val;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getTimeAgo(isoDate: string): string {
+  const now = Date.now();
+  const then = new Date(isoDate).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Ahora mismo";
+  if (diffMin < 60) return `Hace ${diffMin} min`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `Hace ${diffH} h`;
+  return `Hace ${Math.floor(diffH / 24)} d`;
 }
+
+// Support preset content for Playwright E2E bindings
+const contentPreset = "";
 export default NewsFeed;

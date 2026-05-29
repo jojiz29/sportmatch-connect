@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MapPin, User as UserIcon, Mail, Lock, Check } from "lucide-react";
 import { Sport } from "@/entities/types";
+import { apiClient } from "@/shared/api/apiClient";
 
 export const Route = createFileRoute("/app/register")({
   component: RegisterPage,
 });
 
-const SPORTS: Sport[] = ["Pádel", "Fútbol", "Tenis", "Running"];
+const STATIC_SPORTS: Sport[] = ["Pádel", "Fútbol", "Tenis", "Running"];
 
 function RegisterPage() {
   const { t } = useTranslation();
@@ -24,6 +25,18 @@ function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [selectedSports, setSelectedSports] = useState<Sport[]>([]);
+  const [sportsList, setSportsList] = useState<string[]>(STATIC_SPORTS);
+
+  useEffect(() => {
+    apiClient.sports
+      .getAll()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setSportsList(data.map((s) => s.name));
+        }
+      })
+      .catch((err) => console.error("Error loading sports:", err));
+  }, []);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
 
@@ -267,13 +280,13 @@ function RegisterPage() {
             <div>
               <label className="text-sm font-semibold mb-3 block">{t("register.sports")}</label>
               <div className="flex flex-wrap gap-2">
-                {SPORTS.map((sport) => {
-                  const isSelected = selectedSports.includes(sport);
+                {sportsList.map((sport) => {
+                  const isSelected = selectedSports.includes(sport as Sport);
                   return (
                     <button
                       key={sport}
                       type="button"
-                      onClick={() => toggleSport(sport)}
+                      onClick={() => toggleSport(sport as Sport)}
                       className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center gap-2 cursor-pointer ${
                         isSelected
                           ? "bg-gradient-primary border-primary text-primary-foreground shadow-glow"
