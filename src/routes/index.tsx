@@ -94,7 +94,7 @@ function Landing() {
             Ingresar
           </Link>
           <Link
-            to="/app"
+            to="/demo"
             className="text-sm px-4 py-2 rounded-lg bg-gradient-primary text-primary-foreground shadow-glow font-semibold"
           >
             Probar demo
@@ -119,7 +119,7 @@ function Landing() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              to="/app"
+              to="/demo"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-95"
             >
               Empezar a jugar <ArrowRight className="h-4 w-4" />

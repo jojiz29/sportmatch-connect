@@ -2,6 +2,43 @@ import { supabase } from "./supabase";
 import { Post } from "@/entities/types";
 import { calculateDistance } from "./geoService";
 import { createNotification } from "./notificationService";
+import { useAuthStore } from "@/entities/user/useAuth";
+
+const MOCK_POSTS: Post[] = [
+  {
+    id: "post-demo-1",
+    user_id: "user-1",
+    content:
+      "¡Gran partido hoy con Ana Sofía en SportMatch Arena! Terminamos con un supertiebreak de infarto. 🏓🔥",
+    type: "TEXT",
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    sport: "Pádel",
+    user_name: "Carlos Mendoza",
+    user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos",
+  },
+  {
+    id: "post-demo-2",
+    user_id: "user-2",
+    content:
+      "Buscando gente para armar un dobles mixto de tenis este sábado por la mañana. ¿Quién se suma?",
+    type: "TEXT",
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    sport: "Tenis",
+    user_name: "Ana Sofía Prado",
+    user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ana",
+  },
+  {
+    id: "post-demo-3",
+    user_id: "user-3",
+    content:
+      "¡Listo para la pichanga de fútbol 7! Reservado en Complejo DeporLima. ¡Traigan hidratación!",
+    type: "TEXT",
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    sport: "Fútbol",
+    user_name: "Juan Diego Torres",
+    user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan",
+  },
+];
 
 interface SupabasePost {
   id: string;
@@ -24,6 +61,10 @@ interface SupabasePost {
 }
 
 export async function getFeed(userId: string): Promise<Post[]> {
+  if (useAuthStore.getState().isDemoMode) {
+    return MOCK_POSTS;
+  }
+
   // 1. Fetch user's own profile for distance calculation
   const { data: currentUser } = await supabase
     .from("profiles")
@@ -98,6 +139,21 @@ export async function createPost(
   mediaUrl?: string,
   sport?: Post["sport"],
 ): Promise<Post> {
+  if (useAuthStore.getState().isDemoMode) {
+    const newPost: Post = {
+      id: `post-demo-${Date.now()}`,
+      user_id: userId,
+      content,
+      type,
+      media_url: mediaUrl,
+      sport,
+      user_name: useAuthStore.getState().user?.name || "Edwin (Demo)",
+      user_avatar: useAuthStore.getState().user?.avatar_url || "",
+      created_at: new Date().toISOString(),
+    };
+    MOCK_POSTS.unshift(newPost);
+    return newPost;
+  }
   const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   // 1. Insert post in Supabase

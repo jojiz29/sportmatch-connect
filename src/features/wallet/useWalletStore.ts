@@ -37,7 +37,7 @@ export const useWalletStore = create<WalletState>()(
         {
           id: "ch1",
           name: "Jugá 3 partidos esta semana",
-          progress: 2,
+          progress: 0,
           total: 3,
           reward: 150,
           claimed: false,
@@ -45,7 +45,7 @@ export const useWalletStore = create<WalletState>()(
         {
           id: "ch2",
           name: "Mantené Trust Score > 90",
-          progress: 93,
+          progress: 0,
           total: 100,
           reward: 200,
           claimed: false,
@@ -53,7 +53,7 @@ export const useWalletStore = create<WalletState>()(
         {
           id: "ch3",
           name: "Invitá a 2 amigos",
-          progress: 1,
+          progress: 0,
           total: 2,
           reward: 300,
           claimed: false,
@@ -64,35 +64,41 @@ export const useWalletStore = create<WalletState>()(
         const user = useAuthStore.getState().user;
         if (user) {
           const state = get();
-          const currentChallenges =
-            state.challenges && state.challenges.length > 0
-              ? state.challenges
-              : [
-                  {
-                    id: "ch1",
-                    name: "Jugá 3 partidos esta semana",
-                    progress: 2,
-                    total: 3,
-                    reward: 150,
-                    claimed: false,
-                  },
-                  {
-                    id: "ch2",
-                    name: "Mantené Trust Score > 90",
-                    progress: 93,
-                    total: 100,
-                    reward: 200,
-                    claimed: false,
-                  },
-                  {
-                    id: "ch3",
-                    name: "Invitá a 2 amigos",
-                    progress: 1,
-                    total: 2,
-                    reward: 300,
-                    claimed: false,
-                  },
-                ];
+
+          const dynamicChallenges = [
+            {
+              id: "ch1",
+              name: "Jugá 3 partidos esta semana",
+              progress: Math.min(user.matches_played || 0, 3),
+              total: 3,
+              reward: 150,
+              claimed: false,
+            },
+            {
+              id: "ch2",
+              name: "Mantené Trust Score > 90",
+              progress: user.trust_score || 0,
+              total: 100,
+              reward: 200,
+              claimed: false,
+            },
+            {
+              id: "ch3",
+              name: "Invitá a 2 amigos",
+              progress: Math.min(user.followers_count || 0, 2),
+              total: 2,
+              reward: 300,
+              claimed: false,
+            },
+          ];
+
+          const currentChallenges = dynamicChallenges.map((dc) => {
+            const existing = state.challenges?.find((c) => c.id === dc.id);
+            return {
+              ...dc,
+              claimed: existing ? existing.claimed : false,
+            };
+          });
 
           try {
             const balance = await apiClient.wallet.getBalance(user.id);
@@ -136,6 +142,28 @@ export const useWalletStore = create<WalletState>()(
           balance: newBalance,
         });
         useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
+
+        if (useAuthStore.getState().isDemoMode) {
+          const newTransaction: Transaction = {
+            id: `demo-tx-${Date.now()}`,
+            user_id: user.id,
+            amount: -cost,
+            description,
+            type: "SPEND",
+            created_at: new Date().toISOString(),
+          };
+          set((state) => ({
+            transactions: [newTransaction, ...state.transactions],
+          }));
+          createNotification(
+            user.id,
+            "TRANSACTION_SUCCESS",
+            "Canje Exitoso (Demo)",
+            `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
+            "/app/wallet/history",
+          ).catch((e) => console.warn(e));
+          return true;
+        }
 
         try {
           const { error: profileError } = await supabase
@@ -223,6 +251,22 @@ export const useWalletStore = create<WalletState>()(
           challenges: updatedChallenges,
         });
         useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
+
+        if (useAuthStore.getState().isDemoMode) {
+          const newTransaction: Transaction = {
+            id: `demo-tx-${Date.now()}`,
+            user_id: user.id,
+            amount: challenge.reward,
+            description: `Reto completado: ${challenge.name}`,
+            type: "EARN",
+            created_at: new Date().toISOString(),
+          };
+          set((state) => ({
+            transactions: [newTransaction, ...state.transactions],
+          }));
+          toast.success(`¡Reclamaste +${challenge.reward} FitCoins! 🏆`);
+          return;
+        }
 
         try {
           const { error: profileError } = await supabase

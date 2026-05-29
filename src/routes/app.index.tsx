@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { Match, User, Court, SportCatalog, Level } from "@/entities/types";
@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { NewsFeed } from "@/features/feed/ui/NewsFeed";
 import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 import { supabase } from "@/shared/api/supabase";
+import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
+import { calculateDistance } from "@/shared/api/geoService";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +75,32 @@ function Dashboard() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"matches" | "feed" | "squads">("matches");
   const user = useAuthStore((state) => state.user);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn("Geolocation API unavailable or permission denied.", error.message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+  }, []);
+
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (user && user.last_location_lat && user.last_location_lng) {
+      return { lat: user.last_location_lat, lng: user.last_location_lng };
+    }
+    return null;
+  }, [userCoords, user]);
   const { matches, users, courts, sports } = Route.useLoaderData() as {
     matches: Match[];
     users: User[];
@@ -118,35 +146,28 @@ function Dashboard() {
 
     try {
       setIsCreatingMatch(true);
-      const { data: newMatch, error: matchError } = await supabase
-        .from("matches")
-        .insert({
-          title: matchTitle,
-          sport: matchSport,
-          court_id: matchCourtId || null,
-          date: matchDate,
-          time: matchTime,
-          max_players: Number(matchMaxPlayers),
-          required_level: matchLevel,
-          creator_id: user.id,
-          status: "Open",
-        })
-        .select()
-        .single();
-
-      if (matchError || !newMatch) {
-        throw matchError || new Error("No se pudo crear el partido.");
-      }
-
-      // Automatically join the creator to match_participants
-      const { error: partError } = await supabase.from("match_participants").insert({
-        match_id: newMatch.id,
-        user_id: user.id,
-        status: "ACCEPTED",
+      const newMatch = await apiClient.matches.create({
+        title: matchTitle,
+        sport: matchSport,
+        court_id: matchCourtId || null,
+        date: matchDate,
+        time: matchTime,
+        max_players: Number(matchMaxPlayers),
+        required_level: matchLevel,
+        creator_id: user.id,
       });
 
-      if (partError) {
-        console.error("Error joining creator to match:", partError);
+      if (!useAuthStore.getState().isDemoMode) {
+        // Automatically join the creator to match_participants
+        const { error: partError } = await supabase.from("match_participants").insert({
+          match_id: newMatch.id,
+          user_id: user.id,
+          status: "ACCEPTED",
+        });
+
+        if (partError) {
+          console.error("Error joining creator to match:", partError);
+        }
       }
 
       toast.success("¡Partido creado con éxito!");
@@ -337,7 +358,10 @@ function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold truncate">{p.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.preferred_sports[0]} · {p.distance_km || 0} km
+                      {p.preferred_sports[0]} ·{" "}
+                      {baseLocation && p.last_location_lat && p.last_location_lng
+                        ? `${calculateDistance(baseLocation.lat, baseLocation.lng, p.last_location_lat, p.last_location_lng).toFixed(1)} km`
+                        : `${p.distance_km || 0} km`}
                     </div>
                   </div>
                   <span className="text-xs text-neon flex items-center gap-1">
@@ -534,13 +558,24 @@ function Stat({
 }
 
 function MatchCard({ match }: { match: Match }) {
+  const user = useAuthStore((state) => state.user);
   const [joined, setJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+
   const currentParticipants = match.current_players?.length || 0;
   const spotsTaken = joined ? currentParticipants + 1 : currentParticipants;
   const isFull = spotsTaken >= match.max_players;
 
+  const courtFee = match.court
+    ? Math.ceil(match.court.price_per_hour / (match.max_players || 4))
+    : 0;
+
   const handleJoin = () => {
+    if (user && courtFee > user.fitcoins_balance) {
+      setIsBalanceModalOpen(true);
+      return;
+    }
     setIsJoining(true);
     setTimeout(() => {
       setIsJoining(false);
@@ -584,6 +619,13 @@ function MatchCard({ match }: { match: Match }) {
           style={{ width: `${(spotsTaken / match.max_players) * 100}%` }}
         />
       </div>
+
+      <InsufficientBalanceModal
+        isOpen={isBalanceModalOpen}
+        onOpenChange={setIsBalanceModalOpen}
+        cost={courtFee}
+        balance={user?.fitcoins_balance ?? 0}
+      />
     </div>
   );
 }

@@ -10,12 +10,14 @@ import {
   Check,
   QrCode,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Court } from "@/entities/types";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { apiClient } from "@/shared/api/apiClient";
+import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
+import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
+import { calculateDistance } from "@/shared/api/geoService";
 
 export const Route = createFileRoute("/app/courts/$courtId")({
   head: ({ loaderData }: { loaderData?: Court }) => {
@@ -35,6 +37,14 @@ export const Route = createFileRoute("/app/courts/$courtId")({
     };
   },
   loader: async ({ params }: { params: { courtId: string } }) => {
+    if (useAuthStore.getState().isDemoMode) {
+      const court = MOCK_COURTS.find((c) => c.id === params.courtId);
+      if (!court) {
+        throw new Error("Cancha no encontrada");
+      }
+      return court;
+    }
+
     const { data: court, error } = await supabase
       .from("courts")
       .select("*")
@@ -59,9 +69,36 @@ function CourtDetail() {
 
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    if (!court) return;
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn("Geolocation API unavailable or permission denied.", error.message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+  }, []);
+
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (user && user.last_location_lat && user.last_location_lng) {
+      return { lat: user.last_location_lat, lng: user.last_location_lng };
+    }
+    return null;
+  }, [userCoords, user]);
+
+  useEffect(() => {
+    if (!court || !user) return;
 
     const todayStr = new Date().toISOString().split("T")[0];
 
@@ -111,7 +148,13 @@ function CourtDetail() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [court]);
+  }, [court, user]);
+
+  if (!court || !user) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
+  }
 
   const handleBook = async () => {
     if (!slot) {
@@ -120,6 +163,12 @@ function CourtDetail() {
     }
     if (!user) {
       toast.error("Debes iniciar sesión para realizar una reserva.");
+      return;
+    }
+
+    const cost = Math.ceil(pricePerPerson);
+    if (user.fitcoins_balance < cost) {
+      setIsBalanceModalOpen(true);
       return;
     }
 
@@ -201,15 +250,25 @@ function CourtDetail() {
                 {court.sport}
               </span>
               <h1 className="text-3xl font-bold text-white">{court.name}</h1>
-              <div className="text-sm text-white/80 flex items-center gap-4 mt-2">
+              <div className="text-sm text-white/80 flex items-center gap-4 mt-2 flex-wrap">
                 <span className="flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
-                  {court.distance_km ?? 0} km
+                  {baseLocation
+                    ? `${calculateDistance(baseLocation.lat, baseLocation.lng, court.lat, court.lng).toFixed(1)} km`
+                    : `${court.distance_km ?? 0} km`}
                 </span>
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-warning text-warning" />
                   {court.rating} ({court.reviews_count})
                 </span>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${court.lat},${court.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all"
+                >
+                  <MapPin className="h-3 w-3 text-neon" /> Cómo llegar
+                </a>
               </div>
             </div>
           </div>
@@ -332,6 +391,13 @@ function CourtDetail() {
           )}
         </div>
       </div>
+
+      <InsufficientBalanceModal
+        isOpen={isBalanceModalOpen}
+        onOpenChange={setIsBalanceModalOpen}
+        cost={Math.ceil(pricePerPerson)}
+        balance={user?.fitcoins_balance ?? 0}
+      />
     </div>
   );
 }

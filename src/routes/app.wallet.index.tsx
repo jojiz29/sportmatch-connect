@@ -41,7 +41,7 @@ function Wallet() {
   useEffect(() => {
     let active = true;
     apiClient.users
-      .getMatches()
+      .getLeaderboard()
       .then((users) => {
         if (active) setLeaderboardUsers(users);
       })
@@ -134,6 +134,12 @@ function Wallet() {
       .sort((a, b) => b.coins - a.coins)
       .map((u, i) => ({ ...u, rank: i + 1 }));
   }, [leaderboardUsers, user, balance]);
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">

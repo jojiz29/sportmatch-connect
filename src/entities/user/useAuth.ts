@@ -7,9 +7,11 @@ import { safeLocalStorage } from "@/shared/lib/safeStorage";
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isDemoMode: boolean;
   login: (user: User) => void;
   logout: () => void;
   register: (user: User) => void;
+  setDemoMode: (status: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -17,9 +19,11 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      isDemoMode: false,
       login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () => set({ user: null, isAuthenticated: false, isDemoMode: false }),
       register: (user) => set({ user, isAuthenticated: true }),
+      setDemoMode: (status) => set({ isDemoMode: status }),
     }),
     {
       name: "sportmatch-auth",
@@ -88,31 +92,30 @@ export function useAuth() {
         throw profileError;
       }
 
+      store.setDemoMode(false);
       store.login(profile as User);
       return;
     }
 
-    // Demo/Guest login fallback using first available profile
-    try {
-      const { data: profiles, error: pError } = await supabase
-        .from("profiles")
-        .select("*")
-        .limit(1);
-
-      if (pError) {
-        console.error("Error demo login:", pError);
-        throw pError;
-      }
-
-      if (profiles && profiles.length > 0) {
-        store.login(profiles[0] as User);
-      } else {
-        throw new Error("No hay perfiles disponibles en la base de datos.");
-      }
-    } catch (err) {
-      console.error("Error en demo login:", err);
-      throw err;
-    }
+    // Guest login sets demo mode and bypasses Supabase queries entirely
+    store.setDemoMode(true);
+    const demoUser: User = {
+      id: "demo-user-id",
+      created_at: new Date().toISOString(),
+      name: "Edwin (Demo)",
+      age: 26,
+      city: "Surco, Lima",
+      avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=EdwinDemo",
+      bio: "Jugador de Pádel nivel intermedio en modo demostración.",
+      trust_score: 95,
+      fitcoins_balance: 1500,
+      level: "Intermedio",
+      preferred_sports: ["Pádel", "Tenis"],
+      matches_played: 12,
+      last_location_lat: -12.14,
+      last_location_lng: -76.995,
+    };
+    store.login(demoUser);
   };
 
   const signUp = async (newUser: User) => {

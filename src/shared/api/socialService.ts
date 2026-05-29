@@ -1,9 +1,14 @@
 import { supabase } from "./supabase";
 import { createNotification } from "@/shared/api/notificationService";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 export async function followUser(followerId: string, followingId: string): Promise<void> {
   if (followerId === followingId) {
     throw new Error("Self-following is not allowed.");
+  }
+
+  if (useAuthStore.getState().isDemoMode) {
+    return;
   }
 
   // 1. Fetch follower's name for the notification
@@ -44,6 +49,10 @@ export async function followUser(followerId: string, followingId: string): Promi
 }
 
 export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
+  if (useAuthStore.getState().isDemoMode) {
+    return;
+  }
+
   const { error } = await supabase
     .from("followers")
     .delete()
@@ -59,6 +68,10 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
 export async function getFollowStats(
   userId: string,
 ): Promise<{ followersCount: number; followingCount: number }> {
+  if (useAuthStore.getState().isDemoMode) {
+    return { followersCount: 8, followingCount: 15 };
+  }
+
   // Count followers (where following_id = userId)
   const { count: followersCount, error: followersError } = await supabase
     .from("followers")
@@ -88,6 +101,10 @@ export async function getFollowStats(
 }
 
 export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
+  if (useAuthStore.getState().isDemoMode) {
+    return followingId === "user-1";
+  }
+
   const { data, error } = await supabase
     .from("followers")
     .select("follower_id")

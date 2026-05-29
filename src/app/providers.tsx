@@ -34,6 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initAuth() {
       try {
+        const isDemo = useAuthStore.getState().isDemoMode;
+        if (isDemo && useAuthStore.getState().isAuthenticated) {
+          // In demo mode, bypass supabase auth check
+          return;
+        }
+
         const {
           data: { session },
         } = await supabase.auth.getSession();

@@ -1,8 +1,49 @@
 import { supabase } from "./supabase";
 import { CatalogItem } from "@/entities/types";
 import { createNotification } from "./notificationService";
+import { useAuthStore } from "@/entities/user/useAuth";
+
+const MOCK_CATALOG: CatalogItem[] = [
+  {
+    id: "item-1",
+    business_id: "business-1",
+    name: "Bebida Energética Gatorade 500ml",
+    description: "Rehidrátate con la bebida líder en el deporte.",
+    price: 150,
+    type: "PRODUCT",
+    image_url:
+      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=400",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "item-2",
+    business_id: "business-2",
+    name: "Alquiler Raqueta Pádel Wilson Pro",
+    description: "Raqueta de fibra de carbono para control máximo.",
+    price: 300,
+    type: "PRODUCT",
+    image_url:
+      "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=400",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "item-3",
+    business_id: "business-3",
+    name: "Pase Diario Gimnasio Megatlon",
+    description: "Acceso libre a máquinas y piscina climatizada.",
+    price: 600,
+    type: "SERVICE",
+    image_url:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=400",
+    created_at: new Date().toISOString(),
+  },
+];
 
 export async function getCatalogItems(businessId?: string): Promise<CatalogItem[]> {
+  if (useAuthStore.getState().isDemoMode) {
+    return businessId ? MOCK_CATALOG.filter((i) => i.business_id === businessId) : MOCK_CATALOG;
+  }
+
   let query = supabase.from("business_catalog").select("*");
 
   if (businessId) {
@@ -22,6 +63,15 @@ export async function getCatalogItems(businessId?: string): Promise<CatalogItem[
 export async function createCatalogItem(
   item: Omit<CatalogItem, "created_at">,
 ): Promise<CatalogItem> {
+  if (useAuthStore.getState().isDemoMode) {
+    const newItem = {
+      ...item,
+      created_at: new Date().toISOString(),
+    };
+    MOCK_CATALOG.unshift(newItem);
+    return newItem;
+  }
+
   const { data, error } = await supabase
     .from("business_catalog")
     .insert({
@@ -45,6 +95,14 @@ export async function createCatalogItem(
 }
 
 export async function deleteCatalogItem(itemId: string): Promise<void> {
+  if (useAuthStore.getState().isDemoMode) {
+    const index = MOCK_CATALOG.findIndex((i) => i.id === itemId);
+    if (index !== -1) {
+      MOCK_CATALOG.splice(index, 1);
+    }
+    return;
+  }
+
   const { error } = await supabase.from("business_catalog").delete().eq("id", itemId);
 
   if (error) {
@@ -54,6 +112,31 @@ export async function deleteCatalogItem(itemId: string): Promise<void> {
 }
 
 export async function purchaseCatalogItem(buyerId: string, itemId: string): Promise<boolean> {
+  if (useAuthStore.getState().isDemoMode) {
+    const item = MOCK_CATALOG.find((i) => i.id === itemId);
+    if (!item) throw new Error("Item not found");
+
+    const buyer = useAuthStore.getState().user;
+    if (!buyer) throw new Error("Buyer not found");
+
+    if (buyer.fitcoins_balance < item.price) {
+      return false;
+    }
+
+    const newBuyerBalance = buyer.fitcoins_balance - item.price;
+    useAuthStore.setState({ user: { ...buyer, fitcoins_balance: newBuyerBalance } });
+
+    createNotification(
+      buyerId,
+      "TRANSACTION_SUCCESS",
+      "Compra Exitosa (Demo)",
+      `Compraste ${item.name} por ${item.price} FC.`,
+      "/app/wallet/history",
+    ).catch((e) => console.warn("Failed to create buyer notification:", e));
+
+    return true;
+  }
+
   // 1. Fetch catalog item
   const { data: item, error: itemError } = await supabase
     .from("business_catalog")

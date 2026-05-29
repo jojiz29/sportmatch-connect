@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/entities/user/useAuth";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,6 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const { t } = useTranslation();
   const { signIn } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -21,7 +20,7 @@ function Login() {
     try {
       await signIn(email, password);
       toast.success(t("login.success_toast"));
-      navigate({ to: "/app" });
+      window.location.href = "/app";
     } catch (err: unknown) {
       console.error("Error en login:", err);
       const errorMessage = err instanceof Error ? err.message : t("login.error_toast");
@@ -33,7 +32,7 @@ function Login() {
     try {
       await signIn();
       toast.success(t("login.success_toast"));
-      navigate({ to: "/app" });
+      window.location.href = "/app";
     } catch (err: unknown) {
       console.error("Error en demo login:", err);
       const errorMessage = err instanceof Error ? err.message : t("login.error_toast");

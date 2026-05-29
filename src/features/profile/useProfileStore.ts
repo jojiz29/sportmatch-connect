@@ -51,6 +51,10 @@ export const useProfileStore = create<ProfileState>()(
           profile: state.profile ? { ...state.profile, ...data } : updated,
         }));
 
+        if (useAuthStore.getState().isDemoMode) {
+          return;
+        }
+
         try {
           const { error } = await supabase.from("profiles").update(data).eq("id", currentUser.id);
           if (error) {

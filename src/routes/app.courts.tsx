@@ -3,10 +3,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { Court } from "@/entities/types";
 import { Star, MapPin, Check, QrCode, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
+import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
+import { calculateDistance } from "@/shared/api/geoService";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
@@ -24,6 +26,33 @@ function Courts() {
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn("Geolocation API unavailable or permission denied.", error.message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+  }, []);
+
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (user && user.last_location_lat && user.last_location_lng) {
+      return { lat: user.last_location_lat, lng: user.last_location_lng };
+    }
+    return null;
+  }, [userCoords, user]);
 
   useEffect(() => {
     if (courts.length > 0 && !selected) {
@@ -85,7 +114,7 @@ function Courts() {
     };
   }, [selected]);
 
-  if (!selected) {
+  if (!selected || !user) {
     return (
       <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
     );
@@ -115,6 +144,12 @@ function Courts() {
     }
     if (!user) {
       toast.error("Debes iniciar sesión para realizar una reserva.");
+      return;
+    }
+
+    const cost = Math.ceil(pricePerPerson);
+    if (user.fitcoins_balance < cost) {
+      setIsBalanceModalOpen(true);
       return;
     }
 
@@ -200,7 +235,9 @@ function Courts() {
                     <div className="text-xs text-white/80 flex items-center gap-2 mt-0.5">
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {c.distance_km ?? 0} km
+                        {baseLocation
+                          ? `${calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng).toFixed(1)} km`
+                          : `${c.distance_km ?? 0} km`}
                       </span>
                       <span className="flex items-center gap-1">
                         <Star className="h-3 w-3 fill-warning text-warning" />
@@ -303,6 +340,13 @@ function Courts() {
           )}
         </div>
       </div>
+
+      <InsufficientBalanceModal
+        isOpen={isBalanceModalOpen}
+        onOpenChange={setIsBalanceModalOpen}
+        cost={Math.ceil(pricePerPerson)}
+        balance={user?.fitcoins_balance ?? 0}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
+import { MOCK_USERS } from "@/shared/api/apiClient";
 
 export interface ChatMessage {
   id: string;
@@ -102,18 +103,26 @@ export const useChatStore = create<ChatState>()(
         // Fetch target user profile dynamically from Supabase profiles
         let name = "Deportista";
         let avatar = "";
-        try {
-          const { data } = await supabase
-            .from("profiles")
-            .select("name, avatar_url")
-            .eq("id", targetUserId)
-            .single();
-          if (data) {
-            name = data.name;
-            avatar = data.avatar_url || "";
+        if (useAuthStore.getState().isDemoMode) {
+          const targetUser = MOCK_USERS.find((u) => u.id === targetUserId);
+          if (targetUser) {
+            name = targetUser.name;
+            avatar = targetUser.avatar_url || "";
           }
-        } catch (e) {
-          console.warn("Failed to fetch target user profile for chat:", e);
+        } else {
+          try {
+            const { data } = await supabase
+              .from("profiles")
+              .select("name, avatar_url")
+              .eq("id", targetUserId)
+              .single();
+            if (data) {
+              name = data.name;
+              avatar = data.avatar_url || "";
+            }
+          } catch (e) {
+            console.warn("Failed to fetch target user profile for chat:", e);
+          }
         }
 
         const newChat: Chat = {
@@ -134,6 +143,10 @@ export const useChatStore = create<ChatState>()(
       },
 
       subscribeToChat: (chatId) => {
+        if (useAuthStore.getState().isDemoMode) {
+          return () => {};
+        }
+
         // Prevent duplicate subscriptions for the same chat
         if (_subscribedChatId === chatId && _activeChatChannel) {
           return () => {

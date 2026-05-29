@@ -185,6 +185,14 @@ export function MapFeature({
               >
                 {t("map.view_court")}
               </a>
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center px-3 py-2 mt-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-neon"
+              >
+                Cómo llegar
+              </a>
             </div>
           </Popup>
         </Marker>

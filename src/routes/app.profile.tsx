@@ -16,11 +16,12 @@ import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { apiClient } from "@/shared/api/apiClient";
 import { supabase } from "@/shared/api/supabase";
+import { useAuthStore } from "@/entities/user/useAuth";
 import { compressToWebP } from "@/shared/lib/imageUtils";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Match, Sport } from "@/entities/types";
+import { Match, Sport, User } from "@/entities/types";
 
 export const Route = createFileRoute("/app/profile")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -28,10 +29,38 @@ export const Route = createFileRoute("/app/profile")({
 });
 
 const BADGES = [
-  { id: 1, emoji: "🔥", name: "Racha de 7 días" },
-  { id: 2, emoji: "🤝", name: "Buen compañero" },
-  { id: 3, emoji: "🏆", name: "MVP" },
-  { id: 4, emoji: "⭐", name: "Top 10%" },
+  {
+    id: 1,
+    emoji: "🔥",
+    name: "Racha de 7 días",
+    description: "Jugar al menos 5 partidos",
+    checkUnlock: (u: User) => (u.matches_played || 0) >= 5,
+    progress: (u: User) => `${u.matches_played || 0}/5 partidos`,
+  },
+  {
+    id: 2,
+    emoji: "🤝",
+    name: "Buen compañero",
+    description: "Trust Score ≥ 90% y 3+ partidos",
+    checkUnlock: (u: User) => (u.trust_score || 0) >= 90 && (u.matches_played || 0) >= 3,
+    progress: (u: User) => `${u.trust_score || 0}% Trust, ${u.matches_played || 0}/3 part.`,
+  },
+  {
+    id: 3,
+    emoji: "🏆",
+    name: "MVP",
+    description: "Jugar al menos 15 partidos",
+    checkUnlock: (u: User) => (u.matches_played || 0) >= 15,
+    progress: (u: User) => `${u.matches_played || 0}/15 partidos`,
+  },
+  {
+    id: 4,
+    emoji: "⭐",
+    name: "Top 10%",
+    description: "Tener 1,000+ FitCoins",
+    checkUnlock: (u: User) => (u.fitcoins_balance || 0) >= 1000,
+    progress: (u: User) => `${u.fitcoins_balance || 0}/1000 FC`,
+  },
 ];
 
 function Profile() {
@@ -117,13 +146,22 @@ function Profile() {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const target = e.target;
+    const file = target?.files?.[0];
     if (!file || !profile) return;
 
     setIsUploadingAvatar(true);
     const toastId = toast.loading("Subiendo foto de perfil...");
 
     try {
+      if (useAuthStore.getState().isDemoMode) {
+        const localUrl = URL.createObjectURL(file);
+        await updateProfile({ avatar_url: localUrl });
+        setEditForm((prev) => ({ ...prev, avatar_url: localUrl }));
+        toast.success("Foto actualizada correctamente (Demo).", { id: toastId });
+        return;
+      }
+
       // 1. Compress to WebP via Canvas (max 400px, quality 0.8)
       const webpBlob = await compressToWebP(file, 400, 0.8);
 
@@ -155,8 +193,14 @@ function Profile() {
       toast.error("Error al subir la foto. Intenta de nuevo.", { id: toastId });
     } finally {
       setIsUploadingAvatar(false);
-      // Reset file input so the same file can be selected again if needed
-      e.target.value = "";
+      // Reset file input safely so the same file can be selected again if needed
+      if (target) {
+        try {
+          target.value = "";
+        } catch (resetErr) {
+          console.warn("Could not reset input file value:", resetErr);
+        }
+      }
     }
   };
 
@@ -333,15 +377,38 @@ function Profile() {
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">{t("profile.achievements")}</h3>
           <div className="grid grid-cols-2 gap-3">
-            {BADGES.map((b) => (
-              <div
-                key={b.id}
-                className="text-center p-3 rounded-xl glass hover:ring-glow transition-all cursor-default"
-              >
-                <div className="text-3xl">{b.emoji}</div>
-                <div className="text-xs mt-1 font-semibold">{b.name}</div>
-              </div>
-            ))}
+            {BADGES.map((b) => {
+              const isUnlocked = b.checkUnlock(profile);
+              return (
+                <div
+                  key={b.id}
+                  className={`text-center p-3 rounded-xl transition-all cursor-default flex flex-col justify-between items-center ${
+                    isUnlocked
+                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50"
+                      : "bg-muted/15 border border-border/40 grayscale opacity-45 hover:opacity-75 transition-opacity"
+                  }`}
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="text-3xl">{b.emoji}</div>
+                    <div className="text-xs mt-1 font-semibold">{b.name}</div>
+                  </div>
+                  <div className="mt-2 text-[10px] leading-tight text-muted-foreground w-full">
+                    {!isUnlocked ? (
+                      <>
+                        <span className="block font-medium text-warning/90">{b.description}</span>
+                        <span className="block text-muted-foreground/75 mt-0.5">
+                          {b.progress(profile)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="block font-bold text-neon uppercase tracking-wider text-[9px]">
+                        Completado
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
