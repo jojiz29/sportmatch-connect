@@ -6,5 +6,5 @@
   "framework": null,
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [{ "source": "/((?!assets/|favicon.ico).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!assets/|locales/|images/|favicon.ico).*)", "destination": "/index.html" }]
 }
