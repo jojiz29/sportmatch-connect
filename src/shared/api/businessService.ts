@@ -1,9 +1,41 @@
-﻿import { supabase } from "./supabase";
-import { CatalogItem } from "@/entities/types";
+import { supabase } from "./supabase";
+import { CatalogItem, Transaction } from "@/entities/types";
 import { createNotification } from "./notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { apiClient } from "./apiClient";
+import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 
 const MOCK_CATALOG: CatalogItem[] = [
+  {
+    id: "puka-power-bottle",
+    business_id: "user-puka-power",
+    name: "Botella Puka Power",
+    description: "Bebida energética de 500ml para máxima resistencia.",
+    price: 150,
+    type: "PRODUCT",
+    image_url: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "puka-pack-6",
+    business_id: "user-puka-power",
+    name: "Puka Pack (6 botellas)",
+    description: "Caja de 6 botellas para compartir con tu squad.",
+    price: 800,
+    type: "PRODUCT",
+    image_url: "https://images.unsplash.com/photo-1546429070-1fc422f1d77a",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "puka-vip-pass",
+    business_id: "user-puka-power",
+    name: "Acceso VIP Arena Puka",
+    description: "Entrada exclusiva para eventos de pádel patrocinados.",
+    price: 2500,
+    type: "SERVICE",
+    image_url: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+    created_at: new Date().toISOString(),
+  },
   {
     id: "item-1",
     business_id: "business-1",
@@ -39,9 +71,26 @@ const MOCK_CATALOG: CatalogItem[] = [
   },
 ];
 
+const getDemoCatalog = (): CatalogItem[] => {
+  if (typeof window === "undefined") return MOCK_CATALOG;
+  const stored = localStorage.getItem("sportmatch_demo_catalog");
+  if (!stored) {
+    localStorage.setItem("sportmatch_demo_catalog", JSON.stringify(MOCK_CATALOG));
+    return MOCK_CATALOG;
+  }
+  return JSON.parse(stored);
+};
+
+const saveDemoCatalog = (catalog: CatalogItem[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("sportmatch_demo_catalog", JSON.stringify(catalog));
+  }
+};
+
 export async function getCatalogItems(businessId?: string): Promise<CatalogItem[]> {
   if (useAuthStore.getState().isDemoMode) {
-    return businessId ? MOCK_CATALOG.filter((i) => i.business_id === businessId) : MOCK_CATALOG;
+    const catalog = getDemoCatalog();
+    return businessId ? catalog.filter((i) => i.business_id === businessId) : catalog;
   }
 
   let query = supabase.from("business_catalog").select("*");
@@ -68,7 +117,9 @@ export async function createCatalogItem(
       ...item,
       created_at: new Date().toISOString(),
     };
-    MOCK_CATALOG.unshift(newItem);
+    const catalog = getDemoCatalog();
+    catalog.unshift(newItem);
+    saveDemoCatalog(catalog);
     return newItem;
   }
 
@@ -96,9 +147,11 @@ export async function createCatalogItem(
 
 export async function deleteCatalogItem(itemId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
-    const index = MOCK_CATALOG.findIndex((i) => i.id === itemId);
+    const catalog = getDemoCatalog();
+    const index = catalog.findIndex((i) => i.id === itemId);
     if (index !== -1) {
-      MOCK_CATALOG.splice(index, 1);
+      catalog.splice(index, 1);
+      saveDemoCatalog(catalog);
     }
     return;
   }
@@ -113,7 +166,8 @@ export async function deleteCatalogItem(itemId: string): Promise<void> {
 
 export async function purchaseCatalogItem(buyerId: string, itemId: string): Promise<boolean> {
   if (useAuthStore.getState().isDemoMode) {
-    const item = MOCK_CATALOG.find((i) => i.id === itemId);
+    const catalog = getDemoCatalog();
+    const item = catalog.find((i) => i.id === itemId);
     if (!item) throw new Error("Item not found");
 
     const buyer = useAuthStore.getState().user;
@@ -124,7 +178,42 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     }
 
     const newBuyerBalance = buyer.fitcoins_balance - item.price;
-    useAuthStore.setState({ user: { ...buyer, fitcoins_balance: newBuyerBalance } });
+    apiClient.wallet.updateBalance(buyerId, newBuyerBalance);
+
+    const buyerTx: Transaction = {
+      id: `demo-tx-buyer-${Date.now()}`,
+      user_id: buyerId,
+      amount: -item.price,
+      description: `Compra: ${item.name}`,
+      type: "SPEND",
+      created_at: new Date().toISOString(),
+    };
+    apiClient.wallet.saveTransaction(buyerId, buyerTx);
+
+    // Credit seller's balance
+    const currentSellerBalance = await apiClient.wallet.getBalance(item.business_id);
+    apiClient.wallet.updateBalance(item.business_id, currentSellerBalance + item.price);
+
+    const sellerTx: Transaction = {
+      id: `demo-tx-seller-${Date.now()}`,
+      user_id: item.business_id,
+      amount: item.price,
+      description: `Venta: ${item.name}`,
+      type: "EARN",
+      created_at: new Date().toISOString(),
+    };
+    apiClient.wallet.saveTransaction(item.business_id, sellerTx);
+
+    // Add B2B sales record to businessStore
+    useBusinessStore.getState().addSale({
+      id: `sale-demo-${Date.now()}`,
+      catalog_item_id: item.id,
+      item_name: item.name,
+      buyer_id: buyer.id,
+      buyer_name: buyer.name,
+      price: item.price,
+      created_at: new Date().toISOString(),
+    });
 
     createNotification(
       buyerId,
@@ -136,116 +225,62 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
       if (import.meta.env.DEV) console.warn("Failed to create buyer notification:", e);
     });
 
+    createNotification(
+      item.business_id,
+      "TRANSACTION_SUCCESS",
+      "Venta Completada (Demo)",
+      `Vendiste ${item.name} a ${buyer.name} por ${item.price} FC.`,
+      "/app/business",
+    ).catch((e) => {
+      if (import.meta.env.DEV) console.warn("Failed to create seller notification:", e);
+    });
+
     return true;
   }
 
-  // 1. Fetch catalog item
-  const { data: item, error: itemError } = await supabase
-    .from("business_catalog")
-    .select("*")
-    .eq("id", itemId)
-    .single();
-
-  if (itemError || !item) {
-    if (import.meta.env.DEV) console.error("Item not found for purchase:", itemError);
-    throw new Error("Item not found");
-  }
-
-  // 2. Fetch buyer profile
-  const { data: buyer, error: buyerError } = await supabase
-    .from("profiles")
-    .select("fitcoins_balance, name")
-    .eq("id", buyerId)
-    .single();
-
-  if (buyerError || !buyer) {
-    if (import.meta.env.DEV) console.error("Buyer profile not found:", buyerError);
-    throw new Error("Buyer not found");
-  }
-
-  if (buyer.fitcoins_balance < item.price) {
-    return false;
-  }
-
-  // 3. Update buyer balance in profiles
-  const newBuyerBalance = buyer.fitcoins_balance - item.price;
-  const { error: updateBuyerError } = await supabase
-    .from("profiles")
-    .update({ fitcoins_balance: newBuyerBalance })
-    .eq("id", buyerId);
-
-  if (updateBuyerError) {
-    if (import.meta.env.DEV) console.error("Error updating buyer balance:", updateBuyerError);
-    throw updateBuyerError;
-  }
-
-  // 4. Update seller balance in profiles
-  const { data: seller, error: sellerError } = await supabase
-    .from("profiles")
-    .select("fitcoins_balance, name")
-    .eq("id", item.business_id)
-    .single();
-
-  if (sellerError || !seller) {
-    if (import.meta.env.DEV) console.error("Seller profile not found:", sellerError);
-    throw new Error("Seller not found");
-  }
-
-  const newSellerBalance = (seller.fitcoins_balance || 0) + item.price;
-  const { error: updateSellerError } = await supabase
-    .from("profiles")
-    .update({ fitcoins_balance: newSellerBalance })
-    .eq("id", item.business_id);
-
-  if (updateSellerError) {
-    if (import.meta.env.DEV) console.error("Error updating seller balance:", updateSellerError);
-    throw updateSellerError;
-  }
-
-  // 5. Insert wallet transactions
-  const spendTx = {
-    id: `txn_${Date.now()}_spend`,
-    user_id: buyerId,
-    amount: -item.price,
-    description: `Compra: ${item.name}`,
-    type: "SPEND",
-  };
-
-  const earnTx = {
-    id: `txn_${Date.now()}_earn`,
-    user_id: item.business_id,
-    amount: item.price,
-    description: `Venta: ${item.name} a ${buyer.name}`,
-    type: "EARN",
-  };
-
-  const { error: txError } = await supabase.from("wallet_transactions").insert([spendTx, earnTx]);
-
-  if (txError) {
-    if (import.meta.env.DEV) console.error("Error inserting transactions:", txError);
-    throw txError;
-  }
-
-  // 6. Send notifications
-  createNotification(
-    buyerId,
-    "TRANSACTION_SUCCESS",
-    "Compra Exitosa",
-    `Compraste ${item.name} por ${item.price} FC.`,
-    "/app/wallet/history",
-  ).catch((e) => {
-    if (import.meta.env.DEV) console.warn("Failed to create buyer notification:", e);
+  const { data, error } = await supabase.rpc("purchase_catalog_item", {
+    p_buyer_id: buyerId,
+    p_item_id: itemId,
   });
 
-  createNotification(
-    item.business_id,
-    "TRANSACTION_SUCCESS",
-    "Venta Completada",
-    `Vendiste ${item.name} a ${buyer.name} por ${item.price} FC.`,
-    "/app/business",
-  ).catch((e) => {
-    if (import.meta.env.DEV) console.warn("Failed to create seller notification:", e);
-  });
+  if (error) {
+    console.error(`Error purchasing catalog item via RPC (code: ${error.code}):`, error);
+    throw new Error(error.message || "Failed to purchase item");
+  }
 
-  return true;
+  try {
+    const { data: item } = await supabase
+      .from("business_catalog")
+      .select("*")
+      .eq("id", itemId)
+      .single();
+
+    const { data: buyer } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", buyerId)
+      .single();
+
+    if (item && buyer) {
+      createNotification(
+        buyerId,
+        "TRANSACTION_SUCCESS",
+        "Compra Exitosa",
+        `Compraste ${item.name} por ${item.price} FC.`,
+        "/app/wallet/history",
+      ).catch((e) => console.warn("Failed to create buyer notification:", e));
+
+      createNotification(
+        item.business_id,
+        "TRANSACTION_SUCCESS",
+        "Venta Completada",
+        `Vendiste ${item.name} a ${buyer.name} por ${item.price} FC.`,
+        "/app/business",
+      ).catch((e) => console.warn("Failed to create seller notification:", e));
+    }
+  } catch (notifErr) {
+    console.warn("Error triggering B2B purchase notifications:", notifErr);
+  }
+
+  return data as boolean;
 }

@@ -8,8 +8,10 @@ interface NotificationState {
   notifications: AppNotification[];
   initNotifications: () => void;
   addNotification: (notif: Omit<AppNotification, "is_read" | "created_at">) => AppNotification;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
+  addNotificationDirectly: (notif: AppNotification) => void;
+  fetchNotifications: (userId: string) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => void;
 }
 
@@ -20,6 +22,23 @@ export const useNotificationStore = create<NotificationState>()(
 
       initNotifications: () => {
         // Hydrated from localStorage automatically, but we can do extra setup if needed
+      },
+
+      addNotificationDirectly: (notif) => {
+        set((state) => {
+          if (state.notifications.some((n) => n.id === notif.id)) return state;
+          return { notifications: [notif, ...state.notifications] };
+        });
+      },
+
+      fetchNotifications: async (userId) => {
+        try {
+          const { getNotifications } = await import("@/shared/api/notificationService");
+          const fetched = await getNotifications(userId);
+          set({ notifications: fetched });
+        } catch (err) {
+          console.error("Failed to fetch notifications:", err);
+        }
       },
 
       addNotification: (notif) => {
@@ -36,15 +55,21 @@ export const useNotificationStore = create<NotificationState>()(
         return newNotif;
       },
 
-      markAsRead: (id) => {
+      markAsRead: async (id) => {
         set((state) => ({
           notifications: state.notifications.map((n) =>
             n.id === id ? { ...n, is_read: true } : n,
           ),
         }));
+        try {
+          const { markNotificationRead } = await import("@/shared/api/notificationService");
+          await markNotificationRead(id);
+        } catch (err) {
+          console.error("Failed to mark notification read in service:", err);
+        }
       },
 
-      markAllAsRead: () => {
+      markAllAsRead: async () => {
         const user = useAuthStore.getState().user;
         if (!user) return;
         set((state) => ({
@@ -52,6 +77,12 @@ export const useNotificationStore = create<NotificationState>()(
             n.user_id === user.id ? { ...n, is_read: true } : n,
           ),
         }));
+        try {
+          const { markAllNotificationsRead } = await import("@/shared/api/notificationService");
+          await markAllNotificationsRead(user.id);
+        } catch (err) {
+          console.error("Failed to mark all notifications read in service:", err);
+        }
       },
 
       deleteNotification: (id) => {

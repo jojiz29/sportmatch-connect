@@ -19,16 +19,16 @@ INSERT INTO public.courts (
   reviews_count, lat, lng, location, image_url, amenities, is_available, address, owner_id, is_sponsored, max_players, operating_hours
 ) VALUES
 (
-  'lima-court-01', now(), 'Miraflores Padel Club', 'Pádel', 120, 4.9, 142,
-  -12.1221, -77.0298, st_setsrid(st_point(-77.0298, -12.1221), 4326)::geography,
+  'lima-court-01', now(), 'Miraflores Pádel Club', 'Pádel', 120, 4.9, 142,
+  -12.1225, -77.0361, st_setsrid(st_point(-77.0361, -12.1225), 4326)::geography,
   'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&q=80&w=600',
   ARRAY['Vestuarios', 'Iluminación Led', 'Estacionamiento', 'Cafetería Pro'], true,
   'Malecón de la Reserva 610, Miraflores', '00000000-0000-0000-0000-000000000090', true, 4,
   ARRAY['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '21:00']
 ),
 (
-  'lima-court-02', now(), 'Padel Surco Club', 'Pádel', 100, 4.7, 98,
-  -12.1284, -76.9745, st_setsrid(st_point(-76.9745, -12.1284), 4326)::geography,
+  'lima-court-02', now(), 'Padel Center Surco', 'Pádel', 100, 4.7, 98,
+  -12.1314, -76.9812, st_setsrid(st_point(-76.9812, -12.1314), 4326)::geography,
   'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=600',
   ARRAY['Estacionamiento', 'Alquiler de Palas', 'Duchas', 'Bebidas'], true,
   'Av. Cerros de Camacho 500, Santiago de Surco', '00000000-0000-0000-0000-000000000090', true, 4,
@@ -60,7 +60,7 @@ INSERT INTO public.courts (
 ),
 (
   'lima-court-06', now(), 'Deporcentro Casuarinas', 'Fútbol', 90, 4.5, 210,
-  -12.1174, -76.9682, st_setsrid(st_point(-76.9682, -12.1174), 4326)::geography,
+  -12.1158, -76.9675, st_setsrid(st_point(-76.9675, -12.1158), 4326)::geography,
   'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&q=80&w=600',
   ARRAY['Pasto Sintético FIFA', 'Vestuarios amplios', 'Estacionamiento', 'Luz de Noche'], true,
   'Av. Jacarandá 850, Santiago de Surco', '00000000-0000-0000-0000-000000000090', true, 14,
@@ -69,7 +69,7 @@ INSERT INTO public.courts (
 (
   'lima-court-07', now(), 'La 10 - Surco (Fútbol 7)', 'Fútbol', 80, 4.4, 156,
   -12.1382, -76.9805, st_setsrid(st_point(-76.9805, -12.1382), 4326)::geography,
-  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=600',
+  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=600',
   ARRAY['Tribuna techada', 'Arbitraje opcional', 'Snacks', 'Estacionamiento'], true,
   'Av. Caminos del Inca 256, Santiago de Surco', '00000000-0000-0000-0000-000000000090', false, 14,
   ARRAY['18:00', '19:00', '20:00', '21:00', '22:00']
@@ -85,7 +85,7 @@ INSERT INTO public.courts (
 (
   'lima-court-09', now(), 'San Borja Fútbol Club', 'Fútbol', 85, 4.6, 93,
   -12.0912, -77.0123, st_setsrid(st_point(-77.0123, -12.0912), 4326)::geography,
-  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=600',
+  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=600',
   ARRAY['Vestuarios', 'Seguridad Municipal', 'Estacionamiento', 'Parrillas'], true,
   'Av. Javier Prado Este 2500, San Borja', '00000000-0000-0000-0000-000000000090', false, 14,
   ARRAY['18:00', '19:00', '20:00', '21:00', '22:00']
@@ -101,7 +101,7 @@ INSERT INTO public.courts (
 (
   'lima-court-11', now(), 'Centro Deportivo Municipal de Surco', 'Vóley', 60, 4.7, 240,
   -12.1332, -76.9992, st_setsrid(st_point(-76.9992, -12.1332), 4326)::geography,
-  'https://images.unsplash.com/photo-1592656094247-b98a09698714?auto=format&fit=crop&q=80&w=600',
+  'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&q=80&w=600',
   ARRAY['Pabellón Cubierto', 'Tribunas', 'Servicio Médico', 'Cafetería'], true,
   'Av. Loma Amarilla, Santiago de Surco', '00000000-0000-0000-0000-000000000090', true, 12,
   ARRAY['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
@@ -109,7 +109,7 @@ INSERT INTO public.courts (
 (
   'lima-court-12', now(), 'Complejo Manuel Bonilla Vóley', 'Vóley', 75, 4.5, 115,
   -12.1091, -77.0423, st_setsrid(st_point(-77.0423, -12.1091), 4326)::geography,
-  'https://images.unsplash.com/photo-1592656094247-b98a09698714?auto=format&fit=crop&q=80&w=600',
+  'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&q=80&w=600',
   ARRAY['Vista al Mar', 'Estacionamiento', 'Luces Artificiales', 'Tribuna'], true,
   'Av. Ejército 1300, Miraflores', '00000000-0000-0000-0000-000000000090', false, 12,
   ARRAY['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00']
@@ -137,6 +137,22 @@ INSERT INTO public.courts (
   ARRAY['Doble vidrio templado', 'Club House Premium', 'Piscina', 'Duchas Vip'], true,
   'Av. Manuel Prado Ugarteche, La Molina', '00000000-0000-0000-0000-000000000090', true, 4,
   ARRAY['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']
+),
+(
+  'lima-court-16', now(), 'Complejo Huantille', 'Fútbol', 80, 4.6, 88,
+  -12.0945, -77.0689, st_setsrid(st_point(-77.0689, -12.0945), 4326)::geography,
+  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=600',
+  ARRAY['Césped artificial', 'Duchas', 'Iluminación Led', 'Estacionamiento'], true,
+  'Jr. Huantille 350, Magdalena del Mar', '00000000-0000-0000-0000-000000000090', false, 14,
+  ARRAY['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00']
+),
+(
+  'lima-court-17', now(), 'Tennis Club San Borja', 'Tenis', 100, 4.7, 56,
+  -12.1067, -76.9989, st_setsrid(st_point(-76.9989, -12.1067), 4326)::geography,
+  'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&q=80&w=600',
+  ARRAY['Canchas de Arcilla', 'Cafetería', 'Lockers', 'Estacionamiento'], true,
+  'Av. Boulevard de la Nación 300, San Borja', '00000000-0000-0000-0000-000000000090', false, 2,
+  ARRAY['07:00', '09:00', '11:00', '13:00', '15:00', '17:00', '19:00']
 )
 ON CONFLICT (id) DO UPDATE SET
   name = excluded.name,

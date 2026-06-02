@@ -58,3 +58,36 @@ export function compressToWebP(file: File, maxWidth = 400, quality = 0.8): Promi
     img.src = objectUrl;
   });
 }
+
+const SPORT_FALLBACK_IMAGES: Record<string, string> = {
+  futbol: "/images/sports/futbol.jpg",
+  basquet: "/images/sports/basquet.jpg",
+  voley: "/images/sports/voley.jpg",
+  padel: "/images/sports/padel.jpg",
+  natacion: "/images/sports/natacion.jpg",
+  gimnasio: "/images/sports/gimnasio.jpg",
+  running: "/images/sports/running.jpg",
+  tenis: "/images/sports/tenis.jpg",
+  default: "/images/sports/default.jpg",
+};
+
+export function getSportFallbackImage(sport?: string): string {
+  if (!sport) return SPORT_FALLBACK_IMAGES.default;
+  const cleaned = sport
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // remove accents like ú, á, é
+
+  if (cleaned.includes("futbol") || cleaned.includes("futsal")) return SPORT_FALLBACK_IMAGES.futbol;
+  if (cleaned.includes("basquet")) return SPORT_FALLBACK_IMAGES.basquet;
+  if (cleaned.includes("voley")) return SPORT_FALLBACK_IMAGES.voley;
+  if (cleaned.includes("padel")) return SPORT_FALLBACK_IMAGES.padel;
+  if (cleaned.includes("natacion")) return SPORT_FALLBACK_IMAGES.natacion;
+  if (cleaned.includes("gimnasio") || cleaned.includes("funcional"))
+    return SPORT_FALLBACK_IMAGES.gimnasio;
+  if (cleaned.includes("running") || cleaned.includes("atletismo"))
+    return SPORT_FALLBACK_IMAGES.running;
+  if (cleaned.includes("tenis")) return SPORT_FALLBACK_IMAGES.tenis;
+
+  return SPORT_FALLBACK_IMAGES.default;
+}

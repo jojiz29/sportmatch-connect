@@ -224,7 +224,8 @@ function UserProfile() {
               >
                 {isFollowing ? (
                   <>
-                    <UserMinus className="h-4 w-4" /> {t("profile.unfollow")}
+                    <UserMinus className="h-4 w-4" />{" "}
+                    {t("profile.following_status", { defaultValue: "Siguiendo" })}
                   </>
                 ) : (
                   <>

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { Trophy, Gift, Zap, Crown, X, ShoppingBag } from "lucide-react";
+import { Trophy, Gift, Zap, Crown, X, ShoppingBag, Loader2 } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { getCatalogItems, purchaseCatalogItem } from "@/shared/api/businessService";
 import { CatalogItem, User } from "@/entities/types";
 import { apiClient } from "@/shared/api/apiClient";
+import { Reward } from "@/services/walletService";
 
 export const Route = createFileRoute("/app/wallet/")({
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
@@ -19,18 +20,24 @@ export const Route = createFileRoute("/app/wallet/")({
   component: Wallet,
 });
 
-const REWARDS = [
-  { id: "r1", name: "Hora gratis de pádel", cost: 500, emoji: "🏓" },
-  { id: "r2", name: "Camiseta SportMatch", cost: 1200, emoji: "👕" },
-  { id: "r3", name: "Sesión con entrenador", cost: 2000, emoji: "🏋️" },
-  { id: "r4", name: "Pelota oficial", cost: 800, emoji: "⚽" },
-];
+function getRewardEmoji(category: string | null, title: string): string {
+  const cat = (category || "").toLowerCase();
+  const t = title.toLowerCase();
+  if (cat.includes("cancha") || t.includes("padel") || t.includes("pádel")) return "🏓";
+  if (cat.includes("bebida") || t.includes("drink") || t.includes("powerade")) return "🥤";
+  if (cat.includes("equip") || t.includes("ball") || t.includes("pelota")) return "⚽";
+  if (cat.includes("ropa") || cat.includes("shirt") || t.includes("camiseta")) return "👕";
+  return "🎁";
+}
 
 function Wallet() {
   const { t } = useTranslation();
   const { balance, redeem, initWallet, challenges, progressChallenge, claimChallenge } =
     useWalletStore();
-  const [selectedReward, setSelectedReward] = useState<(typeof REWARDS)[0] | null>(null);
+
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [loadingRewards, setLoadingRewards] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [purchasing, setPurchasing] = useState(false);
@@ -56,6 +63,61 @@ function Wallet() {
   useEffect(() => {
     initWallet();
   }, [initWallet]);
+
+  useEffect(() => {
+    async function loadRewards() {
+      try {
+        setLoadingRewards(true);
+        const { getRewards } = await import("@/services/walletService");
+        const list = await getRewards();
+        setRewards(list);
+      } catch (err) {
+        console.error("Failed to load rewards from DB:", err);
+        const fallbackRewards: Reward[] = [
+          {
+            id: "00000000-0000-0000-0000-000000000091",
+            title: "Hora gratis de pádel",
+            cost_fitcoins: 500,
+            description: "Descuento para una hora de alquiler de cancha de pádel.",
+            stock: 50,
+            image_url: "",
+            category: "Canchas",
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000092",
+            title: "Powerade Sports Drink",
+            cost_fitcoins: 50,
+            description: "Bebida isotónica Powerade de 500ml.",
+            stock: 100,
+            image_url: "",
+            category: "Bebidas",
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000093",
+            title: "Pelota oficial",
+            cost_fitcoins: 800,
+            description: "Pelota oficial de tenis o fútbol.",
+            stock: 25,
+            image_url: "",
+            category: "Equipamiento",
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000094",
+            title: "Camiseta SportMatch",
+            cost_fitcoins: 1200,
+            description: "Camiseta oficial técnica transpirable.",
+            stock: 30,
+            image_url: "",
+            category: "Ropa",
+          },
+        ];
+        setRewards(fallbackRewards);
+      } finally {
+        setLoadingRewards(false);
+      }
+    }
+    loadRewards();
+  }, []);
 
   useEffect(() => {
     async function loadCatalog() {
@@ -85,16 +147,22 @@ function Wallet() {
     loadCatalog();
   }, [user, buyItem]);
 
-  const handleRedeem = async (reward: (typeof REWARDS)[0]) => {
-    const rewardName = t(`wallet.reward_${reward.id}_name`, { defaultValue: reward.name });
-    const success = await redeem(reward.cost, `Canje: ${rewardName}`);
+  const handleRedeem = async (reward: Reward) => {
+    const rewardName = t(`wallet.reward_${reward.id}_name`, { defaultValue: reward.title });
+    const success = await redeem(reward.cost_fitcoins, `Canje: ${rewardName}`, reward.id);
     if (success) {
       toast.success(t("wallet.success"), {
         description: t("wallet.success_desc", { reward: rewardName }),
       });
       setSelectedReward(null);
-    } else {
-      toast.error(t("wallet.error"), { description: t("wallet.error_desc") });
+      // Reload rewards to update stock
+      try {
+        const { getRewards } = await import("@/services/walletService");
+        const list = await getRewards();
+        setRewards(list);
+      } catch (err) {
+        console.warn(err);
+      }
     }
   };
 
@@ -255,25 +323,32 @@ function Wallet() {
           <div id="rewards-section">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Gift className="h-4 w-4 text-electric" /> {t("wallet.rewards")}
+              {loadingRewards && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
             </h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              {REWARDS.map((r) => {
-                const rewardName = t(`wallet.reward_${r.id}_name`, { defaultValue: r.name });
+              {rewards.map((r) => {
+                const rewardName = t(`wallet.reward_${r.id}_name`, { defaultValue: r.title });
+                const emoji = getRewardEmoji(r.category, r.title);
                 return (
                   <div
                     key={r.id}
                     className="bg-gradient-card border border-border rounded-2xl p-4 flex items-center gap-3 hover:ring-glow transition-all"
                   >
-                    <div className="text-4xl">{r.emoji}</div>
+                    <div className="text-4xl">{emoji}</div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold truncate">{rewardName}</div>
-                      <div className="text-xs text-neon">{r.cost} FC</div>
+                      <div className="text-xs text-muted-foreground truncate">{r.description}</div>
+                      <div className="text-xs text-neon mt-1 font-bold">
+                        {r.cost_fitcoins} FC ·{" "}
+                        <span className="text-muted-foreground">Stock: {r.stock}</span>
+                      </div>
                     </div>
                     <button
                       onClick={() => setSelectedReward(r)}
-                      className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform cursor-pointer"
+                      disabled={r.stock <= 0}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      {t("wallet.redeem")}
+                      {r.stock > 0 ? t("wallet.redeem") : t("wallet.no_stock")}
                     </button>
                   </div>
                 );
@@ -400,16 +475,18 @@ function Wallet() {
                 <X className="h-4 w-4" />
               </button>
 
-              <div className="text-6xl mb-4">{selectedReward.emoji}</div>
+              <div className="text-6xl mb-4">
+                {getRewardEmoji(selectedReward.category, selectedReward.title)}
+              </div>
               <h2 className="text-xl font-bold mb-2">
                 {t("wallet.confirm_title", {
                   reward: t(`wallet.reward_${selectedReward.id}_name`, {
-                    defaultValue: selectedReward.name,
+                    defaultValue: selectedReward.title,
                   }),
                 })}
               </h2>
               <p className="text-sm text-muted-foreground mb-6">
-                {t("wallet.confirm_desc", { cost: selectedReward.cost })}
+                {t("wallet.confirm_desc", { cost: selectedReward.cost_fitcoins })}
               </p>
 
               <div className="flex flex-col gap-2">

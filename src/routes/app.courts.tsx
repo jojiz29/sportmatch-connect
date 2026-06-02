@@ -2,14 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { Court } from "@/entities/types";
-import { Star, MapPin, Check, QrCode, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { toast } from "sonner";
-import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
+import { CourtCard } from "@/components/CourtCard";
+import { BookingModal } from "@/components/BookingModal";
 import { calculateDistance } from "@/shared/api/geoService";
-import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
+import { Search, MapPin, SlidersHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
@@ -20,21 +18,14 @@ export const Route = createFileRoute("/app/courts")({
 function Courts() {
   const courts = Route.useLoaderData() as Court[];
   const user = useAuthStore((s) => s.user);
-  const [selected, setSelected] = useState<Court | null>(null);
-  const [slot, setSlot] = useState<string | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
-
-  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
-  const [loadingBookings, setLoadingBookings] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
-  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  const { isProcessing, transactionId, processPayment, resetPayment } = usePaymentGatewayStore();
-
-  useEffect(() => {
-    resetPayment();
-  }, [slot, selected?.id, resetPayment]);
+  // Filter and pagination states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedSport, setSelectedSport] = useState("");
+  const [visibleCount, setVisibleCount] = useState(24);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -48,7 +39,7 @@ function Courts() {
         (error) => {
           console.warn("Geolocation API unavailable or permission denied.", error.message);
         },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
     }
   }, []);
@@ -61,403 +52,184 @@ function Courts() {
     return null;
   }, [userCoords, user]);
 
+  // Extract unique districts dynamically from courts list
+  const availableDistricts = useMemo(() => {
+    const set = new Set<string>();
+    courts.forEach((c) => {
+      if (c.district) {
+        set.add(c.district);
+      }
+    });
+    return Array.from(set).sort();
+  }, [courts]);
+
+  // Extract unique sports dynamically from courts list
+  const availableSports = useMemo(() => {
+    const set = new Set<string>();
+    courts.forEach((c) => {
+      if (c.sport) {
+        set.add(c.sport);
+      }
+    });
+    return Array.from(set).sort();
+  }, [courts]);
+
+  // Reset pagination when any filter changes
   useEffect(() => {
-    if (courts.length > 0 && !selected) {
-      setSelected(courts[0]);
-    }
-  }, [courts, selected]);
+    setVisibleCount(24);
+  }, [searchTerm, selectedDistrict, selectedSport]);
 
-  useEffect(() => {
-    if (!selected) return;
+  // Filter and sort courts
+  const filteredAndSortedCourts = useMemo(() => {
+    let result = [...courts];
 
-    const courtId = selected.id;
-    const todayStr = new Date().toISOString().split("T")[0];
-
-    async function fetchBookedSlots() {
-      try {
-        setLoadingBookings(true);
-        const booked = await apiClient.bookings.getByCourtAndDate(courtId, todayStr);
-        setBookedSlots(booked);
-      } catch (err) {
-        console.error("Error loading booked slots:", err);
-      } finally {
-        setLoadingBookings(false);
-      }
-    }
-    fetchBookedSlots();
-
-    // Subscribe to Postgres changes for bookings of this court on today's date
-    const channel = supabase
-      .channel(`public:bookings:court_id=eq.${courtId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "bookings",
-          filter: `court_id=eq.${courtId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newBooking = payload.new as { date: string; time_slot: string };
-            if (newBooking.date === todayStr) {
-              setBookedSlots((prev) => {
-                if (prev.includes(newBooking.time_slot)) return prev;
-                return [...prev, newBooking.time_slot];
-              });
-            }
-          } else if (payload.eventType === "DELETE") {
-            const oldBooking = payload.old as { date: string; time_slot: string };
-            if (oldBooking.date === todayStr) {
-              setBookedSlots((prev) => prev.filter((s) => s !== oldBooking.time_slot));
-            }
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selected]);
-
-  if (!selected || !user) {
-    return (
-      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
-    );
-  }
-
-  // Dynamic slots based on court metadata
-  const slots = selected.operating_hours || [
-    "08:00",
-    "10:00",
-    "12:00",
-    "14:00",
-    "16:00",
-    "18:00",
-    "19:00",
-    "20:00",
-    "21:00",
-  ];
-
-  // Dynamic players limit based on court metadata
-  const maxPlayers = selected.max_players || 4;
-  const pricePerPerson = (selected.price_per_hour + 3) / maxPlayers;
-
-  const handleConfirmBooking = async () => {
-    if (!slot) {
-      toast.error("Por favor selecciona un horario.");
-      return;
-    }
-    if (!user) {
-      toast.error("Debes iniciar sesión para realizar una reserva.");
-      return;
+    // 1. Apply District filter
+    if (selectedDistrict) {
+      result = result.filter((c) => c.district === selectedDistrict);
     }
 
-    const cost = Math.ceil(pricePerPerson);
-    if (user.fitcoins_balance < cost) {
-      setIsBalanceModalOpen(true);
-      return;
+    // 2. Apply Sport filter
+    if (selectedSport) {
+      result = result.filter((c) => c.sport === selectedSport);
     }
 
-    try {
-      setIsBooking(true);
-      const todayStr = new Date().toISOString().split("T")[0];
-
-      // 1. Double Booking Prevention: Check availability in database
-      const booked = await apiClient.bookings.getByCourtAndDate(selected.id, todayStr);
-      if (booked.includes(slot)) {
-        toast.error("Este horario ya ha sido reservado. Por favor elige otro.");
-        setBookedSlots(booked); // Sync state
-        setIsBooking(false);
-        return;
-      }
-
-      // 2. Process Simulated Payment
-      const paymentSuccess = await processPayment(cost, selected.name);
-      if (!paymentSuccess) {
-        const currentError = usePaymentGatewayStore.getState().error;
-        toast.error(currentError || "El pago no pudo ser procesado.");
-        setIsBooking(false);
-        return;
-      }
-
-      // 3. Perform INSERT
-      await apiClient.bookings.create({
-        court_id: selected.id,
-        user_id: user.id,
-        date: todayStr,
-        time_slot: slot,
-        operating_hours: selected.operating_hours,
-      });
-
-      setConfirmed(true);
-      toast.success("¡Reserva confirmada con éxito!", {
-        description: `Turno reservado para hoy a las ${slot} hrs.`,
-      });
-    } catch (err: unknown) {
-      console.error("Booking error:", err);
-      const pgErr = err as { code?: string };
-      if (pgErr?.code === "23505") {
-        toast.error("Este horario ya ha sido reservado por otro usuario.");
-      } else {
-        toast.error("Error al procesar la reserva. Por favor intenta de nuevo.");
-      }
-    } finally {
-      setIsBooking(false);
+    // 3. Apply Search Term filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          (c.address && c.address.toLowerCase().includes(term)),
+      );
     }
-  };
+
+    // 4. Proximity or Rating Sorting
+    if (baseLocation) {
+      result = result
+        .map((c) => ({
+          ...c,
+          distance_km: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
+        }))
+        .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
+    } else {
+      result.sort((a, b) => b.rating - a.rating);
+    }
+
+    return result;
+  }, [courts, selectedDistrict, selectedSport, searchTerm, baseLocation]);
+
+  const displayedCourts = useMemo(() => {
+    return filteredAndSortedCourts.slice(0, visibleCount);
+  }, [filteredAndSortedCourts, visibleCount]);
 
   return (
-    <div className="container mx-auto px-4 lg:px-8 py-8">
-      <PageHeader title="Reservar cancha" subtitle="Disponibilidad en tiempo real" />
+    <div className="container mx-auto px-4 lg:px-8 py-8 animate-fade-in">
+      <PageHeader
+        title="Reservar cancha"
+        subtitle="Disponibilidad en tiempo real para todas las disciplinas en Lima"
+      />
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            {courts.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => {
-                  setSelected(c);
-                  setSlot(null);
-                  setConfirmed(false);
-                }}
-                className={`text-left rounded-2xl overflow-hidden border transition-all ${
-                  selected.id === c.id
-                    ? "border-primary ring-glow"
-                    : "border-border hover:border-accent"
-                }`}
-              >
-                <div className="relative h-40">
-                  <img
-                    src={c.image_url}
-                    alt={c.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                  <div className="absolute top-3 right-3">
-                    {c.is_available ? (
-                      <span className="px-2 py-1 rounded-full bg-neon/90 text-neon-foreground text-xs font-semibold">
-                        Disponible
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-full bg-destructive/90 text-destructive-foreground text-xs">
-                        Ocupado
-                      </span>
-                    )}
-                  </div>
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <div className="font-semibold">{c.name}</div>
-                    <div className="text-xs text-white/80 flex items-center gap-2 mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {baseLocation
-                          ? `${calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng).toFixed(1)} km`
-                          : `${c.distance_km ?? 0} km`}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-warning text-warning" />
-                        {c.rating}
-                      </span>
-                      <span>· ${c.price_per_hour}/h</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-card">
-                  <div className="flex flex-wrap gap-1">
-                    {c.amenities?.map((a) => (
-                      <span key={a} className="text-xs px-2 py-0.5 rounded-full bg-accent">
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+      {/* Filters Container */}
+      <div className="bg-card/20 border border-border/40 rounded-3xl p-5 mb-8 backdrop-blur-md shadow-card">
+        <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <SlidersHorizontal className="h-4 w-4 text-primary" />
+          <span>Filtros de búsqueda</span>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
-            <h3 className="font-semibold">{selected.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {selected.sport} · ${selected.price_per_hour}/h
-            </p>
-
-            <div className="mt-4">
-              <div className="text-xs text-muted-foreground mb-2 flex justify-between items-center">
-                <span>Hoy · Selecciona horario</span>
-                {loadingBookings && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {slots.map((s) => {
-                  const taken = bookedSlots.includes(s);
-                  return (
-                    <button
-                      key={s}
-                      disabled={taken}
-                      onClick={() => {
-                        if (!confirmed) setSlot(s);
-                      }}
-                      className={`py-2 rounded-lg text-sm transition-all ${
-                        taken
-                          ? "bg-muted/40 text-muted-foreground/50 line-through cursor-not-allowed"
-                          : slot === s
-                            ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                            : "glass hover:bg-accent"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-border space-y-2 text-sm">
-              <Row label="Cancha" value={`$${selected.price_per_hour}`} />
-              <Row label="Servicio" value="$3" />
-              <Row label="Dividir entre" value={`${maxPlayers} jugadores`} />
-              <div className="flex justify-between font-semibold pt-2 border-t border-border">
-                <span>Tu parte</span>
-                <span className="text-neon">${pricePerPerson.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleConfirmBooking}
-              disabled={!slot || isBooking || confirmed}
-              className="mt-5 w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isBooking ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Procesando...</span>
-                </>
-              ) : confirmed ? (
-                "Reserva confirmada ✓"
-              ) : (
-                "Confirmar reserva"
-              )}
-            </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search filter */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar por complejo o dirección..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-accent/30 border border-border/50 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60 transition-all"
+            />
           </div>
 
-          {confirmed && (
-            <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-4 relative overflow-hidden font-sans">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
+          {/* District filter */}
+          <select
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            className="w-full bg-accent/30 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-foreground transition-all cursor-pointer"
+          >
+            <option value="">Todos los distritos ({availableDistricts.length})</option>
+            {availableDistricts.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
 
-              <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
-                <Check className="h-6 w-6 text-neon" />
-              </div>
-              <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
-              <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
-
-              {/* Ticket separator dashed line */}
-              <div className="my-5 border-t-2 border-dashed border-border/60 relative">
-                <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
-                <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
-              </div>
-
-              <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
-                <div className="flex justify-between items-center pb-2 border-b border-border/30">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    Transacción
-                  </span>
-                  <span className="font-mono text-xs font-bold text-neon">
-                    {transactionId || "TXN-DEMO123"}
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="font-bold text-foreground text-sm">{selected.name}</div>
-                  <div className="text-[11px] text-muted-foreground leading-normal">
-                    {selected.address}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-1">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
-                    <div className="text-xs font-bold text-foreground">{selected.sport}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">
-                      Fecha y Hora
-                    </div>
-                    <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-border/30 space-y-1.5">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                    Detalle del Pago
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Precio Cancha / Hora</span>
-                    <span>S/ {selected.price_per_hour.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Comisión de Servicio</span>
-                    <span>S/ 3.00</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Descuento (FitCoins gastados)</span>
-                    <span className="text-neon">-S/ {Math.ceil(pricePerPerson).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
-                    <span>Total Pagado</span>
-                    <span>S/ 0.00</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* QR Code section */}
-              <div className="mt-5 space-y-2">
-                <p className="text-[10px] text-muted-foreground">
-                  Mostrá este QR de check-in al ingresar al club
-                </p>
-                <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
-                  <QrCode className="h-28 w-28 text-black" />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Sport filter */}
+          <select
+            value={selectedSport}
+            onChange={(e) => setSelectedSport(e.target.value)}
+            className="w-full bg-accent/30 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-foreground transition-all cursor-pointer"
+          >
+            <option value="">Todos los deportes ({availableSports.length})</option>
+            {availableSports.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {isProcessing && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex flex-col items-center justify-center space-y-6">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-primary blur-xl opacity-50 animate-pulse"></div>
-            <div className="relative bg-card border border-border p-6 rounded-full shadow-glow">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-          </div>
-          <div className="text-center space-y-2 max-w-sm px-6">
-            <h3 className="text-xl font-bold text-foreground">Procesando Pago</h3>
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Conectando de forma segura con la pasarela de pago (Niubiz/Stripe)...
-            </p>
-          </div>
+      {/* Results Section */}
+      <div className="flex items-center justify-between mb-6 text-xs text-muted-foreground font-semibold">
+        <span>
+          Mostrando {displayedCourts.length} de {filteredAndSortedCourts.length} complejos
+          deportivos
+        </span>
+        {baseLocation && (
+          <span className="flex items-center gap-1 text-neon">
+            <MapPin className="h-3.5 w-3.5" /> Ordenado por cercanía
+          </span>
+        )}
+      </div>
+
+      {displayedCourts.length > 0 ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="courts-grid">
+          {displayedCourts.map((c) => (
+            <CourtCard
+              key={`${c.id}-${c.name}-${c.district}`}
+              court={c}
+              onClick={() => setSelectedCourtForBooking(c)}
+              baseLocation={baseLocation}
+              variant="grid"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 rounded-3xl border border-dashed border-border/60 bg-card/10 text-muted-foreground max-w-lg mx-auto">
+          <p className="text-base font-semibold mb-1">No se encontraron canchas</p>
+          <p className="text-xs">Prueba cambiando tus filtros de búsqueda o distrito.</p>
         </div>
       )}
 
-      <InsufficientBalanceModal
-        isOpen={isBalanceModalOpen}
-        onOpenChange={setIsBalanceModalOpen}
-        cost={Math.ceil(pricePerPerson)}
-        balance={user?.fitcoins_balance ?? 0}
-      />
-    </div>
-  );
-}
+      {/* Load More Button */}
+      {filteredAndSortedCourts.length > visibleCount && (
+        <div className="flex justify-center mt-10">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((prev) => prev + 24)}
+            className="px-6 py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-glow cursor-pointer"
+          >
+            Ver más complejos
+          </button>
+        </div>
+      )}
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span>{value}</span>
+      <BookingModal
+        court={selectedCourtForBooking}
+        isOpen={selectedCourtForBooking !== null}
+        onOpenChange={(open) => !open && setSelectedCourtForBooking(null)}
+        baseLocation={baseLocation}
+      />
     </div>
   );
 }

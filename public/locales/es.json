@@ -65,13 +65,16 @@
     "keep_swiping": "Seguir Deslizando",
     "empty_stack": "Sin más sugerencias",
     "sport_default": "Deporte",
-    "user_default": "Usuario"
+    "user_default": "Usuario",
+    "view_profile": "Ver Perfil"
   },
   "map": {
     "title": "Mapa en vivo",
     "subtitle": "Canchas, partidos y jugadores cerca tuyo",
     "near_you": "Cerca tuyo",
-    "view_court": "Ver Cancha"
+    "view_court": "Ver Cancha",
+    "filter_district": "Filtrar por distrito / Hub",
+    "all_districts": "Todos los distritos"
   },
   "chat": {
     "title": "Mensajes",
@@ -212,7 +215,10 @@
     "password_crit_upper": "1 Mayúscula",
     "password_crit_lower": "1 Minúscula",
     "password_crit_number": "1 Número",
-    "password_crit_special": "1 Carácter especial (!@#$%^&*)"
+    "password_crit_special": "1 Carácter especial (!@#$%^&*)",
+    "continue_with_google": "Continuar con Google",
+    "sign_in_with_google": "Iniciar Sesión con Google",
+    "or_continue_with": "O continúa con"
   },
   "feedback": {
     "modal_title": "Calificar Partido & Jugadores",
@@ -234,5 +240,27 @@
   },
   "common": {
     "loading": "Cargando..."
+  },
+  "landing": {
+    "empezar": "Empezar a jugar",
+    "crear_cuenta": "Crear cuenta",
+    "features_title": "Características",
+    "matchmaking_title": "Matchmaking Inteligente",
+    "matchmaking_desc": "Nuestra IA analiza tu nivel deportivo, Trust Score, ubicación y horarios preferidos para conectarte con los rivales o compañeros ideales en minutos.",
+    "squads_title": "Squads y Comunidad",
+    "split_billing_title": "Pago Dividido",
+    "split_billing_desc": "Olvídate de cobrar a cada uno. El costo del alquiler se divide automáticamente entre los participantes activos de tu squad desde su billetera de FitCoins.",
+    "group_chat_title": "Chat Grupal Integrado",
+    "group_chat_desc": "Comunícate en tiempo real con tu squad, organiza pichangas, comparte memes y mantén la pasión del partido viva.",
+    "map_title": "Mapa de Sedes y Cobertura Completa",
+    "map_desc": "Visualiza los 35 distritos de Lima metropolitana en un mapa interactivo con filtro de 'Modo Noche'. Encuentra tu complejo deportivo de pádel o fútbol ideal de forma georreferenciada.",
+    "challenges_title": "Desafíos Deportivos en Vivo",
+    "challenges_desc": "Supera retos semanales para acumular FitCoins y canjearlos en nuestro Marketplace. Mantente activo y sube de nivel.",
+    "challenge_padel": "3 partidos de Pádel esta semana",
+    "challenge_squad": "Organizar evento de Squad",
+    "challenge_cup": "Torneo Copa SportMatch",
+    "status_seeking": "Buscando",
+    "status_starting": "Comenzando",
+    "status_full": "Lleno"
   }
 }

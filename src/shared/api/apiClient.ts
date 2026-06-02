@@ -1,314 +1,69 @@
 import { supabase } from "./supabase";
 import { User, Court, Match, Transaction, SportCatalog, Sport, Level } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { withTimeout } from "./timeoutHelper";
 
 // In-memory cache for bookings made during Demo Mode to allow realistic UX updates
 const demoBookingsCache: Record<string, string[]> = {};
 
-export const MOCK_COURTS: Court[] = [
-  {
-    id: "lima-court-01",
-    created_at: new Date().toISOString(),
-    name: "Miraflores Padel Club",
-    sport: "Pádel",
-    price_per_hour: 120,
-    rating: 4.9,
-    reviews_count: 142,
-    lat: -12.1221,
-    lng: -77.0298,
-    image_url:
-      "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Vestuarios", "Iluminación Led", "Estacionamiento", "Cafetería Pro"],
-    is_available: true,
-    address: "Malecón de la Reserva 610, Miraflores",
-    distance_km: 0.5,
-    is_sponsored: true,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "21:00"],
-    max_players: 4,
-  },
-  {
-    id: "lima-court-02",
-    created_at: new Date().toISOString(),
-    name: "Padel Surco Club",
-    sport: "Pádel",
-    price_per_hour: 100,
-    rating: 4.7,
-    reviews_count: 98,
-    lat: -12.1284,
-    lng: -76.9745,
-    image_url:
-      "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Estacionamiento", "Alquiler de Palas", "Duchas", "Bebidas"],
-    is_available: true,
-    address: "Av. Cerros de Camacho 500, Santiago de Surco",
-    distance_km: 1.2,
-    is_sponsored: true,
-    operating_hours: ["07:00", "09:00", "11:00", "13:00", "15:00", "17:00", "19:00", "21:00"],
-    max_players: 4,
-  },
-  {
-    id: "lima-court-03",
-    created_at: new Date().toISOString(),
-    name: "La Molina Padel Arena",
-    sport: "Pádel",
-    price_per_hour: 130,
-    rating: 4.8,
-    reviews_count: 64,
-    lat: -12.0854,
-    lng: -76.9452,
-    image_url:
-      "https://images.unsplash.com/photo-1546429070-1fc422f1d77a?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Techado completo", "Gimnasio integrado", "Duchas Premium", "Parking Privado"],
-    is_available: true,
-    address: "Av. Raúl Ferrero 1200, La Molina",
-    distance_km: 2.3,
-    is_sponsored: false,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"],
-    max_players: 4,
-  },
-  {
-    id: "lima-court-04",
-    created_at: new Date().toISOString(),
-    name: "Pádel Club Rinconada",
-    sport: "Pádel",
-    price_per_hour: 120,
-    rating: 4.6,
-    reviews_count: 37,
-    lat: -12.0982,
-    lng: -76.9324,
-    image_url:
-      "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Seguridad 24h", "Snack Bar", "Wifi", "Tribuna"],
-    is_available: true,
-    address: "Calle El Rincón 200, La Molina",
-    distance_km: 3.1,
-    is_sponsored: false,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"],
-    max_players: 4,
-  },
-  {
-    id: "lima-court-05",
-    created_at: new Date().toISOString(),
-    name: "Padel Lima Club",
-    sport: "Pádel",
-    price_per_hour: 110,
-    rating: 4.7,
-    reviews_count: 85,
-    lat: -12.1021,
-    lng: -76.9932,
-    image_url:
-      "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Luz Artificial Pro", "Cafetería", "Lockers", "Pádel Shop"],
-    is_available: true,
-    address: "Av. San Luis 1520, San Borja",
-    distance_km: 1.5,
-    is_sponsored: false,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"],
-    max_players: 4,
-  },
-  {
-    id: "lima-court-06",
-    created_at: new Date().toISOString(),
-    name: "Deporcentro Casuarinas",
-    sport: "Fútbol",
-    price_per_hour: 90,
-    rating: 4.5,
-    reviews_count: 210,
-    lat: -12.1174,
-    lng: -76.9682,
-    image_url:
-      "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Pasto Sintético FIFA", "Vestuarios amplios", "Estacionamiento", "Luz de Noche"],
-    is_available: true,
-    address: "Av. Jacarandá 850, Santiago de Surco",
-    distance_km: 2.1,
-    is_sponsored: true,
-    operating_hours: ["18:00", "19:00", "20:00", "21:00", "22:00"],
-    max_players: 14,
-  },
-  {
-    id: "lima-court-07",
-    created_at: new Date().toISOString(),
-    name: "La 10 - Surco",
-    sport: "Fútbol",
-    price_per_hour: 80,
-    rating: 4.4,
-    reviews_count: 156,
-    lat: -12.1382,
-    lng: -76.9805,
-    image_url:
-      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Tribuna techada", "Arbitraje opcional", "Snacks", "Estacionamiento"],
-    is_available: true,
-    address: "Av. Caminos del Inca 256, Surco",
-    distance_km: 1.1,
-    is_sponsored: false,
-    operating_hours: ["18:00", "19:00", "20:00", "21:00", "22:00"],
-    max_players: 14,
-  },
-  {
-    id: "lima-court-08",
-    created_at: new Date().toISOString(),
-    name: "Futbol Plaza La Molina",
-    sport: "Fútbol",
-    price_per_hour: 70,
-    rating: 4.3,
-    reviews_count: 112,
-    lat: -12.0721,
-    lng: -76.9582,
-    image_url:
-      "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Césped Sintético", "Luz artificial", "Parking gratis"],
-    is_available: true,
-    address: "Av. Separadora Industrial 3050, La Molina",
-    distance_km: 3.5,
-    is_sponsored: false,
-    operating_hours: ["18:00", "19:00", "20:00", "21:00", "22:00"],
-    max_players: 14,
-  },
-  {
-    id: "lima-court-09",
-    created_at: new Date().toISOString(),
-    name: "San Borja Fútbol Club",
-    sport: "Fútbol",
-    price_per_hour: 85,
-    rating: 4.6,
-    reviews_count: 93,
-    lat: -12.0912,
-    lng: -77.0123,
-    image_url:
-      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Vestuarios", "Seguridad Municipal", "Estacionamiento", "Parrillas"],
-    is_available: true,
-    address: "Av. Javier Prado Este 2500, San Borja",
-    distance_km: 2.8,
-    is_sponsored: false,
-    operating_hours: ["18:00", "19:00", "20:00", "21:00", "22:00"],
-    max_players: 14,
-  },
-  {
-    id: "lima-court-10",
-    created_at: new Date().toISOString(),
-    name: "Complejo DeporLima Surco",
-    sport: "Fútbol",
-    price_per_hour: 80,
-    rating: 4.5,
-    reviews_count: 78,
-    lat: -12.145,
-    lng: -76.991,
-    image_url:
-      "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Duchas caliente", "Cafetería", "Luz de Noche", "Chalecos gratis"],
-    is_available: true,
-    address: "Jr. Batallón Callao 400, Santiago de Surco",
-    distance_km: 1.8,
-    is_sponsored: false,
-    operating_hours: ["17:00", "18:00", "19:00", "20:00", "21:00", "22:00"],
-    max_players: 14,
-  },
-  {
-    id: "lima-court-11",
-    created_at: new Date().toISOString(),
-    name: "Centro Deportivo Municipal",
-    sport: "Vóley",
-    price_per_hour: 60,
-    rating: 4.7,
-    reviews_count: 240,
-    lat: -12.1332,
-    lng: -76.9992,
-    image_url:
-      "https://images.unsplash.com/photo-1592656094247-b98a09698714?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Pabellón Cubierto", "Tribunas", "Servicio Médico", "Cafetería"],
-    is_available: true,
-    address: "Av. Loma Amarilla, Surco",
-    distance_km: 1.2,
-    is_sponsored: true,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"],
-    max_players: 12,
-  },
-  {
-    id: "lima-court-12",
-    created_at: new Date().toISOString(),
-    name: "Complejo Manuel Bonilla",
-    sport: "Vóley",
-    price_per_hour: 75,
-    rating: 4.5,
-    reviews_count: 115,
-    lat: -12.1091,
-    lng: -77.0423,
-    image_url:
-      "https://images.unsplash.com/photo-1592656094247-b98a09698714?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Vista al Mar", "Estacionamiento", "Luces Artificiales", "Tribuna"],
-    is_available: true,
-    address: "Av. Ejército 1300, Miraflores",
-    distance_km: 3.8,
-    is_sponsored: false,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"],
-    max_players: 12,
-  },
-  {
-    id: "lima-court-13",
-    created_at: new Date().toISOString(),
-    name: "Miraflores Tennis Center",
-    sport: "Tenis",
-    price_per_hour: 80,
-    rating: 4.8,
-    reviews_count: 164,
-    lat: -12.1232,
-    lng: -77.0374,
-    image_url:
-      "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Arcilla Roja", "Entrenadores ATP", "Vestuarios", "Tennis Bar"],
-    is_available: true,
-    address: "Av. Larco 1150, Miraflores",
-    distance_km: 3.2,
-    is_sponsored: false,
-    operating_hours: ["07:00", "09:00", "11:00", "13:00", "15:00", "17:00", "19:00"],
-    max_players: 2,
-  },
-  {
-    id: "lima-court-14",
-    created_at: new Date().toISOString(),
-    name: "San Borja Tenis y Pádel Club",
-    sport: "Tenis",
-    price_per_hour: 100,
-    rating: 4.6,
-    reviews_count: 74,
-    lat: -12.0954,
-    lng: -76.9982,
-    image_url:
-      "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Canchas rápidas", "Cafetería", "Lockers", "Estacionamiento"],
-    is_available: true,
-    address: "Av. Boulevard de la Surco 300, San Borja",
-    distance_km: 2.5,
-    is_sponsored: false,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"],
-    max_players: 2,
-  },
-  {
-    id: "lima-court-15",
-    created_at: new Date().toISOString(),
-    name: "Rinconada Country Club",
-    sport: "Pádel",
-    price_per_hour: 150,
-    rating: 4.9,
-    reviews_count: 212,
-    lat: -12.0911,
-    lng: -76.9234,
-    image_url:
-      "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=600",
-    amenities: ["Doble vidrio templado", "Club House Premium", "Piscina", "Duchas Vip"],
-    is_available: true,
-    address: "Av. Manuel Prado Ugarteche, La Molina",
-    distance_km: 4.5,
-    is_sponsored: true,
-    operating_hours: ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"],
-    max_players: 4,
-  },
-];
+import { EXCEL_MOCK_COURTS } from "./mockCourtsData";
+export const MOCK_COURTS: Court[] = EXCEL_MOCK_COURTS;
 
 export const MOCK_USERS: User[] = [
+  {
+    id: "user-edwin-master",
+    created_at: new Date().toISOString(),
+    name: "Edwin Flores",
+    age: 29,
+    city: "Surco, Lima",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Edwin",
+    bio: "Usuario Maestro Edwin.",
+    trust_score: 99,
+    fitcoins_balance: 3500,
+    level: "Elite",
+    preferred_sports: ["Pádel", "Fútbol"],
+    matches_played: 15,
+    last_location_lat: -12.14,
+    last_location_lng: -76.995,
+    user_role: "PLAYER",
+  },
+  {
+    id: "user-fabiola",
+    created_at: new Date().toISOString(),
+    name: "Fabiola",
+    age: 24,
+    city: "San Borja, Lima",
+    avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola",
+    bio: "Amante del running y del tenis.",
+    trust_score: 95,
+    fitcoins_balance: 1200,
+    level: "Intermedio",
+    preferred_sports: ["Running", "Tenis"],
+    matches_played: 10,
+    last_location_lat: -12.11,
+    last_location_lng: -76.99,
+    user_role: "PLAYER",
+  },
+  {
+    id: "user-puka-power",
+    created_at: new Date().toISOString(),
+    name: "Puka Power",
+    age: 42,
+    city: "Surco, Lima",
+    avatar_url: "https://api.dicebear.com/7.x/identicon/svg?seed=Puka",
+    bio: "Representante de bebidas premium energéticas.",
+    trust_score: 100,
+    fitcoins_balance: 10000,
+    level: "Elite",
+    preferred_sports: [],
+    matches_played: 0,
+    last_location_lat: -12.086,
+    last_location_lng: -76.975,
+    user_role: "BUSINESS",
+    company_name: "Puka Power Inc.",
+    business_category: "Bebidas",
+    is_sponsored: true,
+  },
   {
     id: "user-1",
     created_at: new Date().toISOString(),
@@ -386,7 +141,11 @@ export const MOCK_MATCHES: Match[] = [
     court_id: "court-1",
     sport: "Pádel",
     title: "Dobles de Pádel Competitivo",
-    date: new Date().toISOString().split("T")[0],
+    date: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split("T")[0];
+    })(),
     time: "18:00",
     max_players: 4,
     required_level: "Intermedio",
@@ -401,7 +160,11 @@ export const MOCK_MATCHES: Match[] = [
     court_id: "court-3",
     sport: "Tenis",
     title: "Single de Tenis Amistoso",
-    date: new Date().toISOString().split("T")[0],
+    date: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      return d.toISOString().split("T")[0];
+    })(),
     time: "10:00",
     max_players: 2,
     required_level: "Principiante",
@@ -484,6 +247,27 @@ const MOCK_SPORTS: SportCatalog[] = [
   },
 ];
 
+interface MatchParticipantWithProfile {
+  status: string;
+  profile: User | null;
+}
+
+interface DBResponseMatch {
+  id: string;
+  created_at: string;
+  court_id: string;
+  sport: Sport;
+  title: string;
+  date: string;
+  time: string;
+  max_players: number;
+  required_level: Level;
+  creator_id: string;
+  status?: "Open" | "Full" | "Finished" | "Cancelled" | "IN_PROGRESS";
+  court: Court | null;
+  match_participants?: MatchParticipantWithProfile[];
+}
+
 export const apiClient = {
   users: {
     async getMatches(excludeUserId?: string): Promise<User[]> {
@@ -529,14 +313,25 @@ export const apiClient = {
         return MOCK_MATCHES;
       }
 
-      const { data, error } = await supabase.from("matches").select("*, court:courts(*)");
+      const { data, error } = await supabase.from("matches").select(`
+          *,
+          court:courts(*),
+          match_participants(
+            status,
+            profile:profiles(*)
+          )
+        `);
       if (error) {
         if (import.meta.env.DEV) console.error("Error fetching matches:", error);
         throw error;
       }
-      return (data || []).map((m: Record<string, unknown>) => ({
+      return ((data as unknown as DBResponseMatch[]) || []).map((m) => ({
         ...m,
-        current_players: [],
+        current_players:
+          m.match_participants
+            ?.filter((p) => p.status === "ACCEPTED" || p.status === "ATTENDED")
+            .map((p) => p.profile)
+            .filter((p): p is User => !!p) || [],
       })) as unknown as Match[];
     },
 
@@ -547,16 +342,29 @@ export const apiClient = {
 
       const { data, error } = await supabase
         .from("matches")
-        .select("*, court:courts(*)")
+        .select(
+          `
+          *,
+          court:courts(*),
+          match_participants(
+            status,
+            profile:profiles(*)
+          )
+        `,
+        )
         .eq("creator_id", userId);
 
       if (error) {
         if (import.meta.env.DEV) console.error("Error fetching user matches:", error);
         throw error;
       }
-      return (data || []).map((m: Record<string, unknown>) => ({
+      return ((data as unknown as DBResponseMatch[]) || []).map((m) => ({
         ...m,
-        current_players: [],
+        current_players:
+          m.match_participants
+            ?.filter((p) => p.status === "ACCEPTED" || p.status === "ATTENDED")
+            .map((p) => p.profile)
+            .filter((p): p is User => !!p) || [],
       })) as unknown as Match[];
     },
 
@@ -590,21 +398,23 @@ export const apiClient = {
         return newMatch;
       }
 
-      const { data, error } = await supabase
-        .from("matches")
-        .insert({
-          title: match.title,
-          sport: match.sport,
-          court_id: match.court_id,
-          date: match.date,
-          time: match.time,
-          max_players: match.max_players,
-          required_level: match.required_level,
-          creator_id: match.creator_id,
-          status: "Open",
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from("matches")
+          .insert({
+            title: match.title,
+            sport: match.sport,
+            court_id: match.court_id,
+            date: match.date,
+            time: match.time,
+            max_players: match.max_players,
+            required_level: match.required_level,
+            creator_id: match.creator_id,
+            status: "Open",
+          })
+          .select()
+          .single(),
+      );
 
       if (error) {
         if (import.meta.env.DEV) console.error("Error creating match:", error);
@@ -620,7 +430,15 @@ export const apiClient = {
   wallet: {
     async getBalance(userId: string): Promise<number> {
       if (useAuthStore.getState().isDemoMode) {
-        return 1500;
+        const storedBalances = localStorage.getItem("sportmatch_demo_balances");
+        const balances = storedBalances ? JSON.parse(storedBalances) : {};
+        if (balances[userId] !== undefined) {
+          return balances[userId];
+        }
+        const storedUsers = localStorage.getItem("sportmatch_demo_users");
+        const demoUsers = storedUsers ? JSON.parse(storedUsers) : MOCK_USERS;
+        const mockUser = demoUsers.find((u: User) => u.id === userId);
+        return mockUser ? mockUser.fitcoins_balance : 1500;
       }
 
       const { data, error } = await supabase
@@ -638,7 +456,21 @@ export const apiClient = {
 
     async getTransactions(userId: string): Promise<Transaction[]> {
       if (useAuthStore.getState().isDemoMode) {
-        return MOCK_TRANSACTIONS.filter((t) => t.user_id === userId || userId === "demo-user-id");
+        const key = `sportmatch_demo_transactions_${userId}`;
+        const stored = localStorage.getItem(key);
+        if (!stored) {
+          const seeded = MOCK_TRANSACTIONS.map((t) => ({
+            ...t,
+            user_id: userId,
+          }));
+          localStorage.setItem(key, JSON.stringify(seeded));
+          return seeded;
+        }
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return [];
+        }
       }
 
       const { data, error } = await supabase
@@ -653,20 +485,91 @@ export const apiClient = {
       }
       return (data || []) as Transaction[];
     },
+
+    saveTransaction(userId: string, tx: Transaction): void {
+      if (useAuthStore.getState().isDemoMode) {
+        const key = `sportmatch_demo_transactions_${userId}`;
+        const stored = localStorage.getItem(key);
+        let transactions: Transaction[] = [];
+        if (stored) {
+          try {
+            transactions = JSON.parse(stored);
+          } catch {
+            transactions = [];
+          }
+        } else {
+          transactions = MOCK_TRANSACTIONS.map((t) => ({
+            ...t,
+            user_id: userId,
+          }));
+        }
+        if (!transactions.some((t) => t.id === tx.id)) {
+          transactions = [tx, ...transactions];
+        }
+        localStorage.setItem(key, JSON.stringify(transactions));
+      }
+    },
+
+    updateBalance(userId: string, newBalance: number): void {
+      if (useAuthStore.getState().isDemoMode) {
+        const storedBalances = localStorage.getItem("sportmatch_demo_balances");
+        const balances = storedBalances ? JSON.parse(storedBalances) : {};
+        balances[userId] = newBalance;
+        localStorage.setItem("sportmatch_demo_balances", JSON.stringify(balances));
+
+        const mockUser = MOCK_USERS.find((u) => u.id === userId);
+        if (mockUser) {
+          mockUser.fitcoins_balance = newBalance;
+        }
+
+        const storedUsers = localStorage.getItem("sportmatch_demo_users");
+        if (storedUsers) {
+          const users = JSON.parse(storedUsers);
+          const u = users.find((x: User) => x.id === userId);
+          if (u) {
+            u.fitcoins_balance = newBalance;
+            localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
+          }
+        }
+
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser && currentUser.id === userId) {
+          useAuthStore.setState({ user: { ...currentUser, fitcoins_balance: newBalance } });
+        }
+      }
+    },
   },
 
   courts: {
-    async getAll(): Promise<Court[]> {
+    async getAll(sport?: string): Promise<Court[]> {
       if (useAuthStore.getState().isDemoMode) {
+        if (sport) {
+          return MOCK_COURTS.filter((c) => c.sport === sport);
+        }
         return MOCK_COURTS;
       }
 
-      const { data, error } = await supabase.from("courts").select("*");
+      let query = supabase.from("courts").select("*");
+      if (sport) {
+        query = query.eq("sport", sport);
+      }
+      const { data, error } = await query;
       if (error) {
         if (import.meta.env.DEV) console.error("Error fetching courts:", error);
         throw error;
       }
       return (data || []) as Court[];
+    },
+
+    async getById(id: string): Promise<Court> {
+      if (useAuthStore.getState().isDemoMode) {
+        const found = MOCK_COURTS.find((c) => c.id === id);
+        if (!found) throw new Error("Court not found");
+        return found;
+      }
+      const { data, error } = await supabase.from("courts").select("*").eq("id", id).single();
+      if (error) throw error;
+      return data as Court;
     },
   },
 
@@ -745,9 +648,9 @@ export const apiClient = {
       }
 
       const { time_slot, court_id, date, user_id } = booking;
-      const { error } = await supabase
-        .from("bookings")
-        .insert({ court_id, date, time_slot, user_id });
+      const { error } = await withTimeout(
+        supabase.from("bookings").insert({ court_id, date, time_slot, user_id }),
+      );
       if (error) {
         if (import.meta.env.DEV) console.error("Error creating booking:", error);
         throw error;

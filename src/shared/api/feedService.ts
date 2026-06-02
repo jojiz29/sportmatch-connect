@@ -1,10 +1,15 @@
-﻿import { supabase } from "./supabase";
+import { supabase } from "./supabase";
 import { Post } from "@/entities/types";
 import { calculateDistance } from "./geoService";
 import { createNotification } from "./notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { withTimeout } from "./timeoutHelper";
+import { getCatalogItems } from "./businessService";
+import { useSocialStore } from "@/features/social/model/useSocialStore";
 
-const MOCK_POSTS: Post[] = [
+const LOCAL_STORAGE_KEY_POSTS = "sportmatch_demo_posts";
+
+const DEFAULT_MOCK_POSTS: Post[] = [
   {
     id: "post-demo-1",
     user_id: "user-1",
@@ -40,6 +45,28 @@ const MOCK_POSTS: Post[] = [
   },
 ];
 
+function getMockPosts(): Post[] {
+  if (typeof window === "undefined") return DEFAULT_MOCK_POSTS;
+  try {
+    const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_POSTS);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn("Failed to load mock posts from localStorage:", e);
+  }
+  return DEFAULT_MOCK_POSTS;
+}
+
+function saveMockPosts(posts: Post[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LOCAL_STORAGE_KEY_POSTS, JSON.stringify(posts));
+  } catch (e) {
+    console.warn("Failed to save mock posts to localStorage:", e);
+  }
+}
+
 interface SupabasePost {
   id: string;
   user_id: string;
@@ -62,7 +89,7 @@ interface SupabasePost {
 
 export async function getFeed(userId: string): Promise<Post[]> {
   if (useAuthStore.getState().isDemoMode) {
-    return MOCK_POSTS;
+    return getMockPosts();
   }
 
   // 1. Fetch user's own profile for distance calculation
@@ -87,7 +114,7 @@ export async function getFeed(userId: string): Promise<Post[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    if (import.meta.env.DEV) console.error("Error fetching feed from Supabase:", error);
+    console.error(`Error fetching feed from Supabase (code: ${error.code}):`, error);
     throw error;
   }
 
@@ -152,27 +179,72 @@ export async function createPost(
       user_avatar: currentUser?.avatar_url || "",
       created_at: new Date().toISOString(),
     };
-    MOCK_POSTS.unshift(newPost);
+    const posts = getMockPosts();
+    posts.unshift(newPost);
+    saveMockPosts(posts);
+
+    // Trigger B2B notification for followers in demo mode
+    if (currentUser && currentUser.user_role === "BUSINESS") {
+      const businessName = currentUser.company_name || currentUser.name;
+      // Fetch first catalog item for deep link
+      getCatalogItems(userId)
+        .then(async (catalog) => {
+          const itemIdToLink = catalog[0]?.id;
+          const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
+          const notifTitle = `Nueva oferta de ${businessName}`;
+          const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
+
+          // In demo mode, notify all users who follow this business
+          const relationships = useSocialStore.getState().relationships;
+          const followerIds = relationships
+            .filter((r) => r.followingId === userId)
+            .map((r) => r.followerId);
+
+          console.log("B2B NOTIFICATION DEBUG:", {
+            userId,
+            relationships,
+            followerIds,
+            notifTitle,
+          });
+
+          for (const followerId of followerIds) {
+            await createNotification(
+              followerId,
+              "AD_IMPRESSION",
+              notifTitle,
+              notifContent,
+              notifLink,
+            );
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not trigger B2B post notifications in demo mode:", err);
+        });
+    }
+
     return newPost;
   }
   const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   // 1. Insert post in Supabase
-  const { data: post, error } = await supabase
-    .from("posts")
-    .insert({
-      id: newPostId,
-      user_id: userId,
-      content,
-      type,
-      media_url: mediaUrl || null,
-      sport: sport || null,
-    })
-    .select("*, profile:profiles(*)")
-    .single();
+  const { data: post, error } = await withTimeout(
+    supabase
+      .from("posts")
+      .insert({
+        id: newPostId,
+        user_id: userId,
+        content,
+        type,
+        media_url: mediaUrl || null,
+        sport: sport || null,
+      })
+      .select("*, profile:profiles(*)")
+      .single(),
+  );
 
   if (error || !post) {
-    if (import.meta.env.DEV) console.error("Error creating post in Supabase:", error);
+    const code = error ? error.code : "UNKNOWN";
+    console.error(`Error creating post in Supabase (code: ${code}):`, error);
     throw error || new Error("Failed to create post");
   }
 

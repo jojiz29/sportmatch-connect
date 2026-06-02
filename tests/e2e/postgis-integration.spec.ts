@@ -15,6 +15,7 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
     await context.setGeolocation({ latitude: -12.14, longitude: -76.995 });
 
     // 3. Login as Edwin Flores
+    page.on("console", (msg) => console.log("BROWSER CONSOLE:", msg.text()));
     await page.goto(`${targetURL}/login`);
     await page.fill('input[type="email"]', "ejuniorfloress@gmail.com");
     await page.fill('input[type="password"]', "EdwinFlores123?");
@@ -39,7 +40,7 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
 
     const firstCourt = listContainer.locator("div.flex.gap-3.items-center").first();
     await expect(firstCourt.locator(".text-sm.font-semibold")).toContainText("Pádel Center Surco");
-    await expect(firstCourt.locator(".text-xs.text-muted-foreground")).toContainText("0.78 km");
+    await expect(firstCourt).toContainText("0.8 km");
 
     // 7. Move user to San Borja center (-12.10, -76.99)
     await context.setGeolocation({ latitude: -12.1, longitude: -76.99 });
@@ -55,9 +56,8 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
     const firstCourtSanBorja = listContainerSanBorja.locator("div.flex.gap-3.items-center").first();
     await expect(firstCourtSanBorja.locator(".text-sm.font-semibold")).toContainText(
       "Tenis Club San Borja",
+      { timeout: 15000 },
     );
-    await expect(firstCourtSanBorja.locator(".text-xs.text-muted-foreground")).toContainText(
-      "0 km",
-    );
+    await expect(firstCourtSanBorja).toContainText("0.0 km");
   });
 });

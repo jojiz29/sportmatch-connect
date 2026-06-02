@@ -22,9 +22,9 @@ interface WalletState {
   transactions: Transaction[];
   challenges: Challenge[];
   initWallet: () => Promise<void>;
-  redeem: (cost: number, description: string) => Promise<boolean>;
+  redeem: (cost: number, description: string, rewardId?: string) => Promise<boolean>;
   purchaseItem: (cost: number, itemName: string, sellerId: string) => Promise<boolean>;
-  progressChallenge: (id: string) => void;
+  progressChallenge: (id: string) => Promise<void>;
   claimChallenge: (id: string) => Promise<void>;
 }
 
@@ -127,23 +127,20 @@ export const useWalletStore = create<WalletState>()(
           });
         }
       },
-
-      redeem: async (cost, description) => {
+      redeem: async (cost, description, rewardId) => {
         const user = useAuthStore.getState().user;
         if (!user) return false;
 
         const { balance } = get();
         if (balance < cost) return false;
 
-        const newBalance = balance - cost;
-
-        // Optimistic update
-        set({
-          balance: newBalance,
-        });
-        useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
-
         if (useAuthStore.getState().isDemoMode) {
+          const newBalance = balance - cost;
+          set({
+            balance: newBalance,
+          });
+          useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
+
           const newTransaction: Transaction = {
             id: `demo-tx-${Date.now()}`,
             user_id: user.id,
@@ -152,6 +149,8 @@ export const useWalletStore = create<WalletState>()(
             type: "SPEND",
             created_at: new Date().toISOString(),
           };
+          apiClient.wallet.updateBalance(user.id, newBalance);
+          apiClient.wallet.saveTransaction(user.id, newTransaction);
           set((state) => ({
             transactions: [newTransaction, ...state.transactions],
           }));
@@ -166,46 +165,69 @@ export const useWalletStore = create<WalletState>()(
         }
 
         try {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .update({ fitcoins_balance: newBalance })
-            .eq("id", user.id);
-          if (profileError) throw profileError;
+          if (rewardId) {
+            const { redeemReward } = await import("@/services/walletService");
+            const success = await redeemReward(user.id, rewardId);
+            if (success) {
+              const balanceVal = await apiClient.wallet.getBalance(user.id);
+              const transactionsVal = await apiClient.wallet.getTransactions(user.id);
+              set({ balance: balanceVal, transactions: transactionsVal });
+              useAuthStore.setState({ user: { ...user, fitcoins_balance: balanceVal } });
 
-          const newTransaction = {
-            user_id: user.id,
-            amount: -cost,
-            description,
-            type: "SPEND",
-          };
+              createNotification(
+                user.id,
+                "TRANSACTION_SUCCESS",
+                "Canje Exitoso",
+                `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
+                "/app/wallet/history",
+              ).catch((e) => console.warn(e));
 
-          const { data: insertedTx, error: txError } = await supabase
-            .from("wallet_transactions")
-            .insert(newTransaction)
-            .select()
-            .single();
-          if (txError) throw txError;
+              return true;
+            }
+            return false;
+          } else {
+            const newTransaction = {
+              user_id: user.id,
+              amount: -cost,
+              description,
+              type: "SPEND",
+            };
 
-          if (insertedTx) {
-            set((state) => ({
-              transactions: [insertedTx as Transaction, ...state.transactions],
-            }));
+            const { data: insertedTx, error: txError } = await supabase
+              .from("wallet_transactions")
+              .insert(newTransaction)
+              .select()
+              .single();
+
+            if (txError) throw txError;
+
+            if (insertedTx) {
+              set((state) => ({
+                transactions: [insertedTx as Transaction, ...state.transactions],
+              }));
+              const balanceVal = await apiClient.wallet.getBalance(user.id);
+              set({ balance: balanceVal });
+              useAuthStore.setState({ user: { ...user, fitcoins_balance: balanceVal } });
+            }
+
+            createNotification(
+              user.id,
+              "TRANSACTION_SUCCESS",
+              "Canje Exitoso",
+              `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
+              "/app/wallet/history",
+            ).catch((e) => console.warn(e));
+
+            return true;
           }
-
-          createNotification(
-            user.id,
-            "TRANSACTION_SUCCESS",
-            "Canje Exitoso",
-            `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
-            "/app/wallet/history",
-          ).catch((e) => console.warn(e));
-
-          return true;
-        } catch (e) {
-          console.error("Error during redeem:", e);
-          // Rollback
-          set({ balance });
-          useAuthStore.setState({ user });
+        } catch (err) {
+          const { handleWalletError } = await import("@/services/walletService");
+          const handled = handleWalletError(err);
+          if (!handled) {
+            const e = err as { code?: string; message?: string };
+            console.error(`Error during redeem:`, err);
+            toast.error(`Error al reclamar la recompensa: ${e?.message || String(err)}`);
+          }
           return false;
         }
       },
@@ -215,7 +237,7 @@ export const useWalletStore = create<WalletState>()(
         return false;
       },
 
-      progressChallenge: (id) => {
+      progressChallenge: async (id) => {
         set((state) => {
           const updated = state.challenges.map((c) => {
             if (c.id === id) {
@@ -226,6 +248,12 @@ export const useWalletStore = create<WalletState>()(
           });
           return { challenges: updated };
         });
+
+        const { challenges, claimChallenge } = get();
+        const challenge = challenges.find((c) => c.id === id);
+        if (challenge && challenge.progress >= challenge.total && !challenge.claimed) {
+          await claimChallenge(id);
+        }
       },
 
       claimChallenge: async (id) => {
@@ -261,6 +289,8 @@ export const useWalletStore = create<WalletState>()(
             type: "EARN",
             created_at: new Date().toISOString(),
           };
+          apiClient.wallet.updateBalance(user.id, newBalance);
+          apiClient.wallet.saveTransaction(user.id, newTransaction);
           set((state) => ({
             transactions: [newTransaction, ...state.transactions],
           }));
@@ -269,12 +299,6 @@ export const useWalletStore = create<WalletState>()(
         }
 
         try {
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .update({ fitcoins_balance: newBalance })
-            .eq("id", user.id);
-          if (profileError) throw profileError;
-
           const newTransaction = {
             user_id: user.id,
             amount: challenge.reward,
@@ -296,15 +320,17 @@ export const useWalletStore = create<WalletState>()(
           }
 
           toast.success(`¡Reclamaste +${challenge.reward} FitCoins! 🏆`);
-        } catch (e) {
-          console.error("Error during claimChallenge:", e);
+        } catch (err) {
+          const e = err as { code?: string; message?: string };
+          console.error(`Error during claimChallenge (code: ${e?.code}):`, err);
+          const code = e?.code ? ` (${e.code})` : "";
+          toast.error(`Error al reclamar la recompensa: ${e?.message || String(err)}${code}`);
           // Rollback
           set({
             balance,
             challenges,
           });
           useAuthStore.setState({ user });
-          toast.error("Error al reclamar la recompensa");
         }
       },
     }),

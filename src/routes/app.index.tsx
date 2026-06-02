@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { NewsFeed } from "@/features/feed/ui/NewsFeed";
 import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 import { supabase } from "@/shared/api/supabase";
+import { withTimeout } from "@/shared/api/timeoutHelper";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
 import {
@@ -30,6 +31,8 @@ import {
 } from "@/shared/ui/dialog";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useTranslation } from "react-i18next";
+import { CourtCard } from "@/components/CourtCard";
+import { BookingModal } from "@/components/BookingModal";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
@@ -81,6 +84,7 @@ function Dashboard() {
   const user = useAuthStore((state) => state.user);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [reviewMatch, setReviewMatch] = useState<Match | null>(null);
+  const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -95,7 +99,7 @@ function Dashboard() {
           if (import.meta.env.DEV)
             console.warn("Geolocation API unavailable or permission denied.", error.message);
         },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
     }
   }, []);
@@ -107,6 +111,7 @@ function Dashboard() {
     }
     return null;
   }, [userCoords, user]);
+
   const { matches, users, courts, sports } = Route.useLoaderData() as {
     matches: Match[];
     users: User[];
@@ -114,30 +119,163 @@ function Dashboard() {
     sports: SportCatalog[];
   };
 
+  const [liveMatches, setLiveMatches] = useState<Match[]>(matches);
+
+  useEffect(() => {
+    setLiveMatches(matches);
+  }, [matches]);
+
+  useEffect(() => {
+    if (useAuthStore.getState().isDemoMode) return;
+
+    const channel = supabase
+      .channel("public:matches")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "matches",
+        },
+        async (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newMatch = payload.new as Match;
+            try {
+              const { data: courtData } = await supabase
+                .from("courts")
+                .select("*")
+                .eq("id", newMatch.court_id)
+                .single();
+
+              const matchWithCourt = {
+                ...newMatch,
+                court: courtData || undefined,
+                current_players: [],
+              };
+
+              setLiveMatches((prev) => {
+                if (prev.some((m) => m.id === newMatch.id)) return prev;
+                return [matchWithCourt, ...prev];
+              });
+            } catch (err) {
+              console.error("Error fetching court details for realtime match insert:", err);
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updatedMatch = payload.new as Match;
+            setLiveMatches((prev) =>
+              prev.map((m) => (m.id === updatedMatch.id ? { ...m, ...updatedMatch } : m)),
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deletedMatch = payload.old as { id: string };
+            setLiveMatches((prev) => prev.filter((m) => m.id !== deletedMatch.id));
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     if (!user) return;
+    const currentUser = user;
     const reviewedIds = JSON.parse(
-      localStorage.getItem(`sportmatch_reviewed_matches_${user.id}`) || "[]",
+      localStorage.getItem(`sportmatch_reviewed_matches_${currentUser.id}`) || "[]",
     );
 
-    const unreviewed = matches.find((m) => {
-      const isPart = m.creator_id === user.id || m.current_players?.some((p) => p.id === user.id);
-      if (!isPart) return false;
+    async function checkRatingLoop() {
+      // 1. Filter candidate past/completed matches
+      const candidates = matches.filter((m) => {
+        const isPart =
+          m.creator_id === currentUser.id ||
+          m.current_players?.some((p) => p.id === currentUser.id);
+        if (!isPart) return false;
 
-      const matchStart = new Date(`${m.date}T${m.time}`);
-      const isPast = matchStart.getTime() < Date.now();
+        const matchStart = new Date(`${m.date}T${m.time}`);
+        const isPast = matchStart.getTime() < Date.now();
 
-      return isPast && !reviewedIds.includes(m.id);
-    });
+        // Match status must be finished/completed or past
+        const isCompleted =
+          (m.status as string) === "COMPLETED" || m.status === "Finished" || isPast;
+        if (!isCompleted) return false;
 
-    if (unreviewed) {
-      setReviewMatch(unreviewed);
+        return !reviewedIds.includes(m.id);
+      });
+
+      if (candidates.length === 0) return;
+
+      // 2. Gate checking for 'ATTENDED' status and geolocation proximity
+      for (const match of candidates) {
+        let isAttended = false;
+
+        if (useAuthStore.getState().isDemoMode) {
+          // Check demo storage flag
+          isAttended = localStorage.getItem(`sportmatch_demo_checkin_${match.id}`) === "true";
+        } else {
+          try {
+            const { data: participant } = await supabase
+              .from("match_participants")
+              .select("status")
+              .eq("match_id", match.id)
+              .eq("user_id", currentUser.id)
+              .single();
+            isAttended = participant?.status === "ATTENDED";
+          } catch (e) {
+            console.warn("Failed to query match status:", e);
+          }
+        }
+
+        if (!isAttended) continue;
+
+        // Geolocation Liveness check (user within 100m of the court coordinates)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const userLat = position.coords.latitude;
+              const userLng = position.coords.longitude;
+              const courtLat = match.court?.lat || -12.1221;
+              const courtLng = match.court?.lng || -77.0298;
+
+              const distance = calculateDistance(userLat, userLng, courtLat, courtLng);
+              const threshold = 0.1; // 100m
+
+              if (distance <= threshold) {
+                setReviewMatch(match);
+              } else {
+                console.warn(
+                  `Gated Rating Loop warning: User is too far (${(distance * 1000).toFixed(0)}m) to review match ${match.id}`,
+                );
+              }
+            },
+            (err) => {
+              console.warn("Geolocation permission error during rating loop liveness check:", err);
+            },
+            { enableHighAccuracy: true, timeout: 5000 },
+          );
+        }
+        break; // Process one rating prompt at a time
+      }
     }
+
+    checkRatingLoop();
   }, [matches, user]);
 
   const filteredMatches = selectedSport
-    ? matches.filter((m) => m.sport === selectedSport)
-    : matches;
+    ? liveMatches.filter((m) => m.sport === selectedSport)
+    : liveMatches;
+
+  const closestCourts = useMemo(() => {
+    if (!baseLocation) return courts.slice(0, 5);
+    return [...courts]
+      .map((c) => ({
+        ...c,
+        distance: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 5);
+  }, [courts, baseLocation]);
 
   const SPORTS =
     sports.length > 0
@@ -159,6 +297,32 @@ function Dashboard() {
   const [matchMaxPlayers, setMatchMaxPlayers] = useState<number>(4);
   const [matchLevel, setMatchLevel] = useState<Level>("Intermedio");
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
+  const [filteredCourts, setFilteredCourts] = useState<Court[]>([]);
+  const [loadingCourts, setLoadingCourts] = useState(false);
+
+  useEffect(() => {
+    if (!isCreateModalOpen) return;
+
+    let active = true;
+    setLoadingCourts(true);
+    apiClient.courts
+      .getAll(matchSport || undefined)
+      .then((res) => {
+        if (active) {
+          setFilteredCourts(res);
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading filtered courts:", err);
+      })
+      .finally(() => {
+        if (active) setLoadingCourts(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [matchSport, isCreateModalOpen]);
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,11 +350,13 @@ function Dashboard() {
 
       if (!useAuthStore.getState().isDemoMode) {
         // Automatically join the creator to match_participants
-        const { error: partError } = await supabase.from("match_participants").insert({
-          match_id: newMatch.id,
-          user_id: user.id,
-          status: "ACCEPTED",
-        });
+        const { error: partError } = await withTimeout(
+          supabase.from("match_participants").insert({
+            match_id: newMatch.id,
+            user_id: user.id,
+            status: "ACCEPTED",
+          }),
+        );
 
         if (partError) {
           if (import.meta.env.DEV) console.error("Error joining creator to match:", partError);
@@ -415,25 +581,16 @@ function Dashboard() {
           </div>
 
           <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
-            <h3 className="font-semibold mb-4">Canchas top</h3>
+            <h3 className="font-semibold mb-4">Canchas más cercanas</h3>
             <div className="space-y-3">
-              {courts.slice(0, 3).map((c) => (
-                <div key={c.id} className="flex gap-3">
-                  <img
-                    src={c.image_url}
-                    alt={c.name}
-                    className="h-14 w-14 rounded-xl object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate">{c.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.sport} · ${c.price_per_hour}/h
-                    </div>
-                    <div className="text-xs text-warning flex items-center gap-1 mt-0.5">
-                      <Star className="h-3 w-3 fill-warning" /> {c.rating}
-                    </div>
-                  </div>
-                </div>
+              {closestCourts.map((c) => (
+                <CourtCard
+                  key={`${c.id}-${c.name}-${c.district}`}
+                  court={c}
+                  onClick={() => setSelectedCourtForBooking(c)}
+                  baseLocation={baseLocation}
+                  variant="list"
+                />
               ))}
             </div>
           </div>
@@ -512,16 +669,23 @@ function Dashboard() {
               <select
                 value={matchCourtId}
                 onChange={(e) => setMatchCourtId(e.target.value)}
-                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                disabled={!matchSport}
+                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-50"
               >
-                <option value="">Ninguna (Sin Cancha Reservada)</option>
-                {courts
-                  .filter((c) => !matchSport || c.sport === matchSport)
-                  .map((c) => (
+                <option value="">
+                  {!matchSport
+                    ? "Selecciona primero un deporte..."
+                    : "Ninguna (Sin Cancha Reservada)"}
+                </option>
+                {loadingCourts ? (
+                  <option disabled>Cargando canchas...</option>
+                ) : (
+                  filteredCourts.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} (${c.price_per_hour}/h)
                     </option>
-                  ))}
+                  ))
+                )}
               </select>
             </div>
 
@@ -609,6 +773,12 @@ function Dashboard() {
           )}
         </DialogContent>
       </Dialog>
+      <BookingModal
+        court={selectedCourtForBooking}
+        isOpen={selectedCourtForBooking !== null}
+        onOpenChange={(open) => !open && setSelectedCourtForBooking(null)}
+        baseLocation={baseLocation}
+      />
     </div>
   );
 }
@@ -674,14 +844,34 @@ function MatchCard({ match }: { match: Match }) {
     }
     setIsJoining(true);
     setTimeout(async () => {
-      setIsJoining(false);
-      setJoined(true);
-      toast.success("¡Te uniste al partido!", {
-        description: "Revisa tu calendario para más detalles.",
-      });
-      // Automatically create a temporary Group Chat for the match
-      useChatStore.getState().createMatchGroupChat(match);
-      await router.invalidate();
+      try {
+        if (!useAuthStore.getState().isDemoMode) {
+          const { error } = await withTimeout(
+            supabase.from("match_participants").insert({
+              match_id: match.id,
+              user_id: user?.id,
+              status: "ACCEPTED",
+            }),
+          );
+          if (error) throw error;
+        }
+        setIsJoining(false);
+        setJoined(true);
+        toast.success("¡Te uniste al partido!", {
+          description: "Revisa tu calendario para más detalles.",
+        });
+        // Automatically create a temporary Group Chat for the match
+        useChatStore.getState().createMatchGroupChat(match);
+        await router.invalidate();
+      } catch (err) {
+        console.error("Error joining match in Supabase:", err);
+        setIsJoining(false);
+        const { handleWalletError } = await import("@/services/walletService");
+        const handled = handleWalletError(err);
+        if (!handled) {
+          toast.error("Error al unirse al partido. Por favor intenta de nuevo.");
+        }
+      }
     }, 600);
   };
 
@@ -704,15 +894,20 @@ function MatchCard({ match }: { match: Match }) {
         if (distance <= threshold) {
           try {
             if (!useAuthStore.getState().isDemoMode) {
-              await supabase.from("matches").update({ status: "IN_PROGRESS" }).eq("id", match.id);
+              await withTimeout(
+                supabase.from("matches").update({ status: "IN_PROGRESS" }).eq("id", match.id),
+              );
 
-              await supabase
-                .from("match_participants")
-                .update({ status: "ATTENDED" })
-                .eq("match_id", match.id)
-                .eq("user_id", user?.id);
+              await withTimeout(
+                supabase
+                  .from("match_participants")
+                  .update({ status: "ATTENDED" })
+                  .eq("match_id", match.id)
+                  .eq("user_id", user?.id),
+              );
             } else {
               match.status = "IN_PROGRESS";
+              localStorage.setItem(`sportmatch_demo_checkin_${match.id}`, "true");
             }
 
             setCheckedIn(true);
@@ -735,9 +930,34 @@ function MatchCard({ match }: { match: Match }) {
   return (
     <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card hover:ring-glow transition-all">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs px-2 py-1 rounded-full bg-violet/20 text-violet-foreground border border-violet/30">
-          {match.sport}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2 py-1 rounded-full bg-violet/20 text-violet-foreground border border-violet/30">
+            {match.sport}
+          </span>
+          {(match.status as string) === "Finished" ||
+          (match.status as string) === "COMPLETED" ||
+          match.status === "Cancelled" ? (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[#B2B8C2] border border-white/10 font-semibold flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#B2B8C2]" />
+              Finalizado
+            </span>
+          ) : match.status === "IN_PROGRESS" ? (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FFD60A]/15 text-[#FFD60A] border border-[#FFD60A]/30 font-semibold flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#FFD60A] animate-pulse" />
+              En Curso
+            </span>
+          ) : isFull ? (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF3B30]/15 text-[#FF3B30] border border-[#FF3B30]/30 font-semibold flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30]" />
+              Lleno
+            </span>
+          ) : (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/30 font-semibold flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#39FF14]" />
+              Buscando
+            </span>
+          )}
+        </div>
         <span className="text-xs text-neon">{new Date(match.date).toLocaleDateString()}</span>
       </div>
       <h3 className="font-semibold">{match.title}</h3>
@@ -858,11 +1078,13 @@ function PostMatchReviewForm({ match, onClose }: { match: Match; onClose: () => 
             }
           }
         } else {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("trust_score, fitcoins_balance")
-            .eq("id", player.id)
-            .single();
+          const { data: profile } = await withTimeout(
+            supabase
+              .from("profiles")
+              .select("trust_score, fitcoins_balance")
+              .eq("id", player.id)
+              .single(),
+          );
 
           if (profile) {
             const newTrustScore = Math.max(
@@ -871,21 +1093,25 @@ function PostMatchReviewForm({ match, onClose }: { match: Match; onClose: () => 
             );
             const newFitcoins = Math.max(0, (profile.fitcoins_balance || 0) + fitcoinsAdjustment);
 
-            await supabase
-              .from("profiles")
-              .update({
-                trust_score: newTrustScore,
-                fitcoins_balance: newFitcoins,
-              })
-              .eq("id", player.id);
+            await withTimeout(
+              supabase
+                .from("profiles")
+                .update({
+                  trust_score: newTrustScore,
+                  fitcoins_balance: newFitcoins,
+                })
+                .eq("id", player.id),
+            );
 
             if (fitcoinsAdjustment < 0) {
-              await supabase.from("wallet_transactions").insert({
-                user_id: player.id,
-                amount: fitcoinsAdjustment,
-                description: `Penalización: ${tagDescription}`,
-                type: "PENALTY",
-              });
+              await withTimeout(
+                supabase.from("wallet_transactions").insert({
+                  user_id: player.id,
+                  amount: fitcoinsAdjustment,
+                  description: `Penalización: ${tagDescription}`,
+                  type: "PENALTY",
+                }),
+              );
             }
           }
         }

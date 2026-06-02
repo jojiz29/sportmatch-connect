@@ -12,7 +12,7 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     await expect(page.locator("h1").first()).toContainText("Crear Cuenta");
 
     // 2. Select "Empresa" role
-    await page.click("text=Empresa");
+    await page.click("#register-role-business");
 
     // 3. Fill Business registration details
     await page.fill("#register-company-name", "SportStore Surco");
@@ -84,7 +84,10 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     await expect(purchaseBtn).toBeVisible();
 
     // Purchase the newly created "Bebida Energética Puka" from SportStore Surco
-    const newProductPurchaseBtn = page.locator('[id^="purchase-btn-item-"]');
+    const newProductPurchaseBtn = page
+      .locator("div.bg-gradient-card", { hasText: "Bebida Energética Puka" })
+      .locator("button")
+      .first();
     await expect(newProductPurchaseBtn).toBeVisible();
     await newProductPurchaseBtn.click();
 
