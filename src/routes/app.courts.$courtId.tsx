@@ -19,6 +19,7 @@ import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
 import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
+import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 
 export const Route = createFileRoute("/app/courts/$courtId")({
   validateSearch: (search: Record<string, unknown>): { book?: boolean } => {
@@ -109,7 +110,7 @@ function CourtDetail() {
         (error) => {
           console.warn("Geolocation API unavailable or permission denied.", error.message);
         },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
     }
   }, []);
@@ -228,9 +229,23 @@ function CourtDetail() {
         operating_hours: court.operating_hours,
       });
 
+      // 4. Create match in memory for local demo correctness
+      if (useAuthStore.getState().isDemoMode) {
+        await apiClient.matches.create({
+          title: `Partido en ${court.name}`,
+          sport: court.sport,
+          court_id: court.id,
+          date: todayStr,
+          time: slot,
+          max_players: maxPlayers,
+          required_level: user.level || "Intermedio",
+          creator_id: user.id,
+        });
+      }
+
       setConfirmed(true);
-      toast.success("¡Reserva confirmada con éxito!", {
-        description: `Turno reservado para hoy a las ${slot} hrs.`,
+      toast.success("¡Reserva y Partido creados!", {
+        description: `Turno hoy a las ${slot} hrs. ¡Partido publicado!`,
       });
     } catch (err: unknown) {
       console.error("Booking error:", err);
@@ -275,8 +290,11 @@ function CourtDetail() {
         <div className="space-y-6">
           <div className="rounded-3xl overflow-hidden h-64 sm:h-96 relative shadow-card">
             <img
-              src={court.image_url}
+              src={court.image_url || getSportFallbackImage(court.sport)}
               alt={court.name}
+              onError={(e) => {
+                e.currentTarget.src = getSportFallbackImage(court.sport);
+              }}
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />

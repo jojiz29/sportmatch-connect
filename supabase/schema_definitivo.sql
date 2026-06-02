@@ -123,7 +123,11 @@ create table if not exists public.courts (
   is_available    boolean default true,
   address         text,
   -- B2B: pista asociada a un negocio patrocinador
-  owner_id        uuid references public.profiles(id) on delete set null
+  owner_id        uuid references public.profiles(id) on delete set null,
+  district        text,
+  is_sponsored    boolean default false,
+  max_players     int default 10,
+  operating_hours text[] default '{}'::text[]
 );
 
 -- Índice GiST obligatorio para consultas espaciales ST_DWithin / ST_Distance eficientes
@@ -453,7 +457,7 @@ create or replace function public.search_nearby_courts(
   max_distance_meters  numeric default 50000
 )
 returns table (
-  id              uuid,
+  id              varchar(100),
   created_at      timestamptz,
   name            text,
   sport           text,
@@ -471,12 +475,12 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   return query
   select
-    c.id,
+    c.id::varchar(100),
     c.created_at,
     c.name,
     c.sport,

@@ -11,6 +11,8 @@ export interface ChatMessage {
   sender_id: string;
   text: string;
   created_at: string;
+  media_url?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Chat {
@@ -26,11 +28,17 @@ interface ChatState {
   chats: Chat[];
   activeConversationId: string | null;
   setActiveConversation: (id: string | null) => void;
-  sendMessage: (chatId: string, text: string) => void;
+  sendMessage: (
+    chatId: string,
+    text: string,
+    mediaUrl?: string,
+    metadata?: Record<string, unknown>,
+  ) => Promise<void>;
   createChat: (userId: string) => Promise<string>;
   createGroupChat: (name: string, targetUserIds: string[]) => Promise<string>;
   createMatchGroupChat: (match: Match) => void;
   initChat: () => void;
+  loadChatHistory: (chatId: string) => Promise<void>;
 
   /**
    * Activates a Supabase Realtime subscription for the given chatId.
@@ -56,6 +64,44 @@ export const useChatStore = create<ChatState>()(
       initChat: () => {
         const user = useAuthStore.getState().user;
         if (user) {
+          const isDemo =
+            useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
+          if (isDemo && get().chats.length === 0) {
+            const seedChats: Chat[] = [
+              {
+                id: "chat-fabiola",
+                name: "Fabiola",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola",
+                current_players: [user.id, "user-fabiola"],
+                messages: [
+                  {
+                    id: "m1",
+                    sender_id: "user-fabiola",
+                    text: "Hola! ¿Confirmamos el partido para mañana?",
+                    created_at: new Date(Date.now() - 3600000).toISOString(),
+                  },
+                ],
+                unread: 1,
+              },
+              {
+                id: "chat-pichanga",
+                name: "Pichanga Jueves",
+                avatar: "⚽",
+                current_players: [user.id, "user-1", "user-2"],
+                messages: [
+                  {
+                    id: "m2",
+                    sender_id: "system",
+                    text: "Grupo creado para Pichanga Jueves. ¡Buena suerte!",
+                    created_at: new Date(Date.now() - 7200000).toISOString(),
+                  },
+                ],
+                unread: 0,
+              },
+            ];
+            set({ chats: seedChats });
+          }
+
           const userChats = get().chats.filter((c) => c.current_players.includes(user.id));
           const currentActive = get().activeConversationId;
           if (!currentActive || !userChats.some((c) => c.id === currentActive)) {
@@ -66,26 +112,47 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
-      sendMessage: (chatId, text) =>
-        set((state) => {
-          const user = useAuthStore.getState().user;
-          const sender_id = user ? user.id : "unknown";
-          const newMessage: ChatMessage = {
-            id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            sender_id,
-            text,
-            created_at: new Date().toISOString(),
-          };
+      sendMessage: async (chatId, text, mediaUrl, metadata) => {
+        const user = useAuthStore.getState().user;
+        const sender_id = user ? user.id : "unknown";
+        const newMessageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const isDemo =
+          useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
 
+        const newMessage: ChatMessage = {
+          id: newMessageId,
+          sender_id,
+          text,
+          created_at: new Date().toISOString(),
+          media_url: mediaUrl,
+          metadata,
+        };
+
+        set((state) => {
           const updatedChats = state.chats.map((chat) => {
             if (chat.id === chatId) {
               return { ...chat, messages: [...chat.messages, newMessage] };
             }
             return chat;
           });
-
           return { chats: updatedChats };
-        }),
+        });
+
+        if (!isDemo) {
+          try {
+            await supabase.from("messages").insert({
+              id: newMessageId,
+              chat_id: chatId,
+              sender_id,
+              text,
+              media_url: mediaUrl || null,
+              metadata: metadata || null,
+            });
+          } catch (err) {
+            console.error("Failed to insert message in Supabase:", err);
+          }
+        }
+      },
 
       createChat: async (targetUserId) => {
         const currentUser = useAuthStore.getState().user;
@@ -219,10 +286,57 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      loadChatHistory: async (chatId) => {
+        const isDemo =
+          useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
+        if (isDemo) return;
+
+        try {
+          const { data, error } = await supabase
+            .from("messages")
+            .select("*")
+            .eq("chat_id", chatId)
+            .order("created_at", { ascending: true });
+
+          if (error) throw error;
+
+          if (data) {
+            const mappedMessages: ChatMessage[] = data.map(
+              (row: {
+                id: string;
+                sender_id: string;
+                text: string;
+                created_at: string;
+                media_url: string | null;
+                metadata: Record<string, unknown> | null;
+              }) => ({
+                id: row.id,
+                sender_id: row.sender_id,
+                text: row.text,
+                created_at: row.created_at,
+                media_url: row.media_url || undefined,
+                metadata: row.metadata || undefined,
+              }),
+            );
+
+            set((state) => ({
+              chats: state.chats.map((c) =>
+                c.id === chatId ? { ...c, messages: mappedMessages } : c,
+              ),
+            }));
+          }
+        } catch (e) {
+          console.warn("Failed to load chat history from database:", e);
+        }
+      },
+
       subscribeToChat: (chatId) => {
         if (useAuthStore.getState().isDemoMode) {
           return () => {};
         }
+
+        // Load existing history first
+        get().loadChatHistory(chatId);
 
         // Prevent duplicate subscriptions for the same chat
         if (_subscribedChatId === chatId && _activeChatChannel) {
@@ -262,6 +376,8 @@ export const useChatStore = create<ChatState>()(
                 sender_id: string;
                 text: string;
                 created_at: string;
+                media_url?: string;
+                metadata?: Record<string, unknown>;
               };
 
               // Skip messages we sent ourselves — already added optimistically
@@ -272,6 +388,8 @@ export const useChatStore = create<ChatState>()(
                 sender_id: row.sender_id,
                 text: row.text,
                 created_at: row.created_at,
+                media_url: row.media_url || undefined,
+                metadata: row.metadata || undefined,
               };
 
               set((state) => ({

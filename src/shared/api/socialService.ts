@@ -1,6 +1,8 @@
-﻿import { supabase } from "./supabase";
+import { supabase } from "./supabase";
 import { createNotification } from "@/shared/api/notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { withTimeout } from "./timeoutHelper";
+import { useSocialStore } from "@/features/social/model/useSocialStore";
 
 export async function followUser(followerId: string, followingId: string): Promise<void> {
   if (followerId === followingId) {
@@ -8,6 +10,7 @@ export async function followUser(followerId: string, followingId: string): Promi
   }
 
   if (useAuthStore.getState().isDemoMode) {
+    useSocialStore.getState().follow(followerId, followingId);
     return;
   }
 
@@ -36,10 +39,12 @@ export async function followUser(followerId: string, followingId: string): Promi
   }
 
   // 3. Insert follower relation in Supabase
-  const { error } = await supabase.from("followers").insert({
-    follower_id: followerId,
-    following_id: followingId,
-  });
+  const { error } = await withTimeout(
+    supabase.from("followers").insert({
+      follower_id: followerId,
+      following_id: followingId,
+    }),
+  );
 
   if (error && error.code !== "23505") {
     // Ignore unique constraint violation (on conflict do nothing)
@@ -50,6 +55,7 @@ export async function followUser(followerId: string, followingId: string): Promi
 
 export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
+    useSocialStore.getState().unfollow(followerId, followingId);
     return;
   }
 
@@ -69,7 +75,7 @@ export async function getFollowStats(
   userId: string,
 ): Promise<{ followersCount: number; followingCount: number }> {
   if (useAuthStore.getState().isDemoMode) {
-    return { followersCount: 8, followingCount: 15 };
+    return useSocialStore.getState().getFollowStats(userId);
   }
 
   // Count followers (where following_id = userId)
@@ -102,7 +108,7 @@ export async function getFollowStats(
 
 export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
   if (useAuthStore.getState().isDemoMode) {
-    return followingId === "user-1";
+    return useSocialStore.getState().isFollowing(followerId, followingId);
   }
 
   const { data, error } = await supabase

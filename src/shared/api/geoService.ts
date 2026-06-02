@@ -1,4 +1,4 @@
-﻿import { supabase } from "./supabase";
+import { supabase } from "./supabase";
 import { Court } from "@/entities/types";
 
 // ──────────────────────────────────────────────────────────────
@@ -84,6 +84,7 @@ export async function searchNearbyCourts(
       address: string | null;
       is_sponsored: boolean | null;
       distance_km: string | number;
+      district: string | null;
     }) => ({
       id: row.id,
       created_at: row.created_at,
@@ -100,6 +101,7 @@ export async function searchNearbyCourts(
       address: row.address ?? undefined,
       is_sponsored: row.is_sponsored ?? false,
       distance_km: parseFloat(parseFloat(String(row.distance_km)).toFixed(2)),
+      district: row.district ?? undefined,
     }),
   );
 

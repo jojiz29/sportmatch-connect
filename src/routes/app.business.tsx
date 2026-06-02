@@ -12,7 +12,8 @@ import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { toast } from "sonner";
 import { supabase } from "@/shared/api/supabase";
-import { apiClient } from "@/shared/api/apiClient";
+import { withTimeout } from "@/shared/api/timeoutHelper";
+import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
 import {
   LayoutGrid,
   Plus,
@@ -140,42 +141,44 @@ function BusinessPage() {
       const priceVal = Number(courtPrice);
       const maxPlayersVal = courtMaxPlayers !== "" ? Number(courtMaxPlayers) : 4;
 
-      const { data: newCourt, error: insertErr } = await supabase
-        .from("courts")
-        .insert({
-          name: courtName,
-          sport: courtSport,
-          price_per_hour: priceVal,
-          lat: latVal,
-          lng: lngVal,
-          location: `POINT(${lngVal} ${latVal})`, // WKT point for PostGIS geography (lng first, lat second)
-          address: courtAddress,
-          max_players: maxPlayersVal,
-          operating_hours: [
-            "08:00",
-            "10:00",
-            "12:00",
-            "14:00",
-            "16:00",
-            "18:00",
-            "19:00",
-            "20:00",
-            "21:00",
-          ], // default slots
-          image_url: courtImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
-          amenities: courtAmenities
-            ? courtAmenities
-                .split(",")
-                .map((a) => a.trim())
-                .filter(Boolean)
-            : ["Iluminación", "Estacionamiento"],
-          owner_id: user.id,
-          is_available: true,
-          rating: 5.0,
-          reviews_count: 0,
-        })
-        .select()
-        .single();
+      const { data: newCourt, error: insertErr } = await withTimeout(
+        supabase
+          .from("courts")
+          .insert({
+            name: courtName,
+            sport: courtSport,
+            price_per_hour: priceVal,
+            lat: latVal,
+            lng: lngVal,
+            location: `POINT(${lngVal} ${latVal})`, // WKT point for PostGIS geography (lng first, lat second)
+            address: courtAddress,
+            max_players: maxPlayersVal,
+            operating_hours: [
+              "08:00",
+              "10:00",
+              "12:00",
+              "14:00",
+              "16:00",
+              "18:00",
+              "19:00",
+              "20:00",
+              "21:00",
+            ], // default slots
+            image_url: courtImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+            amenities: courtAmenities
+              ? courtAmenities
+                  .split(",")
+                  .map((a) => a.trim())
+                  .filter(Boolean)
+              : ["Iluminación", "Estacionamiento"],
+            owner_id: user.id,
+            is_available: true,
+            rating: 5.0,
+            reviews_count: 0,
+          })
+          .select()
+          .single(),
+      );
 
       if (insertErr) {
         throw insertErr;
@@ -232,6 +235,16 @@ function BusinessPage() {
         // Load catalog
         const catalogData = await getCatalogItems(businessId);
         setItems(catalogData);
+
+        if (useAuthStore.getState().isDemoMode) {
+          const courtsData = MOCK_COURTS.filter((c) => c.owner_id === businessId);
+          setCourts(courtsData);
+          const sportsData = await apiClient.sports.getAll();
+          setSportsList(sportsData);
+          setLoading(false);
+          setLoadingCourts(false);
+          return;
+        }
 
         // Load courts
         const { data: courtsData, error: courtsErr } = await supabase

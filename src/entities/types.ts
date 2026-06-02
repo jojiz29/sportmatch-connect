@@ -57,6 +57,7 @@ export interface Court {
   owner_id?: string;
   max_players?: number; // Added for dynamic cost calculation
   operating_hours?: string[]; // Added for unique court schedules
+  district?: string;
 }
 
 export interface Match {

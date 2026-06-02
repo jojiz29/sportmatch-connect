@@ -1,24 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  Search,
-  Phone,
-  Video,
-  MoreVertical,
-  Send,
-  Image as ImageIcon,
-  Smile,
-  Plus,
-  Users,
-} from "lucide-react";
+import { Search, Plus, Users } from "lucide-react";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient } from "@/shared/api/apiClient";
-import { User } from "@/entities/types";
+import { User, Court, Match, Squad } from "@/entities/types";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { supabase } from "@/shared/api/supabase";
+import { joinSquad, getSquads } from "@/shared/api/squadService";
+import { BookingModal } from "@/components/BookingModal";
+import { toast } from "sonner";
+import { ChatWindow } from "@/components/chat/ChatWindow";
 
 export const Route = createFileRoute("/app/chat")({
   head: () => ({ meta: [{ title: "Chat — SportMatch" }] }),
@@ -47,9 +41,36 @@ function Chat() {
   const currentUser = useAuthStore((s) => s.user);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
 
+  // Media attachments & interactive cards state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
+  const [userSquads, setUserSquads] = useState<Squad[]>([]);
+  const [systemMatches, setSystemMatches] = useState<Match[]>([]);
+  const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+  const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
+
+  const [isJoiningMap, setIsJoiningMap] = useState<Record<string, boolean>>({});
+  const [joinedMap, setJoinedMap] = useState<Record<string, boolean>>({});
+
+  const handleJoinSquad = async (squadId: string, squadName: string) => {
+    if (!currentUser) return;
+    try {
+      setIsJoiningMap((prev) => ({ ...prev, [squadId]: true }));
+      await joinSquad(squadId, currentUser.id);
+      setJoinedMap((prev) => ({ ...prev, [squadId]: true }));
+      toast.success(`¡Te has unido al Squad ${squadName}!`);
+    } catch (err) {
+      console.error("Error joining squad:", err);
+      toast.error("Error al unirse al Squad.");
+    } finally {
+      setIsJoiningMap((prev) => ({ ...prev, [squadId]: false }));
+    }
+  };
+
   const relationships = useSocialStore((state) => state.relationships);
   const createGroupChat = useChatStore((state) => state.createGroupChat);
 
+  // Sync followings & catalog information
   useEffect(() => {
     if (!currentUser || useAuthStore.getState().isDemoMode) return;
 
@@ -71,6 +92,19 @@ function Chat() {
       }
     }
     syncRelationships();
+  }, [currentUser]);
+
+  // Load squads & matches for user attachments
+  useEffect(() => {
+    if (!currentUser) return;
+    getSquads()
+      .then((list) => setUserSquads(list))
+      .catch((err) => console.warn("Failed to load user squads for attachments:", err));
+
+    apiClient.matches
+      .getAll()
+      .then((list) => setSystemMatches(list))
+      .catch((err) => console.warn("Failed to load active matches for attachments:", err));
   }, [currentUser]);
 
   const socialUserIds = useMemo(() => {
@@ -115,18 +149,67 @@ function Chat() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages]);
 
-  // Subscribe to Realtime messages for the active conversation.
-  // Cleanup is automatic on unmount or when activeConversationId changes.
   useEffect(() => {
     if (!activeConversationId) return;
     const unsubscribe = subscribeToChat(activeConversationId);
     return unsubscribe;
   }, [activeConversationId, subscribeToChat]);
 
+  // Handle selected image attachments transcoding to base64
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImageBase64(reader.result as string);
+        toast.success("Imagen adjuntada correctamente.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSend = () => {
-    if (!text.trim() || !activeConversationId) return;
-    sendMessage(activeConversationId, text);
+    if (!text.trim() && !selectedImageBase64 && !activeConversationId) return;
+    sendMessage(activeConversationId!, text, selectedImageBase64 || undefined);
     setText("");
+    setSelectedImageBase64(null);
+    setIsAttachmentMenuOpen(false);
+  };
+
+  // Helper callbacks to send Actionable Cards
+  const sendSquadInviteCard = (squad: Squad) => {
+    if (!activeConversationId) return;
+    sendMessage(activeConversationId, `¡Únete a mi Squad: ${squad.name}! 👥`, undefined, {
+      type: "squad_invite",
+      squad_id: squad.id,
+      squad_name: squad.name,
+    });
+    setIsAttachmentMenuOpen(false);
+    toast.success("Invitación de Squad enviada.");
+  };
+
+  const sendMatchProposalCard = (match: Match) => {
+    if (!activeConversationId) return;
+    sendMessage(activeConversationId, `¿Jugamos un partido? ${match.title} 🎾`, undefined, {
+      type: "match_proposal",
+      match_id: match.id,
+      match_title: match.title,
+      court_name: match.court?.name || "Cancha recomendada",
+      price: match.court?.price_per_hour || 100,
+      court_id: match.court_id,
+    });
+    setIsAttachmentMenuOpen(false);
+    toast.success("Propuesta de Partido enviada.");
+  };
+
+  const handlePlayCheckout = async (courtId: string) => {
+    try {
+      const courtData = await apiClient.courts.getById(courtId);
+      setSelectedCourtForBooking(courtData);
+    } catch (err) {
+      console.error("Failed to load court for checkout:", err);
+      toast.error("No se pudo cargar los detalles de la cancha.");
+    }
   };
 
   if (!currentUser) return null;
@@ -233,140 +316,43 @@ function Chat() {
           </div>
         </div>
 
-        {/* Chat Area (Hidden on mobile by default, unless conversation active... simple implementation) */}
+        {/* Chat Area */}
         <div className="hidden md:flex flex-1 flex-col bg-background/50">
-          {activeChat ? (
-            <>
-              <div className="h-16 border-b border-border flex items-center justify-between px-6 bg-card/50">
-                <div className="flex items-center gap-3">
-                  <div className="relative h-10 w-10">
-                    {activeChat.avatar.startsWith("http") ? (
-                      <img
-                        src={activeChat.avatar}
-                        alt=""
-                        className="h-10 w-10 rounded-full bg-muted object-cover"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-gradient-primary grid place-items-center text-lg">
-                        🎾
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-semibold">{activeChat.name}</div>
-                    <div className="text-xs text-neon">
-                      {activeChat.current_players.length} {t("chat.online")}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-muted-foreground">
-                  <button className="hover:text-foreground">
-                    <Phone className="h-5 w-5" />
-                  </button>
-                  <button className="hover:text-foreground">
-                    <Video className="h-5 w-5" />
-                  </button>
-                  <button className="hover:text-foreground">
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 p-6 overflow-y-auto space-y-4">
-                {activeChat.messages.map((msg) => {
-                  const isSystem = msg.sender_id === "system";
-                  if (isSystem) {
-                    return (
-                      <div key={msg.id} className="flex justify-center my-4 w-full">
-                        <div className="bg-accent/40 border border-border/60 text-muted-foreground text-xs px-4 py-2 rounded-full max-w-[90%] text-center shadow-sm">
-                          {msg.text}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const isMe = msg.sender_id === currentUser.id;
-                  const sender = registeredUsers.find((u) => u.id === msg.sender_id) || {
-                    name: activeChat.name,
-                    avatar_url: activeChat.avatar,
-                    id: msg.sender_id,
-                  };
-                  const time = new Date(msg.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex gap-3 max-w-[80%] ${isMe ? "ml-auto flex-row-reverse" : ""}`}
-                    >
-                      {isMe ? (
-                        <div className="h-8 w-8 rounded-full bg-gradient-primary grid place-items-center text-white text-xs font-bold shrink-0">
-                          {t("chat.me")}
-                        </div>
-                      ) : (
-                        <img
-                          src={sender.avatar_url}
-                          alt=""
-                          className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
-                        />
-                      )}
-                      <div>
-                        {!isMe && (
-                          <div className="text-xs text-muted-foreground mb-1 ml-1">
-                            {sender.name}
-                          </div>
-                        )}
-                        <div
-                          className={`p-3 text-sm ${isMe ? "bg-gradient-primary text-primary-foreground rounded-2xl rounded-tr-none shadow-glow" : "bg-accent rounded-2xl rounded-tl-none"}`}
-                        >
-                          {msg.text}
-                        </div>
-                        <div
-                          className={`text-[10px] mt-1 ${isMe ? "text-primary/70 mr-1 text-right" : "text-muted-foreground ml-1"}`}
-                        >
-                          {time} {isMe && "✓✓"}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={endRef} />
-              </div>
-
-              <div className="p-4 bg-card/50 border-t border-border">
-                <div className="flex items-center gap-2 bg-background border border-border rounded-full px-4 py-2">
-                  <button className="text-muted-foreground hover:text-neon">
-                    <Smile className="h-5 w-5" />
-                  </button>
-                  <input
-                    type="text"
-                    placeholder={t("chat.placeholder")}
-                    className="flex-1 bg-transparent border-none focus:outline-none text-sm px-2"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  />
-                  <button className="text-muted-foreground hover:text-neon">
-                    <ImageIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={handleSend}
-                    className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer"
-                  >
-                    <Send className="h-4 w-4 ml-0.5" />
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 grid place-items-center text-muted-foreground flex-col">
-              {t("chat.empty")}
-            </div>
-          )}
+          <ChatWindow
+            activeChat={activeChat}
+            currentUser={currentUser}
+            registeredUsers={registeredUsers}
+            text={text}
+            setText={setText}
+            handleSend={handleSend}
+            handleFileChange={handleFileChange}
+            selectedImageBase64={selectedImageBase64}
+            setSelectedImageBase64={setSelectedImageBase64}
+            isAttachmentMenuOpen={isAttachmentMenuOpen}
+            setIsAttachmentMenuOpen={setIsAttachmentMenuOpen}
+            userSquads={userSquads}
+            systemMatches={systemMatches}
+            sendSquadInviteCard={sendSquadInviteCard}
+            sendMatchProposalCard={sendMatchProposalCard}
+            handlePlayCheckout={handlePlayCheckout}
+            onJoinSquad={handleJoinSquad}
+            isJoiningMap={isJoiningMap}
+            joinedMap={joinedMap}
+            endRef={endRef}
+            fileInputRef={fileInputRef}
+            t={t}
+          />
         </div>
       </div>
+
+      {/* Booking Modal Checkout */}
+      <BookingModal
+        court={selectedCourtForBooking}
+        isOpen={selectedCourtForBooking !== null}
+        onOpenChange={(open) => !open && setSelectedCourtForBooking(null)}
+        baseLocation={null}
+      />
+
       {/* New Chat Modal Overlay */}
       {isNewChatModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -537,3 +523,4 @@ function Chat() {
     </div>
   );
 }
+export default Chat;

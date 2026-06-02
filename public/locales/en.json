@@ -65,13 +65,16 @@
     "keep_swiping": "Keep Swiping",
     "empty_stack": "No more suggestions",
     "sport_default": "Sport",
-    "user_default": "User"
+    "user_default": "User",
+    "view_profile": "View Profile"
   },
   "map": {
     "title": "Live Map",
     "subtitle": "Courts, matches and players near you",
     "near_you": "Near you",
-    "view_court": "View Court"
+    "view_court": "View Court",
+    "filter_district": "Filter by district / Hub",
+    "all_districts": "All districts"
   },
   "chat": {
     "title": "Messages",
@@ -212,7 +215,10 @@
     "password_crit_upper": "1 Uppercase",
     "password_crit_lower": "1 Lowercase",
     "password_crit_number": "1 Number",
-    "password_crit_special": "1 Special character (!@#$%^&*)"
+    "password_crit_special": "1 Special character (!@#$%^&*)",
+    "continue_with_google": "Continue with Google",
+    "sign_in_with_google": "Sign In with Google",
+    "or_continue_with": "Or continue with"
   },
   "feedback": {
     "modal_title": "Rate Match & Players",
@@ -234,5 +240,27 @@
   },
   "common": {
     "loading": "Loading..."
+  },
+  "landing": {
+    "empezar": "Start Playing",
+    "crear_cuenta": "Create account",
+    "features_title": "Features",
+    "matchmaking_title": "Smart Matchmaking",
+    "matchmaking_desc": "Our AI analyzes your sports level, Trust Score, location, and preferred times to connect you with the ideal opponents or teammates in minutes.",
+    "squads_title": "Squads & Community",
+    "split_billing_title": "Split Billing",
+    "split_billing_desc": "Forget about collecting from everyone. The rental cost is automatically split among active participants in your squad from their FitCoins wallet.",
+    "group_chat_title": "Integrated Group Chat",
+    "group_chat_desc": "Communicate in real time with your squad, organize games, share memes, and keep the passion of the game alive.",
+    "map_title": "Venue Map & Full Coverage",
+    "map_desc": "Visualize the 35 districts of metropolitan Lima in an interactive map with a 'Night Mode' filter. Find your ideal sports complex for padel or soccer in a georeferenced way.",
+    "challenges_title": "Live Sports Challenges",
+    "challenges_desc": "Complete weekly challenges to accumulate FitCoins and redeem them in our Marketplace. Stay active and level up.",
+    "challenge_padel": "3 Padel matches this week",
+    "challenge_squad": "Host a Squad event",
+    "challenge_cup": "Copa SportMatch Tournament",
+    "status_seeking": "Seeking",
+    "status_starting": "Starting",
+    "status_full": "Full"
   }
 }

@@ -30,29 +30,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
+    const isDemo = useAuthStore.getState().isDemoMode;
+    if (isDemo) {
+      setIsLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     async function initAuth() {
       try {
-        const isDemo = useAuthStore.getState().isDemoMode;
-        if (isDemo && useAuthStore.getState().isAuthenticated) {
-          // In demo mode, bypass supabase auth check
-          return;
-        }
-
         const {
           data: { session },
         } = await supabase.auth.getSession();
         if (!mounted) return;
 
         if (session?.user) {
-          const { data: profile, error } = await supabase
+          let profile = null;
+          const { data: existingProfile, error } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", session.user.id)
             .single();
 
-          if (profile && !error) {
+          if (existingProfile && !error) {
+            profile = existingProfile;
+          } else {
+            // New Google/OAuth user profile auto-creation
+            const userMeta = session.user.user_metadata || {};
+            const name = userMeta.full_name || userMeta.name || "Jugador Google";
+            const avatarUrl =
+              userMeta.avatar_url ||
+              userMeta.picture ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.id}`;
+            const { data: newProfile, error: insertError } = await supabase
+              .from("profiles")
+              .insert({
+                id: session.user.id,
+                name,
+                avatar_url: avatarUrl,
+                user_role: "PLAYER",
+                trust_score: 90,
+                fitcoins_balance: 100,
+                level: "Intermedio",
+                preferred_sports: ["Pádel"],
+              })
+              .select()
+              .single();
+
+            if (!insertError && newProfile) {
+              profile = newProfile;
+            } else {
+              console.error("Error creating profile for Google login:", insertError);
+              // Fallback: Retry fetching the profile in case the trigger inserted it concurrently
+              const { data: retriedProfile } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", session.user.id)
+                .single();
+              if (retriedProfile) {
+                profile = retriedProfile;
+              }
+            }
+          }
+
+          if (profile) {
             loginRef.current(profile);
           } else {
             logoutRef.current();
@@ -81,11 +123,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!initializedRef.current) return;
 
       if (event === "SIGNED_IN" && session?.user) {
-        const { data: profile } = await supabase
+        let profile = null;
+        const { data: existingProfile, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
           .single();
+
+        if (existingProfile && !error) {
+          profile = existingProfile;
+        } else {
+          // New Google/OAuth user profile auto-creation
+          const userMeta = session.user.user_metadata || {};
+          const name = userMeta.full_name || userMeta.name || "Jugador Google";
+          const avatarUrl =
+            userMeta.avatar_url ||
+            userMeta.picture ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.id}`;
+          const { data: newProfile, error: insertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: session.user.id,
+              name,
+              avatar_url: avatarUrl,
+              user_role: "PLAYER",
+              trust_score: 90,
+              fitcoins_balance: 100,
+              level: "Intermedio",
+              preferred_sports: ["Pádel"],
+            })
+            .select()
+            .single();
+
+          if (!insertError && newProfile) {
+            profile = newProfile;
+          } else {
+            console.error(
+              "Error creating profile for Google login during auth change:",
+              insertError,
+            );
+            // Fallback: Retry fetching the profile in case the trigger inserted it concurrently
+            const { data: retriedProfile } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
+            if (retriedProfile) {
+              profile = retriedProfile;
+            }
+          }
+        }
+
         if (profile && mounted) {
           loginRef.current(profile);
         }

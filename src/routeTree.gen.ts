@@ -24,6 +24,7 @@ import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppWalletIndexRouteImport } from './routes/app.wallet.index'
+import { Route as AppProfileIndexRouteImport } from './routes/app.profile.index'
 import { Route as AppMatchIndexRouteImport } from './routes/app.match.index'
 import { Route as AppWalletHistoryRouteImport } from './routes/app.wallet.history'
 import { Route as AppProfileUserIdRouteImport } from './routes/app.profile.$userId'
@@ -105,6 +106,11 @@ const AppWalletIndexRoute = AppWalletIndexRouteImport.update({
   path: '/wallet/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProfileIndexRoute = AppProfileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppProfileRoute,
+} as any)
 const AppMatchIndexRoute = AppMatchIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/app/profile/$userId': typeof AppProfileUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
   '/app/match/': typeof AppMatchIndexRoute
+  '/app/profile/': typeof AppProfileIndexRoute
   '/app/wallet/': typeof AppWalletIndexRoute
 }
 export interface FileRoutesByTo {
@@ -163,7 +170,6 @@ export interface FileRoutesByTo {
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
-  '/app/profile': typeof AppProfileRouteWithChildren
   '/app/register': typeof AppRegisterRoute
   '/app': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
@@ -171,6 +177,7 @@ export interface FileRoutesByTo {
   '/app/profile/$userId': typeof AppProfileUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
   '/app/match': typeof AppMatchIndexRoute
+  '/app/profile': typeof AppProfileIndexRoute
   '/app/wallet': typeof AppWalletIndexRoute
 }
 export interface FileRoutesById {
@@ -194,6 +201,7 @@ export interface FileRoutesById {
   '/app/profile/$userId': typeof AppProfileUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
   '/app/match/': typeof AppMatchIndexRoute
+  '/app/profile/': typeof AppProfileIndexRoute
   '/app/wallet/': typeof AppWalletIndexRoute
 }
 export interface FileRouteTypes {
@@ -218,6 +226,7 @@ export interface FileRouteTypes {
     | '/app/profile/$userId'
     | '/app/wallet/history'
     | '/app/match/'
+    | '/app/profile/'
     | '/app/wallet/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -230,7 +239,6 @@ export interface FileRouteTypes {
     | '/app/courts'
     | '/app/iot'
     | '/app/map'
-    | '/app/profile'
     | '/app/register'
     | '/app'
     | '/app/courts/$courtId'
@@ -238,6 +246,7 @@ export interface FileRouteTypes {
     | '/app/profile/$userId'
     | '/app/wallet/history'
     | '/app/match'
+    | '/app/profile'
     | '/app/wallet'
   id:
     | '__root__'
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/app/profile/$userId'
     | '/app/wallet/history'
     | '/app/match/'
+    | '/app/profile/'
     | '/app/wallet/'
   fileRoutesById: FileRoutesById
 }
@@ -377,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWalletIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/profile/': {
+      id: '/app/profile/'
+      path: '/'
+      fullPath: '/app/profile/'
+      preLoaderRoute: typeof AppProfileIndexRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
     '/app/match/': {
       id: '/app/match/'
       path: '/'
@@ -443,10 +460,12 @@ const AppMatchRouteWithChildren = AppMatchRoute._addFileChildren(
 
 interface AppProfileRouteChildren {
   AppProfileUserIdRoute: typeof AppProfileUserIdRoute
+  AppProfileIndexRoute: typeof AppProfileIndexRoute
 }
 
 const AppProfileRouteChildren: AppProfileRouteChildren = {
   AppProfileUserIdRoute: AppProfileUserIdRoute,
+  AppProfileIndexRoute: AppProfileIndexRoute,
 }
 
 const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(

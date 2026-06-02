@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
 import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
+import { MOCK_USERS } from "@/shared/api/apiClient";
 
 interface AuthState {
   user: User | null;
@@ -24,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      isDemoMode: false,
+      isDemoMode: import.meta.env.VITE_USE_MOCKS === "true",
       login: (user) => set({ user, isAuthenticated: true }),
       logout: () => set({ user: null, isAuthenticated: false, isDemoMode: false }),
       register: (user) => set({ user, isAuthenticated: true }),
@@ -72,10 +73,58 @@ export function purgeAllStores() {
   useAuthStore.setState({ user: null, isAuthenticated: false });
 }
 
+const getDemoUsers = (): User[] => {
+  if (typeof window === "undefined") return MOCK_USERS;
+  const stored = localStorage.getItem("sportmatch_demo_users");
+  if (!stored) {
+    localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
+    return MOCK_USERS;
+  }
+  return JSON.parse(stored);
+};
+
+const saveDemoUsers = (users: User[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
+  }
+};
+
 export function useAuth() {
   const store = useAuthStore();
 
   const signIn = async (email?: string, password?: string) => {
+    // E2E / Mock login bypass
+    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
+      store.setDemoMode(true);
+      const users = getDemoUsers();
+      let mockUser: User = users[0];
+
+      if (email) {
+        const found = users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase() || u.id === email,
+        );
+        if (found) {
+          mockUser = found;
+        } else if (email === "ejuniorfloress@gmail.com") {
+          mockUser = users.find((u) => u.id === "user-edwin-master") || users[0];
+        } else if (email === "fabiola@sportmatch.app") {
+          mockUser = users.find((u) => u.id === "user-fabiola") || users[0];
+        } else if (email === "puka@puka.com") {
+          mockUser = users.find((u) => u.id === "user-puka-power") || users[0];
+        }
+      }
+
+      // Sync user balance from persisted demo balances
+      const storedBalances = localStorage.getItem("sportmatch_demo_balances");
+      const balances = storedBalances ? JSON.parse(storedBalances) : {};
+      const actualBalance =
+        balances[mockUser.id] !== undefined ? balances[mockUser.id] : mockUser.fitcoins_balance;
+      mockUser = { ...mockUser, fitcoins_balance: actualBalance };
+
+      store.login(mockUser);
+      return;
+    }
+
     if (email && password) {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -132,6 +181,25 @@ export function useAuth() {
   const signUp = async (newUser: User) => {
     if (!newUser.email || !newUser.password) {
       throw new Error("Email y contraseña son obligatorios");
+    }
+
+    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
+      store.setDemoMode(true);
+      const mockRegisteredUser: User = {
+        ...newUser,
+        id: `mock-user-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        fitcoins_balance: newUser.fitcoins_balance ?? 0,
+        trust_score: newUser.trust_score ?? 50,
+        level: newUser.level ?? "Intermedio",
+        preferred_sports: newUser.preferred_sports ?? [],
+        matches_played: 0,
+      };
+      const users = getDemoUsers();
+      users.push(mockRegisteredUser);
+      saveDemoUsers(users);
+      store.login(mockRegisteredUser);
+      return;
     }
 
     try {
