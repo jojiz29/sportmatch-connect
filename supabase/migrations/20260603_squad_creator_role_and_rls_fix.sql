@@ -11,11 +11,11 @@ CREATE POLICY "squads_select"
 ON public.squads FOR SELECT
 TO authenticated, anon
 USING (
-  creator_id = auth.uid() OR 
+  creator_id::text = auth.uid()::text OR 
   EXISTS (
     SELECT 1 FROM public.squad_members 
-    WHERE squad_members.squad_id = id 
-    AND squad_members.profile_id = auth.uid()
+    WHERE squad_members.squad_id::text = id::text 
+    AND squad_members.profile_id::text = auth.uid()::text
   )
 );
 
@@ -26,10 +26,10 @@ CREATE POLICY "squad_members_select"
 ON public.squad_members FOR SELECT
 TO authenticated, anon
 USING (
-  profile_id = auth.uid() OR 
+  profile_id::text = auth.uid()::text OR 
   EXISTS (
     SELECT 1 FROM public.squads 
-    WHERE squads.id = squad_id 
-    AND squads.creator_id = auth.uid()
+    WHERE squads.id::text = squad_id::text 
+    AND squads.creator_id::text = auth.uid()::text
   )
 );
