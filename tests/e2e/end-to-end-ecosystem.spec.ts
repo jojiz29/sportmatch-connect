@@ -73,10 +73,8 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     // ═══════════════════════════════════════════════════
     console.log("Phase 3: Puka Power publishes a sponsored offer...");
 
-    // Go to dashboard feed tab
-    await page.click("aside >> text=Inicio");
-    await page.waitForTimeout(300);
-    await page.click("#dashboard-tab-feed");
+    // Go to Feed page
+    await page.goto(`${targetURL}/app/feed`);
     await page.waitForTimeout(300);
 
     // Create a new post as Puka Power

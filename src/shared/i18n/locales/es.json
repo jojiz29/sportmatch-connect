@@ -1,4 +1,24 @@
 {
+  "nav": {
+    "inicio": "Inicio",
+    "matchmaking": "Matchmaking (The Loop)",
+    "map_and_courts": "Reservas y Mapa",
+    "comunidad": "Comunidad (Feed)",
+    "squads": "Squads (Clanes)",
+    "mensajes": "Mensajes (Inbox)",
+    "telemetria": "Mi Rendimiento (Telemetry)",
+    "wallet": "FitCoins (Wallet)",
+    "perfil": "Mi Perfil",
+    "business": "Mi Negocio",
+    "admin": "Panel de Admin",
+    "logout": "Cerrar Sesión",
+    "groups": {
+      "action": "ACCION & DESCUBRIMIENTO",
+      "social": "SOCIAL & COLABORACION",
+      "analytics": "ANALITICA & ECONOMIA",
+      "account": "MI CUENTA"
+    }
+  },
   "login": {
     "title_signin": "Iniciar Sesión",
     "title_signup": "Crear Cuenta",
@@ -43,7 +63,10 @@
   "dashboard": {
     "title": "Panel Principal",
     "balance": "Balance de FitCoins",
-    "recent_activity": "Actividad Reciente"
+    "recent_activity": "Actividad Reciente",
+    "next_match": "Próximo Partido",
+    "no_next_match": "No tienes partidos programados",
+    "find_one": "Encontrar Partido"
   },
   "matchmaking": {
     "title": "Matchmaking IA",

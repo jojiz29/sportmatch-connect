@@ -13,11 +13,10 @@ import {
   Star,
   Sparkles,
   Plus,
+  Clock,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
-import { NewsFeed } from "@/features/feed/ui/NewsFeed";
-import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
@@ -80,8 +79,8 @@ function Dashboard() {
   const router = useRouter();
   const { t } = useTranslation();
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"matches" | "feed" | "squads">("matches");
   const user = useAuthStore((state) => state.user);
+
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [reviewMatch, setReviewMatch] = useState<Match | null>(null);
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
@@ -124,6 +123,33 @@ function Dashboard() {
   useEffect(() => {
     setLiveMatches(matches);
   }, [matches]);
+
+  // Find user's next upcoming match (declared safe after liveMatches initialization)
+  const nextMatch = useMemo(() => {
+    if (!user) return null;
+    const userMatches = liveMatches.filter((m) => {
+      const isCreator = m.creator_id === user.id;
+      const isParticipant = m.current_players?.some((p) => p.id === user.id);
+      if (!isCreator && !isParticipant) return false;
+
+      // Filter for future matches
+      try {
+        const matchStart = new Date(`${m.date}T${m.time}`);
+        return matchStart.getTime() > Date.now();
+      } catch {
+        return false;
+      }
+    });
+
+    if (userMatches.length === 0) return null;
+
+    // Sort by date and time ascending
+    return userMatches.sort((a, b) => {
+      const timeA = new Date(`${a.date}T${a.time}`).getTime();
+      const timeB = new Date(`${b.date}T${b.time}`).getTime();
+      return timeA - timeB;
+    })[0];
+  }, [liveMatches, user]);
 
   useEffect(() => {
     if (useAuthStore.getState().isDemoMode) return;
@@ -454,88 +480,102 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Tabs Selector */}
-      <div className="flex gap-4 border-b border-border/50 pb-2 mb-6">
-        <button
-          onClick={() => setActiveTab("matches")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "matches"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="dashboard-tab-matches"
-        >
-          Partidos
-        </button>
-        <button
-          onClick={() => setActiveTab("feed")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "feed"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="dashboard-tab-feed"
-        >
-          Comunidad (Feed)
-        </button>
-        <button
-          onClick={() => setActiveTab("squads")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "squads"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="dashboard-tab-squads"
-        >
-          Squads (Clubes)
-        </button>
-      </div>
-
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Column */}
-        <div className="lg:col-span-2 space-y-4">
-          {activeTab === "matches" && (
-            <>
-              <PageHeader
-                title="Partidos recomendados"
-                subtitle="Curado por IA según tu nivel y horarios"
-                action={
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Crear Partido
-                  </button>
-                }
-              />
-              <div className="grid sm:grid-cols-2 gap-4">
-                {filteredMatches.length > 0 ? (
-                  filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
-                ) : (
-                  <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
-                    No hay partidos recomendados para este deporte.
+        <div className="lg:col-span-2 space-y-6">
+          {/* Próximo Partido Card */}
+          {nextMatch ? (
+            <div className="animate-fade-in">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 mb-2.5 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-neon animate-pulse" />
+                {t("dashboard.next_match", "Próximo Partido")}
+              </h3>
+              <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5 shadow-neon relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-neon/5 blur-2xl pointer-events-none" />
+                <div className="flex gap-4 min-w-0">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-neon shrink-0 grid place-items-center shadow-neon">
+                    <Calendar className="h-5 w-5 text-neon-foreground" />
                   </div>
+                  <div className="min-w-0">
+                    <span className="text-[9px] bg-neon/20 text-neon font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      {nextMatch.sport}
+                    </span>
+                    <h4 className="font-bold text-base mt-1 text-foreground leading-tight truncate">
+                      {nextMatch.title}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      {nextMatch.date} a las {nextMatch.time} hrs
+                    </p>
+                    {nextMatch.court && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        {nextMatch.court.name} · {nextMatch.court.district}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {nextMatch.court_id ? (
+                  <Link
+                    to="/app/courts/$courtId"
+                    params={{ courtId: nextMatch.court_id }}
+                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform shrink-0 w-full sm:w-auto text-center cursor-pointer"
+                  >
+                    Ver Detalles
+                  </Link>
+                ) : (
+                  <Link
+                    to="/app/map"
+                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform shrink-0 w-full sm:w-auto text-center cursor-pointer"
+                  >
+                    Ver Mapa
+                  </Link>
                 )}
               </div>
-            </>
+            </div>
+          ) : (
+            <div className="p-4 bg-gradient-card border border-border rounded-2xl flex items-center justify-between gap-4">
+              <div>
+                <h4 className="font-semibold text-xs text-foreground">
+                  {t("dashboard.no_next_match", "No tienes partidos programados")}
+                </h4>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Organiza una pichanga o únete a una hoy.
+                </p>
+              </div>
+              <Link
+                to="/app/match"
+                className="px-3.5 py-2 rounded-xl bg-accent text-foreground hover:bg-accent/80 font-bold text-xs transition-colors shrink-0"
+              >
+                {t("dashboard.find_one", "Encontrar")}
+              </Link>
+            </div>
           )}
 
-          {activeTab === "feed" && (
-            <>
-              <PageHeader
-                title="Feed de Noticias"
-                subtitle="Novedades de los jugadores que sigues"
-              />
-              <NewsFeed />
-            </>
-          )}
-
-          {activeTab === "squads" && (
-            <>
-              <PageHeader title="Squads y Clubes" subtitle="Comunidades y equipos de tu zona" />
-              <SquadExplorer />
-            </>
-          )}
+          {/* Recommended Matches List */}
+          <div className="space-y-4">
+            <PageHeader
+              title="Partidos recomendados"
+              subtitle="Curado por IA según tu nivel y horarios"
+              action={
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Crear Partido
+                </button>
+              }
+            />
+            <div className="grid sm:grid-cols-2 gap-4">
+              {filteredMatches.length > 0 ? (
+                filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
+              ) : (
+                <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
+                  No hay partidos recomendados para este deporte.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Side */}

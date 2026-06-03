@@ -146,13 +146,11 @@ async function run() {
   console.log("Starting JIRA Sprint 2 Completion Sync...");
 
   const tasks = [
-    "Google OAuth 2.0 Integration.",
-    "FIFA World Cup 2026 UI Overhaul.",
-    "PostGIS District Filter & Map Navigation (35 Venues).",
-    "Database Triggers for Wallet Balance & Fraud Prevention.",
-    "Geofenced Rating System (100m radius check).",
-    "Dynamic Squads & Collective Split-Billing Logic.",
-    "i18n Localization Cleanup (0-key leak policy).",
+    "Restructuring of Navigation Sidebar & Unified Inbox.",
+    "Tinder-style Matchmaking UI implementation.",
+    "Telemetry to FitCoins rewarding logic.",
+    "SQL Cast Fix (UUID to Text) for Squad Policies.",
+    "i18n Global Dictionary Audit.",
   ];
 
   // Fetch all issues in the project first to search locally

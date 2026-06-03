@@ -1,4 +1,24 @@
 {
+  "nav": {
+    "inicio": "Dashboard",
+    "matchmaking": "Matchmaking (The Loop)",
+    "map_and_courts": "Bookings & Map",
+    "comunidad": "Community (Feed)",
+    "squads": "Squads (Clans)",
+    "mensajes": "Messages (Inbox)",
+    "telemetria": "My Performance (Telemetry)",
+    "wallet": "FitCoins (Wallet)",
+    "perfil": "My Profile",
+    "business": "My Business",
+    "admin": "Admin Panel",
+    "logout": "Log Out",
+    "groups": {
+      "action": "ACTION & DISCOVERY",
+      "social": "SOCIAL & COLLABORATION",
+      "analytics": "ANALYTICS & ECONOMY",
+      "account": "MY ACCOUNT"
+    }
+  },
   "login": {
     "title_signin": "Sign In",
     "title_signup": "Create Account",
@@ -43,7 +63,10 @@
   "dashboard": {
     "title": "Main Dashboard",
     "balance": "FitCoins Balance",
-    "recent_activity": "Recent Activity"
+    "recent_activity": "Recent Activity",
+    "next_match": "Next Match",
+    "no_next_match": "No upcoming matches scheduled",
+    "find_one": "Find Match"
   },
   "matchmaking": {
     "title": "AI Matchmaking",

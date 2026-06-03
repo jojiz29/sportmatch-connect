@@ -1,5 +1,6 @@
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 export interface Reward {
   id: string;
@@ -12,6 +13,47 @@ export interface Reward {
 }
 
 export async function getRewards(): Promise<Reward[]> {
+  if (import.meta.env.VITE_USE_MOCKS === "true" || useAuthStore.getState().isDemoMode) {
+    return [
+      {
+        id: "00000000-0000-0000-0000-000000000091",
+        title: "Hora gratis de pádel",
+        cost_fitcoins: 500,
+        description: "Descuento para una hora de alquiler de cancha de pádel.",
+        stock: 50,
+        image_url: "",
+        category: "Canchas",
+      },
+      {
+        id: "00000000-0000-0000-0000-000000000092",
+        title: "Powerade Sports Drink",
+        cost_fitcoins: 50,
+        description: "Bebida isotónica Powerade de 500ml.",
+        stock: 100,
+        image_url: "",
+        category: "Bebidas",
+      },
+      {
+        id: "00000000-0000-0000-0000-000000000093",
+        title: "Pelota oficial",
+        cost_fitcoins: 800,
+        description: "Pelota oficial de tenis o fútbol.",
+        stock: 25,
+        image_url: "",
+        category: "Equipamiento",
+      },
+      {
+        id: "00000000-0000-0000-0000-000000000094",
+        title: "Camiseta SportMatch",
+        cost_fitcoins: 1200,
+        description: "Camiseta oficial técnica transpirable.",
+        stock: 30,
+        image_url: "",
+        category: "Ropa",
+      },
+    ];
+  }
+
   const { data, error } = await supabase
     .from("rewards")
     .select("*")
@@ -26,6 +68,10 @@ export async function getRewards(): Promise<Reward[]> {
 }
 
 export async function redeemReward(userId: string, rewardId: string): Promise<boolean> {
+  if (import.meta.env.VITE_USE_MOCKS === "true" || useAuthStore.getState().isDemoMode) {
+    return true;
+  }
+
   const { data, error } = await supabase.rpc("redeem_reward", {
     p_user_id: userId,
     p_reward_id: rewardId,
