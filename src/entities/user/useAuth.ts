@@ -284,6 +284,13 @@ export function useAuth() {
         }
       }
 
+      if (authData.session) {
+        await supabase.auth.setSession({
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
+        });
+      }
+
       store.register(profile as User);
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error durante registro:", err);

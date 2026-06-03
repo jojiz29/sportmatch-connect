@@ -197,7 +197,11 @@ function RegisterPage() {
       await register(newUser);
 
       toast.success(t("register.success_toast"));
-      navigate({ to: "/app" });
+      if (role === "BUSINESS") {
+        navigate({ to: "/app/business" });
+      } else {
+        navigate({ to: "/app" });
+      }
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error en registro:", err);
       const errorMessage = err instanceof Error ? err.message : t("register.error_toast");

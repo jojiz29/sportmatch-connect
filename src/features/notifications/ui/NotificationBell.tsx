@@ -114,7 +114,7 @@ export function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute right-0 top-14 w-[360px] max-h-[480px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
+            className="absolute right-0 left-auto top-14 w-[290px] min-[375px]:w-[340px] sm:w-[360px] max-h-[480px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right lg:left-0 lg:right-auto lg:origin-top-left"
             id="notification-panel"
           >
             {/* Header */}
