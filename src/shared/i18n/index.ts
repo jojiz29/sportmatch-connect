@@ -1,26 +1,23 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import HttpBackend from "i18next-http-backend";
-
-// Ensure absolute-base path is resolved for production environments
-const getBaseUrl = () => {
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  return "";
-};
+import esTranslations from "./locales/es.json";
+import enTranslations from "./locales/en.json";
 
 i18n
-  .use(HttpBackend)
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     fallbackLng: "es",
     supportedLngs: ["es", "en"],
     load: "languageOnly",
-    backend: {
-      loadPath: `${getBaseUrl()}/locales/{{lng}}.json`,
+    resources: {
+      es: {
+        translation: esTranslations,
+      },
+      en: {
+        translation: enTranslations,
+      },
     },
     interpolation: {
       escapeValue: false, // React ya se encarga de esto
