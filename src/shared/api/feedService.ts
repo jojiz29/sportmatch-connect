@@ -88,75 +88,83 @@ interface SupabasePost {
 }
 
 export async function getFeed(userId: string): Promise<Post[]> {
-  if (useAuthStore.getState().isDemoMode) {
-    return getMockPosts();
-  }
-
-  // 1. Fetch user's own profile for distance calculation
-  const { data: currentUser } = await supabase
-    .from("profiles")
-    .select("last_location_lat, last_location_lng")
-    .eq("id", userId)
-    .single();
-
-  // 2. Fetch the list of followed users
-  const { data: following } = await supabase
-    .from("followers")
-    .select("following_id")
-    .eq("follower_id", userId);
-
-  const followingIds = new Set((following || []).map((f) => f.following_id));
-
-  // 3. Fetch all posts with their author profiles
-  const { data: posts, error } = await supabase
-    .from("posts")
-    .select("*, profile:profiles(*)")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error(`Error fetching feed from Supabase (code: ${error.code}):`, error);
-    throw error;
-  }
-
-  // 4. Filter posts based on logic (own, following, or sponsored within 5km)
-  const filtered = ((posts as unknown as SupabasePost[]) || []).filter((post) => {
-    const author = post.profile;
-    if (!author) return false;
-
-    // Own post
-    if (post.user_id === userId) return true;
-
-    // Following user post
-    if (followingIds.has(post.user_id)) return true;
-
-    // Sponsored post within 5km
-    if (author.is_sponsored) {
-      if (!currentUser?.last_location_lat || !currentUser?.last_location_lng) return false;
-      if (!author.last_location_lat || !author.last_location_lng) return false;
-
-      const dist = calculateDistance(
-        parseFloat(String(currentUser.last_location_lat)),
-        parseFloat(String(currentUser.last_location_lng)),
-        parseFloat(String(author.last_location_lat)),
-        parseFloat(String(author.last_location_lng)),
-      );
-      return dist <= 5;
+  try {
+    if (useAuthStore.getState().isDemoMode) {
+      return getMockPosts();
     }
 
-    return false;
-  });
+    // 1. Fetch user's own profile for distance calculation
+    const { data: currentUser } = await withTimeout(
+      supabase
+        .from("profiles")
+        .select("last_location_lat, last_location_lng")
+        .eq("id", userId)
+        .single(),
+    ).catch(() => ({ data: null }));
 
-  return (filtered as SupabasePost[]).map((post) => ({
-    id: post.id,
-    user_id: post.user_id,
-    content: post.content,
-    type: post.type as Post["type"],
-    created_at: post.created_at,
-    media_url: post.media_url || undefined,
-    sport: (post.sport as Post["sport"]) || undefined,
-    user_name: post.profile?.name || "Deportista",
-    user_avatar: post.profile?.avatar_url || "",
-  }));
+    // 2. Fetch the list of followed users
+    const { data: following } = await withTimeout(
+      supabase.from("followers").select("following_id").eq("follower_id", userId),
+    ).catch(() => ({ data: null }));
+
+    const followingIds = new Set((following || []).map((f) => f.following_id));
+
+    // 3. Fetch all posts with their author profiles
+    const { data: posts, error } = await withTimeout(
+      supabase
+        .from("posts")
+        .select("*, profile:profiles(*)")
+        .order("created_at", { ascending: false }),
+    );
+
+    if (error) {
+      console.error(`Error fetching feed from Supabase (code: ${error.code}):`, error);
+      return [];
+    }
+
+    // 4. Filter posts based on logic (own, following, or sponsored within 5km)
+    const filtered = ((posts as unknown as SupabasePost[]) || []).filter((post) => {
+      const author = post.profile;
+      if (!author) return false;
+
+      // Own post
+      if (post.user_id === userId) return true;
+
+      // Following user post
+      if (followingIds.has(post.user_id)) return true;
+
+      // Sponsored post within 5km
+      if (author.is_sponsored) {
+        if (!currentUser?.last_location_lat || !currentUser?.last_location_lng) return false;
+        if (!author.last_location_lat || !author.last_location_lng) return false;
+
+        const dist = calculateDistance(
+          parseFloat(String(currentUser.last_location_lat)),
+          parseFloat(String(currentUser.last_location_lng)),
+          parseFloat(String(author.last_location_lat)),
+          parseFloat(String(author.last_location_lng)),
+        );
+        return dist <= 5;
+      }
+
+      return false;
+    });
+
+    return (filtered as SupabasePost[]).map((post) => ({
+      id: post.id,
+      user_id: post.user_id,
+      content: post.content,
+      type: post.type as Post["type"],
+      created_at: post.created_at,
+      media_url: post.media_url || undefined,
+      sport: (post.sport as Post["sport"]) || undefined,
+      user_name: post.profile?.name || "Deportista",
+      user_avatar: post.profile?.avatar_url || "",
+    }));
+  } catch (err) {
+    console.error("Critical error in getFeed, falling back to empty feed list:", err);
+    return [];
+  }
 }
 
 export async function createPost(

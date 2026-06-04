@@ -37,16 +37,16 @@ test.describe("Community & Squads Integration Test", () => {
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`));
 
-    // Go to Feed tab and publish post
-    await page.click("#dashboard-tab-feed");
+    // Go to Feed page and publish post
+    await page.goto(`${targetURL}/app/feed`);
     await page.fill("#feed-post-textarea", "¡Hola a todos! Este es mi primer post del día.");
     await page.click("#feed-post-submit");
     await expect(page.locator("#feed-posts-list")).toContainText(
       "¡Hola a todos! Este es mi primer post del día.",
     );
 
-    // Go to Squads tab and create a squad
-    await page.click("#dashboard-tab-squads");
+    // Go to Squads page and create a squad
+    await page.goto(`${targetURL}/app/squads`);
     await page.click("#create-squad-btn");
     await page.fill("#squad-name-input", "Real Tenis Club Surco");
     await page.fill("#squad-desc-input", "Club de tenis fundado por Edwin");
@@ -68,13 +68,13 @@ test.describe("Community & Squads Integration Test", () => {
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`));
 
     // Verify Edwin's post is visible in Fabiola's feed
-    await page.click("#dashboard-tab-feed");
+    await page.goto(`${targetURL}/app/feed`);
     await expect(page.locator("#feed-posts-list")).toContainText(
       "¡Hola a todos! Este es mi primer post del día.",
     );
 
     // Verify Edwin's squad is visible in Fabiola's explorer and join it
-    await page.click("#dashboard-tab-squads");
+    await page.goto(`${targetURL}/app/squads`);
     const squadCard = page.locator("div.bg-gradient-card", { hasText: "Real Tenis Club Surco" });
     await expect(squadCard).toBeVisible();
     await expect(squadCard.locator(".squad-members-count")).toContainText("1 miembros");

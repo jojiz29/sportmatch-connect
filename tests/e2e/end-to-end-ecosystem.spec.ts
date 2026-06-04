@@ -18,15 +18,8 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await page.click('button[type="submit"]');
     await expect(page.locator("h1").first()).toContainText("Edwin");
 
-    // Navigate to matchmaking to find and follow Puka Power
-    await page.click("aside >> text=Matchmaking");
-    await page.waitForTimeout(500);
-
-    // Find Puka Power in the list and follow them
-    const pukaCard = page.locator("text=Puka Power").first();
-    await expect(pukaCard).toBeVisible();
-
-    // Navigate to Puka Power's profile page and follow them
+    // Navigate directly to Puka Power's public profile
+    // (Puka Power is BUSINESS role and does not appear in the PLAYER matchmaking list)
     await page.goto(`${targetURL}/app/profile/user-puka-power`);
     const followBtn = page.locator("button", { hasText: "Seguir" });
     const followingBtn = page.locator("button", { hasText: "Siguiendo" });
@@ -73,10 +66,8 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     // ═══════════════════════════════════════════════════
     console.log("Phase 3: Puka Power publishes a sponsored offer...");
 
-    // Go to dashboard feed tab
-    await page.click("aside >> text=Inicio");
-    await page.waitForTimeout(300);
-    await page.click("#dashboard-tab-feed");
+    // Go to Feed page
+    await page.goto(`${targetURL}/app/feed`);
     await page.waitForTimeout(300);
 
     // Create a new post as Puka Power

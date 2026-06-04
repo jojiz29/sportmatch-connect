@@ -1,4 +1,53 @@
-export type Sport = "Fútbol" | "Básquet" | "Tenis" | "Pádel" | "Vóley" | "Running";
+export type Sport =
+  | "Fútbol"
+  | "Básquet"
+  | "Tenis"
+  | "Pádel"
+  | "Vóley"
+  | "Running"
+  | "Rugby"
+  | "Natación"
+  | "Gimnasio"
+  | "Calistenia"
+  | "Tenis de Mesa"
+  | "Boxeo / MMA"
+  | "Ciclismo"
+  | "Fútbol Americano"
+  | "Béisbol"
+  | "Skateboarding"
+  | "Golf"
+  | "Automovilismo"
+  | "EA Sports FC"
+  | "League of Legends"
+  | "Valorant"
+  | "Clash Royale"
+  | "Fortnite"
+  | "Brawl Stars"
+  | "Counter-Strike 2"
+  | "Dota 2"
+  | "Rocket League"
+  | "Overwatch 2"
+  | "Street Fighter / Tekken"
+  | "Apex Legends"
+  | "PUBG Mobile"
+  | "Free Fire"
+  | "Call of Duty: Warzone"
+  | "Rainbow Six Siege"
+  | "Hearthstone"
+  | "iRacing / F1 SimRacing";
+
+export interface SportPreferences {
+  sports_matrix: {
+    [sportName: string]: {
+      level: "Amateur" | "Intermediate" | "Advanced" | "Pro";
+      weight: number;
+    };
+  };
+  behavioral_intent: {
+    weekly_hours: number;
+    intent: "Recreativo" | "Competitivo";
+  };
+}
 
 export interface SportCatalog {
   id: string;
@@ -35,6 +84,11 @@ export interface User {
   business_category?: "Canchas" | "Gym" | "Tienda" | "Bebidas";
   is_sponsored?: boolean;
   is_admin?: boolean;
+  sport_preferences?: SportPreferences;
+  user_sports?: { sport_id: string; level: 1 | 2 | 3 }[];
+  onboarding_completed?: boolean;
+  push_token?: string | null;
+  gender?: "Masculino" | "Femenino" | "Mixto";
 }
 
 export interface Court {
@@ -148,7 +202,13 @@ export interface CatalogItem {
 export interface AppNotification {
   id: string;
   user_id: string;
-  type: "FOLLOW" | "SQUAD_INVITE" | "TRANSACTION_SUCCESS" | "AD_IMPRESSION";
+  type:
+    | "FOLLOW"
+    | "SQUAD_INVITE"
+    | "TRANSACTION_SUCCESS"
+    | "AD_IMPRESSION"
+    | "MATCH_ALERT"
+    | "SQUAD_MESSAGE";
   title: string;
   content: string;
   link?: string;

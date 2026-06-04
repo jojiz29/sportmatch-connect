@@ -88,43 +88,51 @@ export function NewsFeed() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "posts" },
         async (payload) => {
-          const newRow = payload.new as {
-            id: string;
-            user_id: string;
-            content: string;
-            type: string;
-            created_at: string;
-            media_url: string | null;
-            sport: string | null;
-          };
+          try {
+            const newRow = payload.new as {
+              id: string;
+              user_id: string;
+              content: string;
+              type: string;
+              created_at: string;
+              media_url: string | null;
+              sport: string | null;
+            };
 
-          // Skip own posts — already added optimistically by handleSubmit
-          if (newRow.user_id === currentUserIdRef.current) return;
+            // Skip own posts — already added optimistically by handleSubmit
+            if (newRow.user_id === currentUserIdRef.current) return;
 
-          // Fetch the author profile for display
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("name, avatar_url")
-            .eq("id", newRow.user_id)
-            .single();
+            // Fetch the author profile for display
+            const { data: profile, error } = await supabase
+              .from("profiles")
+              .select("name, avatar_url")
+              .eq("id", newRow.user_id)
+              .single();
 
-          const post: Post = {
-            id: newRow.id,
-            user_id: newRow.user_id,
-            content: newRow.content,
-            type: newRow.type as Post["type"],
-            created_at: newRow.created_at,
-            media_url: newRow.media_url || undefined,
-            sport: (newRow.sport as Post["sport"]) || undefined,
-            user_name: profile?.name || "Deportista",
-            user_avatar: profile?.avatar_url || "",
-          };
+            if (error) {
+              console.error("Error fetching user profile for realtime post:", error);
+            }
 
-          setPosts((prev) => {
-            // Deduplicate: skip if this post is already in state
-            if (prev.some((p) => p.id === post.id)) return prev;
-            return [post, ...prev];
-          });
+            const post: Post = {
+              id: newRow.id,
+              user_id: newRow.user_id,
+              content: newRow.content,
+              type: newRow.type as Post["type"],
+              created_at: newRow.created_at,
+              media_url: newRow.media_url || undefined,
+              sport: (newRow.sport as Post["sport"]) || undefined,
+              user_name: profile?.name || "Deportista",
+              user_avatar: profile?.avatar_url || "",
+            };
+
+            setPosts((prev) => {
+              // Deduplicate: skip if this post is already in state
+              if (prev.some((p) => p.id === post.id)) return prev;
+              return [post, ...prev];
+            });
+          } catch (err) {
+            console.error("Error processing realtime insert event:", err);
+          }
         },
       )
       .subscribe();

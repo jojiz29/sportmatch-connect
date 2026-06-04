@@ -41,7 +41,9 @@ export const useProfileStore = create<ProfileState>()(
       },
       updateProfile: async (data) => {
         const currentUser = useAuthStore.getState().user;
-        if (!currentUser) return;
+        if (!currentUser) {
+          throw new Error("No hay una sesión activa. Por favor inicia sesión de nuevo.");
+        }
 
         // Persist to database if mocks are off
         try {
@@ -53,7 +55,7 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = { ...currentUser, ...data };
 
-        // Update in auth store
+        // Optimistic update to local stores immediately
         useAuthStore.setState({ user: updated });
 
         set((state) => ({
@@ -64,13 +66,69 @@ export const useProfileStore = create<ProfileState>()(
           return;
         }
 
-        try {
-          const { error } = await supabase.from("profiles").update(data).eq("id", currentUser.id);
-          if (error) {
-            console.error("Error updating profile in Supabase:", error);
-          }
-        } catch (err) {
-          console.error("Failed to update profile in database:", err);
+        // Filter payload to only include columns that exist in the database schema.
+        // This prevents PGRST204 errors when using a database without local migration columns.
+        const VALID_PROFILE_COLUMNS = [
+          "id",
+          "name",
+          "age",
+          "city",
+          "avatar_url",
+          "bio",
+          "trust_score",
+          "fitcoins_balance",
+          "level",
+          "preferred_sports",
+          "matches_played",
+          "last_location_lat",
+          "last_location_lng",
+          "user_role",
+          "company_name",
+          "business_category",
+          "is_sponsored",
+          "is_admin",
+          "gender",
+          "user_sports",
+          "sport_preferences",
+          "onboarding_completed",
+        ];
+
+        const supabasePayload = Object.keys(data)
+          .filter((key) => VALID_PROFILE_COLUMNS.includes(key))
+          .reduce(
+            (obj, key) => {
+              obj[key] = data[key as keyof Partial<User>];
+              return obj;
+            },
+            {} as Record<string, unknown>,
+          );
+
+        // Race the Supabase request against a 12-second timeout to prevent
+        // infinite hangs caused by RLS cold-starts or missing auth sessions.
+        const updateRequest = supabase
+          .from("profiles")
+          .update(supabasePayload)
+          .eq("id", currentUser.id);
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "La actualización tardó demasiado. Verifica tu conexión e inténtalo de nuevo.",
+                ),
+              ),
+            12000,
+          ),
+        );
+
+        // Will throw if timeout fires or network request itself throws
+        const { error } = await Promise.race([updateRequest, timeoutPromise]);
+
+        if (error) {
+          if (import.meta.env.DEV) console.error("Error updating profile in Supabase:", error);
+          // Re-throw so the calling component's catch block can show the user an error toast
+          throw error;
         }
       },
     }),
@@ -81,7 +139,14 @@ export const useProfileStore = create<ProfileState>()(
   ),
 );
 
-// Subscribe to useAuthStore to keep profile in sync
-useAuthStore.subscribe(() => {
-  useProfileStore.getState().initProfile();
+// Subscribe to useAuthStore to keep profile in sync.
+// Only triggers initProfile when the user ID actually changes (login/logout),
+// preventing redundant follow stats database reloads on updates.
+let _prevProfileUserId: string | null = useAuthStore.getState().user?.id ?? null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.id ?? null;
+  if (userId !== _prevProfileUserId) {
+    _prevProfileUserId = userId;
+    useProfileStore.getState().initProfile();
+  }
 });

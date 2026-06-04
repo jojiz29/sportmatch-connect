@@ -3,16 +3,12 @@ import { useAuth } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { MapPin, User as UserIcon, Mail, Lock, Check } from "lucide-react";
-import { Sport } from "@/entities/types";
-import { apiClient } from "@/shared/api/apiClient";
+import { MapPin, User as UserIcon, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { signInWithGoogle } from "@/services/authService";
 
 export const Route = createFileRoute("/app/register")({
   component: RegisterPage,
 });
-
-const STATIC_SPORTS: Sport[] = ["Pádel", "Fútbol", "Tenis", "Running"];
 
 const ALLOWED_DOMAINS = [
   "gmail.com",
@@ -96,21 +92,7 @@ function RegisterPage() {
   const [category, setCategory] = useState<"Canchas" | "Gym" | "Tienda" | "Bebidas">("Tienda");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedSports, setSelectedSports] = useState<Sport[]>([]);
-  const [sportsList, setSportsList] = useState<string[]>(STATIC_SPORTS);
-
-  useEffect(() => {
-    apiClient.sports
-      .getAll()
-      .then((data) => {
-        if (data && data.length > 0) {
-          setSportsList(data.map((s) => s.name));
-        }
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.error("Error loading sports:", err);
-      });
-  }, []);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
@@ -134,24 +116,17 @@ function RegisterPage() {
     }
   }, []);
 
-  const toggleSport = (sport: Sport) => {
-    if (selectedSports.includes(sport)) {
-      setSelectedSports(selectedSports.filter((s) => s !== sport));
-    } else {
-      setSelectedSports([...selectedSports, sport]);
-    }
-  };
-
   const emailError = email ? getEmailValidationError(email, t) : null;
   const criteria = getPasswordCriteria(password);
   const isPasswordValid = Object.values(criteria).every(Boolean);
   const strength = getPasswordStrength(criteria);
   const strengthPercent = (Object.values(criteria).filter(Boolean).length / 5) * 100;
 
+  const isPlayerStep1Valid =
+    fullName.trim().length > 0 && email.length > 0 && emailError === null && isPasswordValid;
+
   const isFormValid =
-    (role === "PLAYER"
-      ? fullName.trim().length > 0 && selectedSports.length > 0
-      : companyName.trim().length > 0) &&
+    (role === "PLAYER" ? isPlayerStep1Valid : companyName.trim().length > 0) &&
     email.length > 0 &&
     emailError === null &&
     isPasswordValid;
@@ -182,7 +157,7 @@ function RegisterPage() {
         trust_score: 50,
         fitcoins_balance: 0,
         level: "Intermedio" as const,
-        preferred_sports: role === "BUSINESS" ? [] : selectedSports,
+        preferred_sports: [],
         matches_played: 0,
         last_location_lat: lat || -12.14,
         last_location_lng: lng || -76.995,
@@ -197,9 +172,13 @@ function RegisterPage() {
       await register(newUser);
 
       toast.success(t("register.success_toast"));
-      navigate({ to: "/app" });
+      if (role === "BUSINESS") {
+        navigate({ to: "/app/business" });
+      } else {
+        navigate({ to: "/app" });
+      }
     } catch (err: unknown) {
-      if (import.meta.env.DEV) console.error("Error en registro:", err);
+      console.error("Error en registro:", err);
       const errorMessage = err instanceof Error ? err.message : t("register.error_toast");
       toast.error(`Error: ${errorMessage}`);
     }
@@ -238,6 +217,7 @@ function RegisterPage() {
                 ? "bg-gradient-primary text-primary-foreground shadow-glow"
                 : "text-muted-foreground hover:text-foreground"
             }`}
+            id="register-role-player"
           >
             {t("register.role_player")}
           </button>
@@ -377,16 +357,24 @@ function RegisterPage() {
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`w-full pl-12 pr-4 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                className={`w-full pl-12 pr-12 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
                   password && !isPasswordValid ? "border-red-500/50" : "border-border"
                 }`}
                 placeholder="••••••••"
                 id="register-password-input"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
 
             {password && (
@@ -477,38 +465,13 @@ function RegisterPage() {
             )}
           </div>
 
-          {role === "PLAYER" && (
-            <div>
-              <label className="text-sm font-semibold mb-3 block">{t("register.sports")}</label>
-              <div className="flex flex-wrap gap-2">
-                {sportsList.map((sport) => {
-                  const isSelected = selectedSports.includes(sport as Sport);
-                  return (
-                    <button
-                      key={sport}
-                      type="button"
-                      onClick={() => toggleSport(sport as Sport)}
-                      className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center gap-2 cursor-pointer ${
-                        isSelected
-                          ? "bg-gradient-primary border-primary text-primary-foreground shadow-glow"
-                          : "bg-background/30 border-border text-muted-foreground hover:bg-accent"
-                      }`}
-                    >
-                      {isSelected && <Check className="h-4 w-4" />}
-                      {sport}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <button
             type="submit"
-            disabled={!isFormValid}
+            disabled={role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid}
             className="w-full py-4 mt-4 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 text-primary-foreground font-bold rounded-xl shadow-glow transition-all cursor-pointer"
+            id="register-player-next-btn"
           >
-            {t("register.btn_register")}
+            {role === "PLAYER" ? "Siguiente" : t("register.btn_register")}
           </button>
 
           <div className="relative my-4 flex items-center justify-center">
