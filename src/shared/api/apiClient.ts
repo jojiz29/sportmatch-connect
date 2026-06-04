@@ -1,5 +1,14 @@
 import { supabase } from "./supabase";
-import { User, Court, Match, Transaction, SportCatalog, Sport, Level } from "@/entities/types";
+import {
+  User,
+  Court,
+  Match,
+  Transaction,
+  SportCatalog,
+  Sport,
+  Level,
+  MatchParticipant,
+} from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { withTimeout } from "./timeoutHelper";
 
@@ -305,6 +314,130 @@ export const apiClient = {
       }
       return (data || []) as User[];
     },
+
+    async updateProfile(userId: string, data: Partial<User>): Promise<User> {
+      if (useAuthStore.getState().isDemoMode) {
+        const storedUsers = localStorage.getItem("sportmatch_demo_users");
+        const users = storedUsers ? JSON.parse(storedUsers) : MOCK_USERS;
+        const index = users.findIndex((u: User) => u.id === userId);
+        if (index !== -1) {
+          users[index] = { ...users[index], ...data };
+          localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
+
+          const mockIndex = MOCK_USERS.findIndex((u) => u.id === userId);
+          if (mockIndex !== -1) {
+            MOCK_USERS[mockIndex] = { ...MOCK_USERS[mockIndex], ...data };
+          }
+
+          // Also sync with auth store if it is the current user
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && currentUser.id === userId) {
+            useAuthStore.setState({ user: { ...currentUser, ...data } });
+          }
+
+          return users[index];
+        }
+        throw new Error("User not found");
+      }
+
+      const { data: updatedProfile, error } = await supabase
+        .from("profiles")
+        .update(data)
+        .eq("id", userId)
+        .select()
+        .single();
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error updating profile in Supabase:", error);
+        throw error;
+      }
+      return updatedProfile as User;
+    },
+
+    async getAttendanceStats(userId: string): Promise<{
+      matchesPlayed: number;
+      attendanceRate: number;
+      cancellations: number;
+      successfulConfirmations: number;
+    }> {
+      if (useAuthStore.getState().isDemoMode) {
+        const statsKey = `sportmatch_demo_attendance_stats_${userId}`;
+        const stored = localStorage.getItem(statsKey);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+
+        const u = MOCK_USERS.find((x) => x.id === userId);
+        const matchesPlayed = u ? u.matches_played : 12;
+
+        const mockStats = {
+          matchesPlayed,
+          attendanceRate: 94,
+          cancellations: 1,
+          successfulConfirmations: Math.max(0, matchesPlayed - 1),
+        };
+        localStorage.setItem(statsKey, JSON.stringify(mockStats));
+        return mockStats;
+      }
+
+      const { data: participations, error } = await supabase
+        .from("match_participants")
+        .select(
+          `
+          status,
+          attendance_status,
+          match:matches(status, date, time)
+        `,
+        )
+        .eq("user_id", userId);
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error fetching attendance statistics:", error);
+        throw error;
+      }
+
+      let matchesPlayed = 0;
+      let cancellations = 0;
+      let successfulConfirmations = 0;
+
+      if (participations) {
+        for (const p of participations) {
+          const matchVal = p.match as unknown as
+            | { status?: string; date: string; time: string }[]
+            | { status?: string; date: string; time: string }
+            | null;
+          const match = Array.isArray(matchVal) ? matchVal[0] : matchVal;
+          if (!match) continue;
+
+          const matchStart = new Date(`${match.date}T${match.time}`);
+          const isPast =
+            matchStart.getTime() < Date.now() ||
+            match.status === "Finished" ||
+            match.status === "COMPLETED";
+
+          if (isPast && (p.status === "ACCEPTED" || p.status === "ATTENDED")) {
+            matchesPlayed++;
+
+            if (p.attendance_status === "VALIDATED") {
+              successfulConfirmations++;
+            } else if (p.attendance_status === "ABSENT") {
+              cancellations++;
+            }
+          }
+        }
+      }
+
+      const totalValidatedOrConfirmed = successfulConfirmations;
+      const attendanceRate =
+        matchesPlayed > 0 ? Math.round((totalValidatedOrConfirmed / matchesPlayed) * 100) : 100;
+
+      return {
+        matchesPlayed,
+        attendanceRate,
+        cancellations,
+        successfulConfirmations,
+      };
+    },
   },
 
   matches: {
@@ -425,6 +558,158 @@ export const apiClient = {
         current_players: [],
       } as unknown as Match;
     },
+
+    async confirmAttendance(matchId: string, userId: string): Promise<void> {
+      if (useAuthStore.getState().isDemoMode) {
+        localStorage.setItem(`sportmatch_demo_checkin_${matchId}_${userId}`, "CONFIRMED");
+        return;
+      }
+
+      const { error } = await withTimeout(
+        supabase
+          .from("match_participants")
+          .update({ attendance_status: "CONFIRMED" })
+          .eq("match_id", matchId)
+          .eq("user_id", userId),
+      );
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error confirming attendance:", error);
+        throw error;
+      }
+    },
+
+    async validateAttendance(
+      matchId: string,
+      validatorId: string,
+      validatedId: string,
+      status: "CONFIRMED" | "ABSENT",
+    ): Promise<void> {
+      if (useAuthStore.getState().isDemoMode) {
+        const key = `sportmatch_demo_validations_${matchId}`;
+        const storedValidations = JSON.parse(localStorage.getItem(key) || "[]");
+
+        const exists = storedValidations.some(
+          (v: { validator_id: string; validated_id: string; status: string }) =>
+            v.validator_id === validatorId && v.validated_id === validatedId,
+        );
+        if (exists) return;
+
+        storedValidations.push({ validator_id: validatorId, validated_id: validatedId, status });
+        localStorage.setItem(key, JSON.stringify(storedValidations));
+
+        const nextStatus = status === "CONFIRMED" ? "VALIDATED" : "ABSENT";
+        localStorage.setItem(`sportmatch_demo_checkin_${matchId}_${validatedId}`, nextStatus);
+
+        const storedUsers = localStorage.getItem("sportmatch_demo_users");
+        const users = storedUsers ? JSON.parse(storedUsers) : MOCK_USERS;
+        const targetIndex = users.findIndex((u: User) => u.id === validatedId);
+
+        if (targetIndex !== -1) {
+          const target = users[targetIndex];
+          target.matches_played += 1;
+
+          let amount = 0;
+          let desc = "";
+          if (status === "CONFIRMED") {
+            target.trust_score = Math.min(100, target.trust_score + 2);
+            amount = 50;
+            desc = "Recompensa: Asistencia verificada";
+          } else {
+            target.trust_score = Math.max(0, target.trust_score - 15);
+            amount = -100;
+            desc = "Penalización: Inasistencia no justificada";
+          }
+
+          const txKey = `sportmatch_demo_transactions_${validatedId}`;
+          const transactions = JSON.parse(localStorage.getItem(txKey) || "[]");
+          transactions.unshift({
+            id: `tx-validation-${Date.now()}`,
+            created_at: new Date().toISOString(),
+            user_id: validatedId,
+            amount,
+            description: desc,
+            type: amount > 0 ? "EARN" : "PENALTY",
+          });
+          localStorage.setItem(txKey, JSON.stringify(transactions));
+
+          const storedBalances = localStorage.getItem("sportmatch_demo_balances") || "{}";
+          const balances = JSON.parse(storedBalances);
+          balances[validatedId] = Math.max(
+            0,
+            (balances[validatedId] ?? target.fitcoins_balance) + amount,
+          );
+          target.fitcoins_balance = balances[validatedId];
+          localStorage.setItem("sportmatch_demo_balances", JSON.stringify(balances));
+
+          localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
+
+          const mockIndex = MOCK_USERS.findIndex((u) => u.id === validatedId);
+          if (mockIndex !== -1) {
+            MOCK_USERS[mockIndex] = { ...MOCK_USERS[mockIndex], ...target };
+          }
+
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && currentUser.id === validatedId) {
+            useAuthStore.setState({ user: { ...currentUser, ...target } });
+          }
+        }
+        return;
+      }
+
+      const { error } = await withTimeout(
+        supabase.from("attendance_validations").insert({
+          match_id: matchId,
+          validator_id: validatorId,
+          validated_id: validatedId,
+          status: status,
+        }),
+      );
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error submitting attendance validation:", error);
+        throw error;
+      }
+    },
+
+    async getParticipantAttendance(matchId: string): Promise<MatchParticipant[]> {
+      if (useAuthStore.getState().isDemoMode) {
+        const match = MOCK_MATCHES.find((m) => m.id === matchId);
+        if (!match) return [];
+        return (match.current_players || []).map((player) => {
+          const status =
+            localStorage.getItem(`sportmatch_demo_checkin_${matchId}_${player.id}`) || "PENDING";
+          return {
+            match_id: matchId,
+            user_id: player.id,
+            status: "ACCEPTED",
+            joined_at: new Date().toISOString(),
+            attendance_status: status as "PENDING" | "CONFIRMED" | "ABSENT" | "VALIDATED",
+            profile: player,
+          } as MatchParticipant;
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("match_participants")
+        .select(
+          `
+          *,
+          profile:profiles(*)
+        `,
+        )
+        .eq("match_id", matchId);
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error fetching participant attendance:", error);
+        throw error;
+      }
+
+      return (data || []).map((p) => ({
+        ...p,
+        profile: (p as unknown as MatchParticipant).profile || undefined,
+      })) as unknown as MatchParticipant[];
+    },
   },
 
   wallet: {
@@ -544,7 +829,7 @@ export const apiClient = {
       description: string,
       type: "EARN" | "SPEND" | "PENALTY",
     ): Promise<Transaction> {
-      if (USE_MOCKS) {
+      if (useAuthStore.getState().isDemoMode) {
         const newTx: Transaction = {
           id: `txn_${Date.now()}`,
           created_at: new Date().toISOString(),
@@ -553,44 +838,31 @@ export const apiClient = {
           description,
           type,
         };
-        return Promise.resolve(newTx);
+        this.saveTransaction(userId, newTx);
+        const currentBalance = await this.getBalance(userId);
+        this.updateBalance(userId, currentBalance + amount);
+        return newTx;
       }
 
-      // Insert transaction log
-      const txData = await fetchSupabase<Transaction>(
+      const { data: txData, error: txError } = await withTimeout(
         supabase
-          .from("transactions")
-          .insert([
-            {
-              id: `txn_${Date.now()}`,
-              user_id: userId,
-              amount,
-              description,
-              type,
-            },
-          ])
+          .from("wallet_transactions")
+          .insert({
+            user_id: userId,
+            amount,
+            description,
+            type,
+          })
           .select()
           .single(),
       );
 
-      // Deduct or increment user fitcoins_balance
-      const { data: userProfile, error: getErr } = await supabase
-        .from("users")
-        .select("fitcoins_balance")
-        .eq("id", userId)
-        .single();
-      if (getErr) throw new Error(getErr.message);
+      if (txError) {
+        if (import.meta.env.DEV) console.error("Error creating transaction:", txError);
+        throw txError;
+      }
 
-      const currentBalance = userProfile?.fitcoins_balance || 0;
-      const newBalance = currentBalance + amount;
-
-      const { error: updateErr } = await supabase
-        .from("users")
-        .update({ fitcoins_balance: newBalance })
-        .eq("id", userId);
-      if (updateErr) throw new Error(updateErr.message);
-
-      return txData;
+      return txData as unknown as Transaction;
     },
   },
 
