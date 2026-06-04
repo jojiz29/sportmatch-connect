@@ -16,7 +16,10 @@ async function run() {
     email: "ejuniorfloress@gmail.com",
     password: "EdwinFlores123?",
   });
-  if (authErr) { console.error("❌ Auth:", authErr); return; }
+  if (authErr) {
+    console.error("❌ Auth:", authErr);
+    return;
+  }
   console.log("✅ Signed in:", auth.user.id);
 
   const tables = [
@@ -40,14 +43,19 @@ async function run() {
 
   // Test the exact matches query (with joins)
   console.log("\n🔗 Testing matches with full join (exact loader query)...");
-  const { data: matchData, error: matchErr } = await supabase.from("matches").select(`
+  const { data: matchData, error: matchErr } = await supabase
+    .from("matches")
+    .select(
+      `
     *,
     court:courts(*),
     match_participants(
       status,
       profile:profiles(*)
     )
-  `).limit(2);
+  `,
+    )
+    .limit(2);
 
   if (matchErr) {
     console.log(`  ❌ matches JOIN query FAILED: [${matchErr.code}] ${matchErr.message}`);
