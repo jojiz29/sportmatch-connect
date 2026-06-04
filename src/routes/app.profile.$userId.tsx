@@ -66,6 +66,12 @@ function UserProfile() {
   const [profile, setProfile] = useState<User | null>(null);
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [attendanceStats, setAttendanceStats] = useState({
+    matchesPlayed: 0,
+    attendanceRate: 100,
+    cancellations: 0,
+    successfulConfirmations: 0,
+  });
 
   const relationships = useSocialStore((state) => state.relationships);
   const follow = useSocialStore((state) => state.follow);
@@ -100,6 +106,8 @@ function UserProfile() {
           if (userProfile) {
             const matchesData = await apiClient.matches.getUserMatches(userId);
             setUserMatches(matchesData);
+            const statsData = await apiClient.users.getAttendanceStats(userId);
+            setAttendanceStats(statsData);
           }
         }
       } catch (err) {
@@ -246,7 +254,7 @@ function UserProfile() {
           <Stat
             icon={<TrendingUp className="h-4 w-4 text-electric" />}
             label={t("profile.matches")}
-            value={profile.matches_played}
+            value={attendanceStats.matchesPlayed}
           />
           <Stat
             icon={<Award className="h-4 w-4 text-warning" />}
@@ -284,10 +292,22 @@ function UserProfile() {
             <div className="h-full bg-gradient-neon" style={{ width: `${profile.trust_score}%` }} />
           </div>
           <div className="mt-4 space-y-2 text-sm">
-            <Metric label={t("profile.punctuality")} value={98} />
-            <Metric label={t("profile.attendance")} value={94} />
-            <Metric label={t("profile.cancellations")} value={88} />
-            <Metric label={t("profile.behavior")} value={92} />
+            <Metric
+              label={t("profile.punctuality")}
+              value={Math.max(70, 100 - attendanceStats.cancellations * 5)}
+            />
+            <Metric label={t("profile.attendance")} value={attendanceStats.attendanceRate} />
+            <Metric
+              label={t("profile.cancellations")}
+              value={
+                attendanceStats.matchesPlayed > 0
+                  ? Math.round(
+                      (attendanceStats.cancellations / attendanceStats.matchesPlayed) * 100,
+                    )
+                  : 0
+              }
+            />
+            <Metric label={t("profile.behavior")} value={profile.trust_score} />
           </div>
         </div>
 
