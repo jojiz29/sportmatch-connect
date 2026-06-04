@@ -22,6 +22,16 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, Sport, User } from "@/entities/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/shared/ui/dialog";
+import { SportSelectionGrid } from "@/components/sports/SportSelectionGrid";
 
 export const Route = createFileRoute("/app/profile/")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -78,6 +88,44 @@ function Profile() {
     preferred_sports: "",
     avatar_url: "",
   });
+
+  const [editSportsMatrix, setEditSportsMatrix] = useState<Record<string, 1 | 2 | 3>>({});
+  const [isSportsDialogOpen, setIsSportsDialogOpen] = useState(false);
+  const [tempSportsMatrix, setTempSportsMatrix] = useState<Record<string, 1 | 2 | 3>>({});
+  const [shouldRenderGrid, setShouldRenderGrid] = useState(false);
+
+  useEffect(() => {
+    if (isSportsDialogOpen) {
+      const timer = setTimeout(() => {
+        setShouldRenderGrid(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setShouldRenderGrid(false);
+    }
+  }, [isSportsDialogOpen]);
+
+  const handleTempSportChange = (sportId: string, level: 1 | 2 | 3 | undefined) => {
+    setTempSportsMatrix((prev) => {
+      const next = { ...prev };
+      if (level === undefined) {
+        delete next[sportId];
+      } else {
+        next[sportId] = level;
+      }
+      return next;
+    });
+  };
+
+  const handleAcceptSports = () => {
+    setEditSportsMatrix(tempSportsMatrix);
+    const sportsKeys = Object.keys(tempSportsMatrix);
+    setEditForm((prev) => ({
+      ...prev,
+      preferred_sports: sportsKeys.join(", "),
+    }));
+    setIsSportsDialogOpen(false);
+  };
 
   useEffect(() => {
     initProfile();
@@ -189,6 +237,18 @@ function Profile() {
         : "text-destructive";
 
   const handleStartEdit = () => {
+    const initial: Record<string, 1 | 2 | 3> = {};
+    if (profile.user_sports && profile.user_sports.length > 0) {
+      profile.user_sports.forEach((us) => {
+        initial[us.sport_id] = us.level;
+      });
+    } else if (profile.preferred_sports) {
+      profile.preferred_sports.forEach((sport) => {
+        initial[sport] = 1;
+      });
+    }
+    setEditSportsMatrix(initial);
+
     setEditForm({
       name: profile.name,
       city: profile.city,
@@ -200,15 +260,46 @@ function Profile() {
   };
 
   const handleSave = () => {
+    const sportsKeys = Object.keys(editSportsMatrix);
+
+    // Structure user_sports array of objects containing sport_id AND specific level
+    const userSports = sportsKeys.map((key) => ({
+      sport_id: key,
+      level: editSportsMatrix[key] as 1 | 2 | 3,
+    }));
+
+    // Structure legacy sport_preferences mapping for backward compatibility
+    const legacyMatrix: Record<
+      string,
+      { level: "Amateur" | "Intermediate" | "Advanced" | "Pro"; weight: number }
+    > = {};
+    sportsKeys.forEach((key) => {
+      const lvl = editSportsMatrix[key];
+      const stringLevel = lvl === 1 ? "Amateur" : lvl === 2 ? "Intermediate" : "Advanced";
+      const weight = lvl === 1 ? 1.0 : lvl === 2 ? 2.0 : 3.5;
+      legacyMatrix[key] = { level: stringLevel, weight };
+    });
+
+    const firstSportKey = sportsKeys[0];
+    const primaryLevelVal = firstSportKey ? editSportsMatrix[firstSportKey] : 2;
+    const translatedLevel =
+      primaryLevelVal === 1 ? "Principiante" : primaryLevelVal === 2 ? "Intermedio" : "Avanzado";
+
     updateProfile({
       name: editForm.name,
       city: editForm.city,
       bio: editForm.bio,
       avatar_url: editForm.avatar_url,
-      preferred_sports: editForm.preferred_sports
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean) as Sport[],
+      preferred_sports: sportsKeys as Sport[],
+      level: translatedLevel as User["level"],
+      user_sports: userSports,
+      sport_preferences: {
+        sports_matrix: legacyMatrix,
+        behavioral_intent: {
+          weekly_hours: profile.sport_preferences?.behavioral_intent?.weekly_hours || 6,
+          intent: profile.sport_preferences?.behavioral_intent?.intent || "Competitivo",
+        },
+      },
     });
     setIsEditing(false);
     toast.success(t("profile.updated"));
@@ -337,13 +428,72 @@ function Profile() {
                   placeholder={t("profile.placeholder_bio")}
                   rows={2}
                 />
-                <input
-                  type="text"
-                  value={editForm.preferred_sports}
-                  onChange={(e) => setEditForm({ ...editForm, preferred_sports: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                  placeholder={t("profile.placeholder_sports")}
-                />
+                <Dialog open={isSportsDialogOpen} onOpenChange={setIsSportsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempSportsMatrix({ ...editSportsMatrix });
+                        setIsSportsDialogOpen(true);
+                      }}
+                      className="w-full text-left bg-background border border-border hover:border-primary/50 rounded-xl px-3 py-2.5 text-sm cursor-pointer flex justify-between items-center text-muted-foreground"
+                    >
+                      <span className="truncate">
+                        {editForm.preferred_sports ||
+                          t("profile.placeholder_sports", "Selecciona tus deportes...")}
+                      </span>
+                      <span className="text-xs font-bold text-neon shrink-0 ml-2 hover:underline">
+                        {t("profile.change_sports", "Cambiar")}
+                      </span>
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-background/95 border-border shadow-2xl rounded-3xl p-6">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-black text-white">
+                        {t("onboarding.step1_title", "Elige tus disciplinas")}
+                      </DialogTitle>
+                      <DialogDescription className="text-xs text-muted-foreground">
+                        {t(
+                          "onboarding.step1_subtitle",
+                          "Selecciona los deportes que juegas y tu nivel.",
+                        )}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 text-left min-h-[300px] flex items-center justify-center">
+                      {shouldRenderGrid ? (
+                        <SportSelectionGrid
+                          sportsMatrix={tempSportsMatrix}
+                          onSportChange={handleTempSportChange}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="h-8 w-8 rounded-full border-2 border-neon border-t-transparent animate-spin" />
+                          <span className="text-xs text-muted-foreground font-semibold">
+                            {t("common.loading", "Cargando...")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <DialogFooter className="flex justify-end gap-2 pt-4 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => setIsSportsDialogOpen(false)}
+                        className="px-4 py-2 rounded-xl glass text-sm cursor-pointer"
+                      >
+                        {t("profile.cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAcceptSports}
+                        className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground text-sm font-bold cursor-pointer"
+                      >
+                        {t("profile.save", "Guardar")}
+                      </button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             ) : (
               <>

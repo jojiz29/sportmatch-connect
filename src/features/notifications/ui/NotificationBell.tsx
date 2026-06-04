@@ -1,16 +1,66 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, Check, CheckCheck, ShoppingBag, UserPlus, Megaphone, Coins, X } from "lucide-react";
+import {
+  Bell,
+  Check,
+  CheckCheck,
+  ShoppingBag,
+  UserPlus,
+  Megaphone,
+  Coins,
+  X,
+  Trophy,
+  MessageSquare,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/shared/api/supabase";
 import type { AppNotification } from "@/entities/types";
+
+function playRefWhistle() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Beep 1: Frequency = 1200Hz, duration = 0.15s
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(1200, audioCtx.currentTime);
+    gain1.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start();
+    osc1.stop(audioCtx.currentTime + 0.15);
+
+    // Beep 2: Frequency = 1500Hz, duration = 0.25s
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(1500, audioCtx.currentTime + 0.15);
+    gain2.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain2.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(audioCtx.currentTime + 0.15);
+    osc2.stop(audioCtx.currentTime + 0.4);
+  } catch (e) {
+    console.warn("Failed to play notification whistle sound:", e);
+  }
+}
 
 const ICON_MAP: Record<AppNotification["type"], React.ReactNode> = {
   FOLLOW: <UserPlus className="h-4 w-4 text-electric" />,
   SQUAD_INVITE: <ShoppingBag className="h-4 w-4 text-violet-foreground" />,
   TRANSACTION_SUCCESS: <Coins className="h-4 w-4 text-neon" />,
   AD_IMPRESSION: <Megaphone className="h-4 w-4 text-warning" />,
+  MATCH_ALERT: <Trophy className="h-4 w-4 text-neon" />,
+  SQUAD_MESSAGE: <MessageSquare className="h-4 w-4 text-primary" />,
 };
 
 const TYPE_COLORS: Record<AppNotification["type"], string> = {
@@ -18,6 +68,8 @@ const TYPE_COLORS: Record<AppNotification["type"], string> = {
   SQUAD_INVITE: "bg-violet/10 border-violet/30",
   TRANSACTION_SUCCESS: "bg-neon/10 border-neon/20",
   AD_IMPRESSION: "bg-warning/10 border-warning/20",
+  MATCH_ALERT: "bg-neon/10 border-neon/20",
+  SQUAD_MESSAGE: "bg-primary/10 border-primary/20",
 };
 
 function timeAgo(dateStr: string): string {
@@ -48,6 +100,42 @@ export function NotificationBell() {
       fetchNotifications(user.id);
     }
   }, [user, fetchNotifications]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const isDemo = useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
+    if (isDemo) return;
+
+    // Real-time subscription to notifications table for this specific user
+    const channel = supabase
+      .channel(`user-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newNotif = payload.new as AppNotification;
+
+          // Add notification to Zustand store
+          useNotificationStore.setState((state) => ({
+            notifications: [newNotif, ...state.notifications],
+          }));
+
+          // Play the referee whistle sound
+          playRefWhistle();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const userNotifs = user
     ? notifications

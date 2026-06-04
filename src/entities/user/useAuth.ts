@@ -174,6 +174,11 @@ export function useAuth() {
       matches_played: 12,
       last_location_lat: -12.14,
       last_location_lng: -76.995,
+      onboarding_completed: true,
+      user_sports: [
+        { sport_id: "Pádel", level: 2 },
+        { sport_id: "Tenis", level: 1 },
+      ],
     };
     store.login(demoUser);
   };
@@ -254,6 +259,7 @@ export function useAuth() {
             fitcoins_balance: newUser.fitcoins_balance ?? 0,
             level: newUser.level ?? "Intermedio",
             preferred_sports: newUser.preferred_sports ?? [],
+            sport_preferences: newUser.sport_preferences,
           })
           .select()
           .single();
@@ -275,6 +281,7 @@ export function useAuth() {
             fitcoins_balance: newUser.fitcoins_balance ?? 0,
             level: newUser.level ?? "Intermedio",
             preferred_sports: newUser.preferred_sports ?? [],
+            sport_preferences: newUser.sport_preferences,
           })
           .eq("id", authData.user.id)
           .select()

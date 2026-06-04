@@ -6,6 +6,9 @@ import { withTimeout } from "./timeoutHelper";
 // In-memory cache for bookings made during Demo Mode to allow realistic UX updates
 const demoBookingsCache: Record<string, string[]> = {};
 
+// In-memory cache for sports catalog query to reduce DB roundtrips on initial load
+let cachedSportsCatalog: SportCatalog[] | null = null;
+
 import { EXCEL_MOCK_COURTS } from "./mockCourtsData";
 export const MOCK_COURTS: Court[] = EXCEL_MOCK_COURTS;
 
@@ -26,6 +29,11 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.14,
     last_location_lng: -76.995,
     user_role: "PLAYER",
+    onboarding_completed: true,
+    user_sports: [
+      { sport_id: "Pádel", level: 3 },
+      { sport_id: "Fútbol", level: 2 },
+    ],
   },
   {
     id: "user-fabiola",
@@ -43,6 +51,11 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.11,
     last_location_lng: -76.99,
     user_role: "PLAYER",
+    onboarding_completed: true,
+    user_sports: [
+      { sport_id: "Running", level: 2 },
+      { sport_id: "Tenis", level: 1 },
+    ],
   },
   {
     id: "user-puka-power",
@@ -80,6 +93,8 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.141,
     last_location_lng: -76.994,
     distance_km: 0.5,
+    onboarding_completed: true,
+    user_sports: [{ sport_id: "Pádel", level: 3 }],
   },
   {
     id: "user-2",
@@ -97,6 +112,8 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.143,
     last_location_lng: -76.996,
     distance_km: 1.1,
+    onboarding_completed: true,
+    user_sports: [{ sport_id: "Vóley", level: 2 }],
   },
   {
     id: "user-3",
@@ -114,6 +131,8 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.139,
     last_location_lng: -76.992,
     distance_km: 0.9,
+    onboarding_completed: true,
+    user_sports: [{ sport_id: "Fútbol", level: 2 }],
   },
   {
     id: "user-4",
@@ -131,6 +150,11 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.14,
     last_location_lng: -76.995,
     distance_km: 0,
+    onboarding_completed: true,
+    user_sports: [
+      { sport_id: "Pádel", level: 2 },
+      { sport_id: "Tenis", level: 1 },
+    ],
   },
 ];
 
@@ -579,12 +603,17 @@ export const apiClient = {
         return MOCK_SPORTS;
       }
 
+      if (cachedSportsCatalog) {
+        return cachedSportsCatalog;
+      }
+
       const { data, error } = await supabase.from("sports").select("*").order("name");
       if (error) {
         if (import.meta.env.DEV) console.error("Error fetching sports:", error);
         throw error;
       }
-      return (data || []) as SportCatalog[];
+      cachedSportsCatalog = (data || []) as SportCatalog[];
+      return cachedSportsCatalog;
     },
   },
 

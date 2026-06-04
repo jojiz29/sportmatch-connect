@@ -220,7 +220,8 @@
     "user_not_found": "Usuario no encontrado.",
     "status_finished": "Finalizado",
     "status_in_progress": "En Curso",
-    "status_open": "Abierto"
+    "status_open": "Abierto",
+    "change_sports": "Cambiar"
   },
   "auth": {
     "email_invalid_format": "Por favor, ingresa un correo electrónico con formato válido.",
@@ -289,5 +290,211 @@
     "challenge_ready": "Listo para Reclamar",
     "challenge_progress": "En Progreso",
     "challenge_claimed": "Reclamado"
+  },
+  "onboarding": {
+    "step_indicator": "Paso {{step}} de 3",
+    "step1_title": "Elige tus disciplinas",
+    "step1_subtitle": "Selecciona los deportes tradicionales y títulos de e-sports que juegas.",
+    "traditional_sports": "Deportes Tradicionales",
+    "esports_gaming": "E-Sports & Gaming Core",
+    "step2_title": "Tu Nivel de Habilidad",
+    "step2_subtitle": "Selecciona tu nivel para calcular tu peso competitivo y asegurar emparejamientos justos.",
+    "skill_amateur_desc": "Ideal para divertirse, aprender y socializar sin presiones.",
+    "skill_amateur_details": "Peso 1.0 · Adecuado para ligas puramente recreativas y partidos informales entre amigos.",
+    "skill_intermedio_desc": "Para jugadores con experiencia y dominio básico de reglas.",
+    "skill_intermedio_details": "Peso 2.0 · Adecuado para partidos amistosos competitivos y torneos locales estándar.",
+    "skill_avanzado_desc": "Enfocado en juego táctico, ritmo rápido y mayor destreza.",
+    "skill_avanzado_details": "Peso 3.5 · Diseñado para ligas competitivas regulares, partidos avanzados y torneos retadores.",
+    "skill_pro_desc": "Destinado a ligas competitivas y torneos de alta intensidad.",
+    "skill_pro_details": "Peso 5.0 · Destinado a ligas competitivas y torneos de alta intensidad profesional.",
+    "step3_title": "Matriz de Intención Deportiva",
+    "step3_subtitle": "Ajusta los sliders interactivos para afinar tus emparejamientos semanales.",
+    "intent_label": "Intención de Juego",
+    "recreativo": "Recreativo",
+    "competitivo": "Competitivo",
+    "intent_recreativo_desc": "Recreativo / Tercer Tiempo",
+    "intent_competitivo_desc": "Competitivo / Tabla de Clasificación",
+    "weekly_dedication": "Dedicación Semanal",
+    "weekly_min": "Mínimo (1h)",
+    "weekly_default": "Predeterminado (6h)",
+    "weekly_max": "Intenso (20h+)",
+    "weekly_hour_sing": "hora",
+    "weekly_hour_plur": "horas",
+    "weight_label": "Peso: {{weight}}",
+    "btn_back": "Atrás",
+    "btn_cancel": "Cancelar",
+    "btn_next": "Siguiente",
+    "btn_finish": "Finalizar y Registrarse",
+    "streak_title": "Racha Deportiva",
+    "streak_current": "Racha actual:",
+    "streak_max": "Máx:",
+    "streak_unit_sing": "sem",
+    "streak_unit_plur": "sems",
+    "streak_footer": "Los días con asistencia verificada se iluminan en <span className=\"text-[#39FF14] font-bold\">Verde Neón</span>.",
+    "streak_footer_plain": "Los días con asistencia verificada se iluminan en Verde Neón.",
+    "streak_footer_prefix": "Los días con asistencia verificada se iluminan en",
+    "streak_footer_color": "Verde Neón",
+    "day_mon": "Lun",
+    "day_wed": "Mié",
+    "day_fri": "Vie",
+    "day_sun": "Dom",
+    "weight_disclosure_am": "Amateur (Peso: 1.0) - Ideal para divertirse y socializar sin presiones.",
+    "weight_disclosure_int": "Intermedio (Peso: 2.0) - Para partidos amistosos competitivos.",
+    "weight_disclosure_adv": "Avanzado (Peso: 3.5) - Diseñado para ligas competitivas regulares.",
+    "weight_disclosure_pro": "Pro (Peso: 5.0) - Destinado a ligas y torneos de alta intensidad.",
+    "ver_mas": "Ver más ↓",
+    "ver_menos": "Ver menos ↑"
+  },
+  "sports": {
+    "futbol": {
+      "name": "Fútbol",
+      "desc": "Tradición y pasión en césped real o sintético."
+    },
+    "voley": {
+      "name": "Vóley",
+      "desc": "Juego de equipo y saltos en coliseo cerrado."
+    },
+    "padel": {
+      "name": "Pádel",
+      "desc": "Paredes y malla metálica en la disciplina de moda."
+    },
+    "basquet": {
+      "name": "Básquet",
+      "desc": "Aro y rebote rápido sobre el tabloncillo."
+    },
+    "tenis": {
+      "name": "Tenis",
+      "desc": "Duelo estratégico en cancha clásica de arcilla."
+    },
+    "running": {
+      "name": "Running / Atletismo",
+      "desc": "Carreras, sprints y fondo en pista de atletismo."
+    },
+    "rugby": {
+      "name": "Rugby",
+      "desc": "Contacto, fuerza y juego en equipo."
+    },
+    "natacion": {
+      "name": "Natación",
+      "desc": "Resistencia y velocidad en piscina olímpica."
+    },
+    "gimnasio": {
+      "name": "Gimnasio / Crossfit",
+      "desc": "Entrenamiento funcional de alta intensidad."
+    },
+    "calistenia": {
+      "name": "Calistenia",
+      "desc": "Dominio corporal y fuerza estática al aire libre."
+    },
+    "tenis_mesa": {
+      "name": "Tenis de Mesa",
+      "desc": "Velocidad, reflejos y precisión milimétrica."
+    },
+    "boxeo_mma": {
+      "name": "Boxeo / MMA",
+      "desc": "Combate de pie, sumisiones y acondicionamiento total."
+    },
+    "ciclismo": {
+      "name": "Ciclismo",
+      "desc": "Rutas urbanas, de montaña o velocidad en pista."
+    },
+    "futbol_americano": {
+      "name": "Fútbol Americano",
+      "desc": "Estrategia de yardas, pases y contacto."
+    },
+    "beisbol": {
+      "name": "Béisbol",
+      "desc": "Lanzamientos, bateos potentes y carreras por las bases."
+    },
+    "skateboarding": {
+      "name": "Skateboarding",
+      "desc": "Trucos callejeros, rampas y freestyle urbano."
+    },
+    "golf": {
+      "name": "Golf",
+      "desc": "Precisión, estrategia y concentración en el green."
+    },
+    "automovilismo": {
+      "name": "Automovilismo",
+      "desc": "Velocidad sobre ruedas, karts y carreras."
+    },
+    "ea_fc": {
+      "name": "EA Sports FC",
+      "desc": "Simulador virtual de fútbol de élite."
+    },
+    "lol": {
+      "name": "League of Legends",
+      "desc": "Batallas tácticas MOBA en la Grieta del Invocador."
+    },
+    "valorant": {
+      "name": "Valorant",
+      "desc": "Tactical shooter de precisión extrema de Riot."
+    },
+    "clash_royale": {
+      "name": "Clash Royale",
+      "desc": "Estrategia de cartas y torres en tiempo real."
+    },
+    "fortnite": {
+      "name": "Fortnite",
+      "desc": "Construcción y supervivencia Battle Royale."
+    },
+    "brawl_stars": {
+      "name": "Brawl Stars",
+      "desc": "Batallas Arcade dinámicas multijugador."
+    },
+    "cs2": {
+      "name": "Counter-Strike 2",
+      "desc": "Shooter táctico en primera persona por equipos."
+    },
+    "dota2": {
+      "name": "Dota 2",
+      "desc": "Estrategia de arena de batalla multijugador clásica."
+    },
+    "rocket_league": {
+      "name": "Rocket League",
+      "desc": "Fútbol vehicular de alta velocidad y acrobacias."
+    },
+    "overwatch2": {
+      "name": "Overwatch 2",
+      "desc": "Batallas por equipos de héroes con roles dinámicos."
+    },
+    "street_fighter_tekken": {
+      "name": "Street Fighter / Tekken",
+      "desc": "Juegos de pelea tradicionales 1v1."
+    },
+    "apex_legends": {
+      "name": "Apex Legends",
+      "desc": "Battle Royale frenético con héroes y habilidades."
+    },
+    "pubg_mobile": {
+      "name": "PUBG Mobile",
+      "desc": "Supervivencia y shooter táctico en dispositivos móviles."
+    },
+    "free_fire": {
+      "name": "Free Fire",
+      "desc": "Rápidos combates Battle Royale optimizados para móviles."
+    },
+    "cod_warzone": {
+      "name": "Call of Duty: Warzone",
+      "desc": "Combates militares masivos de alta fidelidad."
+    },
+    "rainbow_six": {
+      "name": "Rainbow Six Siege",
+      "desc": "Shooter táctico en interiores y destrucción de entornos."
+    },
+    "hearthstone": {
+      "name": "Hearthstone",
+      "desc": "Duelos de cartas estratégicos en el universo Warcraft."
+    },
+    "iracing_simracing": {
+      "name": "iRacing / F1 SimRacing",
+      "desc": "Simulación automotriz de alta precisión y licencias."
+    }
+  },
+  "skills": {
+    "amateur": "Amateur",
+    "intermedio": "Intermedio",
+    "avanzado": "Avanzado",
+    "pro": "Pro"
   }
 }

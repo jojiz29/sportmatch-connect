@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Heart,
   X,
-  Star,
+  Info,
   MapPin,
   Sparkles,
   MessageSquare,
@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useMatchmaking } from "./useMatchmaking";
-import { User, Match } from "@/entities/types";
+import { User, Match, Sport } from "@/entities/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
 import { useChatStore } from "@/features/chat/useChatStore";
@@ -61,7 +61,21 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const { stack, isLoading, swipe } = useMatchmaking(initialStack, (user) => {
     setMatchedUser(user);
   });
-  const top = stack[0];
+
+  const preferredSports = currentUser?.preferred_sports || ["Fútbol"];
+  const [activeSport, setActiveSport] = useState<string>(preferredSports[0] || "Fútbol");
+
+  const filteredStack = useMemo(() => {
+    return stack.filter((p) => {
+      const matrix = p.sport_preferences?.sports_matrix;
+      if (matrix) {
+        return !!matrix[activeSport];
+      }
+      return p.preferred_sports?.includes(activeSport as Sport);
+    });
+  }, [stack, activeSport]);
+
+  const top = filteredStack[0];
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -95,11 +109,31 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
   return (
     <div className="grid lg:grid-cols-3 gap-8">
+      {/* Sport Selector Tabs */}
+      <div className="lg:col-span-3 flex flex-wrap gap-2 mb-2 p-1.5 bg-background/40 border border-border/60 rounded-2xl animate-fade-in">
+        {preferredSports.map((sport) => {
+          const isFilterActive = activeSport === sport;
+          return (
+            <button
+              key={sport}
+              onClick={() => setActiveSport(sport)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                isFilterActive
+                  ? "bg-[#39FF14] text-black border-transparent shadow-[0_0_10px_rgba(57,255,20,0.3)]"
+                  : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10"
+              }`}
+            >
+              {sport}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="lg:col-span-2 flex justify-center">
         <div className="relative w-full max-w-md h-[560px]">
           {isLoading ? (
             <div className="absolute inset-0 bg-muted animate-pulse rounded-3xl" />
-          ) : stack.length === 0 ? (
+          ) : filteredStack.length === 0 ? (
             <div className="absolute inset-0 grid place-items-center bg-gradient-card border border-border rounded-3xl">
               <div className="text-center">
                 <Sparkles className="h-10 w-10 mx-auto text-neon mb-3" />
@@ -108,7 +142,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             </div>
           ) : (
             <AnimatePresence>
-              {stack
+              {filteredStack
                 .slice(0, 3)
                 .reverse()
                 .map((p, i, arr) => {
@@ -144,68 +178,151 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                       exit={{ x: isTop ? 200 : 0, opacity: 0, transition: { duration: 0.2 } }}
                       whileDrag={{ rotate: 5, scale: 1.05 }}
                     >
-                      <div className="relative h-2/3 bg-gradient-primary">
-                        <Link
-                          to="/app/profile/$userId"
-                          params={{ userId: p.id }}
-                          className="absolute inset-0 z-10"
+                      {/* ── HEADER BADGES ── */}
+                      <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
+                        {/* Top-Left: Green glassmorphic MATCH badge */}
+                        <span className="px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black uppercase tracking-widest font-mono shadow-[0_0_8px_rgba(57,255,20,0.25)]">
+                          {Math.round(70 + (p.trust_score || 0) * 0.28)}% MATCH
+                        </span>
+                        {/* Top-Right: Grey Trust Score badge */}
+                        <span className="px-2.5 py-1 rounded-full bg-white/8 border border-white/12 text-white/80 text-[10px] font-semibold backdrop-blur-sm">
+                          {p.trust_score || 0}% Trust Score
+                        </span>
+                      </div>
+
+                      {/* ── AVATAR with World Cup gradient ring & status dot ── */}
+                      <div className="flex justify-center items-center py-4 relative z-10">
+                        {/* Gradient aura glow */}
+                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-[#FF007F] to-[#7B2CBF] opacity-30 blur-lg pointer-events-none" />
+                        {/* Thick gradient ring */}
+                        <div
+                          className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center"
+                          style={{
+                            background: "linear-gradient(135deg, #FF007F, #FF6B35, #7B2CBF)",
+                          }}
                         >
-                          <img
-                            src={p.avatar_url}
-                            alt={p.name}
-                            className="w-full h-full object-cover opacity-90"
-                          />
-                        </Link>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                        <div className="absolute top-4 left-4 flex gap-2">
-                          <span className="px-2 py-1 rounded-full glass text-xs">
-                            {p.preferred_sports?.[0] || t("matchmaking.sport_default")}
-                          </span>
-                          <span className="px-2 py-1 rounded-full glass text-xs text-neon flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-neon" /> {p.trust_score || 0}
-                          </span>
-                        </div>
-                        <div className="absolute bottom-4 left-4 right-4">
-                          <h2 className="text-2xl font-bold">
-                            {p.company_name || p.name || t("matchmaking.user_default")}
-                            {p.user_role !== "BUSINESS" ? `, ${p.age || "?"}` : ""}
-                          </h2>
-                          <p className="text-xs text-white/80 flex items-center gap-1 mt-1 font-sans">
-                            <MapPin className="h-3 w-3 text-neon" /> A {dist.toFixed(1)} km de tu
-                            ubicación
-                          </p>
-                        </div>
-                      </div>
-                      <div className="p-5">
-                        <div className="flex items-center gap-2 text-xs mb-2">
-                          <span className="px-2 py-0.5 rounded-full bg-violet/20 text-violet-foreground border border-violet/30">
-                            {p.level}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>
-                        {isTop && (
-                          <div className="mt-4 flex items-center justify-center gap-4">
-                            <button
-                              onClick={() => swipe(p.id, "pass")}
-                              className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center hover:bg-destructive/20 cursor-pointer"
+                          {/* Inner avatar */}
+                          <div className="h-full w-full rounded-full overflow-hidden border-2 border-[#0D152D] bg-[#1A2544]">
+                            <Link
+                              to="/app/profile/$userId"
+                              params={{ userId: p.id }}
+                              className="block h-full w-full"
                             >
-                              <X className="h-6 w-6 text-destructive" />
-                            </button>
-                            <button
-                              onClick={() => setInspectedUser(p)}
-                              className="px-4 py-2.5 rounded-xl glass border border-border/30 hover:border-primary/50 text-xs font-semibold hover:bg-accent transition-all hover:shadow-glow cursor-pointer"
-                            >
-                              {t("matchmaking.view_profile")}
-                            </button>
-                            <button
-                              onClick={() => swipe(p.id, "like")}
-                              className="h-16 w-16 rounded-full bg-gradient-neon grid place-items-center shadow-neon animate-pulse-ring cursor-pointer"
-                            >
-                              <Heart className="h-7 w-7 text-neon-foreground fill-neon-foreground" />
-                            </button>
+                              <img
+                                src={p.avatar_url}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </Link>
                           </div>
-                        )}
+                          {/* Glowing active status dot */}
+                          <span
+                            className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-[#39FF14] border-[3px] border-[#0D152D] flex items-center justify-center"
+                            style={{ boxShadow: "0 0 6px 2px rgba(57,255,20,0.6)" }}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                          </span>
+                        </div>
                       </div>
+
+                      {/* ── PROFILE INFO ── */}
+                      <div className="px-5 pb-2 space-y-2 z-10 relative">
+                        {/* Name + age */}
+                        <div className="flex items-baseline justify-center gap-2 text-center">
+                          <h2 className="text-xl font-black text-white">
+                            {p.company_name || p.name || t("matchmaking.user_default")}
+                          </h2>
+                          {p.user_role !== "BUSINESS" && (
+                            <span className="text-sm font-semibold text-white/60">
+                              {p.age || "?"}a
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Sport / Level / Distance capsule badges */}
+                        {(() => {
+                          const matrix = p.sport_preferences?.sports_matrix;
+                          const sportLevel = matrix?.[activeSport]?.level || p.level;
+                          const displayLevel =
+                            sportLevel === "Amateur"
+                              ? t("skills.amateur", "Amateur")
+                              : sportLevel === "Intermediate" || sportLevel === "Intermedio"
+                                ? t("skills.intermedio", "Intermedio")
+                                : sportLevel === "Advanced" || sportLevel === "Avanzado"
+                                  ? t("skills.avanzado", "Avanzado")
+                                  : sportLevel === "Pro"
+                                    ? t("skills.pro", "Pro")
+                                    : sportLevel;
+                          return (
+                            <div className="flex flex-wrap justify-center gap-1.5">
+                              <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
+                                {activeSport}
+                              </span>
+                              <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
+                                {displayLevel}
+                              </span>
+                              <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-white/65 text-[10px] font-medium flex items-center gap-1">
+                                <MapPin className="h-2.5 w-2.5 text-[#39FF14]" /> {dist.toFixed(1)}{" "}
+                                km
+                              </span>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Bio italic */}
+                        {p.bio && (
+                          <p className="text-xs text-white/60 leading-relaxed italic text-center line-clamp-2 px-2">
+                            "{p.bio}"
+                          </p>
+                        )}
+
+                        {/* Hashtag pills from trust_score tiers */}
+                        <div className="flex flex-wrap justify-center gap-1 pt-0.5">
+                          {(p.trust_score || 0) >= 90 && (
+                            <span className="text-[9px] px-2 py-0.5 rounded bg-[#39FF14]/10 border border-[#39FF14]/15 text-[#39FF14]/80 font-semibold">
+                              #Confiable
+                            </span>
+                          )}
+                          {(p.trust_score || 0) >= 80 && (
+                            <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/8 text-white/60 font-semibold">
+                              #BuenNivel
+                            </span>
+                          )}
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/8 text-white/60 font-semibold">
+                            #Puntual
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ── ACTION BUTTONS (always shown for top card) ── */}
+                      {isTop && (
+                        <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-white/5 mt-auto">
+                          {/* Dislike / Pass */}
+                          <button
+                            onClick={() => swipe(p.id, "pass")}
+                            className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
+                            aria-label={t("matchmaking.keep_swiping")}
+                          >
+                            <X className="h-6 w-6" />
+                          </button>
+                          {/* Info / View Profile */}
+                          <button
+                            onClick={() => setInspectedUser(p)}
+                            className="h-10 w-10 rounded-full border border-white/12 bg-white/6 hover:bg-white/12 active:scale-95 text-white/70 flex items-center justify-center transition-all duration-200 cursor-pointer"
+                            aria-label={t("matchmaking.view_profile")}
+                          >
+                            <Info className="h-5 w-5" />
+                          </button>
+                          {/* Like / Heart */}
+                          <button
+                            onClick={() => swipe(p.id, "like")}
+                            className="h-14 w-14 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
+                            aria-label={t("matchmaking.like_toast")}
+                          >
+                            <Heart className="h-6 w-6 fill-current" />
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   );
                 })}

@@ -11,6 +11,15 @@ export const Route = createFileRoute("/app")({
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
+    const user = useAuthStore.getState().user;
+    if (
+      user &&
+      user.user_role === "PLAYER" &&
+      (user.onboarding_completed === false || !user.user_sports || user.user_sports.length === 0) &&
+      (!user.preferred_sports || user.preferred_sports.length === 0)
+    ) {
+      throw redirect({ to: "/onboarding/sports" });
+    }
   },
   component: () => (
     <AppShell>
