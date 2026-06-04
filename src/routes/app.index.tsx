@@ -36,11 +36,25 @@ import { BookingModal } from "@/components/BookingModal";
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
+    // Each API call is individually guarded so a single failing table
+    // (missing, RLS violation, network issue) never crashes the whole /app route.
     const [matches, users, courts, sports] = await Promise.all([
-      apiClient.matches.getAll(),
-      apiClient.users.getMatches(),
-      apiClient.courts.getAll(),
-      apiClient.sports.getAll(),
+      apiClient.matches.getAll().catch((err) => {
+        console.warn("[/app loader] matches.getAll failed:", err?.message);
+        return [] as Match[];
+      }),
+      apiClient.users.getMatches().catch((err) => {
+        console.warn("[/app loader] users.getMatches failed:", err?.message);
+        return [] as User[];
+      }),
+      apiClient.courts.getAll().catch((err) => {
+        console.warn("[/app loader] courts.getAll failed:", err?.message);
+        return [] as Court[];
+      }),
+      apiClient.sports.getAll().catch((err) => {
+        console.warn("[/app loader] sports.getAll failed:", err?.message);
+        return [] as SportCatalog[];
+      }),
     ]);
     return { matches, users, courts, sports };
   },

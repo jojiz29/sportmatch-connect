@@ -101,11 +101,24 @@ export function NotificationBell() {
     }
   }, [user, fetchNotifications]);
 
+  // Stable ref to track the active realtime channel so we can remove it before re-subscribing.
+  // This prevents the "cannot add postgres_changes callbacks after subscribe()" Supabase error
+  // that occurs when React's strict-mode or rapid re-renders destroy+recreate the effect.
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
     if (!user) return;
 
     const isDemo = useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
     if (isDemo) return;
+
+    // ── Cleanup any existing channel BEFORE creating a new one ──────────
+    // This is critical: Supabase throws if you call .on() after .subscribe().
+    // By removing the old channel first we guarantee a clean slate.
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
 
     // Real-time subscription to notifications table for this specific user
     const channel = supabase
@@ -132,8 +145,13 @@ export function NotificationBell() {
       )
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [user]);
 
