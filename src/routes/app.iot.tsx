@@ -137,7 +137,7 @@ function IoT() {
             </div>
 
             <div className="mt-8 flex items-end gap-2 h-32 relative z-10">
-              {chartHistory.map((v: number, i: number) => (
+              {history.map((v: number, i: number) => (
                 <div key={i} className="flex-1 flex flex-col justify-end items-center group">
                   <div
                     className="w-full rounded-t-lg bg-gradient-to-t from-destructive/20 to-destructive transition-all duration-500 group-hover:opacity-80"
