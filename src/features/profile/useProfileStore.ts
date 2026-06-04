@@ -46,36 +46,26 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = { ...currentUser, ...data };
 
-        // 2. DEFENSIVE MAPPING FOR LEGACY ACCOUNTS
-        const cleanSportsMatrix = updated.sport_preferences?.sports_matrix || {};
-        const cleanUserSports = Array.isArray(updated.user_sports) ? updated.user_sports : [];
-        const cleanBehavioralIntent = updated.sport_preferences?.behavioral_intent || {
-          weekly_hours: 6,
-          intent: "Recreativo" as const,
-        };
-
+        // 1. Prepare and Normalize Payload
         const normalizedPayload = {
           ...updated,
-          user_sports: cleanUserSports,
+          user_sports: Array.isArray(updated.user_sports) ? updated.user_sports : [],
           sport_preferences: {
-            sports_matrix: cleanSportsMatrix,
-            behavioral_intent: cleanBehavioralIntent,
+            sports_matrix: updated.sport_preferences?.sports_matrix || {},
+            behavioral_intent: updated.sport_preferences?.behavioral_intent || {
+              weekly_hours: 6,
+              intent: "Recreativo" as const,
+            },
           },
         };
 
-        // Optimistic update to local stores immediately
+        // Optimistic update
         useAuthStore.setState({ user: normalizedPayload });
+        set({ profile: normalizedPayload });
 
-        set((state) => ({
-          profile: state.profile ? { ...state.profile, ...normalizedPayload } : normalizedPayload,
-        }));
+        if (useAuthStore.getState().isDemoMode) return;
 
-        if (useAuthStore.getState().isDemoMode) {
-          return;
-        }
-
-        // Filter payload to only include columns that exist in the database schema.
-        // This prevents PGRST204 errors when using a database without local migration columns.
+        // 2. Define schema whitelist
         const VALID_PROFILE_COLUMNS = [
           "id",
           "name",
@@ -101,91 +91,84 @@ export const useProfileStore = create<ProfileState>()(
           "onboarding_completed",
         ];
 
-        const supabasePayload = Object.keys(normalizedPayload)
+        const currentPayload = Object.keys(normalizedPayload)
           .filter((key) => VALID_PROFILE_COLUMNS.includes(key))
           .reduce(
             (obj, key) => {
-              obj[key] = normalizedPayload[key as keyof User];
+              obj[key] = normalizedPayload[key as keyof User] as unknown;
               return obj;
             },
             {} as Record<string, unknown>,
           );
 
-        // Self-healing update retry loop:
-        // If a column does not exist in the database (e.g., legacy/unmigrated schema),
-        // we dynamically strip it from the payload and retry the update.
-        const currentPayload = { ...supabasePayload };
-        let retries = 10;
-        let success = false;
-        let lastError: unknown = null;
-
-        while (retries > 0 && !success) {
-          const updateRequest = supabase
+        // 3. Self-healing retry loop for missing schema columns (PGRST204 / 42703)
+        // Each iteration strips one unknown column and retries.
+        // MAX_RETRIES is generous enough to handle all possible new columns.
+        const MAX_RETRIES = 10;
+        let retries = MAX_RETRIES;
+        while (retries > 0) {
+          const { error } = await supabase
             .from("profiles")
             .update(currentPayload)
             .eq("id", currentUser.id);
 
-          const timeoutPromise = new Promise<unknown>((_, reject) =>
-            setTimeout(
-              () =>
-                reject(
-                  new Error(
-                    "La actualización tardó demasiado. Verifica tu conexión e inténtalo de nuevo.",
-                  ),
-                ),
-              12000,
-            ),
-          );
+          // ✅ Update succeeded
+          if (!error) return;
 
-          const res = await Promise.race([updateRequest, timeoutPromise]);
-          const error =
-            res && typeof res === "object" && "error" in res
-              ? (res as { error: unknown }).error
-              : null;
+          const pgError = error as { code?: string; message?: string };
+          const msg = pgError.message ?? "";
 
-          if (!error) {
-            success = true;
-          } else {
-            lastError = error;
-            const pgError = error as { code?: string; message?: string };
-            // Handle PostgreSQL undefined_column (42703) and PostgREST schema cache missing column (PGRST204)
-            if (pgError.code === "42703" || pgError.code === "PGRST204") {
-              const errMsg = pgError.message || "";
-              // 1. PostgREST cache missing: "Could not find the 'column_name' column of 'profiles' in the schema cache"
-              let columnMatch = errMsg.match(/Could not find the '([a-zA-Z0-9_]+)' column/);
+          // ── Missing column: strip & retry ──────────────────────────────
+          // PostgREST PGRST204: "Could not find the 'col' column of 'profiles' in the schema cache"
+          // Postgres    42703:  "column \"col\" of relation \"profiles\" does not exist"
+          if (pgError.code === "PGRST204" || pgError.code === "42703") {
+            let missingColumn: string | undefined;
 
-              // 2. PostgreSQL: "column \"column_name\" of relation \"profiles\" does not exist"
-              if (!columnMatch) {
-                columnMatch = errMsg.match(/column\s+"?([a-zA-Z0-9_]+)"?\s+of\s+relation/);
-              }
+            // Pattern 1 — PostgREST cache miss
+            missingColumn = msg.match(/Could not find the '([a-zA-Z0-9_]+)' column/)?.[1];
 
-              // 3. PostgreSQL: "column profiles.column_name does not exist"
-              if (!columnMatch) {
-                columnMatch = errMsg.match(
-                  /column\s+profiles\.([a-zA-Z0-9_]+)\s+does\s+not\s+exist/,
-                );
-              }
+            // Pattern 2 — Postgres quoted column
+            if (!missingColumn)
+              missingColumn = msg.match(/column\s+"([a-zA-Z0-9_]+)"\s+of\s+relation/)?.[1];
 
-              if (columnMatch && columnMatch[1]) {
-                const missingColumn = columnMatch[1];
-                console.warn(
-                  `Column "${missingColumn}" does not exist in profiles table. Removing from payload and retrying...`,
-                );
-                delete currentPayload[missingColumn];
-                retries--;
-                continue;
-              }
+            // Pattern 3 — Postgres unquoted column
+            if (!missingColumn)
+              missingColumn = msg.match(
+                /column\s+profiles\.([a-zA-Z0-9_]+)\s+does\s+not\s+exist/,
+              )?.[1];
+
+            if (missingColumn && currentPayload[missingColumn] !== undefined) {
+              console.warn(
+                `[ProfileStore] Column "${missingColumn}" missing in DB. Stripping & retrying (${MAX_RETRIES - retries + 1}/${MAX_RETRIES})`,
+              );
+              delete currentPayload[missingColumn];
+              retries--;
+              continue;
             }
-            // If it's a different database error, throw it immediately
-            throw error;
+            // If we can't identify the column, break to avoid infinite loop
+            console.error("[ProfileStore] PGRST204 but could not extract column from:", msg);
           }
+
+          // ── RLS / permission error ──────────────────────────────────────
+          if (pgError.code === "42501") {
+            throw new Error(
+              "No tienes permiso para actualizar este perfil. Verifica las políticas de seguridad (RLS) en Supabase.",
+            );
+          }
+
+          // ── Any other error: throw immediately ─────────────────────────
+          throw error;
         }
 
-        if (!success && lastError) {
-          if (import.meta.env.DEV)
-            console.error("Error updating profile in Supabase after retries:", lastError);
-          throw lastError;
-        }
+        // Exhausted retries without success — throw the last error context
+        if (import.meta.env.DEV)
+          console.error(
+            "[ProfileStore] Profile update failed after all retries. Payload keys left:",
+            Object.keys(currentPayload),
+          );
+        throw new Error(
+          "No se pudo guardar el perfil después de varios intentos. Por favor ejecuta la migración SQL en Supabase.",
+        );
       },
     }),
     {
