@@ -6,7 +6,6 @@ import { Court, Match, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useTranslation } from "react-i18next";
-import { Link } from "@tanstack/react-router";
 
 // Cache for Leaflet court icons to prevent memory leaks and GC overhead
 const courtIconCache = new Map<string, L.DivIcon>();
