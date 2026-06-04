@@ -111,32 +111,80 @@ export const useProfileStore = create<ProfileState>()(
             {} as Record<string, unknown>,
           );
 
-        // Race the Supabase request against a 12-second timeout to prevent
-        // infinite hangs caused by RLS cold-starts or missing auth sessions.
-        const updateRequest = supabase
-          .from("profiles")
-          .update(supabasePayload)
-          .eq("id", currentUser.id);
+        // Self-healing update retry loop:
+        // If a column does not exist in the database (e.g., legacy/unmigrated schema),
+        // we dynamically strip it from the payload and retry the update.
+        const currentPayload = { ...supabasePayload };
+        let retries = 10;
+        let success = false;
+        let lastError: unknown = null;
 
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  "La actualización tardó demasiado. Verifica tu conexión e inténtalo de nuevo.",
+        while (retries > 0 && !success) {
+          const updateRequest = supabase
+            .from("profiles")
+            .update(currentPayload)
+            .eq("id", currentUser.id);
+
+          const timeoutPromise = new Promise<unknown>((_, reject) =>
+            setTimeout(
+              () =>
+                reject(
+                  new Error(
+                    "La actualización tardó demasiado. Verifica tu conexión e inténtalo de nuevo.",
+                  ),
                 ),
-              ),
-            12000,
-          ),
-        );
+              12000,
+            ),
+          );
 
-        // Will throw if timeout fires or network request itself throws
-        const { error } = await Promise.race([updateRequest, timeoutPromise]);
+          const res = await Promise.race([updateRequest, timeoutPromise]);
+          const error =
+            res && typeof res === "object" && "error" in res
+              ? (res as { error: unknown }).error
+              : null;
 
-        if (error) {
-          if (import.meta.env.DEV) console.error("Error updating profile in Supabase:", error);
-          // Re-throw so the calling component's catch block can show the user an error toast
-          throw error;
+          if (!error) {
+            success = true;
+          } else {
+            lastError = error;
+            const pgError = error as { code?: string; message?: string };
+            // Handle PostgreSQL undefined_column (42703) and PostgREST schema cache missing column (PGRST204)
+            if (pgError.code === "42703" || pgError.code === "PGRST204") {
+              const errMsg = pgError.message || "";
+              // 1. PostgREST cache missing: "Could not find the 'column_name' column of 'profiles' in the schema cache"
+              let columnMatch = errMsg.match(/Could not find the '([a-zA-Z0-9_]+)' column/);
+
+              // 2. PostgreSQL: "column \"column_name\" of relation \"profiles\" does not exist"
+              if (!columnMatch) {
+                columnMatch = errMsg.match(/column\s+"?([a-zA-Z0-9_]+)"?\s+of\s+relation/);
+              }
+
+              // 3. PostgreSQL: "column profiles.column_name does not exist"
+              if (!columnMatch) {
+                columnMatch = errMsg.match(
+                  /column\s+profiles\.([a-zA-Z0-9_]+)\s+does\s+not\s+exist/,
+                );
+              }
+
+              if (columnMatch && columnMatch[1]) {
+                const missingColumn = columnMatch[1];
+                console.warn(
+                  `Column "${missingColumn}" does not exist in profiles table. Removing from payload and retrying...`,
+                );
+                delete currentPayload[missingColumn];
+                retries--;
+                continue;
+              }
+            }
+            // If it's a different database error, throw it immediately
+            throw error;
+          }
+        }
+
+        if (!success && lastError) {
+          if (import.meta.env.DEV)
+            console.error("Error updating profile in Supabase after retries:", lastError);
+          throw lastError;
         }
       },
     }),
