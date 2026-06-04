@@ -133,7 +133,7 @@ export async function createSquad(
       id: `${squad.id}_${creatorId}`,
       squad_id: squad.id,
       profile_id: creatorId,
-      role: "OWNER",
+      role: "CREATOR",
     }),
   );
 

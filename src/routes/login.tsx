@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/entities/user/useAuth";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MapPin, Lock, Mail } from "lucide-react";
+import { MapPin, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { signInWithGoogle } from "@/services/authService";
 
@@ -61,6 +61,7 @@ function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const emailError = email ? getEmailValidationError(email, t) : null;
   const passwordError = password && password.length < 8 ? t("auth.password_min_length") : null;
@@ -80,7 +81,7 @@ function Login() {
       toast.success(t("login.success_toast"));
       navigate({ to: "/app" });
     } catch (err: unknown) {
-      if (import.meta.env.DEV) console.error("Error en login:", err);
+      console.error("Error en login:", err);
       const errorMessage = err instanceof Error ? err.message : t("login.error_toast");
       toast.error(`Error: ${errorMessage}`);
     }
@@ -144,15 +145,23 @@ function Login() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2 bg-background border rounded-xl focus:ring-2 focus:ring-primary outline-none ${
+                className={`w-full pl-10 pr-10 py-2 bg-background border rounded-xl focus:ring-2 focus:ring-primary outline-none ${
                   passwordError ? "border-red-500/50" : "border-border"
                 }`}
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
             {passwordError && (
               <p className="text-[11px] text-red-500 mt-1 ml-1 animate-fade-in">{passwordError}</p>

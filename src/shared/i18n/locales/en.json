@@ -1,4 +1,24 @@
 {
+  "nav": {
+    "inicio": "Dashboard",
+    "matchmaking": "Matchmaking (The Loop)",
+    "map_and_courts": "Bookings & Map",
+    "comunidad": "Community (Feed)",
+    "squads": "Squads (Clans)",
+    "mensajes": "Messages (Inbox)",
+    "telemetria": "My Performance (Telemetry)",
+    "wallet": "FitCoins (Wallet)",
+    "perfil": "My Profile",
+    "business": "My Business",
+    "admin": "Admin Panel",
+    "logout": "Log Out",
+    "groups": {
+      "action": "ACTION & DISCOVERY",
+      "social": "SOCIAL & COLLABORATION",
+      "analytics": "ANALYTICS & ECONOMY",
+      "account": "MY ACCOUNT"
+    }
+  },
   "login": {
     "title_signin": "Sign In",
     "title_signup": "Create Account",
@@ -43,7 +63,10 @@
   "dashboard": {
     "title": "Main Dashboard",
     "balance": "FitCoins Balance",
-    "recent_activity": "Recent Activity"
+    "recent_activity": "Recent Activity",
+    "next_match": "Next Match",
+    "no_next_match": "No upcoming matches scheduled",
+    "find_one": "Find Match"
   },
   "matchmaking": {
     "title": "AI Matchmaking",
@@ -197,7 +220,8 @@
     "user_not_found": "User not found.",
     "status_finished": "Finished",
     "status_in_progress": "In Progress",
-    "status_open": "Open"
+    "status_open": "Open",
+    "change_sports": "Change"
   },
   "auth": {
     "email_invalid_format": "Please enter a valid email address.",
@@ -266,5 +290,211 @@
     "challenge_ready": "Ready to Claim",
     "challenge_progress": "In Progress",
     "challenge_claimed": "Claimed"
+  },
+  "onboarding": {
+    "step_indicator": "Step {{step}} of 3",
+    "step1_title": "Choose your disciplines",
+    "step1_subtitle": "Select the traditional sports and e-sports titles you play.",
+    "traditional_sports": "Traditional Sports",
+    "esports_gaming": "E-Sports & Gaming Core",
+    "step2_title": "Your Skill Level",
+    "step2_subtitle": "Select your level to calculate your competitive weight and ensure fair matches.",
+    "skill_amateur_desc": "Ideal for fun, learning, and socializing without pressure.",
+    "skill_amateur_details": "Weight 1.0 · Suitable for purely recreational leagues and casual friendly matches.",
+    "skill_intermedio_desc": "For players with experience and basic rule knowledge.",
+    "skill_intermedio_details": "Weight 2.0 · Suitable for competitive friendly matches and standard local tournaments.",
+    "skill_avanzado_desc": "Focused on tactical play, fast pace, and higher skill.",
+    "skill_avanzado_details": "Weight 3.5 · Designed for regular competitive leagues, advanced matches, and challenging tournaments.",
+    "skill_pro_desc": "Intended for competitive leagues and high-intensity tournaments.",
+    "skill_pro_details": "Weight 5.0 · Intended for competitive leagues and high-intensity professional tournaments.",
+    "step3_title": "Sports Intent Matrix",
+    "step3_subtitle": "Adjust the interactive sliders to fine-tune your weekly matchmaking.",
+    "intent_label": "Game Intent",
+    "recreativo": "Recreational",
+    "competitivo": "Competitive",
+    "intent_recreativo_desc": "Recreational / Post-Game Hangout",
+    "intent_competitivo_desc": "Competitive / Leaderboard Focus",
+    "weekly_dedication": "Weekly Dedication",
+    "weekly_min": "Minimum (1h)",
+    "weekly_default": "Default (6h)",
+    "weekly_max": "Intense (20h+)",
+    "weekly_hour_sing": "hour",
+    "weekly_hour_plur": "hours",
+    "weight_label": "Weight: {{weight}}",
+    "btn_back": "Back",
+    "btn_cancel": "Cancel",
+    "btn_next": "Next",
+    "btn_finish": "Finish & Register",
+    "streak_title": "Sports Streak",
+    "streak_current": "Current streak:",
+    "streak_max": "Max:",
+    "streak_unit_sing": "wk",
+    "streak_unit_plur": "wks",
+    "streak_footer": "Verified attendance days light up in <span className=\"text-[#39FF14] font-bold\">Neon Green</span>.",
+    "streak_footer_plain": "Verified attendance days light up in Neon Green.",
+    "streak_footer_prefix": "Verified attendance days light up in",
+    "streak_footer_color": "Neon Green",
+    "day_mon": "Mon",
+    "day_wed": "Wed",
+    "day_fri": "Fri",
+    "day_sun": "Sun",
+    "weight_disclosure_am": "Amateur (Weight: 1.0) - Ideal for fun and socializing without pressure.",
+    "weight_disclosure_int": "Intermediate (Weight: 2.0) - For competitive friendly matches.",
+    "weight_disclosure_adv": "Advanced (Weight: 3.5) - Designed for regular competitive leagues.",
+    "weight_disclosure_pro": "Pro (Weight: 5.0) - Intended for high-intensity leagues and tournaments.",
+    "ver_mas": "See more ↓",
+    "ver_menos": "See less ↑"
+  },
+  "sports": {
+    "futbol": {
+      "name": "Soccer",
+      "desc": "Tradition and passion on real or synthetic grass."
+    },
+    "voley": {
+      "name": "Volleyball",
+      "desc": "Team play and jumps in a closed arena."
+    },
+    "padel": {
+      "name": "Padel",
+      "desc": "Walls and metal mesh in the trendy discipline."
+    },
+    "basquet": {
+      "name": "Basketball",
+      "desc": "Hoop and quick bounce on the hardwood court."
+    },
+    "tenis": {
+      "name": "Tennis",
+      "desc": "Strategic duel on a classic clay court."
+    },
+    "running": {
+      "name": "Running / Track & Field",
+      "desc": "Running, sprints, and long-distance on a running track."
+    },
+    "rugby": {
+      "name": "Rugby",
+      "desc": "Contact, strength, and team play."
+    },
+    "natacion": {
+      "name": "Swimming",
+      "desc": "Endurance and speed in an Olympic pool."
+    },
+    "gimnasio": {
+      "name": "Gym / CrossFit",
+      "desc": "High-intensity functional training."
+    },
+    "calistenia": {
+      "name": "Calisthenics",
+      "desc": "Bodyweight control and static strength outdoors."
+    },
+    "tenis_mesa": {
+      "name": "Table Tennis",
+      "desc": "Speed, reflexes, and millimeter precision."
+    },
+    "boxeo_mma": {
+      "name": "Boxing / MMA",
+      "desc": "Stand-up fighting, submissions, and full body conditioning."
+    },
+    "ciclismo": {
+      "name": "Cycling",
+      "desc": "Urban routes, mountain biking or track speed."
+    },
+    "futbol_americano": {
+      "name": "American Football",
+      "desc": "Yard strategy, passing and contact."
+    },
+    "beisbol": {
+      "name": "Baseball",
+      "desc": "Pitches, powerful hits and running bases."
+    },
+    "skateboarding": {
+      "name": "Skateboarding",
+      "desc": "Street tricks, ramps and urban freestyle."
+    },
+    "golf": {
+      "name": "Golf",
+      "desc": "Precision, strategy and focus on the green."
+    },
+    "automovilismo": {
+      "name": "Motorsport",
+      "desc": "Speed on wheels, karts and racing."
+    },
+    "ea_fc": {
+      "name": "EA Sports FC",
+      "desc": "Virtual elite soccer simulator."
+    },
+    "lol": {
+      "name": "League of Legends",
+      "desc": "Tactical MOBA battles on the Summoner's Rift."
+    },
+    "valorant": {
+      "name": "Valorant",
+      "desc": "Extreme precision tactical shooter by Riot."
+    },
+    "clash_royale": {
+      "name": "Clash Royale",
+      "desc": "Real-time card and tower strategy."
+    },
+    "fortnite": {
+      "name": "Fortnite",
+      "desc": "Battle Royale construction and survival."
+    },
+    "brawl_stars": {
+      "name": "Brawl Stars",
+      "desc": "Dynamic multiplayer arcade battles."
+    },
+    "cs2": {
+      "name": "Counter-Strike 2",
+      "desc": "Tactical team-based first-person shooter."
+    },
+    "dota2": {
+      "name": "Dota 2",
+      "desc": "Classic multiplayer online battle arena strategy."
+    },
+    "rocket_league": {
+      "name": "Rocket League",
+      "desc": "High-speed vehicular soccer and acrobatics."
+    },
+    "overwatch2": {
+      "name": "Overwatch 2",
+      "desc": "Hero shooter team battles with dynamic roles."
+    },
+    "street_fighter_tekken": {
+      "name": "Street Fighter / Tekken",
+      "desc": "Traditional 1v1 fighting games."
+    },
+    "apex_legends": {
+      "name": "Apex Legends",
+      "desc": "Frenetic Battle Royale with heroes and abilities."
+    },
+    "pubg_mobile": {
+      "name": "PUBG Mobile",
+      "desc": "Survival and tactical shooter on mobile devices."
+    },
+    "free_fire": {
+      "name": "Free Fire",
+      "desc": "Fast-paced Battle Royale matches optimized for mobile."
+    },
+    "cod_warzone": {
+      "name": "Call of Duty: Warzone",
+      "desc": "Massive high-fidelity military combat."
+    },
+    "rainbow_six": {
+      "name": "Rainbow Six Siege",
+      "desc": "Tactical indoor shooter with environment destruction."
+    },
+    "hearthstone": {
+      "name": "Hearthstone",
+      "desc": "Strategic card duels in the Warcraft universe."
+    },
+    "iracing_simracing": {
+      "name": "iRacing / F1 SimRacing",
+      "desc": "High-precision automotive simulation and licensed racing."
+    }
+  },
+  "skills": {
+    "amateur": "Amateur",
+    "intermedio": "Intermediate",
+    "avanzado": "Advanced",
+    "pro": "Pro"
   }
 }

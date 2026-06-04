@@ -134,7 +134,7 @@ export const useWalletStore = create<WalletState>()(
         const { balance } = get();
         if (balance < cost) return false;
 
-        if (useAuthStore.getState().isDemoMode) {
+        if (useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
           const newBalance = balance - cost;
           set({
             balance: newBalance,
@@ -344,7 +344,7 @@ export const useWalletStore = create<WalletState>()(
 // Subscribe to useAuthStore changes.
 // Only triggers initWallet when the user ID actually changes (login/logout),
 // preventing redundant fetches on unrelated auth state ticks.
-let _prevWalletUserId: string | null = null;
+let _prevWalletUserId: string | null = useAuthStore.getState().user?.id ?? null;
 useAuthStore.subscribe((state) => {
   const userId = state.user?.id ?? null;
   if (userId !== _prevWalletUserId) {

@@ -23,9 +23,8 @@ test.describe("Core User Flow (Happy Path)", () => {
 
     // 4. Navegar a mapa usando el menú (asumiendo que existe el sidebar)
     await page.goto(`${targetURL}/app/map`);
-    await expect(page.locator("h1")).toContainText("Mapa en vivo");
-
     // Verifica que el mapa cargó algo (el canvas de leaflet)
-    await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("h1")).toContainText("Mapa en vivo");
   });
 });

@@ -22,9 +22,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx vite --port ${port}`,
+    command: `npx vite --port ${port} --mode test`,
     url: `http://localhost:${port}`,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     env: {
       VITE_USE_MOCKS: "true",
     },

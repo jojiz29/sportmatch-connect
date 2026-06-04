@@ -9,9 +9,13 @@ import {
   ArrowDownRight,
   Clock,
   RefreshCw,
+  Flame,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { supabase } from "@/shared/api/supabase";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/app/iot")({
   head: () => ({ meta: [{ title: "Telemetría — SportMatch" }] }),
@@ -19,6 +23,102 @@ export const Route = createFileRoute("/app/iot")({
 });
 
 function IoT() {
+  const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
+  const [attendanceDays, setAttendanceDays] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (useAuthStore.getState().isDemoMode) {
+      const storedStreak = localStorage.getItem(`sportmatch_demo_streak_${user.id}`);
+      if (storedStreak) {
+        setStreak(JSON.parse(storedStreak));
+      } else {
+        const defaultStreak = { current_streak: 3, max_streak: 5 };
+        setStreak(defaultStreak);
+        localStorage.setItem(`sportmatch_demo_streak_${user.id}`, JSON.stringify(defaultStreak));
+      }
+
+      const storedAttendance = localStorage.getItem(`sportmatch_demo_attendance_${user.id}`);
+      if (storedAttendance) {
+        setAttendanceDays(JSON.parse(storedAttendance));
+      } else {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const dayMinus3 = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+        const dayMinus7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+        const mockAttendance = [todayStr, dayMinus3, dayMinus7];
+        setAttendanceDays(mockAttendance);
+        localStorage.setItem(
+          `sportmatch_demo_attendance_${user.id}`,
+          JSON.stringify(mockAttendance),
+        );
+      }
+    } else {
+      const fetchStats = async () => {
+        try {
+          const { data: stats } = await supabase
+            .from("user_stats")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (stats) {
+            setStreak({ current_streak: stats.current_streak, max_streak: stats.max_streak });
+          } else {
+            setStreak({ current_streak: 0, max_streak: 0 });
+          }
+
+          const { data: participants } = await supabase
+            .from("match_participants")
+            .select("joined_at, matches(date)")
+            .eq("user_id", user.id)
+            .eq("status", "ATTENDED");
+
+          if (participants) {
+            const days = (
+              participants as unknown as {
+                joined_at: string;
+                matches: { date: string } | null;
+              }[]
+            )
+              .map((p) => p.matches?.date || p.joined_at?.split("T")[0])
+              .filter(Boolean);
+            setAttendanceDays(days);
+          }
+        } catch (err) {
+          console.error("Error fetching user stats/attendance in IoT:", err);
+        }
+      };
+
+      fetchStats();
+    }
+  }, [user]);
+
+  const contributionGrid = useMemo(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const daysToMonday = currentDay === 0 ? 6 : currentDay - 1;
+    const startDay = new Date(today);
+    startDay.setDate(today.getDate() - daysToMonday - 28);
+
+    const cells = [];
+    for (let d = 0; d < 35; d++) {
+      const current = new Date(startDay);
+      current.setDate(startDay.getDate() + d);
+      const dateStr = current.toISOString().split("T")[0];
+      const dayVal = current.getDay();
+      const row = dayVal === 0 ? 6 : dayVal - 1;
+      const col = Math.floor(d / 7);
+      cells.push({ date: dateStr, row, col });
+    }
+    return cells;
+  }, []);
+
   const [heartRate, setHeartRate] = useState(142);
   const [calories, setCalories] = useState(650);
   const [duration, setDuration] = useState(45);
@@ -206,6 +306,93 @@ function IoT() {
 
         {/* Wearables / API Pipeline Integrations Panel */}
         <div className="space-y-6">
+          {/* Weekly Streak & Contribution Graph Widget */}
+          <div className="bg-gradient-card border border-border rounded-2xl p-6 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Flame className="h-5 w-5 text-neon" />
+                <h3 className="font-bold text-sm">
+                  {t("onboarding.streak_title", "Racha Deportiva")}
+                </h3>
+              </div>
+              {streak && (
+                <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                  <span>
+                    {t("onboarding.streak_current", "Racha actual:")}{" "}
+                    <strong className="text-neon">{streak.current_streak}</strong>{" "}
+                    {streak.current_streak === 1
+                      ? t("onboarding.streak_unit_sing", "sem")
+                      : t("onboarding.streak_unit_plur", "sems")}
+                  </span>
+                  <span>·</span>
+                  <span>
+                    {t("onboarding.streak_max", "Máx:")}{" "}
+                    <strong className="text-foreground">{streak.max_streak}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                <svg
+                  width="220"
+                  height="110"
+                  viewBox="0 0 220 110"
+                  className="text-muted-foreground"
+                >
+                  {/* Days labels */}
+                  <text x="5" y="18" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_mon", "Lun")}
+                  </text>
+                  <text x="5" y="46" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_wed", "Mié")}
+                  </text>
+                  <text x="5" y="74" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_fri", "Vie")}
+                  </text>
+                  <text x="5" y="102" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_sun", "Dom")}
+                  </text>
+
+                  {/* Grid Cells */}
+                  {contributionGrid.map((cell, idx) => {
+                    const isAttended = attendanceDays.includes(cell.date);
+                    const x = 35 + cell.col * 36;
+                    const y = 10 + cell.row * 14;
+
+                    return (
+                      <rect
+                        key={idx}
+                        x={x}
+                        y={y}
+                        width="10"
+                        height="10"
+                        rx="2"
+                        fill={isAttended ? "#39FF14" : "#1e293b"}
+                        stroke={isAttended ? "#39FF14" : "rgba(255,255,255,0.05)"}
+                        strokeWidth="0.5"
+                        className="transition-all duration-300 hover:stroke-white hover:stroke-[1.5px]"
+                      >
+                        <title>{cell.date}</title>
+                      </rect>
+                    );
+                  })}
+                </svg>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                {t(
+                  "onboarding.streak_footer_prefix",
+                  "Los días con asistencia verificada se iluminan en",
+                )}{" "}
+                <span className="text-[#39FF14] font-bold">
+                  {t("onboarding.streak_footer_color", "Verde Neón")}
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+
           <div className="bg-gradient-card border border-border rounded-2xl p-6">
             <h3 className="font-semibold mb-6 flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-neon animate-pulse" />

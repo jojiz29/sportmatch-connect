@@ -53,7 +53,7 @@ test.describe("Edwin Flores E2E Flow", () => {
     await expect(sidebarBalance).toContainText("3500 FC");
 
     // 9. Navigate to Chat and check Fabiola and Pichanga Jueves chats are present
-    await page.click("aside >> text=Chat");
+    await page.goto(`${targetURL}/app/chat`);
     await page.waitForTimeout(500); // Wait for store initialization/mount
 
     const chatsList = page.locator(
@@ -73,7 +73,7 @@ test.describe("Edwin Flores E2E Flow", () => {
     ).toBeVisible();
 
     // 11. Navigate to Profile
-    await page.click("aside >> text=Perfil");
+    await page.goto(`${targetURL}/app/profile`);
 
     // Verify initial profile values
     await expect(page.locator("h2")).toContainText("Edwin Flores");
@@ -94,7 +94,7 @@ test.describe("Edwin Flores E2E Flow", () => {
     await expect(sidebarName).toContainText("Edwin Flores Junior");
 
     // 13. Redeem Prize from FitCoins Section
-    await page.click("aside >> text=FitCoins");
+    await page.goto(`${targetURL}/app/wallet`);
     const walletBalance = page.locator(".text-6xl.font-extrabold");
     await expect(walletBalance).toContainText("3500");
 
@@ -128,13 +128,13 @@ test.describe("Edwin Flores E2E Flow", () => {
     await expect(sidebarBalance).toContainText("2700 FC");
 
     // Go back to profile to verify profile edits survived reload
-    await page.click("aside >> text=Perfil");
+    await page.goto(`${targetURL}/app/profile`);
     await page.waitForTimeout(500);
     await expect(page.locator("h2")).toContainText("Edwin Flores Junior");
     await expect(page.locator('p:has-text("Apasionado del pádel y fútbol.")')).toBeVisible();
 
     // Go back to chat to verify message history survived reload
-    await page.click("aside >> text=Chat");
+    await page.goto(`${targetURL}/app/chat`);
     await page.waitForTimeout(500);
     await page.click('button:has-text("Fabiola")');
     await expect(

@@ -10,6 +10,7 @@ import {
   Check,
 } from "lucide-react";
 import { User, Match, Squad } from "@/entities/types";
+import { useChatStore } from "@/features/chat/useChatStore";
 
 interface SquadInviteCardProps {
   squadId: string;
@@ -153,6 +154,45 @@ export function ChatWindow({
   fileInputRef,
   t,
 }: ChatWindowProps) {
+  const sendTypingStatus = useChatStore((s) => s.sendTypingStatus);
+  const typingUsers = useChatStore((s) => s.typingUsers);
+
+  const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleTyping = () => {
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      sendTypingStatus(true);
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      sendTypingStatus(false);
+    }, 1500);
+  };
+
+  const onSend = () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    isTypingRef.current = false;
+    sendTypingStatus(false);
+    handleSend();
+  };
+
   if (!activeChat) {
     return (
       <div className="flex-1 grid place-items-center text-muted-foreground flex-col">
@@ -279,14 +319,66 @@ export function ChatWindow({
                   )}
                 </div>
                 <div
-                  className={`text-[10px] mt-1 ${isMe ? "text-primary/70 mr-1 text-right" : "text-muted-foreground ml-1"}`}
+                  className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isMe ? "text-primary/75 mr-1" : "text-muted-foreground ml-1"}`}
                 >
-                  {time} {isMe && "✓✓"}
+                  <span>{time}</span>
+                  {isMe &&
+                    (msg.metadata?.seen ? (
+                      <span className="text-neon font-bold text-xs" title="Visto">
+                        ✓✓
+                      </span>
+                    ) : (
+                      <span className="text-primary-foreground/60 text-xs" title="Enviado">
+                        ✓
+                      </span>
+                    ))}
                 </div>
               </div>
             </div>
           );
         })}
+
+        {/* Real-time Typing Indicators */}
+        {Object.keys(typingUsers).map((userId) => {
+          if (userId === currentUser?.id) return null;
+          const typingUser = registeredUsers.find((u) => u.id === userId) || {
+            name: "Alguien",
+            avatar_url: "/placeholder.png",
+          };
+          return (
+            <div key={userId} className="flex gap-3 max-w-[80%] items-center animate-pulse">
+              {typingUser.avatar_url && typingUser.avatar_url.startsWith("http") ? (
+                <img
+                  src={typingUser.avatar_url}
+                  alt=""
+                  className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-gradient-primary grid place-items-center text-white text-[10px] font-bold shrink-0">
+                  🎾
+                </div>
+              )}
+              <div className="bg-accent rounded-2xl rounded-tl-none p-3 text-xs text-muted-foreground flex items-center gap-1.5">
+                <span>{typingUser.name} está escribiendo</span>
+                <span className="flex gap-0.5">
+                  <span
+                    className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
         <div ref={endRef} />
       </div>
 
@@ -368,8 +460,11 @@ export function ChatWindow({
             placeholder={t("chat.placeholder", "Escribe un mensaje...")}
             className="flex-1 bg-transparent border-none focus:outline-none text-sm px-2 text-foreground"
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onChange={(e) => {
+              setText(e.target.value);
+              handleTyping();
+            }}
+            onKeyDown={(e) => e.key === "Enter" && onSend()}
           />
 
           <button
@@ -389,7 +484,7 @@ export function ChatWindow({
           />
 
           <button
-            onClick={handleSend}
+            onClick={onSend}
             className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer border-0"
           >
             <Send className="h-4 w-4 ml-0.5" />

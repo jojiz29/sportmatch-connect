@@ -14,11 +14,14 @@ import { Route as DemoRouteImport } from './routes/demo'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as OnboardingSportsRouteImport } from './routes/onboarding.sports'
+import { Route as AppSquadsRouteImport } from './routes/app.squads'
 import { Route as AppRegisterRouteImport } from './routes/app.register'
 import { Route as AppProfileRouteImport } from './routes/app.profile'
 import { Route as AppMatchRouteImport } from './routes/app.match'
 import { Route as AppMapRouteImport } from './routes/app.map'
 import { Route as AppIotRouteImport } from './routes/app.iot'
+import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
 import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
@@ -56,6 +59,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const OnboardingSportsRoute = OnboardingSportsRouteImport.update({
+  id: '/onboarding/sports',
+  path: '/onboarding/sports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppSquadsRoute = AppSquadsRouteImport.update({
+  id: '/squads',
+  path: '/squads',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRegisterRoute = AppRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -79,6 +92,11 @@ const AppMapRoute = AppMapRouteImport.update({
 const AppIotRoute = AppIotRouteImport.update({
   id: '/iot',
   path: '/iot',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeedRoute = AppFeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCourtsRoute = AppCourtsRouteImport.update({
@@ -146,11 +164,14 @@ export interface FileRoutesByFullPath {
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
+  '/app/feed': typeof AppFeedRoute
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/match': typeof AppMatchRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/register': typeof AppRegisterRoute
+  '/app/squads': typeof AppSquadsRoute
+  '/onboarding/sports': typeof OnboardingSportsRoute
   '/app/': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
@@ -168,9 +189,12 @@ export interface FileRoutesByTo {
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
+  '/app/feed': typeof AppFeedRoute
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/register': typeof AppRegisterRoute
+  '/app/squads': typeof AppSquadsRoute
+  '/onboarding/sports': typeof OnboardingSportsRoute
   '/app': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
@@ -190,11 +214,14 @@ export interface FileRoutesById {
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
+  '/app/feed': typeof AppFeedRoute
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/match': typeof AppMatchRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/register': typeof AppRegisterRoute
+  '/app/squads': typeof AppSquadsRoute
+  '/onboarding/sports': typeof OnboardingSportsRoute
   '/app/': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
@@ -215,11 +242,14 @@ export interface FileRouteTypes {
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
+    | '/app/feed'
     | '/app/iot'
     | '/app/map'
     | '/app/match'
     | '/app/profile'
     | '/app/register'
+    | '/app/squads'
+    | '/onboarding/sports'
     | '/app/'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
@@ -237,9 +267,12 @@ export interface FileRouteTypes {
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
+    | '/app/feed'
     | '/app/iot'
     | '/app/map'
     | '/app/register'
+    | '/app/squads'
+    | '/onboarding/sports'
     | '/app'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
@@ -258,11 +291,14 @@ export interface FileRouteTypes {
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
+    | '/app/feed'
     | '/app/iot'
     | '/app/map'
     | '/app/match'
     | '/app/profile'
     | '/app/register'
+    | '/app/squads'
+    | '/onboarding/sports'
     | '/app/'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
@@ -278,6 +314,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   DemoRoute: typeof DemoRoute
   LoginRoute: typeof LoginRoute
+  OnboardingSportsRoute: typeof OnboardingSportsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -317,6 +354,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/onboarding/sports': {
+      id: '/onboarding/sports'
+      path: '/onboarding/sports'
+      fullPath: '/onboarding/sports'
+      preLoaderRoute: typeof OnboardingSportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/squads': {
+      id: '/app/squads'
+      path: '/squads'
+      fullPath: '/app/squads'
+      preLoaderRoute: typeof AppSquadsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/register': {
       id: '/app/register'
       path: '/register'
@@ -350,6 +401,13 @@ declare module '@tanstack/react-router' {
       path: '/iot'
       fullPath: '/app/iot'
       preLoaderRoute: typeof AppIotRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/feed': {
+      id: '/app/feed'
+      path: '/feed'
+      fullPath: '/app/feed'
+      preLoaderRoute: typeof AppFeedRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/courts': {
@@ -477,11 +535,13 @@ interface AppRouteChildren {
   AppBusinessRoute: typeof AppBusinessRoute
   AppChatRoute: typeof AppChatRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
+  AppFeedRoute: typeof AppFeedRoute
   AppIotRoute: typeof AppIotRoute
   AppMapRoute: typeof AppMapRoute
   AppMatchRoute: typeof AppMatchRouteWithChildren
   AppProfileRoute: typeof AppProfileRouteWithChildren
   AppRegisterRoute: typeof AppRegisterRoute
+  AppSquadsRoute: typeof AppSquadsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppWalletHistoryRoute: typeof AppWalletHistoryRoute
   AppWalletIndexRoute: typeof AppWalletIndexRoute
@@ -492,11 +552,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppBusinessRoute: AppBusinessRoute,
   AppChatRoute: AppChatRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,
+  AppFeedRoute: AppFeedRoute,
   AppIotRoute: AppIotRoute,
   AppMapRoute: AppMapRoute,
   AppMatchRoute: AppMatchRouteWithChildren,
   AppProfileRoute: AppProfileRouteWithChildren,
   AppRegisterRoute: AppRegisterRoute,
+  AppSquadsRoute: AppSquadsRoute,
   AppIndexRoute: AppIndexRoute,
   AppWalletHistoryRoute: AppWalletHistoryRoute,
   AppWalletIndexRoute: AppWalletIndexRoute,
@@ -509,6 +571,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   DemoRoute: DemoRoute,
   LoginRoute: LoginRoute,
+  OnboardingSportsRoute: OnboardingSportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

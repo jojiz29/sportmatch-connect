@@ -13,11 +13,10 @@ import {
   Star,
   Sparkles,
   Plus,
+  Clock,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
-import { NewsFeed } from "@/features/feed/ui/NewsFeed";
-import { SquadExplorer } from "@/features/squads/ui/SquadExplorer";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
@@ -80,8 +79,102 @@ function Dashboard() {
   const router = useRouter();
   const { t } = useTranslation();
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"matches" | "feed" | "squads">("matches");
   const user = useAuthStore((state) => state.user);
+
+  const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
+  const [attendanceDays, setAttendanceDays] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (useAuthStore.getState().isDemoMode) {
+      const storedStreak = localStorage.getItem(`sportmatch_demo_streak_${user.id}`);
+      if (storedStreak) {
+        setStreak(JSON.parse(storedStreak));
+      } else {
+        const defaultStreak = { current_streak: 3, max_streak: 5 };
+        setStreak(defaultStreak);
+        localStorage.setItem(`sportmatch_demo_streak_${user.id}`, JSON.stringify(defaultStreak));
+      }
+
+      const storedAttendance = localStorage.getItem(`sportmatch_demo_attendance_${user.id}`);
+      if (storedAttendance) {
+        setAttendanceDays(JSON.parse(storedAttendance));
+      } else {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const dayMinus3 = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+        const dayMinus7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+        const mockAttendance = [todayStr, dayMinus3, dayMinus7];
+        setAttendanceDays(mockAttendance);
+        localStorage.setItem(
+          `sportmatch_demo_attendance_${user.id}`,
+          JSON.stringify(mockAttendance),
+        );
+      }
+    } else {
+      const fetchStats = async () => {
+        try {
+          const { data: stats } = await supabase
+            .from("user_stats")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (stats) {
+            setStreak({ current_streak: stats.current_streak, max_streak: stats.max_streak });
+          } else {
+            setStreak({ current_streak: 0, max_streak: 0 });
+          }
+
+          const { data: participants } = await supabase
+            .from("match_participants")
+            .select("joined_at, matches(date)")
+            .eq("user_id", user.id)
+            .eq("status", "ATTENDED");
+
+          if (participants) {
+            const days = (
+              participants as unknown as {
+                joined_at: string;
+                matches: { date: string } | null;
+              }[]
+            )
+              .map((p) => p.matches?.date || p.joined_at?.split("T")[0])
+              .filter(Boolean);
+            setAttendanceDays(days);
+          }
+        } catch (err) {
+          console.error("Error fetching user stats/attendance:", err);
+        }
+      };
+
+      fetchStats();
+    }
+  }, [user]);
+
+  const contributionGrid = useMemo(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const daysToMonday = currentDay === 0 ? 6 : currentDay - 1;
+    const startDay = new Date(today);
+    startDay.setDate(today.getDate() - daysToMonday - 28);
+
+    const cells = [];
+    for (let d = 0; d < 35; d++) {
+      const current = new Date(startDay);
+      current.setDate(startDay.getDate() + d);
+      const dateStr = current.toISOString().split("T")[0];
+      const dayVal = current.getDay();
+      const row = dayVal === 0 ? 6 : dayVal - 1;
+      const col = Math.floor(d / 7);
+      cells.push({ date: dateStr, row, col });
+    }
+    return cells;
+  }, []);
+
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [reviewMatch, setReviewMatch] = useState<Match | null>(null);
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
@@ -124,6 +217,33 @@ function Dashboard() {
   useEffect(() => {
     setLiveMatches(matches);
   }, [matches]);
+
+  // Find user's next upcoming match (declared safe after liveMatches initialization)
+  const nextMatch = useMemo(() => {
+    if (!user) return null;
+    const userMatches = liveMatches.filter((m) => {
+      const isCreator = m.creator_id === user.id;
+      const isParticipant = m.current_players?.some((p) => p.id === user.id);
+      if (!isCreator && !isParticipant) return false;
+
+      // Filter for future matches
+      try {
+        const matchStart = new Date(`${m.date}T${m.time}`);
+        return matchStart.getTime() > Date.now();
+      } catch {
+        return false;
+      }
+    });
+
+    if (userMatches.length === 0) return null;
+
+    // Sort by date and time ascending
+    return userMatches.sort((a, b) => {
+      const timeA = new Date(`${a.date}T${a.time}`).getTime();
+      const timeB = new Date(`${b.date}T${b.time}`).getTime();
+      return timeA - timeB;
+    })[0];
+  }, [liveMatches, user]);
 
   useEffect(() => {
     if (useAuthStore.getState().isDemoMode) return;
@@ -454,92 +574,193 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Tabs Selector */}
-      <div className="flex gap-4 border-b border-border/50 pb-2 mb-6">
-        <button
-          onClick={() => setActiveTab("matches")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "matches"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="dashboard-tab-matches"
-        >
-          Partidos
-        </button>
-        <button
-          onClick={() => setActiveTab("feed")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "feed"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="dashboard-tab-feed"
-        >
-          Comunidad (Feed)
-        </button>
-        <button
-          onClick={() => setActiveTab("squads")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "squads"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="dashboard-tab-squads"
-        >
-          Squads (Clubes)
-        </button>
-      </div>
-
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Column */}
-        <div className="lg:col-span-2 space-y-4">
-          {activeTab === "matches" && (
-            <>
-              <PageHeader
-                title="Partidos recomendados"
-                subtitle="Curado por IA según tu nivel y horarios"
-                action={
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Crear Partido
-                  </button>
-                }
-              />
-              <div className="grid sm:grid-cols-2 gap-4">
-                {filteredMatches.length > 0 ? (
-                  filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
-                ) : (
-                  <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
-                    No hay partidos recomendados para este deporte.
+        <div className="lg:col-span-2 space-y-6">
+          {/* Próximo Partido Card */}
+          {nextMatch ? (
+            <div className="animate-fade-in">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 mb-2.5 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-neon animate-pulse" />
+                {t("dashboard.next_match", "Próximo Partido")}
+              </h3>
+              <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5 shadow-neon relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-neon/5 blur-2xl pointer-events-none" />
+                <div className="flex gap-4 min-w-0">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-neon shrink-0 grid place-items-center shadow-neon">
+                    <Calendar className="h-5 w-5 text-neon-foreground" />
                   </div>
+                  <div className="min-w-0">
+                    <span className="text-[9px] bg-neon/20 text-neon font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      {nextMatch.sport}
+                    </span>
+                    <h4 className="font-bold text-base mt-1 text-foreground leading-tight truncate">
+                      {nextMatch.title}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      {nextMatch.date} a las {nextMatch.time} hrs
+                    </p>
+                    {nextMatch.court && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        {nextMatch.court.name} · {nextMatch.court.district}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {nextMatch.court_id ? (
+                  <Link
+                    to="/app/courts/$courtId"
+                    params={{ courtId: nextMatch.court_id }}
+                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform shrink-0 w-full sm:w-auto text-center cursor-pointer"
+                  >
+                    Ver Detalles
+                  </Link>
+                ) : (
+                  <Link
+                    to="/app/map"
+                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform shrink-0 w-full sm:w-auto text-center cursor-pointer"
+                  >
+                    Ver Mapa
+                  </Link>
                 )}
               </div>
-            </>
+            </div>
+          ) : (
+            <div className="p-4 bg-gradient-card border border-border rounded-2xl flex items-center justify-between gap-4">
+              <div>
+                <h4 className="font-semibold text-xs text-foreground">
+                  {t("dashboard.no_next_match", "No tienes partidos programados")}
+                </h4>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Organiza una pichanga o únete a una hoy.
+                </p>
+              </div>
+              <Link
+                to="/app/match"
+                className="px-3.5 py-2 rounded-xl bg-accent text-foreground hover:bg-accent/80 font-bold text-xs transition-colors shrink-0"
+              >
+                {t("dashboard.find_one", "Encontrar")}
+              </Link>
+            </div>
           )}
 
-          {activeTab === "feed" && (
-            <>
-              <PageHeader
-                title="Feed de Noticias"
-                subtitle="Novedades de los jugadores que sigues"
-              />
-              <NewsFeed />
-            </>
-          )}
-
-          {activeTab === "squads" && (
-            <>
-              <PageHeader title="Squads y Clubes" subtitle="Comunidades y equipos de tu zona" />
-              <SquadExplorer />
-            </>
-          )}
+          {/* Recommended Matches List */}
+          <div className="space-y-4">
+            <PageHeader
+              title="Partidos recomendados"
+              subtitle="Curado por IA según tu nivel y horarios"
+              action={
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Crear Partido
+                </button>
+              }
+            />
+            <div className="grid sm:grid-cols-2 gap-4">
+              {filteredMatches.length > 0 ? (
+                filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
+              ) : (
+                <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
+                  No hay partidos recomendados para este deporte.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Side */}
         <div className="space-y-6">
+          {/* Weekly Streak & Contribution Graph Widget */}
+          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Flame className="h-5 w-5 text-neon" />
+                <h3 className="font-bold text-sm">
+                  {t("onboarding.streak_title", "Racha Deportiva")}
+                </h3>
+              </div>
+              {streak && (
+                <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                  <span>
+                    {t("onboarding.streak_current", "Racha actual:")}{" "}
+                    <strong className="text-neon">{streak.current_streak}</strong>{" "}
+                    {streak.current_streak === 1
+                      ? t("onboarding.streak_unit_sing", "sem")
+                      : t("onboarding.streak_unit_plur", "sems")}
+                  </span>
+                  <span>·</span>
+                  <span>
+                    {t("onboarding.streak_max", "Máx:")}{" "}
+                    <strong className="text-foreground">{streak.max_streak}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                <svg
+                  width="220"
+                  height="110"
+                  viewBox="0 0 220 110"
+                  className="text-muted-foreground"
+                >
+                  {/* Days labels */}
+                  <text x="5" y="18" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_mon", "Lun")}
+                  </text>
+                  <text x="5" y="46" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_wed", "Mié")}
+                  </text>
+                  <text x="5" y="74" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_fri", "Vie")}
+                  </text>
+                  <text x="5" y="102" fontSize="8" fill="currentColor">
+                    {t("onboarding.day_sun", "Dom")}
+                  </text>
+
+                  {/* Grid Cells */}
+                  {contributionGrid.map((cell, idx) => {
+                    const isAttended = attendanceDays.includes(cell.date);
+                    const x = 35 + cell.col * 36;
+                    const y = 10 + cell.row * 14;
+
+                    return (
+                      <rect
+                        key={idx}
+                        x={x}
+                        y={y}
+                        width="10"
+                        height="10"
+                        rx="2"
+                        fill={isAttended ? "#39FF14" : "#1e293b"}
+                        stroke={isAttended ? "#39FF14" : "rgba(255,255,255,0.05)"}
+                        strokeWidth="0.5"
+                        className="transition-all duration-300 hover:stroke-white hover:stroke-[1.5px]"
+                      >
+                        <title>{cell.date}</title>
+                      </rect>
+                    );
+                  })}
+                </svg>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                {t(
+                  "onboarding.streak_footer_prefix",
+                  "Los días con asistencia verificada se iluminan en",
+                )}{" "}
+                <span className="text-[#39FF14] font-bold">
+                  {t("onboarding.streak_footer_color", "Verde Neón")}
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+
           <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Jugadores cerca</h3>
@@ -908,11 +1129,43 @@ function MatchCard({ match }: { match: Match }) {
             } else {
               match.status = "IN_PROGRESS";
               localStorage.setItem(`sportmatch_demo_checkin_${match.id}`, "true");
+
+              // Local update for contribution graph in demo mode
+              if (user) {
+                const todayStr = new Date().toISOString().split("T")[0];
+                const storedAttendance = localStorage.getItem(
+                  `sportmatch_demo_attendance_${user.id}`,
+                );
+                const days = storedAttendance ? JSON.parse(storedAttendance) : [];
+                if (!days.includes(todayStr)) {
+                  days.push(todayStr);
+                  localStorage.setItem(
+                    `sportmatch_demo_attendance_${user.id}`,
+                    JSON.stringify(days),
+                  );
+                }
+
+                const storedStreak = localStorage.getItem(`sportmatch_demo_streak_${user.id}`);
+                const streakObj = storedStreak
+                  ? JSON.parse(storedStreak)
+                  : { current_streak: 0, max_streak: 0 };
+                streakObj.current_streak += 1;
+                if (streakObj.current_streak > streakObj.max_streak) {
+                  streakObj.max_streak = streakObj.current_streak;
+                }
+                localStorage.setItem(
+                  `sportmatch_demo_streak_${user.id}`,
+                  JSON.stringify(streakObj),
+                );
+              }
             }
 
             setCheckedIn(true);
             toast.success(t("game_day.checkin_success"));
             await router.invalidate();
+            if (useAuthStore.getState().isDemoMode) {
+              window.location.reload();
+            }
           } catch {
             toast.error("Error al registrar asistencia.");
           }

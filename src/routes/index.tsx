@@ -320,11 +320,6 @@ function Landing() {
             </a>
           </nav>
           <div className="flex items-center gap-3">
-            {/* Live FitCoins display indicator */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FF6B35]/15 border border-[#FF6B35]/40 text-[#FF6B35] font-mono text-xs sm:text-sm font-bold shadow-neon-amber">
-              <Coins className="h-4 w-4 animate-spin-slow" />
-              <span>{fitcoins.toLocaleString()} FC</span>
-            </div>
             <Link
               to="/login"
               className={
