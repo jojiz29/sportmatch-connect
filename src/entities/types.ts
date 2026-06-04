@@ -1,5 +1,13 @@
 export type Sport = "Fútbol" | "Básquet" | "Tenis" | "Pádel" | "Vóley" | "Running";
 
+export interface SportCatalog {
+  id: string;
+  name: string;
+  icon_slug: string;
+  default_max_players: number;
+  created_at: string;
+}
+
 export type Level = "Principiante" | "Intermedio" | "Avanzado" | "Elite";
 
 export interface User {
@@ -26,13 +34,14 @@ export interface User {
   company_name?: string;
   business_category?: "Canchas" | "Gym" | "Tienda" | "Bebidas";
   is_sponsored?: boolean;
+  is_admin?: boolean;
 }
 
 export interface Court {
   id: string; // UUID
   created_at: string;
   name: string;
-  sport: Sport;
+  sport: string; // Changed to string to support dynamic sports
   price_per_hour: number;
   rating: number;
   reviews_count: number;
@@ -46,6 +55,9 @@ export interface Court {
   distance_km?: number;
   is_sponsored?: boolean; // Patrocinador B2B — destacado en mapa con borde dorado
   owner_id?: string;
+  max_players?: number; // Added for dynamic cost calculation
+  operating_hours?: string[]; // Added for unique court schedules
+  district?: string;
 }
 
 export interface Match {
@@ -59,10 +71,18 @@ export interface Match {
   max_players: number;
   required_level: Level;
   creator_id: string; // Faltaba para hacer match con RLS
+  status?: "Open" | "Full" | "Finished" | "Cancelled" | "IN_PROGRESS";
 
   // Relaciones
   court?: Court;
   current_players?: User[];
+}
+
+export interface MatchParticipant {
+  match_id: string;
+  user_id: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "ATTENDED";
+  joined_at: string;
 }
 
 export interface Transaction {
@@ -71,7 +91,7 @@ export interface Transaction {
   user_id: string;
   amount: number; // Positivo (ganancia) o Negativo (gasto)
   description: string;
-  type: "EARN" | "SPEND" | "EARN" | "SPEND" | "PENALTY"; // Added EARN and SPEND
+  type: "EARN" | "SPEND" | "PENALTY";
 }
 
 export interface TelemetryData {

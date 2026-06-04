@@ -1,215 +1,286 @@
-import { query } from "@/shared/lib/database";
-import { CatalogItem } from "@/entities/types";
-import { useBusinessStore } from "@/features/business/model/useBusinessStore";
-import { useWalletStore } from "@/features/wallet/useWalletStore";
+import { supabase } from "./supabase";
+import { CatalogItem, Transaction } from "@/entities/types";
+import { createNotification } from "./notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { MOCK_USERS, MOCK_TRANSACTIONS, syncMockUsersToStorage } from "@/lib/mock";
+import { apiClient } from "./apiClient";
+import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 
-const USE_MOCKS =
-  (typeof process !== "undefined" && process.env?.VITE_USE_MOCKS !== "false") ||
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_USE_MOCKS !== "false");
+const MOCK_CATALOG: CatalogItem[] = [
+  {
+    id: "puka-power-bottle",
+    business_id: "user-puka-power",
+    name: "Botella Puka Power",
+    description: "Bebida energética de 500ml para máxima resistencia.",
+    price: 150,
+    type: "PRODUCT",
+    image_url: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "puka-pack-6",
+    business_id: "user-puka-power",
+    name: "Puka Pack (6 botellas)",
+    description: "Caja de 6 botellas para compartir con tu squad.",
+    price: 800,
+    type: "PRODUCT",
+    image_url: "https://images.unsplash.com/photo-1546429070-1fc422f1d77a",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "puka-vip-pass",
+    business_id: "user-puka-power",
+    name: "Acceso VIP Arena Puka",
+    description: "Entrada exclusiva para eventos de pádel patrocinados.",
+    price: 2500,
+    type: "SERVICE",
+    image_url: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "item-1",
+    business_id: "business-1",
+    name: "Bebida Energética Gatorade 500ml",
+    description: "Rehidrátate con la bebida líder en el deporte.",
+    price: 150,
+    type: "PRODUCT",
+    image_url:
+      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=400",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "item-2",
+    business_id: "business-2",
+    name: "Alquiler Raqueta Pádel Wilson Pro",
+    description: "Raqueta de fibra de carbono para control máximo.",
+    price: 300,
+    type: "PRODUCT",
+    image_url:
+      "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=400",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "item-3",
+    business_id: "business-3",
+    name: "Pase Diario Gimnasio Megatlon",
+    description: "Acceso libre a máquinas y piscina climatizada.",
+    price: 600,
+    type: "SERVICE",
+    image_url:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=400",
+    created_at: new Date().toISOString(),
+  },
+];
+
+const getDemoCatalog = (): CatalogItem[] => {
+  if (typeof window === "undefined") return MOCK_CATALOG;
+  const stored = localStorage.getItem("sportmatch_demo_catalog");
+  if (!stored) {
+    localStorage.setItem("sportmatch_demo_catalog", JSON.stringify(MOCK_CATALOG));
+    return MOCK_CATALOG;
+  }
+  return JSON.parse(stored);
+};
+
+const saveDemoCatalog = (catalog: CatalogItem[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("sportmatch_demo_catalog", JSON.stringify(catalog));
+  }
+};
 
 export async function getCatalogItems(businessId?: string): Promise<CatalogItem[]> {
-  if (USE_MOCKS) {
-    const items = useBusinessStore.getState().catalogItems;
-    if (businessId) {
-      return Promise.resolve(items.filter((i) => i.business_id === businessId));
-    }
-    return Promise.resolve(items);
+  if (useAuthStore.getState().isDemoMode) {
+    const catalog = getDemoCatalog();
+    return businessId ? catalog.filter((i) => i.business_id === businessId) : catalog;
   }
 
-  let sqlQuery = `SELECT id, business_id, name, description, price, type, image_url, created_at FROM public.business_catalog`;
-
-  const params: (string | number)[] = [];
+  let query = supabase.from("business_catalog").select("*");
 
   if (businessId) {
-    sqlQuery += ` WHERE business_id = $1`;
-    params.push(businessId);
+    query = query.eq("business_id", businessId);
   }
 
-  sqlQuery += ` ORDER BY created_at DESC;`;
+  const { data, error } = await query.order("created_at", { ascending: false });
 
-  try {
-    const result = await query(sqlQuery, params);
-    return (result.rows || []).map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (row: any) => ({
-        id: row.id,
-        business_id: row.business_id,
-        name: row.name,
-        description: row.description,
-        price: parseFloat(row.price),
-
-        type: row.type as CatalogItem["type"],
-        image_url: row.image_url,
-        created_at: row.created_at,
-      }),
-    );
-  } catch (error) {
-    console.error("Vercel Postgres getCatalogItems failed:", error);
+  if (error) {
+    if (import.meta.env.DEV) console.error("Error fetching catalog items from Supabase:", error);
     throw error;
   }
+
+  return (data || []) as CatalogItem[];
 }
 
 export async function createCatalogItem(
   item: Omit<CatalogItem, "created_at">,
 ): Promise<CatalogItem> {
-  const newItem: CatalogItem = {
-    ...item,
-    created_at: new Date().toISOString(),
-  };
-
-  if (USE_MOCKS) {
-    useBusinessStore.getState().addCatalogItem(newItem);
-    return Promise.resolve(newItem);
+  if (useAuthStore.getState().isDemoMode) {
+    const newItem = {
+      ...item,
+      created_at: new Date().toISOString(),
+    };
+    const catalog = getDemoCatalog();
+    catalog.unshift(newItem);
+    saveDemoCatalog(catalog);
+    return newItem;
   }
 
-  const sqlQuery = `
-    INSERT INTO public.business_catalog (id, business_id, name, description, price, type, image_url)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING id, business_id, name, description, price, type, image_url, created_at;
-  `;
+  const { data, error } = await supabase
+    .from("business_catalog")
+    .insert({
+      id: item.id,
+      business_id: item.business_id,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      type: item.type,
+      image_url: item.image_url,
+    })
+    .select()
+    .single();
 
-  try {
-    const result = await query(sqlQuery, [
-      newItem.id,
-      newItem.business_id,
-      newItem.name,
-      newItem.description || null,
-      newItem.price,
-      newItem.type,
-      newItem.image_url || null,
-    ]);
-    const row = result.rows[0];
-    return {
-      id: row.id,
-      business_id: row.business_id,
-      name: row.name,
-      description: row.description,
-      price: parseFloat(row.price),
-
-      type: row.type as CatalogItem["type"],
-      image_url: row.image_url,
-      created_at: row.created_at,
-    };
-  } catch (error) {
-    console.error("Vercel Postgres createCatalogItem failed:", error);
+  if (error) {
+    if (import.meta.env.DEV) console.error("Error creating catalog item in Supabase:", error);
     throw error;
   }
+
+  return data as CatalogItem;
 }
 
 export async function deleteCatalogItem(itemId: string): Promise<void> {
-  if (USE_MOCKS) {
-    useBusinessStore.getState().deleteCatalogItem(itemId);
-    return Promise.resolve();
+  if (useAuthStore.getState().isDemoMode) {
+    const catalog = getDemoCatalog();
+    const index = catalog.findIndex((i) => i.id === itemId);
+    if (index !== -1) {
+      catalog.splice(index, 1);
+      saveDemoCatalog(catalog);
+    }
+    return;
   }
 
-  const sqlQuery = `DELETE FROM public.business_catalog WHERE id = $1;`;
-  try {
-    await query(sqlQuery, [itemId]);
-  } catch (error) {
-    console.error("Vercel Postgres deleteCatalogItem failed:", error);
+  const { error } = await supabase.from("business_catalog").delete().eq("id", itemId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("Error deleting catalog item from Supabase:", error);
     throw error;
   }
 }
 
 export async function purchaseCatalogItem(buyerId: string, itemId: string): Promise<boolean> {
-  // Fetch item details first
-  const items = await getCatalogItems();
-  const item = items.find((i) => i.id === itemId);
-  if (!item) {
-    throw new Error("Item not found");
-  }
+  if (useAuthStore.getState().isDemoMode) {
+    const catalog = getDemoCatalog();
+    const item = catalog.find((i) => i.id === itemId);
+    if (!item) throw new Error("Item not found");
 
-  if (USE_MOCKS) {
-    // 1. Check buyer has enough balance
-    const buyer = MOCK_USERS.find((u) => u.id === buyerId);
+    const buyer = useAuthStore.getState().user;
     if (!buyer) throw new Error("Buyer not found");
+
     if (buyer.fitcoins_balance < item.price) {
       return false;
     }
 
-    // 2. Perform wallet balance updates
-    const success = useWalletStore.getState().redeem(item.price, `Compra: ${item.name}`);
-    if (!success) return false;
+    const newBuyerBalance = buyer.fitcoins_balance - item.price;
+    apiClient.wallet.updateBalance(buyerId, newBuyerBalance);
 
-    // 3. Credit the business user
-    const seller = MOCK_USERS.find((u) => u.id === item.business_id);
-    if (seller) {
-      const newSellerBalance = seller.fitcoins_balance + item.price;
-      seller.fitcoins_balance = newSellerBalance;
+    const buyerTx: Transaction = {
+      id: `demo-tx-buyer-${Date.now()}`,
+      user_id: buyerId,
+      amount: -item.price,
+      description: `Compra: ${item.name}`,
+      type: "SPEND",
+      created_at: new Date().toISOString(),
+    };
+    apiClient.wallet.saveTransaction(buyerId, buyerTx);
 
-      // If the current logged in user is the seller, update session store
-      const currentUser = useAuthStore.getState().user;
-      if (currentUser && currentUser.id === seller.id) {
-        useAuthStore.setState({ user: { ...currentUser, fitcoins_balance: newSellerBalance } });
-      }
+    // Credit seller's balance
+    const currentSellerBalance = await apiClient.wallet.getBalance(item.business_id);
+    apiClient.wallet.updateBalance(item.business_id, currentSellerBalance + item.price);
 
-      // Generate EARN transaction for business
-      const earnTx = {
-        id: `txn_${Date.now()}_earn`,
-        created_at: new Date().toISOString(),
-        user_id: seller.id,
-        amount: item.price,
-        description: `Venta: ${item.name} a ${buyer.name}`,
-        type: "EARN" as const,
-      };
-      MOCK_TRANSACTIONS.unshift(earnTx);
-    }
+    const sellerTx: Transaction = {
+      id: `demo-tx-seller-${Date.now()}`,
+      user_id: item.business_id,
+      amount: item.price,
+      description: `Venta: ${item.name}`,
+      type: "EARN",
+      created_at: new Date().toISOString(),
+    };
+    apiClient.wallet.saveTransaction(item.business_id, sellerTx);
 
-    // 4. Log sales record in business store
+    // Add B2B sales record to businessStore
     useBusinessStore.getState().addSale({
-      id: `sale_${Date.now()}`,
+      id: `sale-demo-${Date.now()}`,
       catalog_item_id: item.id,
       item_name: item.name,
-      buyer_id: buyerId,
+      buyer_id: buyer.id,
       buyer_name: buyer.name,
       price: item.price,
       created_at: new Date().toISOString(),
     });
 
-    syncMockUsersToStorage();
-
-    return true;
-  }
-
-  // Production DB transaction would go here.
-  // In production, we decrement buyer balance, increment seller balance, and insert transaction logs.
-  try {
-    // Basic verification of balance
-    const buyerResult = await query("SELECT fitcoins_balance FROM public.users WHERE id = $1", [
+    createNotification(
       buyerId,
-    ]);
-    const buyerBalance = buyerResult.rows[0]?.fitcoins_balance || 0;
-    if (buyerBalance < item.price) {
-      return false;
-    }
+      "TRANSACTION_SUCCESS",
+      "Compra Exitosa (Demo)",
+      `Compraste ${item.name} por ${item.price} FC.`,
+      "/app/wallet/history",
+    ).catch((e) => {
+      if (import.meta.env.DEV) console.warn("Failed to create buyer notification:", e);
+    });
 
-    // Perform updates in DB (simple sequence)
-    await query("UPDATE public.users SET fitcoins_balance = fitcoins_balance - $1 WHERE id = $2", [
-      item.price,
-      buyerId,
-    ]);
-    await query("UPDATE public.users SET fitcoins_balance = fitcoins_balance + $1 WHERE id = $2", [
-      item.price,
+    createNotification(
       item.business_id,
-    ]);
-
-    // Insert transactions
-    const txId1 = `txn_${Date.now()}_spend`;
-    const txId2 = `txn_${Date.now()}_earn`;
-    await query(
-      "INSERT INTO public.transactions (id, user_id, amount, description, type, created_at) VALUES ($1, $2, $3, $4, $5, now())",
-      [txId1, buyerId, -item.price, `Compra: ${item.name}`, "SPEND"],
-    );
-    await query(
-      "INSERT INTO public.transactions (id, user_id, amount, description, type, created_at) VALUES ($1, $2, $3, $4, $5, now())",
-      [txId2, item.business_id, item.price, `Venta: ${item.name}`, "EARN"],
-    );
+      "TRANSACTION_SUCCESS",
+      "Venta Completada (Demo)",
+      `Vendiste ${item.name} a ${buyer.name} por ${item.price} FC.`,
+      "/app/business",
+    ).catch((e) => {
+      if (import.meta.env.DEV) console.warn("Failed to create seller notification:", e);
+    });
 
     return true;
-  } catch (error) {
-    console.error("Vercel Postgres purchaseCatalogItem execution failed:", error);
-    throw error;
   }
+
+  const { data, error } = await supabase.rpc("purchase_catalog_item", {
+    p_buyer_id: buyerId,
+    p_item_id: itemId,
+  });
+
+  if (error) {
+    console.error(`Error purchasing catalog item via RPC (code: ${error.code}):`, error);
+    throw new Error(error.message || "Failed to purchase item");
+  }
+
+  try {
+    const { data: item } = await supabase
+      .from("business_catalog")
+      .select("*")
+      .eq("id", itemId)
+      .single();
+
+    const { data: buyer } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", buyerId)
+      .single();
+
+    if (item && buyer) {
+      createNotification(
+        buyerId,
+        "TRANSACTION_SUCCESS",
+        "Compra Exitosa",
+        `Compraste ${item.name} por ${item.price} FC.`,
+        "/app/wallet/history",
+      ).catch((e) => console.warn("Failed to create buyer notification:", e));
+
+      createNotification(
+        item.business_id,
+        "TRANSACTION_SUCCESS",
+        "Venta Completada",
+        `Vendiste ${item.name} a ${buyer.name} por ${item.price} FC.`,
+        "/app/business",
+      ).catch((e) => console.warn("Failed to create seller notification:", e));
+    }
+  } catch (notifErr) {
+    console.warn("Error triggering B2B purchase notifications:", notifErr);
+  }
+
+  return data as boolean;
 }

@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { LEADERBOARD } from "@/lib/mock";
-import { Trophy, Gift, Zap, Crown, X, ShoppingBag } from "lucide-react";
+import { Trophy, Gift, Zap, Crown, X, ShoppingBag, Loader2 } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { getCatalogItems, purchaseCatalogItem } from "@/shared/api/businessService";
-import { CatalogItem } from "@/entities/types";
+import { CatalogItem, User } from "@/entities/types";
+import { apiClient } from "@/shared/api/apiClient";
+import { Reward } from "@/services/walletService";
 
 export const Route = createFileRoute("/app/wallet/")({
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
@@ -19,32 +20,104 @@ export const Route = createFileRoute("/app/wallet/")({
   component: Wallet,
 });
 
-const REWARDS = [
-  { id: "r1", name: "Hora gratis de pádel", cost: 500, emoji: "🏓" },
-  { id: "r2", name: "Camiseta SportMatch", cost: 1200, emoji: "👕" },
-  { id: "r3", name: "Sesión con entrenador", cost: 2000, emoji: "🏋️" },
-  { id: "r4", name: "Pelota oficial", cost: 800, emoji: "⚽" },
-];
-
-const CHALLENGES = [
-  { id: "ch1", name: "Jugá 3 partidos esta semana", progress: 2, total: 3, reward: 150 },
-  { id: "ch2", name: "Mantené Trust Score > 90", progress: 93, total: 100, reward: 200 },
-  { id: "ch3", name: "Invitá a 2 amigos", progress: 1, total: 2, reward: 300 },
-];
+function getRewardEmoji(category: string | null, title: string): string {
+  const cat = (category || "").toLowerCase();
+  const t = title.toLowerCase();
+  if (cat.includes("cancha") || t.includes("padel") || t.includes("pádel")) return "🏓";
+  if (cat.includes("bebida") || t.includes("drink") || t.includes("powerade")) return "🥤";
+  if (cat.includes("equip") || t.includes("ball") || t.includes("pelota")) return "⚽";
+  if (cat.includes("ropa") || cat.includes("shirt") || t.includes("camiseta")) return "👕";
+  return "🎁";
+}
 
 function Wallet() {
   const { t } = useTranslation();
-  const { balance, redeem, initWallet } = useWalletStore();
-  const [selectedReward, setSelectedReward] = useState<(typeof REWARDS)[0] | null>(null);
+  const { balance, redeem, initWallet, challenges, progressChallenge, claimChallenge } =
+    useWalletStore();
+
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [loadingRewards, setLoadingRewards] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [purchasing, setPurchasing] = useState(false);
   const user = useAuthStore((state) => state.user);
   const { buyItem } = Route.useSearch();
+  const [leaderboardUsers, setLeaderboardUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    apiClient.users
+      .getLeaderboard()
+      .then((users) => {
+        if (active) setLeaderboardUsers(users);
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error("Error loading leaderboard users:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     initWallet();
   }, [initWallet]);
+
+  useEffect(() => {
+    async function loadRewards() {
+      try {
+        setLoadingRewards(true);
+        const { getRewards } = await import("@/services/walletService");
+        const list = await getRewards();
+        setRewards(list);
+      } catch (err) {
+        console.error("Failed to load rewards from DB:", err);
+        const fallbackRewards: Reward[] = [
+          {
+            id: "00000000-0000-0000-0000-000000000091",
+            title: "Hora gratis de pádel",
+            cost_fitcoins: 500,
+            description: "Descuento para una hora de alquiler de cancha de pádel.",
+            stock: 50,
+            image_url: "",
+            category: "Canchas",
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000092",
+            title: "Powerade Sports Drink",
+            cost_fitcoins: 50,
+            description: "Bebida isotónica Powerade de 500ml.",
+            stock: 100,
+            image_url: "",
+            category: "Bebidas",
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000093",
+            title: "Pelota oficial",
+            cost_fitcoins: 800,
+            description: "Pelota oficial de tenis o fútbol.",
+            stock: 25,
+            image_url: "",
+            category: "Equipamiento",
+          },
+          {
+            id: "00000000-0000-0000-0000-000000000094",
+            title: "Camiseta SportMatch",
+            cost_fitcoins: 1200,
+            description: "Camiseta oficial técnica transpirable.",
+            stock: 30,
+            image_url: "",
+            category: "Ropa",
+          },
+        ];
+        setRewards(fallbackRewards);
+      } finally {
+        setLoadingRewards(false);
+      }
+    }
+    loadRewards();
+  }, []);
 
   useEffect(() => {
     async function loadCatalog() {
@@ -68,21 +141,28 @@ function Wallet() {
           }
         }
       } catch (err) {
-        console.error("Failed to load catalog:", err);
+        if (import.meta.env.DEV) console.error("Failed to load catalog:", err);
       }
     }
     loadCatalog();
   }, [user, buyItem]);
 
-  const handleRedeem = async (reward: (typeof REWARDS)[0]) => {
-    const success = await redeem(reward.cost, `Canje: ${reward.name}`);
+  const handleRedeem = async (reward: Reward) => {
+    const rewardName = t(`wallet.reward_${reward.id}_name`, { defaultValue: reward.title });
+    const success = await redeem(reward.cost_fitcoins, `Canje: ${rewardName}`, reward.id);
     if (success) {
       toast.success(t("wallet.success"), {
-        description: t("wallet.success_desc", { reward: reward.name }),
+        description: t("wallet.success_desc", { reward: rewardName }),
       });
       setSelectedReward(null);
-    } else {
-      toast.error(t("wallet.error"), { description: t("wallet.error_desc") });
+      // Reload rewards to update stock
+      try {
+        const { getRewards } = await import("@/services/walletService");
+        const list = await getRewards();
+        setRewards(list);
+      } catch (err) {
+        console.warn(err);
+      }
     }
   };
 
@@ -92,23 +172,46 @@ function Wallet() {
       setPurchasing(true);
       const success = await purchaseCatalogItem(user.id, item.id);
       if (success) {
-        toast.success("¡Compra completada con éxito!", {
-          description: `Canjeaste: ${item.name}`,
+        toast.success(t("wallet.purchase_success"), {
+          description: t("wallet.purchase_success_desc", { name: item.name }),
         });
         initWallet();
         setSelectedItem(null);
       } else {
-        toast.error("Saldo insuficiente", {
-          description: "No tienes suficientes FitCoins para este artículo.",
+        toast.error(t("wallet.purchase_error"), {
+          description: t("wallet.purchase_error_desc"),
         });
       }
     } catch (err) {
-      console.error(err);
-      toast.error("Error al procesar la compra");
+      if (import.meta.env.DEV) console.error(err);
+      toast.error(t("wallet.purchase_failed"));
     } finally {
       setPurchasing(false);
     }
   };
+
+  const leaderboard = useMemo(() => {
+    const list = [...leaderboardUsers];
+    if (user && !list.some((u) => u.id === user.id)) {
+      list.push(user);
+    }
+    return list
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        avatar: u.avatar_url,
+        coins: u.id === user?.id ? balance : u.fitcoins_balance,
+        isMe: u.id === user?.id,
+      }))
+      .sort((a, b) => b.coins - a.coins)
+      .map((u, i) => ({ ...u, rank: i + 1 }));
+  }, [leaderboardUsers, user, balance]);
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -124,7 +227,9 @@ function Wallet() {
               {balance}
               <Trophy className="h-10 w-10 text-neon" />
             </div>
-            <div className="text-sm text-white/80 mt-2">+185 esta semana ↗</div>
+            <div className="text-sm text-white/80 mt-2">
+              {t("wallet.this_week_gain", { amount: 185 })}
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -153,28 +258,64 @@ function Wallet() {
               <Zap className="h-4 w-4 text-neon" /> {t("wallet.challenges")}
             </h3>
             <div className="space-y-3">
-              {CHALLENGES.map((c) => (
-                <div
-                  key={c.id}
-                  className="bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-medium text-sm">{c.name}</div>
-                    <div className="text-xs text-neon flex items-center gap-1">
-                      <Trophy className="h-3 w-3" /> +{c.reward}
+              {challenges?.map((c) => {
+                const isCompleted = c.progress >= c.total;
+                return (
+                  <div
+                    key={c.id}
+                    className="bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="font-medium text-sm">{c.name}</div>
+                        {c.claimed && (
+                          <span className="text-[10px] text-neon bg-neon/10 border border-neon/20 px-2 py-0.5 rounded-full mt-1 inline-block">
+                            {t("wallet.claimed")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-neon flex items-center gap-1 font-semibold">
+                        <Trophy className="h-3 w-3" /> +{c.reward}
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden mb-3">
+                      <div
+                        className="h-full bg-gradient-neon"
+                        style={{ width: `${(c.progress / c.total) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {c.progress} / {c.total}
+                      </span>
+                      {!c.claimed ? (
+                        <div className="flex gap-2">
+                          {c.progress < c.total && (
+                            <button
+                              onClick={() => progressChallenge(c.id)}
+                              className="px-2.5 py-1 rounded-lg bg-accent text-[11px] font-semibold hover:bg-accent/80 transition-colors cursor-pointer"
+                            >
+                              {t("wallet.advance")}
+                            </button>
+                          )}
+                          {isCompleted && (
+                            <button
+                              onClick={() => claimChallenge(c.id)}
+                              className="px-2.5 py-1 rounded-lg bg-gradient-neon text-neon-foreground text-[11px] font-bold hover:shadow-neon transition-shadow cursor-pointer"
+                            >
+                              {t("wallet.claim")}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic font-semibold text-neon">
+                          {t("wallet.completed")}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-neon"
-                      style={{ width: `${(c.progress / c.total) * 100}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {c.progress} / {c.total}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -182,33 +323,43 @@ function Wallet() {
           <div id="rewards-section">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <Gift className="h-4 w-4 text-electric" /> {t("wallet.rewards")}
+              {loadingRewards && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
             </h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              {REWARDS.map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-gradient-card border border-border rounded-2xl p-4 flex items-center gap-3 hover:ring-glow transition-all"
-                >
-                  <div className="text-4xl">{r.emoji}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate">{r.name}</div>
-                    <div className="text-xs text-neon">{r.cost} FC</div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedReward(r)}
-                    className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform cursor-pointer"
+              {rewards.map((r) => {
+                const rewardName = t(`wallet.reward_${r.id}_name`, { defaultValue: r.title });
+                const emoji = getRewardEmoji(r.category, r.title);
+                return (
+                  <div
+                    key={r.id}
+                    className="bg-gradient-card border border-border rounded-2xl p-4 flex items-center gap-3 hover:ring-glow transition-all"
                   >
-                    {t("wallet.redeem")}
-                  </button>
-                </div>
-              ))}
+                    <div className="text-4xl">{emoji}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">{rewardName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{r.description}</div>
+                      <div className="text-xs text-neon mt-1 font-bold">
+                        {r.cost_fitcoins} FC ·{" "}
+                        <span className="text-muted-foreground">Stock: {r.stock}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedReward(r)}
+                      disabled={r.stock <= 0}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {r.stock > 0 ? t("wallet.redeem") : t("wallet.no_stock")}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* B2B Business Marketplace Catalog */}
           <div className="mt-8" id="marketplace-section">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4 text-neon" /> Tienda de Negocios (Marketplace B2B)
+              <ShoppingBag className="h-4 w-4 text-neon" /> {t("wallet.business_marketplace")}
             </h3>
             {catalog.length > 0 ? (
               <div className="grid sm:grid-cols-2 gap-3 animate-fade-in">
@@ -227,7 +378,7 @@ function Wallet() {
                     />
                     <div className="flex-1 min-w-0">
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-neon/10 text-neon border border-neon/20 font-semibold uppercase">
-                        {item.type === "PRODUCT" ? "Producto" : "Servicio"}
+                        {item.type === "PRODUCT" ? t("wallet.product") : t("wallet.service")}
                       </span>
                       <div className="text-sm font-semibold truncate mt-1">{item.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
@@ -240,14 +391,14 @@ function Wallet() {
                       className="px-3 py-1.5 rounded-lg bg-gradient-neon text-neon-foreground text-xs font-semibold hover:scale-105 transition-transform shrink-0 cursor-pointer"
                       id={`purchase-btn-${item.id}`}
                     >
-                      Comprar
+                      {t("wallet.buy")}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="p-8 text-center text-muted-foreground glass border border-border rounded-2xl text-xs">
-                No hay productos comerciales disponibles en este momento.
+                {t("wallet.no_products")}
               </div>
             )}
           </div>
@@ -259,12 +410,17 @@ function Wallet() {
             <Crown className="h-4 w-4 text-warning" /> {t("wallet.ranking")}
           </h3>
           <div className="bg-gradient-card border border-border rounded-2xl p-3 space-y-1">
-            {LEADERBOARD.map((u) => {
+            {leaderboard.map((u) => {
               const me = u.name === user?.name;
+              const toPath = me ? "/app/profile" : "/app/profile/$userId";
+              const linkParams = me ? undefined : { userId: u.id || "" };
+
               return (
-                <div
+                <Link
                   key={u.rank}
-                  className={`flex items-center gap-3 p-2 rounded-xl transition-all ${me ? "bg-gradient-primary/20 ring-1 ring-primary/40" : "hover:bg-accent/50"}`}
+                  to={toPath}
+                  params={linkParams}
+                  className={`flex items-center gap-3 p-2 rounded-xl transition-all ${me ? "bg-gradient-primary/20 ring-1 ring-primary/40" : "hover:bg-accent/50"} cursor-pointer w-full text-left`}
                 >
                   <div
                     className={`h-7 w-7 rounded-full grid place-items-center text-xs font-bold ${
@@ -287,8 +443,8 @@ function Wallet() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold truncate">{u.name}</div>
                   </div>
-                  <div className="text-xs text-neon">{me ? balance : u.coins}</div>
-                </div>
+                  <div className="text-xs text-neon">{u.coins}</div>
+                </Link>
               );
             })}
           </div>
@@ -319,12 +475,18 @@ function Wallet() {
                 <X className="h-4 w-4" />
               </button>
 
-              <div className="text-6xl mb-4">{selectedReward.emoji}</div>
+              <div className="text-6xl mb-4">
+                {getRewardEmoji(selectedReward.category, selectedReward.title)}
+              </div>
               <h2 className="text-xl font-bold mb-2">
-                {t("wallet.confirm_title", { reward: selectedReward.name })}
+                {t("wallet.confirm_title", {
+                  reward: t(`wallet.reward_${selectedReward.id}_name`, {
+                    defaultValue: selectedReward.title,
+                  }),
+                })}
               </h2>
               <p className="text-sm text-muted-foreground mb-6">
-                {t("wallet.confirm_desc", { cost: selectedReward.cost })}
+                {t("wallet.confirm_desc", { cost: selectedReward.cost_fitcoins })}
               </p>
 
               <div className="flex flex-col gap-2">
@@ -378,10 +540,12 @@ function Wallet() {
                 alt=""
                 className="h-24 w-24 rounded-full mx-auto object-cover mb-4 border border-border bg-muted"
               />
-              <h2 className="text-xl font-bold mb-2">Confirmar Compra</h2>
+              <h2 className="text-xl font-bold mb-2">{t("wallet.confirm_purchase_title")}</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                ¿Deseas comprar <strong>{selectedItem.name}</strong> por{" "}
-                <strong>{selectedItem.price} FC</strong>?
+                {t("wallet.confirm_purchase_desc", {
+                  name: selectedItem.name,
+                  price: selectedItem.price,
+                })}
               </p>
 
               <div className="flex flex-col gap-2">
@@ -391,13 +555,13 @@ function Wallet() {
                   className="w-full py-3 rounded-xl bg-gradient-neon text-neon-foreground font-semibold hover:shadow-neon transition-shadow cursor-pointer"
                   id="confirm-purchase-btn"
                 >
-                  {purchasing ? "Procesando..." : "Confirmar Compra"}
+                  {purchasing ? t("wallet.processing") : t("wallet.confirm_purchase_title")}
                 </button>
                 <button
                   onClick={() => setSelectedItem(null)}
                   className="w-full py-3 rounded-xl glass border border-border font-semibold hover:bg-accent transition-colors cursor-pointer"
                 >
-                  Cancelar
+                  {t("wallet.cancel")}
                 </button>
               </div>
             </motion.div>

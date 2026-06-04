@@ -2,8 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { Court } from "@/entities/types";
-import { Star, MapPin, Check, QrCode } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { CourtCard } from "@/components/CourtCard";
+import { BookingModal } from "@/components/BookingModal";
+import { calculateDistance } from "@/shared/api/geoService";
+import { Search, MapPin, SlidersHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
@@ -11,167 +15,221 @@ export const Route = createFileRoute("/app/courts")({
   component: Courts,
 });
 
-const SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "19:00", "20:00", "21:00"];
-
 function Courts() {
   const courts = Route.useLoaderData() as Court[];
-  const [selected, setSelected] = useState<Court | null>(null);
-  const [slot, setSlot] = useState<string | null>("19:00");
-  const [confirmed, setConfirmed] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Filter and pagination states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedSport, setSelectedSport] = useState("");
+  const [visibleCount, setVisibleCount] = useState(24);
 
   useEffect(() => {
-    if (courts.length > 0 && !selected) {
-      setSelected(courts[0]);
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn("Geolocation API unavailable or permission denied.", error.message);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
+      );
     }
-  }, [courts, selected]);
+  }, []);
 
-  if (!selected) {
-    return (
-      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
-    );
-  }
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (user && user.last_location_lat && user.last_location_lng) {
+      return { lat: user.last_location_lat, lng: user.last_location_lng };
+    }
+    return null;
+  }, [userCoords, user]);
+
+  // Extract unique districts dynamically from courts list
+  const availableDistricts = useMemo(() => {
+    const set = new Set<string>();
+    courts.forEach((c) => {
+      if (c.district) {
+        set.add(c.district);
+      }
+    });
+    return Array.from(set).sort();
+  }, [courts]);
+
+  // Extract unique sports dynamically from courts list
+  const availableSports = useMemo(() => {
+    const set = new Set<string>();
+    courts.forEach((c) => {
+      if (c.sport) {
+        set.add(c.sport);
+      }
+    });
+    return Array.from(set).sort();
+  }, [courts]);
+
+  // Reset pagination when any filter changes
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [searchTerm, selectedDistrict, selectedSport]);
+
+  // Filter and sort courts
+  const filteredAndSortedCourts = useMemo(() => {
+    let result = [...courts];
+
+    // 1. Apply District filter
+    if (selectedDistrict) {
+      result = result.filter((c) => c.district === selectedDistrict);
+    }
+
+    // 2. Apply Sport filter
+    if (selectedSport) {
+      result = result.filter((c) => c.sport === selectedSport);
+    }
+
+    // 3. Apply Search Term filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          (c.address && c.address.toLowerCase().includes(term)),
+      );
+    }
+
+    // 4. Proximity or Rating Sorting
+    if (baseLocation) {
+      result = result
+        .map((c) => ({
+          ...c,
+          distance_km: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
+        }))
+        .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
+    } else {
+      result.sort((a, b) => b.rating - a.rating);
+    }
+
+    return result;
+  }, [courts, selectedDistrict, selectedSport, searchTerm, baseLocation]);
+
+  const displayedCourts = useMemo(() => {
+    return filteredAndSortedCourts.slice(0, visibleCount);
+  }, [filteredAndSortedCourts, visibleCount]);
 
   return (
-    <div className="container mx-auto px-4 lg:px-8 py-8">
-      <PageHeader title="Reservar cancha" subtitle="Disponibilidad en tiempo real" />
+    <div className="container mx-auto px-4 lg:px-8 py-8 animate-fade-in">
+      <PageHeader
+        title="Reservar cancha"
+        subtitle="Disponibilidad en tiempo real para todas las disciplinas en Lima"
+      />
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            {courts.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => {
-                  setSelected(c);
-                  setConfirmed(false);
-                }}
-                className={`text-left rounded-2xl overflow-hidden border transition-all ${
-                  selected.id === c.id
-                    ? "border-primary ring-glow"
-                    : "border-border hover:border-accent"
-                }`}
-              >
-                <div className="relative h-40">
-                  <img
-                    src={c.image_url}
-                    alt={c.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                  <div className="absolute top-3 right-3">
-                    {c.is_available ? (
-                      <span className="px-2 py-1 rounded-full bg-neon/90 text-neon-foreground text-xs font-semibold">
-                        Disponible
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-full bg-destructive/90 text-destructive-foreground text-xs">
-                        Ocupado
-                      </span>
-                    )}
-                  </div>
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <div className="font-semibold">{c.name}</div>
-                    <div className="text-xs text-white/80 flex items-center gap-2 mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {c.distance_km} km
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-warning text-warning" />
-                        {c.rating}
-                      </span>
-                      <span>· ${c.price_per_hour}/h</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-card">
-                  <div className="flex flex-wrap gap-1">
-                    {c.amenities.map((a) => (
-                      <span key={a} className="text-xs px-2 py-0.5 rounded-full bg-accent">
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+      {/* Filters Container */}
+      <div className="bg-card/20 border border-border/40 rounded-3xl p-5 mb-8 backdrop-blur-md shadow-card">
+        <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <SlidersHorizontal className="h-4 w-4 text-primary" />
+          <span>Filtros de búsqueda</span>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
-            <h3 className="font-semibold">{selected.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {selected.sport} · ${selected.price_per_hour}/h
-            </p>
-
-            <div className="mt-4">
-              <div className="text-xs text-muted-foreground mb-2">Hoy · Selecciona horario</div>
-              <div className="grid grid-cols-3 gap-2">
-                {SLOTS.map((s) => {
-                  const taken = ["12:00", "16:00"].includes(s);
-                  return (
-                    <button
-                      key={s}
-                      disabled={taken}
-                      onClick={() => setSlot(s)}
-                      className={`py-2 rounded-lg text-sm transition-all ${
-                        taken
-                          ? "bg-muted/40 text-muted-foreground/50 line-through cursor-not-allowed"
-                          : slot === s
-                            ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                            : "glass hover:bg-accent"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-border space-y-2 text-sm">
-              <Row label="Cancha" value={`$${selected.price_per_hour}`} />
-              <Row label="Servicio" value="$3" />
-              <Row label="Dividir entre" value="4 jugadores" />
-              <div className="flex justify-between font-semibold pt-2 border-t border-border">
-                <span>Tu parte</span>
-                <span className="text-neon">${((selected.price_per_hour + 3) / 4).toFixed(2)}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setConfirmed(true)}
-              disabled={!slot}
-              className="mt-5 w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow disabled:opacity-50"
-            >
-              {confirmed ? "Reserva confirmada ✓" : "Confirmar reserva"}
-            </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search filter */}
+          <div className="relative flex items-center">
+            <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar por complejo o dirección..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-accent/30 border border-border/50 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60 transition-all"
+            />
           </div>
 
-          {confirmed && (
-            <div className="bg-gradient-card border border-neon/40 rounded-2xl p-5 text-center shadow-neon">
-              <div className="h-14 w-14 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3">
-                <Check className="h-7 w-7 text-neon" />
-              </div>
-              <div className="font-semibold">¡Listo, {slot}!</div>
-              <p className="text-xs text-muted-foreground mt-1">Mostrá este QR al ingresar</p>
-              <div className="mt-4 mx-auto h-32 w-32 rounded-xl bg-white grid place-items-center">
-                <QrCode className="h-24 w-24 text-black" />
-              </div>
-            </div>
-          )}
+          {/* District filter */}
+          <select
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            className="w-full bg-accent/30 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-foreground transition-all cursor-pointer"
+          >
+            <option value="">Todos los distritos ({availableDistricts.length})</option>
+            {availableDistricts.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+
+          {/* Sport filter */}
+          <select
+            value={selectedSport}
+            onChange={(e) => setSelectedSport(e.target.value)}
+            className="w-full bg-accent/30 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 text-foreground transition-all cursor-pointer"
+          >
+            <option value="">Todos los deportes ({availableSports.length})</option>
+            {availableSports.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-    </div>
-  );
-}
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span>{value}</span>
+      {/* Results Section */}
+      <div className="flex items-center justify-between mb-6 text-xs text-muted-foreground font-semibold">
+        <span>
+          Mostrando {displayedCourts.length} de {filteredAndSortedCourts.length} complejos
+          deportivos
+        </span>
+        {baseLocation && (
+          <span className="flex items-center gap-1 text-neon">
+            <MapPin className="h-3.5 w-3.5" /> Ordenado por cercanía
+          </span>
+        )}
+      </div>
+
+      {displayedCourts.length > 0 ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="courts-grid">
+          {displayedCourts.map((c) => (
+            <CourtCard
+              key={`${c.id}-${c.name}-${c.district}`}
+              court={c}
+              onClick={() => setSelectedCourtForBooking(c)}
+              baseLocation={baseLocation}
+              variant="grid"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 rounded-3xl border border-dashed border-border/60 bg-card/10 text-muted-foreground max-w-lg mx-auto">
+          <p className="text-base font-semibold mb-1">No se encontraron canchas</p>
+          <p className="text-xs">Prueba cambiando tus filtros de búsqueda o distrito.</p>
+        </div>
+      )}
+
+      {/* Load More Button */}
+      {filteredAndSortedCourts.length > visibleCount && (
+        <div className="flex justify-center mt-10">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((prev) => prev + 24)}
+            className="px-6 py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-glow cursor-pointer"
+          >
+            Ver más complejos
+          </button>
+        </div>
+      )}
+
+      <BookingModal
+        court={selectedCourtForBooking}
+        isOpen={selectedCourtForBooking !== null}
+        onOpenChange={(open) => !open && setSelectedCourtForBooking(null)}
+        baseLocation={baseLocation}
+      />
     </div>
   );
 }

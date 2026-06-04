@@ -1,5 +1,5 @@
 -- ============================================================
--- SPORTMATCH CONNECT — SUPABASE SCHEMA DEFINITIVO
+-- SPORTMATCH CONNECT — SUPABASE SCHEMA DEFINITIVO OPTIMIZADO
 -- Copiar y pegar COMPLETO en el SQL Editor de Supabase
 -- ============================================================
 
@@ -10,18 +10,33 @@ create extension if not exists postgis with schema extensions;
 create extension if not exists "uuid-ossp";
 
 -- ─────────────────────────────────────────────────────────────
+-- A. FUNCIÓN GLOBAL: updated_at AUTOMÁTICO
+-- ─────────────────────────────────────────────────────────────
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+-- ─────────────────────────────────────────────────────────────
 -- 1. TABLA: profiles (usuarios con roles PLAYER / BUSINESS)
 -- ─────────────────────────────────────────────────────────────
 create table if not exists public.profiles (
   id                  uuid primary key references auth.users(id) on delete cascade,
   created_at          timestamptz default now() not null,
+  updated_at          timestamptz default now() not null,
   name                text not null,
   age                 int default 25,
   city                text default 'Lima',
   avatar_url          text,
   bio                 text,
   trust_score         int default 100 check (trust_score between 0 and 100),
-  fitcoins_balance    int default 500,
+  fitcoins_balance    int default 0, -- Cambiado por defecto a 0 según reglas de negocio
   level               text default 'Intermedio'
                         check (level in ('Principiante','Intermedio','Avanzado','Elite')),
   preferred_sports    text[] default '{}'::text[],
@@ -34,14 +49,21 @@ create table if not exists public.profiles (
   company_name        text,
   business_category   text
                         check (business_category in ('Canchas','Gym','Tienda','Bebidas') or business_category is null),
-  is_sponsored        boolean default false
+  is_sponsored        boolean default false,
+  is_admin            boolean default false
 );
 
 alter table public.profiles enable row level security;
 
--- Cada usuario sólo puede leer/editar su propio perfil
-create policy "profiles_select_own" on public.profiles
-  for select using (auth.uid() = id);
+-- Triggers de auditoría de tiempos
+drop trigger if exists handle_updated_at on public.profiles;
+create trigger handle_updated_at
+  before update on public.profiles
+  for each row execute procedure public.set_updated_at();
+
+-- Políticas RLS
+create policy "profiles_select_all" on public.profiles
+  for select using (true);
 
 create policy "profiles_insert_own" on public.profiles
   for insert with check (auth.uid() = id);
@@ -49,9 +71,36 @@ create policy "profiles_insert_own" on public.profiles
 create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);
 
--- Permitir lectura pública del perfil (para matchmaking y mapa de negocios)
-create policy "profiles_public_read" on public.profiles
-  for select using (true);
+-- Trigger de protección de campos críticos (fitcoins_balance, trust_score, roles)
+create or replace function public.protect_profile_fields()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  -- Si el rol de la sesión actual corresponde al cliente de Supabase (anon o authenticated)
+  if current_setting('role', true) in ('anon', 'authenticated') then
+    if old.fitcoins_balance <> new.fitcoins_balance then
+      raise exception 'Restricción de Seguridad: El saldo de FitCoins no puede ser modificado directamente desde el cliente.';
+    end if;
+    if old.trust_score <> new.trust_score then
+      raise exception 'Restricción de Seguridad: El Trust Score no puede ser modificado directamente desde el cliente.';
+    end if;
+    if old.user_role <> new.user_role then
+      raise exception 'Restricción de Seguridad: El rol de usuario no puede ser modificado directamente desde el cliente.';
+    end if;
+    if old.is_admin <> new.is_admin then
+      raise exception 'Restricción de Seguridad: Los privilegios de administrador no pueden ser modificados directamente desde el cliente.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_profile_field_protect on public.profiles;
+create trigger on_profile_field_protect
+  before update on public.profiles
+  for each row execute procedure public.protect_profile_fields();
 
 -- ─────────────────────────────────────────────────────────────
 -- 2. TABLA: courts (con tipo espacial GEOGRAPHY)
@@ -59,6 +108,7 @@ create policy "profiles_public_read" on public.profiles
 create table if not exists public.courts (
   id              uuid primary key default gen_random_uuid(),
   created_at      timestamptz default now() not null,
+  updated_at      timestamptz default now() not null,
   name            text not null,
   sport           text not null,
   price_per_hour  numeric not null,
@@ -66,21 +116,30 @@ create table if not exists public.courts (
   reviews_count   int default 0,
   lat             numeric not null,
   lng             numeric not null,
-  -- Tipo espacial real (el profesor lo auditará)
+  -- Tipo espacial geography (GPS lat/lng estándar)
   location        geography(Point, 4326) not null,
   image_url       text,
   amenities       text[] default '{}'::text[],
   is_available    boolean default true,
   address         text,
   -- B2B: pista asociada a un negocio patrocinador
-  owner_id        uuid references public.profiles(id) on delete set null
+  owner_id        uuid references public.profiles(id) on delete set null,
+  district        text,
+  is_sponsored    boolean default false,
+  max_players     int default 10,
+  operating_hours text[] default '{}'::text[]
 );
 
--- Índice GiST obligatorio para consultas ST_DWithin eficientes
+-- Índice GiST obligatorio para consultas espaciales ST_DWithin / ST_Distance eficientes
 create index if not exists courts_location_gist_idx
   on public.courts using gist(location);
 
 alter table public.courts enable row level security;
+
+drop trigger if exists handle_updated_at on public.courts;
+create trigger handle_updated_at
+  before update on public.courts
+  for each row execute procedure public.set_updated_at();
 
 create policy "courts_public_read" on public.courts
   for select using (true);
@@ -92,11 +151,12 @@ create policy "courts_owner_update" on public.courts
   for update using (auth.uid() = owner_id);
 
 -- ─────────────────────────────────────────────────────────────
--- 3. TABLA: matches
+-- 3. TABLA: matches & match_participants
 -- ─────────────────────────────────────────────────────────────
 create table if not exists public.matches (
   id              uuid primary key default gen_random_uuid(),
   created_at      timestamptz default now() not null,
+  updated_at      timestamptz default now() not null,
   court_id        uuid references public.courts(id) on delete set null,
   creator_id      uuid references public.profiles(id) on delete cascade not null,
   sport           text not null,
@@ -104,10 +164,16 @@ create table if not exists public.matches (
   date            date not null,
   time            time not null,
   max_players     int default 4 check (max_players > 0),
-  required_level  text check (required_level in ('Principiante','Intermedio','Avanzado','Elite'))
+  required_level  text check (required_level in ('Principiante','Intermedio','Avanzado','Elite')),
+  status          text default 'Open' not null check (status in ('Open','Full','Finished','Cancelled'))
 );
 
 alter table public.matches enable row level security;
+
+drop trigger if exists handle_updated_at on public.matches;
+create trigger handle_updated_at
+  before update on public.matches
+  for each row execute procedure public.set_updated_at();
 
 create policy "matches_public_read" on public.matches
   for select using (true);
@@ -118,6 +184,31 @@ create policy "matches_creator_insert" on public.matches
 create policy "matches_creator_update" on public.matches
   for update using (auth.uid() = creator_id);
 
+-- TABLA RELACIONAL: match_participants
+create table if not exists public.match_participants (
+  match_id    uuid references public.matches(id) on delete cascade not null,
+  user_id     uuid references public.profiles(id) on delete cascade not null,
+  status      text default 'ACCEPTED' not null check (status in ('PENDING','ACCEPTED','REJECTED')),
+  joined_at   timestamptz default now() not null,
+  primary key (match_id, user_id)
+);
+
+alter table public.match_participants enable row level security;
+
+create policy "participants_read_all" on public.match_participants
+  for select using (true);
+
+create policy "participants_join_self" on public.match_participants
+  for insert with check (auth.uid() = user_id);
+
+create policy "participants_leave_self" on public.match_participants
+  for delete using (auth.uid() = user_id);
+
+create policy "participants_creator_update" on public.match_participants
+  for update using (
+    auth.uid() = (select creator_id from public.matches where id = match_id)
+  );
+
 -- ─────────────────────────────────────────────────────────────
 -- 4. TABLA: followers (social graph)
 -- ─────────────────────────────────────────────────────────────
@@ -126,7 +217,6 @@ create table if not exists public.followers (
   following_id  uuid references public.profiles(id) on delete cascade not null,
   created_at    timestamptz default now() not null,
   primary key (follower_id, following_id),
-  -- Restricción de no auto-seguimiento
   constraint no_self_follow check (follower_id <> following_id)
 );
 
@@ -142,11 +232,12 @@ create policy "followers_delete_own" on public.followers
   for delete using (auth.uid() = follower_id);
 
 -- ─────────────────────────────────────────────────────────────
--- 5. TABLA: squads (equipos / clubes)
+-- 5. TABLA: squads & squad_members
 -- ─────────────────────────────────────────────────────────────
 create table if not exists public.squads (
   id          uuid primary key default gen_random_uuid(),
   created_at  timestamptz default now() not null,
+  updated_at  timestamptz default now() not null,
   name        text not null,
   description text,
   creator_id  uuid references public.profiles(id) on delete cascade not null,
@@ -162,6 +253,11 @@ create table if not exists public.squad_members (
 
 alter table public.squads enable row level security;
 alter table public.squad_members enable row level security;
+
+drop trigger if exists handle_updated_at on public.squads;
+create trigger handle_updated_at
+  before update on public.squads
+  for each row execute procedure public.set_updated_at();
 
 create policy "squads_public_read" on public.squads
   for select using (true);
@@ -179,7 +275,7 @@ create policy "squad_members_self_delete" on public.squad_members
   for delete using (auth.uid() = user_id);
 
 -- ─────────────────────────────────────────────────────────────
--- 6. TABLA: wallet_transactions
+-- 6. TABLA: wallet_transactions & TRIGGER DE ACTUALIZACIÓN DE SALDO
 -- ─────────────────────────────────────────────────────────────
 create table if not exists public.wallet_transactions (
   id          uuid primary key default gen_random_uuid(),
@@ -197,6 +293,27 @@ create policy "wallet_own_read" on public.wallet_transactions
 
 create policy "wallet_own_insert" on public.wallet_transactions
   for insert with check (auth.uid() = user_id);
+
+-- Automatización de balance mediante Triggers (Sincronización robusta en base de datos)
+create or replace function public.sync_profile_wallet_balance()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles
+  set fitcoins_balance = fitcoins_balance + new.amount
+  where id = new.user_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_wallet_transaction_inserted on public.wallet_transactions;
+create trigger on_wallet_transaction_inserted
+  after insert on public.wallet_transactions
+  for each row
+  execute procedure public.sync_profile_wallet_balance();
 
 -- ─────────────────────────────────────────────────────────────
 -- 7. TABLA: notifications
@@ -229,6 +346,7 @@ create policy "notifications_own_update" on public.notifications
 create table if not exists public.business_catalog (
   id           uuid primary key default gen_random_uuid(),
   created_at   timestamptz default now() not null,
+  updated_at   timestamptz default now() not null,
   business_id  uuid references public.profiles(id) on delete cascade not null,
   name         text not null,
   description  text,
@@ -238,6 +356,11 @@ create table if not exists public.business_catalog (
 );
 
 alter table public.business_catalog enable row level security;
+
+drop trigger if exists handle_updated_at on public.business_catalog;
+create trigger handle_updated_at
+  before update on public.business_catalog
+  for each row execute procedure public.set_updated_at();
 
 create policy "catalog_public_read" on public.business_catalog
   for select using (true);
@@ -249,7 +372,84 @@ create policy "catalog_owner_delete" on public.business_catalog
   for delete using (auth.uid() = business_id);
 
 -- ─────────────────────────────────────────────────────────────
--- 9. FUNCIÓN RPC: search_nearby_courts (Supabase .rpc())
+-- 9. TABLA: reviews (Futuras valoraciones de canchas) & RATINGS TRIGGER
+-- ─────────────────────────────────────────────────────────────
+create table if not exists public.reviews (
+  id          uuid primary key default gen_random_uuid(),
+  created_at  timestamptz default now() not null,
+  updated_at  timestamptz default now() not null,
+  court_id    uuid references public.courts(id) on delete cascade not null,
+  user_id     uuid references public.profiles(id) on delete cascade not null,
+  rating      int not null check (rating between 1 and 5),
+  comment     text
+);
+
+alter table public.reviews enable row level security;
+
+drop trigger if exists handle_updated_at on public.reviews;
+create trigger handle_updated_at
+  before update on public.reviews
+  for each row execute procedure public.set_updated_at();
+
+create policy "reviews_public_read" on public.reviews
+  for select using (true);
+
+create policy "reviews_authenticated_insert" on public.reviews
+  for insert with check (auth.uid() = user_id);
+
+create policy "reviews_owner_update" on public.reviews
+  for update using (auth.uid() = user_id);
+
+create policy "reviews_owner_delete" on public.reviews
+  for delete using (auth.uid() = user_id);
+
+-- Recálculo automático de rating y reviews_count de canchas
+create or replace function public.update_court_ratings()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_court_id uuid;
+  v_avg_rating numeric;
+  v_count int;
+begin
+  if tg_op = 'DELETE' then
+    v_court_id := old.court_id;
+  else
+    v_court_id := new.court_id;
+  end if;
+
+  select coalesce(avg(rating), 5.0), count(*)
+  into v_avg_rating, v_count
+  from public.reviews
+  where court_id = v_court_id;
+
+  update public.courts
+  set rating = round(v_avg_rating, 1),
+      reviews_count = v_count
+  where id = v_court_id;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists on_review_changed on public.reviews;
+create trigger on_review_changed
+  after insert or update or delete on public.reviews
+  for each row
+  execute procedure public.update_court_ratings();
+
+-- ─────────────────────────────────────────────────────────────
+-- 10. FUNCIÓN RPC: search_nearby_courts (Supabase .rpc())
+-- ─────────────────────────────────────────────────────────────
+-- EXPLICACIÓN GEOMETRÍA VS GEOGRAFÍA:
+-- Usamos el tipo geography(Point, 4326) que implementa el elipsoide WGS 84 (GPS estándar).
+-- En lugar de usar geometría plana euclidiana (que calcula distancias erróneas en grados),
+-- el tipo geography calcula automáticamente distancias reales en metros sobre la curvatura de la Tierra.
+-- El SRID 4326 define el sistema geodésico estándar mundial (usado por GPS, Google Maps y Leaflet).
+-- La función utiliza st_dwithin para aprovechar el índice GiST espacial y buscar en sub-milisegundos.
 -- ─────────────────────────────────────────────────────────────
 create or replace function public.search_nearby_courts(
   latitude             numeric,
@@ -257,7 +457,7 @@ create or replace function public.search_nearby_courts(
   max_distance_meters  numeric default 50000
 )
 returns table (
-  id              uuid,
+  id              varchar(100),
   created_at      timestamptz,
   name            text,
   sport           text,
@@ -275,12 +475,12 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   return query
   select
-    c.id,
+    c.id::varchar(100),
     c.created_at,
     c.name,
     c.sport,
@@ -306,14 +506,13 @@ begin
     max_distance_meters
   )
   order by
-    -- Patrocinadores siempre al tope
     is_sponsored desc,
     distance_km asc;
 end;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- 10. FUNCIÓN: handle_new_user (auto-crear perfil al registrar)
+-- 11. FUNCIÓN: handle_new_user (auto-crear perfil al registrar)
 -- ─────────────────────────────────────────────────────────────
 create or replace function public.handle_new_user()
 returns trigger
@@ -321,7 +520,7 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, name, avatar_url, user_role)
+  insert into public.profiles (id, name, avatar_url, user_role, fitcoins_balance)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
@@ -329,7 +528,8 @@ begin
       new.raw_user_meta_data->>'avatar_url',
       'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.id
     ),
-    coalesce(new.raw_user_meta_data->>'user_role', 'PLAYER')
+    coalesce(new.raw_user_meta_data->>'user_role', 'PLAYER'),
+    0 -- El usuario recién creado inicia con 0 fitcoins. Se ganan mediante retos.
   );
   return new;
 end;
@@ -342,7 +542,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- ─────────────────────────────────────────────────────────────
--- 11. SEED DATA: canchas de demostración en Lima
+-- 12. SEED DATA: canchas de demostración en Lima
 -- ─────────────────────────────────────────────────────────────
 insert into public.courts (id, name, sport, price_per_hour, rating, reviews_count, lat, lng, location, image_url, amenities, is_available, address)
 values

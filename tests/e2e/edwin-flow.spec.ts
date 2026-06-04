@@ -77,7 +77,7 @@ test.describe("Edwin Flores E2E Flow", () => {
 
     // Verify initial profile values
     await expect(page.locator("h2")).toContainText("Edwin Flores");
-    await expect(page.locator('p:has-text("Surco · 29 años")')).toBeVisible();
+    await expect(page.locator('p:has-text("29 años")')).toContainText("Surco");
     await expect(page.locator('p:has-text("Usuario Maestro Edwin.")')).toBeVisible();
 
     // 12. Edit Profile

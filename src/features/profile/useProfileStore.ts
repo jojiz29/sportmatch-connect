@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { User } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { MOCK_USERS } from "@/lib/mock";
+import { supabase } from "@/shared/api/supabase";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { getFollowStats } from "@/shared/api/socialService";
 import { apiClient } from "@/shared/api/apiClient";
@@ -53,18 +53,25 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = { ...currentUser, ...data };
 
-        // Update in mock database MOCK_USERS list
-        const idx = MOCK_USERS.findIndex((u) => u.id === currentUser.id);
-        if (idx !== -1) {
-          MOCK_USERS[idx] = { ...MOCK_USERS[idx], ...data };
-        }
-
         // Update in auth store
         useAuthStore.setState({ user: updated });
 
         set((state) => ({
           profile: state.profile ? { ...state.profile, ...data } : updated,
         }));
+
+        if (useAuthStore.getState().isDemoMode) {
+          return;
+        }
+
+        try {
+          const { error } = await supabase.from("profiles").update(data).eq("id", currentUser.id);
+          if (error) {
+            console.error("Error updating profile in Supabase:", error);
+          }
+        } catch (err) {
+          console.error("Failed to update profile in database:", err);
+        }
       },
     }),
     {

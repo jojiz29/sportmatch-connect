@@ -1,18 +1,31 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { MOCK_TRANSACTIONS, MOCK_USERS, syncMockUsersToStorage } from "@/lib/mock";
 import { Transaction } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { supabase } from "@/shared/api/supabase";
+import { apiClient } from "@/shared/api/apiClient";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { createNotification } from "@/shared/api/notificationService";
-import { apiClient } from "@/shared/api/apiClient";
+import { toast } from "sonner";
+
+export interface Challenge {
+  id: string;
+  name: string;
+  progress: number;
+  total: number;
+  reward: number;
+  claimed: boolean;
+}
 
 interface WalletState {
   balance: number;
   transactions: Transaction[];
-  initWallet: () => void;
-  redeem: (cost: number, description: string) => Promise<boolean>;
-  purchaseItem: (cost: number, itemName: string, sellerId: string) => boolean;
+  challenges: Challenge[];
+  initWallet: () => Promise<void>;
+  redeem: (cost: number, description: string, rewardId?: string) => Promise<boolean>;
+  purchaseItem: (cost: number, itemName: string, sellerId: string) => Promise<boolean>;
+  progressChallenge: (id: string) => Promise<void>;
+  claimChallenge: (id: string) => Promise<void>;
 }
 
 export const useWalletStore = create<WalletState>()(
@@ -20,14 +33,93 @@ export const useWalletStore = create<WalletState>()(
     (set, get) => ({
       balance: 0,
       transactions: [],
+      challenges: [
+        {
+          id: "ch1",
+          name: "Jugá 3 partidos esta semana",
+          progress: 0,
+          total: 3,
+          reward: 150,
+          claimed: false,
+        },
+        {
+          id: "ch2",
+          name: "Mantené Trust Score > 90",
+          progress: 0,
+          total: 100,
+          reward: 200,
+          claimed: false,
+        },
+        {
+          id: "ch3",
+          name: "Invitá a 2 amigos",
+          progress: 0,
+          total: 2,
+          reward: 300,
+          claimed: false,
+        },
+      ],
 
-      initWallet: () => {
+      initWallet: async () => {
         const user = useAuthStore.getState().user;
         if (user) {
-          set({
-            balance: user.fitcoins_balance,
-            transactions: MOCK_TRANSACTIONS.filter((t) => t.user_id === user.id),
+          const state = get();
+
+          const dynamicChallenges = [
+            {
+              id: "ch1",
+              name: "Jugá 3 partidos esta semana",
+              progress: Math.min(user.matches_played || 0, 3),
+              total: 3,
+              reward: 150,
+              claimed: false,
+            },
+            {
+              id: "ch2",
+              name: "Mantené Trust Score > 90",
+              progress: user.trust_score || 0,
+              total: 100,
+              reward: 200,
+              claimed: false,
+            },
+            {
+              id: "ch3",
+              name: "Invitá a 2 amigos",
+              progress: Math.min(user.followers_count || 0, 2),
+              total: 2,
+              reward: 300,
+              claimed: false,
+            },
+          ];
+
+          const currentChallenges = dynamicChallenges.map((dc) => {
+            const existing = state.challenges?.find((c) => c.id === dc.id);
+            return {
+              ...dc,
+              claimed: existing ? existing.claimed : false,
+            };
           });
+
+          try {
+            const balance = await apiClient.wallet.getBalance(user.id);
+            const transactions = await apiClient.wallet.getTransactions(user.id);
+
+            if (user.fitcoins_balance !== balance) {
+              useAuthStore.setState({ user: { ...user, fitcoins_balance: balance } });
+            }
+
+            set({
+              balance,
+              challenges: currentChallenges,
+              transactions,
+            });
+          } catch (e) {
+            console.error("Error loading wallet details from DB:", e);
+            set({
+              balance: user.fitcoins_balance,
+              challenges: currentChallenges,
+            });
+          }
         } else {
           set({
             balance: 0,
@@ -35,133 +127,212 @@ export const useWalletStore = create<WalletState>()(
           });
         }
       },
-
-      redeem: async (cost, description) => {
+      redeem: async (cost, description, rewardId) => {
         const user = useAuthStore.getState().user;
         if (!user) return false;
 
-        const { balance, transactions } = get();
+        const { balance } = get();
         if (balance < cost) return false;
 
-        try {
-          // Persist the transaction and update balance in Supabase/Mocks
-          const tx = await apiClient.wallet.createTransaction(
-            user.id,
-            -cost,
-            description,
-            "SPEND",
-          );
-
+        if (useAuthStore.getState().isDemoMode) {
           const newBalance = balance - cost;
-
-          // Add to mock transactions array
-          MOCK_TRANSACTIONS.unshift(tx);
-
-          // Update the user balance in memory for current user references
-          user.fitcoins_balance = newBalance;
-          const foundInMock = MOCK_USERS.find((u) => u.id === user.id);
-          if (foundInMock) {
-            foundInMock.fitcoins_balance = newBalance;
-          }
-
-          // Update in auth store so components binded to auth user reactively update
-          useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
-
           set({
             balance: newBalance,
-            transactions: [tx, ...transactions],
           });
+          useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
 
-          syncMockUsersToStorage();
-
-          // Trigger notification
+          const newTransaction: Transaction = {
+            id: `demo-tx-${Date.now()}`,
+            user_id: user.id,
+            amount: -cost,
+            description,
+            type: "SPEND",
+            created_at: new Date().toISOString(),
+          };
+          apiClient.wallet.updateBalance(user.id, newBalance);
+          apiClient.wallet.saveTransaction(user.id, newTransaction);
+          set((state) => ({
+            transactions: [newTransaction, ...state.transactions],
+          }));
           createNotification(
             user.id,
             "TRANSACTION_SUCCESS",
-            "Canje Exitoso",
+            "Canje Exitoso (Demo)",
             `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
             "/app/wallet/history",
           ).catch((e) => console.warn(e));
-
           return true;
-        } catch (error) {
-          console.error("Redemption failed:", error);
+        }
+
+        try {
+          if (rewardId) {
+            const { redeemReward } = await import("@/services/walletService");
+            const success = await redeemReward(user.id, rewardId);
+            if (success) {
+              const balanceVal = await apiClient.wallet.getBalance(user.id);
+              const transactionsVal = await apiClient.wallet.getTransactions(user.id);
+              set({ balance: balanceVal, transactions: transactionsVal });
+              useAuthStore.setState({ user: { ...user, fitcoins_balance: balanceVal } });
+
+              createNotification(
+                user.id,
+                "TRANSACTION_SUCCESS",
+                "Canje Exitoso",
+                `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
+                "/app/wallet/history",
+              ).catch((e) => console.warn(e));
+
+              return true;
+            }
+            return false;
+          } else {
+            const newTransaction = {
+              user_id: user.id,
+              amount: -cost,
+              description,
+              type: "SPEND",
+            };
+
+            const { data: insertedTx, error: txError } = await supabase
+              .from("wallet_transactions")
+              .insert(newTransaction)
+              .select()
+              .single();
+
+            if (txError) throw txError;
+
+            if (insertedTx) {
+              set((state) => ({
+                transactions: [insertedTx as Transaction, ...state.transactions],
+              }));
+              const balanceVal = await apiClient.wallet.getBalance(user.id);
+              set({ balance: balanceVal });
+              useAuthStore.setState({ user: { ...user, fitcoins_balance: balanceVal } });
+            }
+
+            createNotification(
+              user.id,
+              "TRANSACTION_SUCCESS",
+              "Canje Exitoso",
+              `Canjeaste: ${description.replace("Canje: ", "")} por ${cost} FC.`,
+              "/app/wallet/history",
+            ).catch((e) => console.warn(e));
+
+            return true;
+          }
+        } catch (err) {
+          const { handleWalletError } = await import("@/services/walletService");
+          const handled = handleWalletError(err);
+          if (!handled) {
+            const e = err as { code?: string; message?: string };
+            console.error(`Error during redeem:`, err);
+            toast.error(`Error al reclamar la recompensa: ${e?.message || String(err)}`);
+          }
           return false;
         }
       },
 
-      purchaseItem: (cost, itemName, sellerId) => {
+      purchaseItem: async () => {
+        // Handled via purchaseCatalogItem in businessService.ts.
+        return false;
+      },
+
+      progressChallenge: async (id) => {
+        set((state) => {
+          const updated = state.challenges.map((c) => {
+            if (c.id === id) {
+              const newProgress = Math.min(c.progress + 1, c.total);
+              return { ...c, progress: newProgress };
+            }
+            return c;
+          });
+          return { challenges: updated };
+        });
+
+        const { challenges, claimChallenge } = get();
+        const challenge = challenges.find((c) => c.id === id);
+        if (challenge && challenge.progress >= challenge.total && !challenge.claimed) {
+          await claimChallenge(id);
+        }
+      },
+
+      claimChallenge: async (id) => {
+        const { challenges, balance } = get();
+        const challenge = challenges.find((c) => c.id === id);
+        if (!challenge || challenge.claimed || challenge.progress < challenge.total) return;
+
         const user = useAuthStore.getState().user;
-        if (!user) return false;
+        if (!user) return;
 
-        const { balance, transactions } = get();
-        if (balance < cost) return false;
+        const newBalance = balance + challenge.reward;
 
-        const newBalance = balance - cost;
-
-        // 1. Generate SPEND transaction for the buyer (Player)
-        const spendTx: Transaction = {
-          id: `txn_${Date.now()}_spend`,
-          user_id: user.id,
-          amount: -cost,
-          description: `Compra: ${itemName}`,
-          type: "SPEND",
-          created_at: new Date().toISOString(),
-        };
-        MOCK_TRANSACTIONS.unshift(spendTx);
-
-        // 2. Update buyer balance
-        user.fitcoins_balance = newBalance;
-        const buyerMock = MOCK_USERS.find((u) => u.id === user.id);
-        if (buyerMock) {
-          buyerMock.fitcoins_balance = newBalance;
-        }
-        useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
-
-        // 3. Increment seller balance & generate EARN transaction for the seller (Business)
-        const sellerMock = MOCK_USERS.find((u) => u.id === sellerId);
-        if (sellerMock) {
-          const oldSellerBalance = sellerMock.fitcoins_balance || 0;
-          const newSellerBalance = oldSellerBalance + cost;
-          sellerMock.fitcoins_balance = newSellerBalance;
-
-          const earnTx: Transaction = {
-            id: `txn_${Date.now()}_earn`,
-            user_id: sellerId,
-            amount: cost,
-            description: `Venta: ${itemName} a ${user.name}`,
-            type: "EARN",
-            created_at: new Date().toISOString(),
-          };
-          MOCK_TRANSACTIONS.unshift(earnTx);
-        }
+        // Optimistic update
+        const updatedChallenges = challenges.map((c) => {
+          if (c.id === id) {
+            return { ...c, claimed: true };
+          }
+          return c;
+        });
 
         set({
           balance: newBalance,
-          transactions: [spendTx, ...transactions],
+          challenges: updatedChallenges,
         });
 
-        syncMockUsersToStorage();
+        useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
 
-        // Trigger TRANSACTION_SUCCESS for buyer (Player)
-        createNotification(
-          user.id,
-          "TRANSACTION_SUCCESS",
-          "Compra Exitosa",
-          `Compraste ${itemName} por ${cost} FC.`,
-          "/app/wallet/history",
-        ).catch((e) => console.warn(e));
+        if (useAuthStore.getState().isDemoMode) {
+          const newTransaction: Transaction = {
+            id: `demo-tx-${Date.now()}`,
+            user_id: user.id,
+            amount: challenge.reward,
+            description: `Reto completado: ${challenge.name}`,
+            type: "EARN",
+            created_at: new Date().toISOString(),
+          };
+          apiClient.wallet.updateBalance(user.id, newBalance);
+          apiClient.wallet.saveTransaction(user.id, newTransaction);
+          set((state) => ({
+            transactions: [newTransaction, ...state.transactions],
+          }));
+          toast.success(`¡Reclamaste +${challenge.reward} FitCoins! 🏆`);
+          return;
+        }
 
-        // Trigger TRANSACTION_SUCCESS for seller (Business)
-        createNotification(
-          sellerId,
-          "TRANSACTION_SUCCESS",
-          "Venta Completada",
-          `Vendiste ${itemName} a ${user.name} por ${cost} FC.`,
-          "/app/business",
-        ).catch((e) => console.warn(e));
+        try {
+          const newTransaction = {
+            user_id: user.id,
+            amount: challenge.reward,
+            description: `Reto completado: ${challenge.name}`,
+            type: "EARN",
+          };
 
-        return true;
+          const { data: insertedTx, error: txError } = await supabase
+            .from("wallet_transactions")
+            .insert(newTransaction)
+            .select()
+            .single();
+          if (txError) throw txError;
+
+          if (insertedTx) {
+            set((state) => ({
+              transactions: [insertedTx as Transaction, ...state.transactions],
+            }));
+          }
+
+          toast.success(`¡Reclamaste +${challenge.reward} FitCoins! 🏆`);
+        } catch (err) {
+          const e = err as { code?: string; message?: string };
+          console.error(`Error during claimChallenge (code: ${e?.code}):`, err);
+          const code = e?.code ? ` (${e.code})` : "";
+          toast.error(`Error al reclamar la recompensa: ${e?.message || String(err)}${code}`);
+          // Rollback
+          set({
+            balance,
+            challenges,
+          });
+          useAuthStore.setState({ user });
+        }
       },
     }),
     {
@@ -171,7 +342,14 @@ export const useWalletStore = create<WalletState>()(
   ),
 );
 
-// Subscribe to useAuthStore changes
-useAuthStore.subscribe(() => {
-  useWalletStore.getState().initWallet();
+// Subscribe to useAuthStore changes.
+// Only triggers initWallet when the user ID actually changes (login/logout),
+// preventing redundant fetches on unrelated auth state ticks.
+let _prevWalletUserId: string | null = null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.id ?? null;
+  if (userId !== _prevWalletUserId) {
+    _prevWalletUserId = userId;
+    useWalletStore.getState().initWallet();
+  }
 });

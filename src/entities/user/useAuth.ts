@@ -1,128 +1,292 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
-import { ME, MOCK_USERS } from "@/lib/mock";
 import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
+import { MOCK_USERS } from "@/shared/api/apiClient";
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  /**
+   * SEC-02: isDemoMode is intentionally NOT persisted to localStorage.
+   * Keeping it ephemeral (in-memory only) prevents attackers from setting
+   * isDemoMode=true via DevTools to bypass all Supabase queries.
+   */
+  isDemoMode: boolean;
   login: (user: User) => void;
   logout: () => void;
   register: (user: User) => void;
+  setDemoMode: (status: boolean) => void;
 }
 
-// Estado local de sesión (principalmente para el Mock Mode)
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      isDemoMode: import.meta.env.VITE_USE_MOCKS === "true",
       login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () => set({ user: null, isAuthenticated: false, isDemoMode: false }),
       register: (user) => set({ user, isAuthenticated: true }),
+      setDemoMode: (status) => set({ isDemoMode: status }),
     }),
     {
       name: "sportmatch-auth",
       storage: createJSONStorage(() => safeLocalStorage),
+      // SEC-02: Explicitly exclude isDemoMode from persisted state.
+      // It will always reset to false on a page refresh, preventing localStorage manipulation.
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     },
   ),
 );
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
+/**
+ * Purges all persisted Zustand stores and clears localStorage keys.
+ * Called during sign-out to ensure a clean session state.
+ */
+export function purgeAllStores() {
+  // Clear all known localStorage keys for this app
+  const STORE_KEYS = [
+    "sportmatch-auth",
+    "sportmatch-profile",
+    "sportmatch-wallet",
+    "sportmatch-chat",
+    "sportmatch-notifications",
+  ];
+  try {
+    STORE_KEYS.forEach((key) => {
+      try {
+        safeLocalStorage.removeItem(key);
+      } catch {
+        // Ignore individual key failures
+      }
+    });
+  } catch {
+    // Ignore storage access errors
+  }
+
+  // Reset Zustand auth store state
+  useAuthStore.setState({ user: null, isAuthenticated: false });
+}
+
+const getDemoUsers = (): User[] => {
+  if (typeof window === "undefined") return MOCK_USERS;
+  const stored = localStorage.getItem("sportmatch_demo_users");
+  if (!stored) {
+    localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
+    return MOCK_USERS;
+  }
+  return JSON.parse(stored);
+};
+
+const saveDemoUsers = (users: User[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
+  }
+};
 
 export function useAuth() {
   const store = useAuthStore();
 
   const signIn = async (email?: string, password?: string) => {
-    if (USE_MOCKS) {
-      if (email && password) {
-        const found = MOCK_USERS.find((u) => u.email === email && u.password === password);
-        if (found) {
-          store.login(found);
-          return;
-        }
-        throw new Error("Credenciales incorrectas");
-      }
-      // Login simulado como guest (Edwin por defecto)
-      store.login(ME);
-      return;
-    }
+    // E2E / Mock login bypass
+    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
+      store.setDemoMode(true);
+      const users = getDemoUsers();
+      let mockUser: User = users[0];
 
-    // Lógica real de Supabase - Query directo a tabla users
-    if (email && password) {
-      try {
-        const { data, error } = await supabase.from("users").select("*").eq("email", email);
-
-        if (error) {
-          console.error("Error en Supabase:", error);
-          throw new Error(`Supabase error: ${error.message}`);
-        }
-
-        if (!data || data.length === 0) {
-          throw new Error("Usuario no encontrado");
-        }
-
-        // Comparar password (en producción usa bcrypt)
-        if (data[0].password !== password) {
-          throw new Error("Contraseña incorrecta");
-        }
-
-        store.login(data[0] as User);
-      } catch (err: unknown) {
-        console.error("Error durante signIn:", err);
-        throw err;
-      }
-      return;
-    }
-
-    // Login de demo (sin credenciales)
-    try {
-      // Obtener el primer usuario disponible (no usar .single() si la tabla está vacía)
-      const { data, error } = await supabase.from("users").select("*").limit(1);
-
-      if (error) {
-        console.error("Error demo login:", error);
-        throw new Error(`Error al obtener usuario demo: ${error.message}`);
-      }
-
-      if (data && data.length > 0) {
-        store.login(data[0] as User);
-      } else {
-        throw new Error(
-          "No hay usuarios disponibles en la base de datos. Por favor, contacta al administrador.",
+      if (email) {
+        const found = users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase() || u.id === email,
         );
+        if (found) {
+          mockUser = found;
+        } else if (email === "ejuniorfloress@gmail.com") {
+          mockUser = users.find((u) => u.id === "user-edwin-master") || users[0];
+        } else if (email === "fabiola@sportmatch.app") {
+          mockUser = users.find((u) => u.id === "user-fabiola") || users[0];
+        } else if (email === "puka@puka.com") {
+          mockUser = users.find((u) => u.id === "user-puka-power") || users[0];
+        }
       }
-    } catch (err: unknown) {
-      console.error("Error en demo login:", err);
-      throw err;
+
+      // Sync user balance from persisted demo balances
+      const storedBalances = localStorage.getItem("sportmatch_demo_balances");
+      const balances = storedBalances ? JSON.parse(storedBalances) : {};
+      const actualBalance =
+        balances[mockUser.id] !== undefined ? balances[mockUser.id] : mockUser.fitcoins_balance;
+      mockUser = { ...mockUser, fitcoins_balance: actualBalance };
+
+      store.login(mockUser);
+      return;
     }
+
+    if (email && password) {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        if (import.meta.env.DEV) console.error("Error en Supabase Auth signIn:", authError);
+        throw authError;
+      }
+
+      if (!authData.user) {
+        throw new Error("Usuario no encontrado");
+      }
+
+      // Fetch user profile from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileError) {
+        if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
+        throw profileError;
+      }
+
+      store.setDemoMode(false);
+      store.login(profile as User);
+      return;
+    }
+
+    // Guest login sets demo mode and bypasses Supabase queries entirely
+    store.setDemoMode(true);
+    const demoUser: User = {
+      id: "demo-user-id",
+      created_at: new Date().toISOString(),
+      name: "Edwin (Demo)",
+      age: 26,
+      city: "Surco, Lima",
+      avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=EdwinDemo",
+      bio: "Jugador de Pádel nivel intermedio en modo demostración.",
+      trust_score: 95,
+      fitcoins_balance: 1500,
+      level: "Intermedio",
+      preferred_sports: ["Pádel", "Tenis"],
+      matches_played: 12,
+      last_location_lat: -12.14,
+      last_location_lng: -76.995,
+    };
+    store.login(demoUser);
   };
 
   const signUp = async (newUser: User) => {
-    if (USE_MOCKS) {
-      // Registro simulado, persistido en el store
-      store.register(newUser);
+    if (!newUser.email || !newUser.password) {
+      throw new Error("Email y contraseña son obligatorios");
+    }
+
+    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
+      store.setDemoMode(true);
+      const mockRegisteredUser: User = {
+        ...newUser,
+        id: `mock-user-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        fitcoins_balance: newUser.fitcoins_balance ?? 0,
+        trust_score: newUser.trust_score ?? 50,
+        level: newUser.level ?? "Intermedio",
+        preferred_sports: newUser.preferred_sports ?? [],
+        matches_played: 0,
+      };
+      const users = getDemoUsers();
+      users.push(mockRegisteredUser);
+      saveDemoUsers(users);
+      store.login(mockRegisteredUser);
       return;
     }
 
-    // Lógica real de Supabase - Insertar nuevo usuario
     try {
-      console.log("Intentando registrar usuario:", newUser);
-      const { data, error } = await supabase.from("users").insert([newUser]).select().single();
+      if (import.meta.env.DEV)
+        console.log("Intentando registrar usuario en Supabase Auth:", newUser.email);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: {
+            name: newUser.name,
+            user_role: newUser.user_role || "PLAYER",
+          },
+        },
+      });
 
-      if (error) {
-        console.error("Error en signUp:", error);
-        throw new Error(`Error al registrar: ${error.message}`);
+      if (authError) {
+        if (import.meta.env.DEV) console.error("Error en Supabase Auth signUp:", authError);
+        throw authError;
       }
 
-      if (data) {
-        console.log("Usuario registrado exitosamente:", data);
-        store.register(data as User);
+      if (!authData.user) {
+        throw new Error("El registro en Supabase Auth falló.");
       }
-    } catch (err: unknown) {
-      console.error("Error durante registro:", err);
+
+      // Supabase trigger handle_new_user should automatically create the public.profiles record.
+      // We attempt to fetch this record with a retry mechanism.
+      let profile = null;
+      for (let i = 0; i < 5; i++) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authData.user.id)
+          .single();
+        if (data) {
+          profile = data;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // If the trigger hasn't run or is missing, manually insert the profile row.
+      if (!profile) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: authData.user.id,
+            name: newUser.name,
+            avatar_url: newUser.avatar_url,
+            user_role: newUser.user_role || "PLAYER",
+            trust_score: newUser.trust_score ?? 50,
+            fitcoins_balance: newUser.fitcoins_balance ?? 0,
+            level: newUser.level ?? "Intermedio",
+            preferred_sports: newUser.preferred_sports ?? [],
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          if (import.meta.env.DEV) console.error("Error manually inserting profile:", insertError);
+          throw insertError;
+        }
+        profile = inserted;
+      } else {
+        // Enforce extra metadata fields that the automatic trigger might not have updated
+        const { data: updated } = await supabase
+          .from("profiles")
+          .update({
+            age: newUser.age,
+            city: newUser.city,
+            bio: newUser.bio,
+            trust_score: newUser.trust_score ?? 50,
+            fitcoins_balance: newUser.fitcoins_balance ?? 0,
+            level: newUser.level ?? "Intermedio",
+            preferred_sports: newUser.preferred_sports ?? [],
+          })
+          .eq("id", authData.user.id)
+          .select()
+          .single();
+        if (updated) {
+          profile = updated;
+        }
+      }
+
+      store.register(profile as User);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error("Error durante registro:", err);
       throw err;
     }
   };
@@ -132,11 +296,13 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    if (USE_MOCKS) {
-      store.logout();
-      return;
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn("Supabase Auth signOut warning:", e);
     }
-    store.logout();
+    // Purge all Zustand stores and localStorage keys for a clean session exit
+    purgeAllStores();
   };
 
   return {

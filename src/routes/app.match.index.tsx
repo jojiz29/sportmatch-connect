@@ -4,6 +4,8 @@ import { Filter } from "lucide-react";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { apiClient } from "@/shared/api/apiClient";
 import { MatchmakingFeature } from "@/features/matchmaking/MatchmakingFeature";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/app/match/")({
   head: () => ({
@@ -22,7 +24,12 @@ export const Route = createFileRoute("/app/match/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => apiClient.users.getMatches(),
+  loader: () => {
+    // Exclude the current authenticated user from the swipe stack.
+    // useAuthStore.getState() is safe here — loaders run outside React rendering.
+    const currentUserId = useAuthStore.getState().user?.id;
+    return apiClient.users.getMatches(currentUserId);
+  },
   pendingComponent: MatchPendingComponent,
   component: Match,
 });
@@ -45,6 +52,7 @@ function MatchPendingComponent() {
 }
 
 function Match() {
+  const { t } = useTranslation();
   const initialStack = Route.useLoaderData();
 
   if (!initialStack) {
@@ -56,11 +64,11 @@ function Match() {
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader
-        title="Matchmaking IA"
-        subtitle="Deslizá para encontrar tu próximo rival ideal"
+        title={t("matchmaking.title")}
+        subtitle={t("matchmaking.subtitle")}
         action={
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm">
-            <Filter className="h-4 w-4" /> Filtros
+          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm cursor-pointer">
+            <Filter className="h-4 w-4" /> {t("matchmaking.filters")}
           </button>
         }
       />

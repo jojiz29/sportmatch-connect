@@ -41,6 +41,13 @@ export function NotificationBell() {
   const notifications = useNotificationStore((s) => s.notifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications(user.id);
+    }
+  }, [user, fetchNotifications]);
 
   const userNotifs = user
     ? notifications
@@ -136,13 +143,21 @@ export function NotificationBell() {
             <div className="flex-1 overflow-y-auto overscroll-contain" id="notification-list">
               {userNotifs.length > 0 ? (
                 userNotifs.slice(0, 30).map((notif) => (
-                  <button
+                  <div
                     key={notif.id}
                     onClick={() => handleNotifClick(notif)}
                     className={`w-full text-left px-4 py-3 flex gap-3 items-start border-b border-border/30 transition-colors cursor-pointer ${
                       notif.is_read ? "hover:bg-accent/30" : "bg-primary/5 hover:bg-primary/10"
                     }`}
                     id={`notif-item-${notif.id}`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleNotifClick(notif);
+                      }
+                    }}
                   >
                     <div
                       className={`shrink-0 h-9 w-9 rounded-xl border grid place-items-center mt-0.5 ${
@@ -179,7 +194,7 @@ export function NotificationBell() {
                         </button>
                       )}
                     </div>
-                  </button>
+                  </div>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2 px-4">

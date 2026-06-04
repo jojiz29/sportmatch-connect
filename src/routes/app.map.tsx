@@ -3,10 +3,13 @@ import { PageHeader } from "@/components/PageHeader";
 import { MapFeature } from "@/features/map/MapFeature";
 import { apiClient } from "@/shared/api/apiClient";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { searchNearbyCourts } from "@/shared/api/geoService";
+import { searchNearbyCourts, calculateDistance } from "@/shared/api/geoService";
 import { Court } from "@/entities/types";
+import { CourtCard } from "@/components/CourtCard";
+import { BookingModal } from "@/components/BookingModal";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/app/map")({
   head: () => ({
@@ -63,12 +66,24 @@ function MapPendingComponent() {
   );
 }
 
+const DISTRICT_CENTROIDS: Record<string, [number, number]> = {
+  "Santiago de Surco": [-12.1314, -76.9812],
+  "San Borja": [-12.1067, -76.9989],
+  Miraflores: [-12.1228, -77.0282],
+  Lince: [-12.0833, -77.0333],
+  Magdalena: [-12.0911, -77.0694],
+};
+
 function MapPage() {
+  const { t } = useTranslation();
   const data = Route.useLoaderData();
   const user = useAuthStore((state) => state.user);
   const [courts, setCourts] = useState<Court[]>(data.courts);
+  const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
+    let active = true;
     let baseLat = -12.14; // Default Surco lat
     let baseLng = -76.995; // Default Surco lng
 
@@ -80,29 +95,84 @@ function MapPage() {
     const loadCourts = async (latitude: number, longitude: number) => {
       try {
         const fetched = await searchNearbyCourts(latitude, longitude);
-        setCourts(fetched);
+        if (active) {
+          setCourts(fetched);
+        }
       } catch (err) {
-        console.error("Error loading nearby courts from spatial search:", err);
+        if (import.meta.env.DEV)
+          console.error("Error loading nearby courts from spatial search:", err);
       }
     };
 
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          loadCourts(position.coords.latitude, position.coords.longitude);
+          if (active) {
+            setUserCoords({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+            loadCourts(position.coords.latitude, position.coords.longitude);
+          }
         },
         (error) => {
-          console.warn(
-            "Geolocation API unavailable or permission denied. Using profile location.",
-            error.message,
-          );
-          loadCourts(baseLat, baseLng);
+          if (import.meta.env.DEV)
+            console.warn(
+              "Geolocation API unavailable or permission denied. Using profile location.",
+              error.message,
+            );
+          if (active) {
+            loadCourts(baseLat, baseLng);
+          }
         },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
     } else {
       loadCourts(baseLat, baseLng);
     }
+
+    return () => {
+      active = false;
+    };
   }, [user, user?.last_location_lat, user?.last_location_lng]);
+
+  const baseLocation = useMemo(() => {
+    if (userCoords) return userCoords;
+    if (user && user.last_location_lat && user.last_location_lng) {
+      return { lat: user.last_location_lat, lng: user.last_location_lng };
+    }
+    return null;
+  }, [userCoords, user]);
+
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+
+  const selectedDistrictCenter = useMemo(() => {
+    if (!selectedDistrict) return null;
+    return DISTRICT_CENTROIDS[selectedDistrict] || null;
+  }, [selectedDistrict]);
+
+  const sortedCourts = useMemo(() => {
+    if (!baseLocation) return courts;
+    const res = [...courts]
+      .map((c) => ({
+        ...c,
+        distance_km: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
+      }))
+      .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
+    console.log(
+      "SORTED COURTS DEBUG:",
+      baseLocation,
+      res.slice(0, 3).map((c) => `${c.name} (${c.distance_km?.toFixed(2)} km)`),
+    );
+    return res;
+  }, [courts, baseLocation]);
+
+  const filteredCourts = useMemo(() => {
+    if (!selectedDistrict) return sortedCourts;
+    return sortedCourts.filter((c) =>
+      c.district?.toLowerCase().includes(selectedDistrict.toLowerCase()),
+    );
+  }, [sortedCourts, selectedDistrict]);
 
   if (!data || !data.courts || !data.matches) {
     return (
@@ -116,10 +186,36 @@ function MapPage() {
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title="Mapa en vivo" subtitle="Canchas, partidos y jugadores cerca tuyo" />
 
+      {/* District Selector Filter */}
+      <div className="bg-gradient-card border border-border/40 rounded-2xl p-4 mb-6 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 shadow-card">
+        <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-neon">📍</span>{" "}
+          {t("map.filter_district", "Filtrar por distrito / Hub")}
+        </div>
+        <select
+          value={selectedDistrict}
+          onChange={(e) => setSelectedDistrict(e.target.value)}
+          className="bg-accent/40 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary text-foreground transition-all cursor-pointer min-w-[220px]"
+        >
+          <option value="">{t("map.all_districts", "Todos los distritos")}</option>
+          <option value="Santiago de Surco">Santiago de Surco</option>
+          <option value="San Borja">San Borja</option>
+          <option value="Miraflores">Miraflores</option>
+          <option value="Lince">Lince</option>
+          <option value="Magdalena">Magdalena del Mar</option>
+        </select>
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card animate-fade-in">
           <ErrorBoundary>
-            <MapFeature courts={courts} players={players} matches={matches} />
+            <MapFeature
+              courts={filteredCourts}
+              players={players}
+              matches={matches}
+              onBookCourt={(c) => setSelectedCourtForBooking(c)}
+              selectedDistrictCenter={selectedDistrictCenter}
+            />
           </ErrorBoundary>
         </div>
 
@@ -127,28 +223,26 @@ function MapPage() {
           <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card max-h-[560px] overflow-y-auto">
             <h3 className="font-semibold mb-3">Cerca tuyo (Ordenado por distancia)</h3>
             <div className="space-y-3">
-              {courts.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex gap-3 items-center hover:bg-accent/40 p-2 rounded-xl transition-colors"
-                >
-                  <img
-                    src={c.image_url}
-                    alt={c.name}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate">{c.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.distance_km} km · ${c.price_per_hour}/h
-                    </div>
-                  </div>
-                </div>
+              {filteredCourts.map((c) => (
+                <CourtCard
+                  key={`${c.id}-${c.name}-${c.district}`}
+                  court={c}
+                  onClick={() => setSelectedCourtForBooking(c)}
+                  baseLocation={baseLocation}
+                  variant="list"
+                />
               ))}
             </div>
           </div>
         </div>
       </div>
+
+      <BookingModal
+        court={selectedCourtForBooking}
+        isOpen={selectedCourtForBooking !== null}
+        onOpenChange={(open) => !open && setSelectedCourtForBooking(null)}
+        baseLocation={baseLocation}
+      />
     </div>
   );
 }

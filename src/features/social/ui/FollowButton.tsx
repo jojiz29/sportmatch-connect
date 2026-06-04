@@ -4,6 +4,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { toast } from "sonner";
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface FollowButtonProps {
   targetUserId: string;
@@ -18,6 +19,7 @@ interface FollowButtonProps {
  * Self-follow check prevents rendering if targetUserId is the current user.
  */
 export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps) {
+  const { t } = useTranslation();
   const currentUser = useAuthStore((state) => state.user);
   const { profile, updateProfile } = useProfileStore();
   const [following, setFollowing] = useState<boolean>(false);
@@ -85,10 +87,14 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
     try {
       if (previousState) {
         await unfollowUser(currentUser.id, targetUserId);
-        toast.success("Has dejado de seguir a este usuario");
+        toast.success(
+          t("profile.unfollow_success", { defaultValue: "Dejaste de seguir a este usuario." }),
+        );
       } else {
         await followUser(currentUser.id, targetUserId);
-        toast.success("Ahora sigues a este usuario");
+        toast.success(
+          t("profile.follow_success", { defaultValue: "¡Ahora sigues a este usuario!" }),
+        );
       }
     } catch (error) {
       // 3. Rollback on failure
@@ -105,8 +111,11 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
         });
       }
       console.error("Follow operation failed:", error);
-      toast.error("Error al procesar la solicitud", {
-        description: error instanceof Error ? error.message : "Inténtalo de nuevo más tarde.",
+      toast.error(t("profile.follow_error", { defaultValue: "Error al procesar la solicitud." }), {
+        description:
+          error instanceof Error
+            ? error.message
+            : t("profile.try_again_later", { defaultValue: "Inténtalo de nuevo más tarde." }),
       });
     }
   };
@@ -118,7 +127,7 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
         className="w-full py-3 rounded-xl border border-border bg-card text-muted-foreground flex items-center justify-center gap-2 text-sm font-semibold transition-all"
       >
         <Loader2 className="h-4 w-4 animate-spin" />
-        Cargando...
+        {t("common.loading", { defaultValue: "Cargando..." })}
       </button>
     );
   }
@@ -134,11 +143,12 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
     >
       {following ? (
         <>
-          <UserMinus className="h-4 w-4" /> Siguiendo
+          <UserMinus className="h-4 w-4" />{" "}
+          {t("profile.following_status", { defaultValue: "Siguiendo" })}
         </>
       ) : (
         <>
-          <UserPlus className="h-4 w-4" /> Seguir
+          <UserPlus className="h-4 w-4" /> {t("profile.follow", { defaultValue: "Seguir" })}
         </>
       )}
     </button>

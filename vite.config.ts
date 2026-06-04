@@ -22,7 +22,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@vercel/postgres": path.resolve(__dirname, "./src/shared/lib/vercel-postgres-mock.ts"),
     },
   },
   server: {
@@ -34,4 +33,9 @@ export default defineConfig(({ mode }) => ({
       ignored: ["**/playwright-report/**", "**/test-results/**"],
     },
   },
+  define: process.env.VITE_USE_MOCKS
+    ? {
+        "import.meta.env.VITE_USE_MOCKS": JSON.stringify(process.env.VITE_USE_MOCKS),
+      }
+    : {},
 }));

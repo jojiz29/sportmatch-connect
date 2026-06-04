@@ -11,6 +11,7 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     // PHASE 1: Login as Edwin and follow Puka Power
     // ═══════════════════════════════════════════════════
     console.log("Phase 1: Edwin logs in and follows Puka Power...");
+    page.on("console", (msg) => console.log("BROWSER CONSOLE:", msg.text()));
     await page.goto(`${targetURL}/login`);
     await page.fill('input[type="email"]', "ejuniorfloress@gmail.com");
     await page.fill('input[type="password"]', "EdwinFlores123?");
@@ -25,11 +26,14 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     const pukaCard = page.locator("text=Puka Power").first();
     await expect(pukaCard).toBeVisible();
 
-    // Click follow button for Puka Power
-    const followBtnPuka = page.locator('[id*="follow-btn-user-puka-power"]').first();
-    if (await followBtnPuka.isVisible()) {
-      await followBtnPuka.click();
-      await page.waitForTimeout(300);
+    // Navigate to Puka Power's profile page and follow them
+    await page.goto(`${targetURL}/app/profile/user-puka-power`);
+    const followBtn = page.locator("button", { hasText: "Seguir" });
+    const followingBtn = page.locator("button", { hasText: "Siguiendo" });
+    await expect(followBtn.or(followingBtn)).toBeVisible({ timeout: 10000 });
+    if (await followBtn.isVisible()) {
+      await followBtn.click();
+      await expect(followingBtn).toBeVisible();
     }
 
     // Logout Edwin
@@ -76,15 +80,14 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await page.waitForTimeout(300);
 
     // Create a new post as Puka Power
-    const postInput = page.locator('textarea[placeholder*="compartir"]').first();
-    if (await postInput.isVisible()) {
-      await postInput.fill(
-        "🎉 ¡OFERTA FLASH! Llévate tu Botella Puka Power con 20% de descuento. ¡Solo hoy!",
-      );
-      const publishBtn = page.locator('button:has-text("Publicar")').first();
-      await publishBtn.click();
-      await page.waitForTimeout(500);
-    }
+    const postInput = page.locator("#feed-post-textarea");
+    await expect(postInput).toBeVisible();
+    await postInput.fill(
+      "🎉 ¡OFERTA FLASH! Llévate tu Botella Puka Power con 20% de descuento. ¡Solo hoy!",
+    );
+    const publishBtn = page.locator("#feed-post-submit");
+    await publishBtn.click();
+    await page.waitForTimeout(500);
 
     // Logout Puka Power
     await page.evaluate(() => localStorage.removeItem("sportmatch-auth"));
@@ -100,45 +103,36 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await expect(page.locator("h1").first()).toContainText("Edwin");
 
     // Check the notification bell is visible
-    await expect(page.locator("#notification-bell-btn")).toBeVisible();
+    const bellBtn = page.locator("#notification-bell-btn").first();
+    await expect(bellBtn).toBeVisible();
 
     // Soft check — badge may not be visible on first run, never throws
     await page
       .locator("#notification-badge")
+      .first()
       .isVisible()
       .catch(() => false);
 
     // Click the notification bell to open the panel
-    await page.click("#notification-bell-btn");
+    await bellBtn.click();
     await page.waitForTimeout(300);
 
     // Verify notification panel is open
-    await expect(page.locator("#notification-panel")).toBeVisible();
-    await expect(page.locator("#notification-list")).toBeVisible();
+    await expect(page.locator("h3:has-text('Notificaciones')")).toBeVisible();
 
-    // ═══════════════════════════════════════════════════
-    // PHASE 5: Edwin purchases from wallet (2-click flow)
-    // ═══════════════════════════════════════════════════
-    console.log("Phase 5: Edwin navigates to wallet and purchases...");
+    // Verify Edwin got a B2B offer purchase notification from Puka Power
+    const offerNotif = page.locator("text=Nueva oferta de Puka Power");
+    await expect(offerNotif).toBeVisible();
+    await offerNotif.click();
 
-    // Close notification panel first
-    await page.click("#notification-bell-btn");
-    await page.waitForTimeout(200);
-
-    // Navigate to FitCoins / Wallet
-    await page.click("aside >> text=FitCoins");
-    await page.waitForTimeout(500);
+    // Verify redirection to Wallet index page with buyItem param
+    await expect(page).toHaveURL(new RegExp(`${targetURL}/app/wallet\\?buyItem=.*`));
 
     // Verify Edwin's initial balance
     const sidebarBalance = page.locator("aside .text-neon");
     await expect(sidebarBalance).toContainText("FC");
 
-    // Find the Puka Power product and purchase
-    const purchaseBtn = page.locator("#purchase-btn-puka-power-bottle");
-    await expect(purchaseBtn).toBeVisible();
-    await purchaseBtn.click();
-
-    // Click confirm in the purchase modal
+    // Click confirm in the purchase modal (already auto-opened via buyItem param)
     const confirmBtn = page.locator("#confirm-purchase-btn");
     await expect(confirmBtn).toBeVisible();
     await confirmBtn.click();
@@ -155,7 +149,7 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     console.log("Phase 6: Verifying transaction notification...");
 
     // Open notification bell again
-    await page.click("#notification-bell-btn");
+    await page.locator("#notification-bell-btn").first().click();
     await page.waitForTimeout(300);
 
     // Verify notification panel shows a TRANSACTION_SUCCESS notification
