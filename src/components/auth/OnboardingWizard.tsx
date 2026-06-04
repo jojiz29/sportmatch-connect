@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Zap, Award, Flame, Target } from "lucide-react";
+import { Check, Zap, Award, Flame } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SportPreferences } from "@/entities/types";
 
@@ -32,7 +32,6 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
   const [isEsportsExpanded, setIsEsportsExpanded] = useState(false);
 
   // Step 2: Intent & Weekly Hours states
-  const [intentValue, setIntentValue] = useState<number>(50); // 0 (Recreativo) to 100 (Competitivo)
   const [weeklyHours, setWeeklyHours] = useState<number>(6);
 
   const sportsData: SportCardData[] = [
@@ -455,12 +454,11 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
     if (step < 2) {
       setStep((prev) => (prev + 1) as 1 | 2);
     } else {
-      const intent = intentValue >= 50 ? "Competitivo" : "Recreativo";
       onComplete({
         sports_matrix: sportsMatrix,
         behavioral_intent: {
           weekly_hours: weeklyHours,
-          intent: intent,
+          intent: "Recreativo",
         },
       });
     }
@@ -753,45 +751,6 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                 "Ajusta los sliders interactivos para afinar tus emparejamientos semanales.",
               )}
             </p>
-          </div>
-
-          {/* Intent Slider */}
-          <div className="bg-gradient-card border border-border rounded-2xl p-5 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                <Target className="h-4 w-4 text-[#FF6B35]" />{" "}
-                {t("onboarding.intent_label", "Intención de Juego")}
-              </span>
-              <span className="text-xs font-extrabold text-[#FF6B35]">
-                {intentValue >= 50
-                  ? t("onboarding.competitivo", "Competitivo")
-                  : t("onboarding.recreativo", "Recreativo")}
-              </span>
-            </div>
-
-            <div className="relative pt-2 pb-1">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={intentValue}
-                onChange={(e) => setIntentValue(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#FF6B35]"
-                style={{
-                  background: `linear-gradient(to right, #FF6B35 ${intentValue}%, #1e293b ${intentValue}%)`,
-                }}
-                id="intent-slider"
-              />
-            </div>
-
-            <div className="flex justify-between text-[10px] text-muted-foreground font-semibold pt-1">
-              <span className="text-left leading-normal">
-                {t("onboarding.intent_recreativo_desc", "Recreativo / Tercer Tiempo")}
-              </span>
-              <span className="text-right leading-normal">
-                {t("onboarding.intent_competitivo_desc", "Competitivo / Tabla de Clasificación")}
-              </span>
-            </div>
           </div>
 
           {/* Weekly Hours Slider */}
