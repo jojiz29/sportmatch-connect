@@ -28,16 +28,30 @@ async function run() {
   const testId = allProfiles[0].id;
   console.log("Found profile to test:", testId);
 
-  // Payload containing non-existent columns (onboarding_completed, user_sports, sport_preferences)
+  // Exact onboarding payload
   const initialPayload = {
-    gender: "Masculino",
-    bio: "Soy un deportista activo",
+    user_sports: [
+      { sport_id: "Fútbol", level: 3 },
+      { sport_id: "Tenis", level: 1 },
+    ],
     onboarding_completed: true,
-    user_sports: [],
+    preferred_sports: ["Fútbol", "Tenis"],
+    level: "Intermedio",
     sport_preferences: {
-      sports_matrix: {},
-      behavioral_intent: { weekly_hours: 6, intent: "Recreativo" },
+      sports_matrix: {
+        Fútbol: { level: "Advanced", weight: 3.5 },
+        Tenis: { level: "Amateur", weight: 1.0 },
+      },
+      behavioral_intent: {
+        weekly_hours: 10,
+        intent: "Recreativo",
+      },
     },
+    avatar_url: "",
+    bio: "Soy un deportista activo que le gusta aprender nuevos deportes!",
+    gender: "Masculino",
+    last_location_lat: -12.14,
+    last_location_lng: -76.99,
   };
 
   let currentPayload = { ...initialPayload };
@@ -62,9 +76,8 @@ async function run() {
       lastError = error;
       console.log(`Failed with code ${error.code}: ${error.message}`);
 
-      // Handle both PostgreSQL (42703) and PostgREST (PGRST204) missing column errors
       if (error.code === "42703" || error.code === "PGRST204") {
-        // Try PostgREST match first: "Could not find the 'column_name' column of 'profiles' in the schema cache"
+        // Try PostgREST match first
         let columnMatch = error.message.match(/Could not find the '([a-zA-Z0-9_]+)' column/);
 
         // Match standard Postgres message: "column \"column_name\" of relation \"profiles\" does not exist"
