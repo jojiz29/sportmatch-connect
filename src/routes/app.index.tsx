@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
-import { Match, User, Court, SportCatalog, Level } from "@/entities/types";
+import { Match, User, Court, SportCatalog, Level, MatchParticipant } from "@/entities/types";
 import {
   Trophy,
   Flame,
@@ -1031,6 +1031,10 @@ function MatchCard({ match }: { match: Match }) {
   const [isJoining, setIsJoining] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
 
+  const [participants, setParticipants] = useState<MatchParticipant[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
+
   const currentParticipants = match.current_players?.length || 0;
   const spotsTaken = joined ? currentParticipants + 1 : currentParticipants;
   const isFull = spotsTaken >= match.max_players;
@@ -1048,6 +1052,25 @@ function MatchCard({ match }: { match: Match }) {
     match.creator_id === user?.id ||
     match.current_players?.some((p) => p.id === user?.id) ||
     joined;
+
+  useEffect(() => {
+    if (isParticipant && showParticipants) {
+      let active = true;
+      setLoadingParticipants(true);
+      apiClient.matches
+        .getParticipantAttendance(match.id)
+        .then((res) => {
+          if (active) setParticipants(res);
+        })
+        .catch((err) => console.error("Error loading participants attendance:", err))
+        .finally(() => {
+          if (active) setLoadingParticipants(false);
+        });
+      return () => {
+        active = false;
+      };
+    }
+  }, [match.id, isParticipant, showParticipants]);
 
   const showCheckIn =
     isParticipant &&
@@ -1252,6 +1275,156 @@ function MatchCard({ match }: { match: Match }) {
           style={{ width: `${(spotsTaken / match.max_players) * 100}%` }}
         />
       </div>
+
+      {isParticipant && (
+        <div className="mt-4 pt-3 border-t border-border/40">
+          <button
+            onClick={() => setShowParticipants(!showParticipants)}
+            className="w-full text-left text-xs font-semibold text-neon hover:underline flex items-center justify-between cursor-pointer"
+          >
+            <span>
+              {showParticipants ? "Ocultar panel de asistencia" : "Ver control de asistencia"}
+            </span>
+            <span className="text-[10px] bg-neon/10 text-neon px-2 py-0.5 rounded-full">
+              {participants.length || match.current_players?.length || 1} jugadores
+            </span>
+          </button>
+
+          {showParticipants && (
+            <div className="mt-3 space-y-2.5 transition-all">
+              {loadingParticipants ? (
+                <div className="text-center py-2 text-xs text-muted-foreground animate-pulse">
+                  Cargando asistencia...
+                </div>
+              ) : participants.length > 0 ? (
+                participants.map((p) => {
+                  const isMe = p.user_id === user?.id;
+                  const profile = p.profile || (isMe ? user : null);
+                  const attStatus = p.attendance_status || "PENDING";
+
+                  return (
+                    <div
+                      key={p.user_id}
+                      className="flex items-center justify-between text-xs bg-accent/20 p-2 rounded-xl border border-border/30"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg"}
+                          alt=""
+                          className="h-7 w-7 rounded-full bg-muted object-cover"
+                        />
+                        <div>
+                          <div className="font-semibold truncate max-w-[120px]">
+                            {profile?.name || "Jugador"} {isMe && "(Tú)"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            {attStatus === "PENDING" && (
+                              <span className="text-[#FFD60A]">⏳ Pendiente</span>
+                            )}
+                            {attStatus === "CONFIRMED" && (
+                              <span className="text-electric">⚪ Confirmado</span>
+                            )}
+                            {attStatus === "VALIDATED" && (
+                              <span className="text-neon">✅ Validado</span>
+                            )}
+                            {attStatus === "ABSENT" && (
+                              <span className="text-destructive">❌ No asistió</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {isMe && attStatus === "PENDING" && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await apiClient.matches.confirmAttendance(match.id, user.id);
+                                toast.success("¡Asistencia confirmada!", {
+                                  description: "Espera a que tus compañeros validen tu presencia.",
+                                });
+                                const res = await apiClient.matches.getParticipantAttendance(
+                                  match.id,
+                                );
+                                setParticipants(res);
+                                await router.invalidate();
+                              } catch {
+                                toast.error("Error al confirmar asistencia.");
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded bg-gradient-neon text-neon-foreground text-[10px] font-bold cursor-pointer hover:shadow-neon transition-all"
+                          >
+                            Confirmar mi asistencia
+                          </button>
+                        )}
+
+                        {!isMe && (attStatus === "PENDING" || attStatus === "CONFIRMED") && (
+                          <>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  if (!user) return;
+                                  await apiClient.matches.validateAttendance(
+                                    match.id,
+                                    user.id,
+                                    p.user_id,
+                                    "CONFIRMED",
+                                  );
+                                  toast.success("¡Jugador validado con éxito!");
+                                  const res = await apiClient.matches.getParticipantAttendance(
+                                    match.id,
+                                  );
+                                  setParticipants(res);
+                                  await router.invalidate();
+                                } catch {
+                                  toast.error("Error al validar asistencia.");
+                                }
+                              }}
+                              className="p-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all cursor-pointer text-[10px] font-bold"
+                              title="Validar Asistencia"
+                            >
+                              ✓ Validar
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  if (!user) return;
+                                  await apiClient.matches.validateAttendance(
+                                    match.id,
+                                    user.id,
+                                    p.user_id,
+                                    "ABSENT",
+                                  );
+                                  toast.warning("Inasistencia reportada.");
+                                  const res = await apiClient.matches.getParticipantAttendance(
+                                    match.id,
+                                  );
+                                  setParticipants(res);
+                                  await router.invalidate();
+                                } catch {
+                                  toast.error("Error al reportar inasistencia.");
+                                }
+                              }}
+                              className="p-1 rounded bg-destructive/20 text-destructive-foreground border border-destructive/30 hover:bg-destructive/30 transition-all cursor-pointer text-[10px] font-bold"
+                              title="Marcar Falta / No asistió"
+                            >
+                              ✗ Falta
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-2 text-xs text-muted-foreground">
+                  No hay datos de asistencia para este partido.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <InsufficientBalanceModal
         isOpen={isBalanceModalOpen}

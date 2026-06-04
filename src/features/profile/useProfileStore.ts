@@ -5,6 +5,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { supabase } from "@/shared/api/supabase";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { getFollowStats } from "@/shared/api/socialService";
+import { apiClient } from "@/shared/api/apiClient";
 
 interface ProfileState {
   profile: User | null;
@@ -42,6 +43,14 @@ export const useProfileStore = create<ProfileState>()(
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) {
           throw new Error("No hay una sesión activa. Por favor inicia sesión de nuevo.");
+        }
+
+        // Persist to database if mocks are off
+        try {
+          await apiClient.users.updateProfile(currentUser.id, data);
+        } catch (error) {
+          console.error("Failed to update database profile:", error);
+          throw error;
         }
 
         const updated = { ...currentUser, ...data };

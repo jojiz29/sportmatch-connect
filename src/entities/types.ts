@@ -137,6 +137,9 @@ export interface MatchParticipant {
   user_id: string;
   status: "PENDING" | "ACCEPTED" | "REJECTED" | "ATTENDED";
   joined_at: string;
+  attendance_status?: "PENDING" | "CONFIRMED" | "ABSENT" | "VALIDATED";
+  validated_at?: string;
+  profile?: User;
 }
 
 export interface Transaction {

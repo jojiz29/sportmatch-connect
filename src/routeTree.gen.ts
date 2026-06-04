@@ -24,6 +24,7 @@ import { Route as AppIotRouteImport } from './routes/app.iot'
 import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
 import { Route as AppChatRouteImport } from './routes/app.chat'
+import { Route as AppCalendarRouteImport } from './routes/app.calendar'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppWalletIndexRouteImport } from './routes/app.wallet.index'
@@ -109,6 +110,11 @@ const AppChatRoute = AppChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBusinessRoute = AppBusinessRouteImport.update({
   id: '/business',
   path: '/business',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/business': typeof AppBusinessRoute
+  '/app/calendar': typeof AppCalendarRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/feed': typeof AppFeedRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/business': typeof AppBusinessRoute
+  '/app/calendar': typeof AppCalendarRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/feed': typeof AppFeedRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/business': typeof AppBusinessRoute
+  '/app/calendar': typeof AppCalendarRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/feed': typeof AppFeedRoute
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/admin'
     | '/app/business'
+    | '/app/calendar'
     | '/app/chat'
     | '/app/courts'
     | '/app/feed'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/admin'
     | '/app/business'
+    | '/app/calendar'
     | '/app/chat'
     | '/app/courts'
     | '/app/feed'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/admin'
     | '/app/business'
+    | '/app/calendar'
     | '/app/chat'
     | '/app/courts'
     | '/app/feed'
@@ -424,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/calendar': {
+      id: '/app/calendar'
+      path: '/calendar'
+      fullPath: '/app/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/business': {
       id: '/app/business'
       path: '/business'
@@ -533,6 +552,7 @@ const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppBusinessRoute: typeof AppBusinessRoute
+  AppCalendarRoute: typeof AppCalendarRoute
   AppChatRoute: typeof AppChatRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
   AppFeedRoute: typeof AppFeedRoute
@@ -550,6 +570,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
   AppBusinessRoute: AppBusinessRoute,
+  AppCalendarRoute: AppCalendarRoute,
   AppChatRoute: AppChatRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,
   AppFeedRoute: AppFeedRoute,

@@ -4,6 +4,7 @@ import {
   Users,
   Map,
   MessageSquare,
+  Calendar,
   Trophy,
   Activity,
   LayoutDashboard,
@@ -31,6 +32,7 @@ const GROUPS = [
       { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
       { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
       { to: "/app/map", labelKey: "nav.map_and_courts", icon: Map },
+      { to: "/app/calendar", labelKey: "nav.calendar", icon: Calendar },
     ],
   },
   {

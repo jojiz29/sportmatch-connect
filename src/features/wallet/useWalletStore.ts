@@ -278,6 +278,7 @@ export const useWalletStore = create<WalletState>()(
           balance: newBalance,
           challenges: updatedChallenges,
         });
+
         useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
 
         if (useAuthStore.getState().isDemoMode) {
