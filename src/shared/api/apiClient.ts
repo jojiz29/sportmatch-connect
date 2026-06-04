@@ -607,13 +607,21 @@ export const apiClient = {
         return cachedSportsCatalog;
       }
 
-      const { data, error } = await supabase.from("sports").select("*").order("name");
-      if (error) {
-        if (import.meta.env.DEV) console.error("Error fetching sports:", error);
-        throw error;
+      try {
+        const { data, error } = await supabase.from("sports").select("*").order("name");
+        if (error) {
+          throw error;
+        }
+        cachedSportsCatalog = (data || []) as SportCatalog[];
+        return cachedSportsCatalog;
+      } catch (err) {
+        console.warn(
+          "Table 'sports' not found or failed to fetch. Falling back to local catalog:",
+          err,
+        );
+        cachedSportsCatalog = MOCK_SPORTS;
+        return cachedSportsCatalog;
       }
-      cachedSportsCatalog = (data || []) as SportCatalog[];
-      return cachedSportsCatalog;
     },
   },
 

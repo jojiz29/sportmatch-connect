@@ -147,6 +147,7 @@ function Login() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`w-full pl-10 pr-10 py-2 bg-background border rounded-xl focus:ring-2 focus:ring-primary outline-none ${

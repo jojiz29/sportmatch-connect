@@ -143,7 +143,16 @@ function OnboardingSports() {
       navigate({ to: "/app" });
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error saving onboarding sports:", err);
-      toast.error("Error al actualizar el perfil legacy. Inicializando estructuras...");
+      const errMsg = err instanceof Error ? err.message : "Error desconocido al guardar el perfil.";
+      // If the profile store exhausted retries due to missing columns, show migration hint
+      if (errMsg.includes("migración SQL") || errMsg.includes("varios intentos")) {
+        toast.error(
+          "Tu base de datos necesita una migración. Ejecuta el SQL en Supabase → SQL Editor.",
+          { duration: 8000 },
+        );
+      } else {
+        toast.error(errMsg, { duration: 6000 });
+      }
     } finally {
       setIsSaving(false);
     }
