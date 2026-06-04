@@ -63,7 +63,6 @@ function OnboardingSports() {
     bio: string;
     gender: "Masculino" | "Femenino" | "Mixto";
     weekly_hours: number;
-    intent: "Recreativo" | "Competitivo";
     lat: number | null;
     lng: number | null;
   }) => {
@@ -111,17 +110,22 @@ function OnboardingSports() {
       const translatedLevel: Level =
         primaryLevelVal === 1 ? "Principiante" : primaryLevelVal === 2 ? "Intermedio" : "Avanzado";
 
+      // 2. DEFENSIVE MAPPING FOR LEGACY ACCOUNTS
+      const cleanSportsMatrix =
+        legacyMatrix && Object.keys(legacyMatrix).length > 0 ? legacyMatrix : {};
+      const cleanUserSports = Array.isArray(userSports) ? userSports : [];
+
       // Build consolidated atomic payload
       const updatedPayload = {
-        user_sports: userSports,
+        user_sports: cleanUserSports,
         onboarding_completed: true,
         preferred_sports: sportsKeys as Sport[],
         level: translatedLevel,
         sport_preferences: {
-          sports_matrix: legacyMatrix,
+          sports_matrix: cleanSportsMatrix,
           behavioral_intent: {
             weekly_hours: identityData.weekly_hours,
-            intent: identityData.intent,
+            intent: "Recreativo" as const,
           },
         },
         avatar_url: identityData.avatar_url || user?.avatar_url || "",
@@ -139,39 +143,7 @@ function OnboardingSports() {
       navigate({ to: "/app" });
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error saving onboarding sports:", err);
-
-      const msg = err instanceof Error ? err.message : "";
-      const isPermissionsError =
-        msg.toLowerCase().includes("rls") ||
-        msg.toLowerCase().includes("permission") ||
-        msg.toLowerCase().includes("policy") ||
-        (err as { code?: string })?.code === "42501";
-      const isTimeoutError =
-        msg.toLowerCase().includes("tardó demasiado") || msg.toLowerCase().includes("timeout");
-      const isSessionError =
-        msg.toLowerCase().includes("sesión") || msg.toLowerCase().includes("session");
-
-      if (isPermissionsError) {
-        toast.error(
-          t(
-            "auth.rls_error",
-            "Error de permisos. Cierra sesión e inicia sesión de nuevo para continuar.",
-          ),
-        );
-      } else if (isTimeoutError) {
-        toast.error(
-          t(
-            "auth.timeout_error",
-            "La conexión tardó demasiado. Verifica tu internet e inténtalo de nuevo.",
-          ),
-        );
-      } else if (isSessionError) {
-        toast.error(msg);
-      } else {
-        toast.error(
-          t("register.error_toast", "Error al guardar tu perfil. Por favor inténtalo de nuevo."),
-        );
-      }
+      toast.error("Error al actualizar el perfil legacy. Inicializando estructuras...");
     } finally {
       setIsSaving(false);
     }

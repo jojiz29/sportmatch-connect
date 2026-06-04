@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Camera, Award, Target } from "lucide-react";
+import { Camera, Award } from "lucide-react";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { compressToWebP } from "@/shared/lib/imageUtils";
@@ -14,7 +14,6 @@ interface IdentityStepProps {
     bio: string;
     gender: "Masculino" | "Femenino" | "Mixto";
     weekly_hours: number;
-    intent: "Recreativo" | "Competitivo";
     lat: number | null;
     lng: number | null;
   }) => void;
@@ -35,7 +34,6 @@ export function IdentityStep({
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [bio, setBio] = useState<string>("");
   const [gender, setGender] = useState<"Masculino" | "Femenino" | "Mixto">("Masculino");
-  const [intentValue, setIntentValue] = useState<number>(50);
   const [weeklyHours, setWeeklyHours] = useState<number>(6);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
@@ -155,14 +153,11 @@ export function IdentityStep({
       return;
     }
 
-    const intent = intentValue >= 50 ? "Competitivo" : "Recreativo";
-
     onComplete({
       avatar_url: avatarUrl,
       bio: trimmedBio,
       gender,
       weekly_hours: weeklyHours,
-      intent,
       lat,
       lng,
     });
@@ -338,45 +333,6 @@ export function IdentityStep({
             "Debe tener entre 10 y 150 caracteres. Se sanitiza automáticamente.",
           )}
         </p>
-      </div>
-
-      {/* Identity Matrix: Intent & Engagement Sliders */}
-      <div className="bg-gradient-card border border-border rounded-2xl p-5 space-y-4">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-            <Target className="h-4 w-4 text-[#FF6B35]" />{" "}
-            {t("onboarding.intent_label", "Intención de Juego")}
-          </span>
-          <span className="text-xs font-extrabold text-[#FF6B35]">
-            {intentValue >= 50
-              ? t("onboarding.competitivo", "Competitivo")
-              : t("onboarding.recreativo", "Recreativo")}
-          </span>
-        </div>
-
-        <div className="relative pt-2 pb-1">
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={intentValue}
-            onChange={(e) => setIntentValue(parseInt(e.target.value))}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#FF6B35]"
-            style={{
-              background: `linear-gradient(to right, #FF6B35 ${intentValue}%, #1e293b ${intentValue}%)`,
-            }}
-            id="intent-slider"
-          />
-        </div>
-
-        <div className="flex justify-between text-[9px] text-muted-foreground font-semibold pt-1">
-          <span className="text-left leading-normal">
-            {t("onboarding.intent_recreativo_desc", "Recreativo / Tercer Tiempo")}
-          </span>
-          <span className="text-right leading-normal">
-            {t("onboarding.intent_competitivo_desc", "Competitivo / Tabla de Clasificación")}
-          </span>
-        </div>
       </div>
 
       <div className="bg-gradient-card border border-border rounded-2xl p-5 space-y-4">

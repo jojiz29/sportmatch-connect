@@ -142,7 +142,7 @@ test.describe("Onboarding Wizard E2E Flow", () => {
           const intent = userObj.sport_preferences.behavioral_intent;
           expect(intent).toBeDefined();
           expect(intent.weekly_hours).toBe(12);
-          expect(intent.intent).toBe("Competitivo");
+          expect(intent.intent).toBe("Recreativo");
         }
       }
     }

@@ -46,11 +46,28 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = { ...currentUser, ...data };
 
+        // 2. DEFENSIVE MAPPING FOR LEGACY ACCOUNTS
+        const cleanSportsMatrix = updated.sport_preferences?.sports_matrix || {};
+        const cleanUserSports = Array.isArray(updated.user_sports) ? updated.user_sports : [];
+        const cleanBehavioralIntent = updated.sport_preferences?.behavioral_intent || {
+          weekly_hours: 6,
+          intent: "Recreativo" as const,
+        };
+
+        const normalizedPayload = {
+          ...updated,
+          user_sports: cleanUserSports,
+          sport_preferences: {
+            sports_matrix: cleanSportsMatrix,
+            behavioral_intent: cleanBehavioralIntent,
+          },
+        };
+
         // Optimistic update to local stores immediately
-        useAuthStore.setState({ user: updated });
+        useAuthStore.setState({ user: normalizedPayload });
 
         set((state) => ({
-          profile: state.profile ? { ...state.profile, ...data } : updated,
+          profile: state.profile ? { ...state.profile, ...normalizedPayload } : normalizedPayload,
         }));
 
         if (useAuthStore.getState().isDemoMode) {
@@ -84,11 +101,11 @@ export const useProfileStore = create<ProfileState>()(
           "onboarding_completed",
         ];
 
-        const supabasePayload = Object.keys(data)
+        const supabasePayload = Object.keys(normalizedPayload)
           .filter((key) => VALID_PROFILE_COLUMNS.includes(key))
           .reduce(
             (obj, key) => {
-              obj[key] = data[key as keyof Partial<User>];
+              obj[key] = normalizedPayload[key as keyof User];
               return obj;
             },
             {} as Record<string, unknown>,
