@@ -16,8 +16,15 @@ declare global {
 const ONESIGNAL_APP_ID = (import.meta.env.VITE_ONESIGNAL_APP_ID || "mock-app-id") as string;
 
 export function isMockMode(): boolean {
-  return import.meta.env.VITE_USE_MOCKS === "true" || useAuthStore.getState().isDemoMode;
+  return (
+    import.meta.env.VITE_USE_MOCKS === "true" ||
+    useAuthStore.getState().isDemoMode ||
+    !ONESIGNAL_APP_ID ||
+    ONESIGNAL_APP_ID === "mock-app-id"
+  );
 }
+
+let isOneSignalInitialized = false;
 
 /**
  * Initializes OneSignal Web SDK if not in mock mode.
@@ -28,14 +35,36 @@ export async function initOneSignal(): Promise<void> {
     return;
   }
 
+  if (isOneSignalInitialized) {
+    console.log("[OneSignal] Web SDK already initialized, skipping duplicate call.");
+    return;
+  }
+
   try {
     window.OneSignal = window.OneSignal || [];
     window.OneSignal.push(async () => {
-      await window.OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        allowLocalhostAsSecureOrigin: true,
-      });
-      console.log("[OneSignal] Web SDK Initialized successfully.");
+      if (window.OneSignal.initialized) {
+        console.log("[OneSignal] Web SDK was already initialized internally.");
+        isOneSignalInitialized = true;
+        return;
+      }
+
+      try {
+        await window.OneSignal.init({
+          appId: ONESIGNAL_APP_ID,
+          allowLocalhostAsSecureOrigin: true,
+        });
+        isOneSignalInitialized = true;
+        console.log("[OneSignal] Web SDK Initialized successfully.");
+      } catch (initErr) {
+        const errMessage = initErr instanceof Error ? initErr.message : String(initErr);
+        if (errMessage.includes("already initialized")) {
+          isOneSignalInitialized = true;
+          console.log("[OneSignal] Web SDK was already initialized (caught error).");
+        } else {
+          console.error("[OneSignal] Error during SDK init call:", initErr);
+        }
+      }
     });
   } catch (error) {
     console.error("[OneSignal] Initialization error:", error);
