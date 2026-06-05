@@ -26,9 +26,86 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isDemoMode: import.meta.env.VITE_USE_MOCKS === "true",
-      login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false, isDemoMode: false }),
-      register: (user) => set({ user, isAuthenticated: true }),
+      login: (user) => {
+        set({ user, isAuthenticated: true });
+        try {
+          if (typeof window !== "undefined" && window.OneSignal) {
+            const userId = user.id;
+            if (typeof window.OneSignal.login === "function") {
+              window.OneSignal.login(userId).catch((err: unknown) => {
+                console.warn("OneSignal login promise rejected:", err);
+              });
+            } else if (Array.isArray(window.OneSignal)) {
+              window.OneSignal.push(async () => {
+                try {
+                  if (typeof window.OneSignal.login === "function") {
+                    await window.OneSignal.login(userId);
+                  }
+                } catch (e) {
+                  console.warn("OneSignal delayed login failed:", e);
+                }
+              });
+            }
+          }
+        } catch (oneSignalTelemetryError) {
+          console.warn(
+            "OneSignal push sequence bypassed safely to prevent auth blocking:",
+            oneSignalTelemetryError,
+          );
+        }
+      },
+      logout: () => {
+        set({ user: null, isAuthenticated: false, isDemoMode: false });
+        try {
+          if (typeof window !== "undefined" && window.OneSignal) {
+            if (typeof window.OneSignal.logout === "function") {
+              window.OneSignal.logout().catch((err: unknown) => {
+                console.warn("OneSignal logout promise rejected:", err);
+              });
+            } else if (Array.isArray(window.OneSignal)) {
+              window.OneSignal.push(async () => {
+                try {
+                  if (typeof window.OneSignal.logout === "function") {
+                    await window.OneSignal.logout();
+                  }
+                } catch (e) {
+                  console.warn("OneSignal delayed logout failed:", e);
+                }
+              });
+            }
+          }
+        } catch (oneSignalTelemetryError) {
+          console.warn("OneSignal logout sequence bypassed safely:", oneSignalTelemetryError);
+        }
+      },
+      register: (user) => {
+        set({ user, isAuthenticated: true });
+        try {
+          if (typeof window !== "undefined" && window.OneSignal) {
+            const userId = user.id;
+            if (typeof window.OneSignal.login === "function") {
+              window.OneSignal.login(userId).catch((err: unknown) => {
+                console.warn("OneSignal login promise rejected:", err);
+              });
+            } else if (Array.isArray(window.OneSignal)) {
+              window.OneSignal.push(async () => {
+                try {
+                  if (typeof window.OneSignal.login === "function") {
+                    await window.OneSignal.login(userId);
+                  }
+                } catch (e) {
+                  console.warn("OneSignal delayed login failed:", e);
+                }
+              });
+            }
+          }
+        } catch (oneSignalTelemetryError) {
+          console.warn(
+            "OneSignal push sequence bypassed safely to prevent auth blocking:",
+            oneSignalTelemetryError,
+          );
+        }
+      },
       setDemoMode: (status) => set({ isDemoMode: status }),
     }),
     {
@@ -306,7 +383,7 @@ export function useAuth() {
   };
 
   const register = async (newUser: User) => {
-    await signUp(newUser);
+    return await signUp(newUser);
   };
 
   const signOut = async () => {

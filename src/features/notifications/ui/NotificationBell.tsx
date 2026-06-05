@@ -18,6 +18,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/shared/api/supabase";
 import type { AppNotification } from "@/entities/types";
 
+// Global variables to implement a reference counting pattern for the realtime subscription.
+// Since multiple instances of NotificationBell are mounted concurrently (desktop and mobile),
+// they share the same channel to avoid colliding or throwing "cannot add postgres_changes callbacks after subscribe()".
+let activeChannel: ReturnType<typeof supabase.channel> | null = null;
+let activeChannelUserId: string | null = null;
+let activeCount = 0;
+
 function playRefWhistle() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,56 +108,56 @@ export function NotificationBell() {
     }
   }, [user, fetchNotifications]);
 
-  // Stable ref to track the active realtime channel so we can remove it before re-subscribing.
-  // This prevents the "cannot add postgres_changes callbacks after subscribe()" Supabase error
-  // that occurs when React's strict-mode or rapid re-renders destroy+recreate the effect.
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
   useEffect(() => {
     if (!user) return;
 
     const isDemo = useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
     if (isDemo) return;
 
-    // ── Cleanup any existing channel BEFORE creating a new one ──────────
-    // This is critical: Supabase throws if you call .on() after .subscribe().
-    // By removing the old channel first we guarantee a clean slate.
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
+    // Reset if user mismatch
+    if (activeChannel && activeChannelUserId !== user.id) {
+      supabase.removeChannel(activeChannel);
+      activeChannel = null;
+      activeChannelUserId = null;
+      activeCount = 0;
     }
 
-    // Real-time subscription to notifications table for this specific user
-    const channel = supabase
-      .channel(`user-notifications-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotif = payload.new as AppNotification;
+    activeCount++;
 
-          // Add notification to Zustand store
-          useNotificationStore.setState((state) => ({
-            notifications: [newNotif, ...state.notifications],
-          }));
+    if (!activeChannel) {
+      activeChannelUserId = user.id;
+      activeChannel = supabase
+        .channel(`user-notifications-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as AppNotification;
 
-          // Play the referee whistle sound
-          playRefWhistle();
-        },
-      )
-      .subscribe();
+            // Add notification to Zustand store if not already present
+            useNotificationStore.setState((state) => {
+              if (state.notifications.some((n) => n.id === newNotif.id)) return state;
+              return { notifications: [newNotif, ...state.notifications] };
+            });
 
-    channelRef.current = channel;
+            // Play the referee whistle sound
+            playRefWhistle();
+          },
+        )
+        .subscribe();
+    }
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      activeCount--;
+      if (activeCount <= 0 && activeChannel) {
+        supabase.removeChannel(activeChannel);
+        activeChannel = null;
+        activeChannelUserId = null;
       }
     };
   }, [user]);
