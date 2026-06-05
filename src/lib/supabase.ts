@@ -98,6 +98,12 @@ function createFallbackClient(): SupabaseClient {
           console.warn("Called supabase.removeChannel but Supabase is not configured.");
         };
       }
+      if (prop === "getChannels") {
+        return () => {
+          console.warn("Called supabase.getChannels but Supabase is not configured.");
+          return [];
+        };
+      }
       if (prop === "storage") {
         const dummyStorageBucket = {
           upload: () =>
