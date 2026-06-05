@@ -93,6 +93,7 @@ function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
@@ -133,12 +134,14 @@ function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!isFormValid) {
       toast.error(t("register.error_toast"));
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const newUser = {
         id: crypto.randomUUID(),
@@ -169,7 +172,13 @@ function RegisterPage() {
         password,
       };
 
-      await register(newUser);
+      const result = await register(newUser);
+
+      if (result?.requiresEmailConfirmation) {
+        toast.success(t("register.check_email_to_confirm"));
+        navigate({ to: "/login" });
+        return;
+      }
 
       toast.success(t("register.success_toast"));
       if (role === "BUSINESS") {
@@ -181,6 +190,8 @@ function RegisterPage() {
       console.error("Error en registro:", err);
       const errorMessage = err instanceof Error ? err.message : t("register.error_toast");
       toast.error(`Error: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -467,11 +478,15 @@ function RegisterPage() {
 
           <button
             type="submit"
-            disabled={role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid}
+            disabled={isSubmitting || (role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid)}
             className="w-full py-4 mt-4 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 text-primary-foreground font-bold rounded-xl shadow-glow transition-all cursor-pointer"
             id="register-player-next-btn"
           >
-            {role === "PLAYER" ? "Siguiente" : t("register.btn_register")}
+            {isSubmitting
+              ? t("register.btn_registering")
+              : role === "PLAYER"
+                ? "Siguiente"
+                : t("register.btn_register")}
           </button>
 
           <div className="relative my-4 flex items-center justify-center">
