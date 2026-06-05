@@ -243,7 +243,8 @@ function Chat() {
                 setIsCreateSquadModalOpen(true);
               }}
               className="p-2 rounded-xl bg-accent text-accent-foreground border border-border hover:bg-accent/80 hover:shadow-glow transition-all cursor-pointer flex items-center justify-center"
-              title="Crear Squad (Grupo)"
+              title={t("chat.create_squad")}
+              aria-label={t("chat.create_squad")}
             >
               <Users className="h-4 w-4" />
             </button>
@@ -428,9 +429,13 @@ function Chat() {
           />
           <div className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card overflow-hidden flex flex-col max-h-[80vh] z-10 animate-fade-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">{t("chat.create_squad")}</h3>
+              <div>
+                <h3 className="font-bold text-lg">{t("chat.create_squad")}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{t("chat.create_squad_hint")}</p>
+              </div>
               <button
                 onClick={() => setIsCreateSquadModalOpen(false)}
+                aria-label={t("common.close", { defaultValue: "Cerrar" })}
                 className="h-8 w-8 rounded-full bg-muted grid place-items-center hover:bg-accent transition-colors cursor-pointer"
               >
                 <Plus className="h-4 w-4 rotate-45" />
@@ -452,12 +457,21 @@ function Chat() {
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[200px]">
-                <label className="text-xs text-muted-foreground block mb-1">
-                  {t("chat.select_members")}
-                </label>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <label className="text-xs text-muted-foreground block">
+                    {t("chat.select_members")}
+                  </label>
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {t("chat.selected_members", { count: selectedUserIds.length })}
+                  </span>
+                </div>
                 {socialUsers.length === 0 ? (
-                  <div className="text-xs text-muted-foreground py-8 text-center">
-                    {t("chat.no_contacts")}
+                  <div className="rounded-2xl border border-border bg-background/50 px-4 py-8 text-center">
+                    <Users className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm font-semibold">{t("chat.no_contacts")}</p>
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      {t("chat.no_contacts_hint")}
+                    </p>
                   </div>
                 ) : (
                   socialUsers.map((u) => {
@@ -507,9 +521,9 @@ function Chat() {
 
               <button
                 type="button"
-                disabled={!squadName.trim() || selectedUserIds.length === 0}
+                disabled={!squadName.trim()}
                 onClick={async () => {
-                  await createGroupChat(squadName, selectedUserIds);
+                  await createGroupChat(squadName.trim(), selectedUserIds);
                   setIsCreateSquadModalOpen(false);
                 }}
                 className="w-full py-3 rounded-xl bg-neon text-neon-foreground font-bold hover:shadow-neon transition-shadow disabled:opacity-50 disabled:pointer-events-none cursor-pointer text-center"
