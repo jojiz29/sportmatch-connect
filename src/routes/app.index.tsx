@@ -89,6 +89,15 @@ function getSportEmoji(name: string) {
   }
 }
 
+function parseStoredJson<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 function Dashboard() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -103,7 +112,7 @@ function Dashboard() {
     if (useAuthStore.getState().isDemoMode) {
       const storedStreak = localStorage.getItem(`sportmatch_demo_streak_${user.id}`);
       if (storedStreak) {
-        setStreak(JSON.parse(storedStreak));
+        setStreak(parseStoredJson(storedStreak, { current_streak: 0, max_streak: 0 }));
       } else {
         const defaultStreak = { current_streak: 3, max_streak: 5 };
         setStreak(defaultStreak);
@@ -112,7 +121,7 @@ function Dashboard() {
 
       const storedAttendance = localStorage.getItem(`sportmatch_demo_attendance_${user.id}`);
       if (storedAttendance) {
-        setAttendanceDays(JSON.parse(storedAttendance));
+        setAttendanceDays(parseStoredJson<string[]>(storedAttendance, []));
       } else {
         const todayStr = new Date().toISOString().split("T")[0];
         const dayMinus3 = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
@@ -315,8 +324,9 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     const currentUser = user;
-    const reviewedIds = JSON.parse(
-      localStorage.getItem(`sportmatch_reviewed_matches_${currentUser.id}`) || "[]",
+    const reviewedIds = parseStoredJson<string[]>(
+      localStorage.getItem(`sportmatch_reviewed_matches_${currentUser.id}`),
+      [],
     );
 
     async function checkRatingLoop() {
@@ -994,8 +1004,9 @@ function Dashboard() {
             <PostMatchReviewForm
               match={reviewMatch}
               onClose={() => {
-                const reviewedIds = JSON.parse(
-                  localStorage.getItem(`sportmatch_reviewed_matches_${user?.id}`) || "[]",
+                const reviewedIds = parseStoredJson<string[]>(
+                  localStorage.getItem(`sportmatch_reviewed_matches_${user?.id}`),
+                  [],
                 );
                 localStorage.setItem(
                   `sportmatch_reviewed_matches_${user?.id}`,
@@ -1150,7 +1161,7 @@ function MatchCard({ match }: { match: Match }) {
                 const storedAttendance = localStorage.getItem(
                   `sportmatch_demo_attendance_${user.id}`,
                 );
-                const days = storedAttendance ? JSON.parse(storedAttendance) : [];
+                const days = parseStoredJson<string[]>(storedAttendance, []);
                 if (!days.includes(todayStr)) {
                   days.push(todayStr);
                   localStorage.setItem(
@@ -1160,9 +1171,10 @@ function MatchCard({ match }: { match: Match }) {
                 }
 
                 const storedStreak = localStorage.getItem(`sportmatch_demo_streak_${user.id}`);
-                const streakObj = storedStreak
-                  ? JSON.parse(storedStreak)
-                  : { current_streak: 0, max_streak: 0 };
+                const streakObj = parseStoredJson(storedStreak, {
+                  current_streak: 0,
+                  max_streak: 0,
+                });
                 streakObj.current_streak += 1;
                 if (streakObj.current_streak > streakObj.max_streak) {
                   streakObj.max_streak = streakObj.current_streak;
