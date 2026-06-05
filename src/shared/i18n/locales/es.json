@@ -115,6 +115,9 @@
     "squad_placeholder": "Ej: Los Peloteros FC",
     "select_members": "Seleccionar Miembros (Seguidores / Siguiendo)",
     "no_contacts": "No tienes contactos seguidos o seguidores aún para crear un grupo.",
+    "create_squad_hint": "Ponle nombre a tu grupo y selecciona a los contactos que quieres invitar.",
+    "selected_members": "{{count}} seleccionados",
+    "no_contacts_hint": "Puedes crear el Squad ahora y agregar contactos cuando sigas a otros deportistas o ellos te sigan.",
     "create_squad_btn": "Crear Squad ({{count}} miembros)"
   },
   "wallet": {
@@ -264,7 +267,8 @@
     "checkin_error": "No se pudo obtener tu ubicación. Por favor, activa el GPS."
   },
   "common": {
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "close": "Cerrar"
   },
   "landing": {
     "empezar": "Empezar a jugar",
