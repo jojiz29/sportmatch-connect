@@ -55,27 +55,63 @@ export async function requestPushPermission(): Promise<string | null> {
   }
 
   return new Promise((resolve) => {
+    let resolved = false;
+
+    // Timeout fallback after 3 seconds in case OneSignal SDK is blocked or fails to load
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.warn("[OneSignal] Permission request timed out. Ad-blocker might be active.");
+        resolve(null);
+      }
+    }, 3000);
+
     try {
       window.OneSignal = window.OneSignal || [];
       window.OneSignal.push(async () => {
         try {
+          if (resolved) return;
+
+          if (
+            !window.OneSignal.Notifications ||
+            typeof window.OneSignal.Notifications.requestPermission !== "function"
+          ) {
+            throw new Error("OneSignal Notifications SDK is not available.");
+          }
+
           const permissionGranted = await window.OneSignal.Notifications.requestPermission();
           if (permissionGranted) {
             const subscriptionId = window.OneSignal.User?.PushSubscription?.id;
             console.log("[OneSignal] Permission granted. Subscription ID:", subscriptionId);
-            resolve(subscriptionId || null);
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              resolve(subscriptionId || null);
+            }
           } else {
             console.warn("[OneSignal] Permission denied by user.");
-            resolve(null);
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              resolve(null);
+            }
           }
         } catch (err) {
           console.error("[OneSignal] Error during permission request:", err);
-          resolve(null);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeoutId);
+            resolve(null);
+          }
         }
       });
     } catch (e) {
       console.error("[OneSignal] Push SDK error:", e);
-      resolve(null);
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeoutId);
+        resolve(null);
+      }
     }
   });
 }
