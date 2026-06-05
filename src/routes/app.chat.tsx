@@ -431,7 +431,9 @@ function Chat() {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="font-bold text-lg">{t("chat.create_squad")}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{t("chat.create_squad_hint")}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("chat.create_squad_hint")}
+                </p>
               </div>
               <button
                 onClick={() => setIsCreateSquadModalOpen(false)}

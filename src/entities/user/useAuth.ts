@@ -230,11 +230,6 @@ export function useAuth() {
         throw new Error("El registro en Supabase Auth falló.");
       }
 
-      if (!authData.session) {
-        store.setDemoMode(false);
-        return { requiresEmailConfirmation: true };
-      }
-
       // Supabase trigger handle_new_user should automatically create the public.profiles record.
       // We attempt to fetch this record with a retry mechanism.
       let profile = null;
