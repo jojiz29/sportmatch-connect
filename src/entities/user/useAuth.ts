@@ -311,7 +311,7 @@ export function useAuth() {
   };
 
   const register = async (newUser: User) => {
-    await signUp(newUser);
+    return signUp(newUser);
   };
 
   const signOut = async () => {
