@@ -115,6 +115,9 @@
     "squad_placeholder": "e.g., Peloteros FC",
     "select_members": "Select Members (Followers / Following)",
     "no_contacts": "You do not have any followers or followed contacts to create a group chat.",
+    "create_squad_hint": "Name your group and select the contacts you want to invite.",
+    "selected_members": "{{count}} selected",
+    "no_contacts_hint": "You can create the Squad now and add contacts once you follow other athletes or they follow you.",
     "create_squad_btn": "Create Squad ({{count}} members)"
   },
   "wallet": {
@@ -264,7 +267,8 @@
     "checkin_error": "Failed to get location. Please enable GPS."
   },
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "close": "Close"
   },
   "landing": {
     "empezar": "Start Playing",
