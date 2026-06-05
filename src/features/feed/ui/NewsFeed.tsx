@@ -5,8 +5,9 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { Post, Sport } from "@/entities/types";
 import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
-import { Send, Loader2, Zap } from "lucide-react";
+import { Send, Loader2, Zap, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PostComments } from "./PostComments";
 
 /**
  * NewsFeed component with post creation, dynamic listing, and real-time updates.
@@ -41,6 +42,7 @@ export function NewsFeed() {
   const [postType, setPostType] = useState<Post["type"]>("TEXT");
   const [mediaUrl, setMediaUrl] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
   // Track current user ID in a ref so the Realtime callback can reference it
   // without being included in the subscription's dependency array.
@@ -331,8 +333,31 @@ export function NewsFeed() {
                             />
                           </div>
                         )}
+
+                        <button
+                          onClick={() =>
+                            setExpandedPostId(expandedPostId === post.id ? null : post.id)
+                          }
+                          className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground hover:text-neon transition-colors"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span>Comentar</span>
+                        </button>
                       </div>
                     </div>
+
+                    <AnimatePresence>
+                      {expandedPostId === post.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 198 }}
+                          className="overflow-hidden"
+                        >
+                          <PostComments postId={post.id} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 );
               })
