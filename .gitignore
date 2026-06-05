@@ -41,3 +41,4 @@ scratch/
 
 # Supabase (sensitive connection info)
 supabase/.temp/pooler-url
+.vercel
