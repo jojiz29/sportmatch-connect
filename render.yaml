@@ -3,9 +3,8 @@ services:
     name: sportmatch-connect
     env: node
     region: oregon
-    rootDir: server
-    buildCommand: bun install && bun run build
-    startCommand: node dist/main.js
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && node dist/main.js
     envVars:
       - key: FRONTEND_URL
         value: https://sportmatch-connect-juan-alonso.vercel.app
