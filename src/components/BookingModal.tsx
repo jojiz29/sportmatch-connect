@@ -53,6 +53,7 @@ export function BookingModal({
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
   const [actualSquadMembersCount, setActualSquadMembersCount] = useState<number | null>(null);
   const [paymentSelection, setPaymentSelection] = useState<PaymentSelection | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [holdExpiry, setHoldExpiry] = useState<number | null>(null);
   const [holdCountdown, setHoldCountdown] = useState("05:00");
@@ -109,9 +110,16 @@ export function BookingModal({
       setPaymentResult(null);
       setHoldExpiry(null);
       setHoldCountdown("05:00");
+      setPaymentDialogOpen(false);
       resetPayment();
     }
   }, [isOpen, court?.id, resetPayment]);
+
+  useEffect(() => {
+    if (confirmed) {
+      setPaymentDialogOpen(false);
+    }
+  }, [confirmed]);
 
   useEffect(() => {
     if (!slot) {
@@ -231,6 +239,7 @@ export function BookingModal({
     }
 
     setPaymentSelection(selection);
+    setPaymentDialogOpen(false);
     setIsBooking(true);
     let currentPaymentResult: PaymentResult | null = null;
 
@@ -351,7 +360,8 @@ export function BookingModal({
         </DialogHeader>
 
         {!confirmed ? (
-          <div className="grid md:grid-cols-2 gap-6 pt-2">
+          <>
+            <div className="grid md:grid-cols-2 gap-6 pt-2">
             {/* Court Detail Preview & Info */}
             <div className="space-y-4">
               <div className="relative h-44 rounded-2xl overflow-hidden border border-border/50 shadow-md">
@@ -463,6 +473,52 @@ export function BookingModal({
                 </div>
               )}
 
+              <div className="rounded-3xl border border-border/70 bg-background/80 p-4 space-y-4 text-xs">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Resumen de la reserva</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed break-words">
+                      Selecciona un horario y luego elige la forma de pago en una ventana separada.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-muted px-3 py-1 text-[11px] uppercase tracking-[0.2em] font-semibold">
+                    {slot ? "Horario listo" : "Selecciona horario"}
+                  </span>
+                </div>
+                <div className="grid gap-3">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Horario elegido</span>
+                    <span className="font-semibold text-foreground">{slot ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Costo total</span>
+                    <span className="font-semibold text-foreground">S/ {cost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Método actual</span>
+                    <span className="font-semibold text-foreground">{paymentSelection ? paymentMethodLabel : "Sin seleccionar"}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={!slot || isBooking}
+                  onClick={() => setPaymentDialogOpen(true)}
+                  className="w-full rounded-2xl bg-gradient-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {paymentSelection ? "Cambiar método de pago" : "Elegir método de pago"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-xl font-bold">Selecciona tu forma de pago</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Elige el método que prefieras y completa los datos en esta ventana segura.
+                </DialogDescription>
+              </DialogHeader>
               <PaymentCheckout
                 cost={cost}
                 userBalance={user.fitcoins_balance}
@@ -470,8 +526,9 @@ export function BookingModal({
                 isProcessing={isProcessing}
                 disabled={isBooking}
               />
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
+          </>
         ) : (
           /* Confirmation Ticket */
           <div className="bg-gradient-card border border-neon/30 rounded-3xl p-6 text-center shadow-neon relative overflow-hidden font-sans pt-8">

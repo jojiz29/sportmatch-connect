@@ -74,19 +74,26 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
   const cardNumberValid = selectedMethod === "card" ? validateCardNumber(cardNumber) : true;
   const cardHolderValid = selectedMethod === "card" ? cardHolder.trim().length >= 3 : true;
   const cardExpiryValid = selectedMethod === "card" ? validateExpiry(cardExpiry) : true;
-  const cardCvvValid = selectedMethod === "card" ? /^[0-9]{3,4}$/.test(cardCvv) : true;
+  const cardCvvValid = selectedMethod === "card" ? /^[0-9]{3}$/.test(cardCvv) : true;
   const phoneValid = selectedMethod === "yape" || selectedMethod === "plin" ? validatePhoneNumber(sanitizedPhone) : true;
 
+  const cardNumberError = selectedMethod === "card" && touchedFields.cardNumber && !cardNumberValid
+    ? "Ingresa 16 dígitos válidos de tarjeta."
+    : "";
+  const cardHolderError = selectedMethod === "card" && touchedFields.cardHolder && !cardHolderValid
+    ? "El nombre del titular debe tener al menos 3 letras y solo puede contener letras y espacios."
+    : "";
+  const cardExpiryError = selectedMethod === "card" && touchedFields.cardExpiry && !cardExpiryValid
+    ? "Fecha inválida o vencida. Usa formato MM/AA."
+    : "";
+  const cardCvvError = selectedMethod === "card" && touchedFields.cardCvv && !cardCvvValid
+    ? "CVV inválido. Debe tener 3 dígitos."
+    : "";
+  const phoneError = (selectedMethod === "yape" || selectedMethod === "plin") && touchedFields.phone && !phoneValid
+    ? "Ingresa un número de celular válido de 9 dígitos."
+    : "";
+
   const showFitcoinToggle = selectedMethod === "card" && userBalance > 0;
-  const cardErrors = useMemo(() => {
-    if (selectedMethod !== "card") return [];
-    const errors: string[] = [];
-    if (touchedFields.cardNumber && !cardNumberValid) errors.push("Número de tarjeta inválido.");
-    if (touchedFields.cardHolder && !cardHolderValid) errors.push("Nombre del titular es requerido.");
-    if (touchedFields.cardExpiry && !cardExpiryValid) errors.push("Fecha de vencimiento inválida o vencida.");
-    if (touchedFields.cardCvv && !cardCvvValid) errors.push("CVV inválido.");
-    return errors;
-  }, [selectedMethod, touchedFields, cardNumberValid, cardHolderValid, cardExpiryValid, cardCvvValid]);
 
   const paymentDisabled = useMemo(() => {
     if (disabled || isProcessing) return true;
@@ -123,13 +130,16 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
   return (
     <div className="space-y-5">
       <div className="rounded-3xl border border-border/70 p-4 bg-card/80">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm font-semibold">Método de pago</p>
-            <p className="text-xs text-muted-foreground">Selecciona cómo quieres pagar tu reserva</p>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Selecciona el método de pago</p>
+            <p className="text-xs text-muted-foreground leading-relaxed break-words">
+              Elige el método y completa solo los datos necesarios para confirmar tu reserva.
+            </p>
           </div>
           <div className="rounded-full px-3 py-1 bg-muted text-[11px] uppercase tracking-[0.2em] font-semibold">
-            {availableFitcoins} FC</div>
+            {availableFitcoins} FC disponibles
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -140,15 +150,17 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
                 key={method}
                 type="button"
                 onClick={() => setSelectedMethod(method)}
-                className={`text-left rounded-2xl border p-3 transition-all ${selected ? "border-neon bg-neon/10" : "border-border/50 bg-background hover:border-primary"}`}
+                className={`text-left min-h-[6rem] rounded-2xl border p-4 transition-all ${selected ? "border-neon bg-neon/10" : "border-border/50 bg-background hover:border-primary"}`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="font-semibold text-sm">{methodLabels[method]}</div>
-                  <div className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] font-semibold">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm leading-tight break-words">{methodLabels[method]}</div>
+                  </div>
+                  <div className="flex-shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] font-semibold">
                     {method === "fitcoins" ? "Saldo" : method === "card" ? "Tarjeta" : method.toUpperCase()}
                   </div>
                 </div>
-                <p className="mt-2 text-[11px] text-muted-foreground leading-snug">
+                <p className="mt-3 text-[11px] text-muted-foreground leading-snug break-words">
                   {methodDescriptions[method]}
                 </p>
                 {method === "fitcoins" && (
@@ -180,24 +192,29 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
               <input
                 type="text"
                 inputMode="numeric"
+                autoComplete="cc-number"
                 value={cardNumber}
                 onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
                 onBlur={() => setTouchedFields((prev) => ({ ...prev, cardNumber: true }))}
                 placeholder="0000 0000 0000 0000"
-                className="mt-2 w-full rounded-2xl border border-border/60 bg-background px-3 py-3 text-sm outline-none focus:border-primary"
+                className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardNumberError ? "border-rose-500" : "border-border/60"}`}
                 maxLength={19}
               />
+              {cardNumberError ? <p className="mt-2 text-[11px] text-rose-500">{cardNumberError}</p> : null}
             </label>
             <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Nombre del titular
               <input
                 type="text"
+                autoComplete="cc-name"
                 value={cardHolder}
-                onChange={(event) => setCardHolder(event.target.value)}
+                onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").slice(0, 50))}
                 onBlur={() => setTouchedFields((prev) => ({ ...prev, cardHolder: true }))}
                 placeholder="Nombre como en la tarjeta"
-                className="mt-2 w-full rounded-2xl border border-border/60 bg-background px-3 py-3 text-sm outline-none focus:border-primary"
+                className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardHolderError ? "border-rose-500" : "border-border/60"}`}
+                maxLength={50}
               />
+              {cardHolderError ? <p className="mt-2 text-[11px] text-rose-500">{cardHolderError}</p> : null}
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -205,26 +222,30 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
                 <input
                   type="text"
                   inputMode="numeric"
+                  autoComplete="cc-exp"
                   value={cardExpiry}
                   onChange={(event) => setCardExpiry(formatExpiry(event.target.value))}
                   onBlur={() => setTouchedFields((prev) => ({ ...prev, cardExpiry: true }))}
                   placeholder="MM/AA"
-                  className="mt-2 w-full rounded-2xl border border-border/60 bg-background px-3 py-3 text-sm outline-none focus:border-primary"
+                  className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardExpiryError ? "border-rose-500" : "border-border/60"}`}
                   maxLength={5}
                 />
+                {cardExpiryError ? <p className="mt-2 text-[11px] text-rose-500">{cardExpiryError}</p> : null}
               </label>
               <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 CVV
                 <input
                   type="password"
                   inputMode="numeric"
+                  autoComplete="cc-csc"
                   value={cardCvv}
-                  onChange={(event) => setCardCvv(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onChange={(event) => setCardCvv(event.target.value.replace(/\D/g, "").slice(0, 3))}
                   onBlur={() => setTouchedFields((prev) => ({ ...prev, cardCvv: true }))}
                   placeholder="•••"
-                  className="mt-2 w-full rounded-2xl border border-border/60 bg-background px-3 py-3 text-sm outline-none focus:border-primary"
-                  maxLength={4}
+                  className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardCvvError ? "border-rose-500" : "border-border/60"}`}
+                  maxLength={3}
                 />
+                {cardCvvError ? <p className="mt-2 text-[11px] text-rose-500">{cardCvvError}</p> : null}
               </label>
             </div>
 
@@ -239,14 +260,6 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
                   {useFitcoins ? "Activado" : "Desactivado"}
                 </span>
               </button>
-            )}
-
-            {cardErrors.length > 0 && (
-              <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-700">
-                {cardErrors.map((error) => (
-                  <p key={error}>{error}</p>
-                ))}
-              </div>
             )}
           </div>
         </div>
