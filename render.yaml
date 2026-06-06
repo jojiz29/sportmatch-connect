@@ -14,4 +14,3 @@ services:
         sync: false
       - key: SUPABASE_JWT_SECRET
         sync: false
-# Updated: triggering new deploy after suspend
