@@ -16,6 +16,7 @@ import { Court } from "@/entities/types";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
 import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
@@ -231,7 +232,8 @@ function CourtDetail() {
 
       // 4. Create match in memory for local demo correctness
       if (useAuthStore.getState().isDemoMode) {
-        await apiClient.matches.create({
+        // Try backend first, fallback to Supabase
+        const backendResult = await backendApi.matches.create(user.id, {
           title: `Partido en ${court.name}`,
           sport: court.sport,
           court_id: court.id,
@@ -239,8 +241,20 @@ function CourtDetail() {
           time: slot,
           max_players: maxPlayers,
           required_level: user.level || "Intermedio",
-          creator_id: user.id,
-        });
+        }).catch(() => null);
+
+        if (!backendResult?.data) {
+          await apiClient.matches.create({
+            title: `Partido en ${court.name}`,
+            sport: court.sport,
+            court_id: court.id,
+            date: todayStr,
+            time: slot,
+            max_players: maxPlayers,
+            required_level: user.level || "Intermedio",
+            creator_id: user.id,
+          });
+        }
       }
 
       setConfirmed(true);

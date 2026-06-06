@@ -19,6 +19,7 @@ import {
 import { Court, Squad } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { calculateDistance } from "@/shared/api/geoService";
@@ -222,19 +223,32 @@ export function BookingModal({
 
       // 4. AUTOMATICALLY insert into public.matches (Social Cascade Match link)
       if (useAuthStore.getState().isDemoMode) {
-        // Create match in memory for local demo correctness
-        await apiClient.matches.create({
-          title: squadForGroupBooking
-            ? `Partido de Squad: ${squadForGroupBooking.name}`
-            : `Partido en ${court.name}`,
+        const matchTitle = squadForGroupBooking
+          ? `Partido de Squad: ${squadForGroupBooking.name}`
+          : `Partido en ${court.name}`;
+
+        const backendResult = await backendApi.matches.create(user.id, {
+          title: matchTitle,
           sport: court.sport,
           court_id: court.id,
           date: todayStr,
           time: slot,
           max_players: squadForGroupBooking ? bookingMembersCount : maxPlayers,
           required_level: user.level || "Intermedio",
-          creator_id: user.id,
-        });
+        }).catch(() => null);
+
+        if (!backendResult?.data) {
+          await apiClient.matches.create({
+            title: matchTitle,
+            sport: court.sport,
+            court_id: court.id,
+            date: todayStr,
+            time: slot,
+            max_players: squadForGroupBooking ? bookingMembersCount : maxPlayers,
+            required_level: user.level || "Intermedio",
+            creator_id: user.id,
+          });
+        }
       }
 
       setConfirmed(true);

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect, useMemo } from "react";
@@ -98,7 +99,11 @@ function UserProfile() {
         if (active) {
           setProfile(userProfile);
           if (userProfile) {
-            const matchesData = await apiClient.matches.getUserMatches(userId);
+            // Try backend first, fallback to Supabase
+            const backendMatches = await backendApi.matches.getAll().catch(() => null);
+            const matchesData = backendMatches
+              ? (backendMatches as Match[]).filter(m => m.creator_id === userId)
+              : await apiClient.matches.getUserMatches(userId);
             setUserMatches(matchesData);
           }
         }
