@@ -18,6 +18,8 @@ export class BookingsService {
     date: string;
     time: string;
     user_id: string;
+    hours?: number;
+    total_price?: number;
   }) {
     return this.prisma.bookings.create({
       data: {
@@ -25,6 +27,8 @@ export class BookingsService {
         date: data.date,
         time: data.time,
         user_id: data.user_id,
+        hours: data.hours || 1,
+        total_price: data.total_price || 0,
       },
     });
   }
