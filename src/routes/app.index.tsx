@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { Match, User, Court, SportCatalog, Level } from "@/entities/types";
 import {
   Trophy,
@@ -36,21 +37,27 @@ import { BookingModal } from "@/components/BookingModal";
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
-    // Each API call is individually guarded so a single failing table
-    // (missing, RLS violation, network issue) never crashes the whole /app route.
+    // Try backend first, fallback to Supabase
+    const backendMatches = await backendApi.matches.getAll().catch(() => null);
+    const backendCourts = await backendApi.courts.getAll().catch(() => null);
+
     const [matches, users, courts, sports] = await Promise.all([
-      apiClient.matches.getAll().catch((err) => {
-        console.warn("[/app loader] matches.getAll failed:", err?.message);
-        return [] as Match[];
-      }),
+      backendMatches
+        ? Promise.resolve(backendMatches as Match[])
+        : apiClient.matches.getAll().catch((err) => {
+            console.warn("[/app loader] matches.getAll failed:", err?.message);
+            return [] as Match[];
+          }),
       apiClient.users.getMatches().catch((err) => {
         console.warn("[/app loader] users.getMatches failed:", err?.message);
         return [] as User[];
       }),
-      apiClient.courts.getAll().catch((err) => {
-        console.warn("[/app loader] courts.getAll failed:", err?.message);
-        return [] as Court[];
-      }),
+      backendCourts
+        ? Promise.resolve(backendCourts as Court[])
+        : apiClient.courts.getAll().catch((err) => {
+            console.warn("[/app loader] courts.getAll failed:", err?.message);
+            return [] as Court[];
+          }),
       apiClient.sports.getAll().catch((err) => {
         console.warn("[/app loader] sports.getAll failed:", err?.message);
         return [] as SportCatalog[];
@@ -471,19 +478,36 @@ function Dashboard() {
 
     try {
       setIsCreatingMatch(true);
-      const newMatch = await apiClient.matches.create({
+      let newMatch: Match;
+
+      // Try backend first, fallback to Supabase
+      const token = user.id;
+      const backendResult = await backendApi.matches.create(token, {
         title: matchTitle,
         sport: matchSport,
-        court_id: matchCourtId || null,
+        court_id: matchCourtId || undefined,
         date: matchDate,
         time: matchTime,
         max_players: Number(matchMaxPlayers),
         required_level: matchLevel,
-        creator_id: user.id,
-      });
+      }).catch(() => null);
+
+      if (backendResult?.data) {
+        newMatch = backendResult.data as Match;
+      } else {
+        newMatch = await apiClient.matches.create({
+          title: matchTitle,
+          sport: matchSport,
+          court_id: matchCourtId || null,
+          date: matchDate,
+          time: matchTime,
+          max_players: Number(matchMaxPlayers),
+          required_level: matchLevel,
+          creator_id: user.id,
+        });
+      }
 
       if (!useAuthStore.getState().isDemoMode) {
-        // Automatically join the creator to match_participants
         const { error: partError } = await withTimeout(
           supabase.from("match_participants").insert({
             match_id: newMatch.id,
@@ -500,7 +524,6 @@ function Dashboard() {
       toast.success("¡Partido creado con éxito!");
       setIsCreateModalOpen(false);
 
-      // Clear form
       setMatchTitle("");
       setMatchSport("");
       setMatchCourtId("");
