@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "dev": "cd server && npm install && npm run build && npm run start:prod",
-    "build": "cd server && npm run build",
+    "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",
     "preview": "vite preview",
