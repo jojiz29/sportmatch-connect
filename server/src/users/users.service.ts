@@ -6,22 +6,30 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(excludeUserId?: string) {
-    let where = {};
-    if (excludeUserId) {
-      where = { id: { not: excludeUserId } };
+    try {
+      let where = {};
+      if (excludeUserId) {
+        where = { id: { not: excludeUserId } };
+      }
+      return await this.prisma.profiles.findMany({
+        where,
+        take: 30,
+      });
+    } catch (error) {
+      console.error('Error in findAll:', error);
+      return [];
     }
-    return this.prisma.profiles.findMany({
-      where,
-      take: 30,
-      orderBy: { created_at: 'desc' },
-    });
   }
 
   async getLeaderboard() {
-    return this.prisma.profiles.findMany({
-      where: { user_role: 'PLAYER' },
-      take: 20,
-      orderBy: { fitcoins_balance: 'desc' },
-    });
+    try {
+      return await this.prisma.profiles.findMany({
+        take: 20,
+        orderBy: { fitcoins_balance: 'desc' },
+      });
+    } catch (error) {
+      console.error('Error in getLeaderboard:', error);
+      return [];
+    }
   }
 }
