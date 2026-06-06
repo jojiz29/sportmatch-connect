@@ -7,6 +7,10 @@
     "**/*.css"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "cd server && npm install && npm run build && npm run start:prod",
     "build": "vite build",
