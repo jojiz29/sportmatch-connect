@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { MapFeature } from "@/features/map/MapFeature";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { searchNearbyCourts, calculateDistance } from "@/shared/api/geoService";
-import { Court } from "@/entities/types";
+import { Court, Match } from "@/entities/types";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { useTranslation } from "react-i18next";
@@ -26,10 +27,19 @@ export const Route = createFileRoute("/app/map")({
     ],
   }),
   loader: async () => {
+    const [backendCourts, backendMatches] = await Promise.all([
+      backendApi.courts.getAll().catch(() => null),
+      backendApi.matches.getAll().catch(() => null),
+    ]);
+
     const [courts, players, matches] = await Promise.all([
-      apiClient.courts.getAll(),
+      backendCourts
+        ? Promise.resolve(backendCourts as Court[])
+        : apiClient.courts.getAll(),
       apiClient.users.getMatches(),
-      apiClient.matches.getAll(),
+      backendMatches
+        ? Promise.resolve(backendMatches as Match[])
+        : apiClient.matches.getAll(),
     ]);
     return { courts, players, matches };
   },
