@@ -21,9 +21,7 @@ export class UsersService {
   async getLeaderboard() {
     try {
       return await this.prisma.profiles.findMany({
-        where: { fitcoins_balance: { not: null } },
         take: 20,
-        orderBy: { fitcoins_balance: 'desc' },
       });
     } catch (error) {
       console.error('Error in getLeaderboard:', error);
