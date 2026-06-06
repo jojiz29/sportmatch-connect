@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
+import { backendApi } from "@/shared/api/backendApi";
 import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { MOCK_USERS } from "@/shared/api/apiClient";
@@ -217,16 +218,32 @@ export function useAuth() {
         throw new Error("Usuario no encontrado");
       }
 
-      // Fetch user profile from profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", authData.user.id)
-        .single();
+      const token = authData.session?.access_token;
+      let profile = null;
 
-      if (profileError) {
-        if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
-        throw profileError;
+      if (token && import.meta.env.VITE_API_URL) {
+        try {
+          const { data: backendProfile } = await backendApi.auth.getProfile(token);
+          if (backendProfile) {
+            profile = backendProfile;
+          }
+        } catch (backendError) {
+          if (import.meta.env.DEV) console.warn("Backend profile fetch failed, falling back to Supabase:", backendError);
+        }
+      }
+
+      if (!profile) {
+        const { data: supabaseProfile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authData.user.id)
+          .single();
+
+        if (profileError) {
+          if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
+          throw profileError;
+        }
+        profile = supabaseProfile;
       }
 
       store.setDemoMode(false);
