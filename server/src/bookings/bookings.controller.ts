@@ -24,7 +24,7 @@ export class BookingsController {
   async create(@Body() data: {
     court_id: string;
     date: string;
-    time_slot: string;
+    time: string;
     user_id: string;
   }) {
     return this.bookingsService.create(data);

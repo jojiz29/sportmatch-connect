@@ -335,7 +335,7 @@ export const backendApi = {
     async create(token: string, data: {
       court_id: string;
       date: string;
-      time_slot: string;
+      time: string;
       user_id: string;
     }) {
       return fetchApi('/bookings', {

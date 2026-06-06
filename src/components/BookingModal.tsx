@@ -233,7 +233,7 @@ export function BookingModal({
           court_id: court.id,
           user_id: user.id,
           date: todayStr,
-          time_slot: slot,
+          time: slot,
         }).catch(() =>
           apiClient.bookings.create({
             court_id: court.id,
