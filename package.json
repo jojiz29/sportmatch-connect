@@ -8,8 +8,8 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "cd server && npm install && npm run build && npm run start:prod",
+    "build": "cd server && npm run build",
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",
     "preview": "vite preview",
@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "start": "cd server && npm install && npm run build && npm run start:prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -105,6 +106,7 @@
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
+    "pg": "^8.21.0",
     "prettier": "^3.7.3",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.8.3",

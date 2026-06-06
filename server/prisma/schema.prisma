@@ -32,6 +32,7 @@ model profiles {
   user_sports          Json?     @map("user_sports")
   onboarding_completed Boolean?  @default(false) @map("onboarding_completed")
   sport_preferences    Json?     @map("sport_preferences")
+  user_id              String?   @unique @map("user_id")
 
   posts                posts[]
   created_matches      matches[] @relation("match_creator")
