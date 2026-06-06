@@ -7,9 +7,7 @@ export class ProfilesService {
 
   async findAll() {
     try {
-      return await this.prisma.profiles.findMany({
-        take: 30,
-      });
+      return await this.prisma.$queryRaw`SELECT * FROM profiles LIMIT 30`;
     } catch (error) {
       console.error('ProfilesService.findAll error:', error);
       throw error;
@@ -18,9 +16,8 @@ export class ProfilesService {
 
   async findOne(id: string) {
     try {
-      const profile = await this.prisma.profiles.findUnique({
-        where: { id },
-      });
+      const results = await this.prisma.$queryRaw`SELECT * FROM profiles WHERE id = ${id} LIMIT 1`;
+      const profile = Array.isArray(results) ? results[0] : results;
 
       if (!profile) {
         throw new NotFoundException('Profile not found');

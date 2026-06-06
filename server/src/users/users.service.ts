@@ -20,10 +20,7 @@ export class UsersService {
 
   async getLeaderboard() {
     try {
-      return await this.prisma.profiles.findMany({
-        take: 20,
-        orderBy: { fitcoins_balance: 'desc' },
-      });
+      return await this.prisma.$queryRaw`SELECT * FROM profiles WHERE fitcoins_balance IS NOT NULL ORDER BY fitcoins_balance DESC LIMIT 20`;
     } catch (error) {
       console.error('UsersService.getLeaderboard error:', error);
       throw error;

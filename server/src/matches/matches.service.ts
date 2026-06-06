@@ -8,11 +8,10 @@ export class MatchesService {
 
   async findAll(sport?: string) {
     try {
-      const where = sport ? { sport } : {};
-      return await this.prisma.matches.findMany({
-        where,
-        take: 50,
-      });
+      if (sport) {
+        return await this.prisma.$queryRaw`SELECT * FROM matches WHERE sport = ${sport} LIMIT 50`;
+      }
+      return await this.prisma.$queryRaw`SELECT * FROM matches LIMIT 50`;
     } catch (error) {
       console.error('MatchesService.findAll error:', error);
       throw error;
