@@ -5,6 +5,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { Post, Sport } from "@/entities/types";
 import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { Send, Loader2, Zap, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PostComments } from "./PostComments";
@@ -30,14 +31,23 @@ export function NewsFeed() {
   ]);
 
   useEffect(() => {
-    apiClient.sports
-      .getAll()
+    // Try backend first for sports, fallback to Supabase
+    backendApi.sports.getAll()
       .then((data) => {
-        if (data && data.length > 0) {
-          setSportsList(data.map((s) => s.name));
+        if (data && (data as any[]).length > 0) {
+          setSportsList((data as any[]).map((s: any) => s.name));
         }
       })
-      .catch((err) => console.error("Error loading sports in NewsFeed:", err));
+      .catch(() => {
+        apiClient.sports
+          .getAll()
+          .then((data) => {
+            if (data && data.length > 0) {
+              setSportsList(data.map((s) => s.name));
+            }
+          })
+          .catch((err) => console.error("Error loading sports in NewsFeed:", err));
+      });
   }, []);
   const [postType, setPostType] = useState<Post["type"]>("TEXT");
   const [mediaUrl, setMediaUrl] = useState<string>("");

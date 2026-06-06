@@ -6,6 +6,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/admin")({
@@ -44,19 +45,26 @@ function Admin() {
 
   useEffect(() => {
     let active = true;
+
+    // Try backend first for courts, fallback to Supabase
+    backendApi.courts.getAll()
+      .then((backendCourts) => {
+        if (active) setCourtsList(backendCourts as Court[]);
+      })
+      .catch(() => {
+        apiClient.courts.getAll()
+          .then((courts) => {
+            if (active) setCourtsList(courts);
+          })
+          .catch((err) => console.error("Error loading courts for admin:", err));
+      });
+
     apiClient.users
       .getMatches()
       .then((users) => {
         if (active) setUsersList(users);
       })
       .catch((err) => console.error("Error loading users for admin:", err));
-
-    apiClient.courts
-      .getAll()
-      .then((courts) => {
-        if (active) setCourtsList(courts);
-      })
-      .catch((err) => console.error("Error loading courts for admin:", err));
 
     return () => {
       active = false;

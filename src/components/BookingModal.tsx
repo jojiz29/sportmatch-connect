@@ -111,10 +111,17 @@ export function BookingModal({
     async function fetchBookedSlots() {
       try {
         setLoadingBookings(true);
-        const booked = await apiClient.bookings.getByCourtAndDate(court!.id, todayStr);
+        // Try backend first, fallback to Supabase
+        const backendResult = await backendApi.bookings.getByCourtAndDate(court!.id, todayStr);
+        const booked = (backendResult.data as string[]) || [];
         setBookedSlots(booked);
-      } catch (err) {
-        console.error("Error loading booked slots:", err);
+      } catch (_) {
+        try {
+          const booked = await apiClient.bookings.getByCourtAndDate(court!.id, todayStr);
+          setBookedSlots(booked);
+        } catch (err) {
+          console.error("Error loading booked slots:", err);
+        }
       } finally {
         setLoadingBookings(false);
       }
@@ -195,7 +202,13 @@ export function BookingModal({
       const todayStr = new Date().toISOString().split("T")[0];
 
       // 1. Double Booking Prevention: Check availability in database
-      const booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
+      let booked: string[] = [];
+      try {
+        const backendResult = await backendApi.bookings.getByCourtAndDate(court.id, todayStr);
+        booked = (backendResult.data as string[]) || [];
+      } catch (_) {
+        booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
+      }
       if (booked.includes(slot)) {
         toast.error("Este horario ya ha sido reservado. Por favor elige otro.");
         setBookedSlots(booked);
@@ -213,13 +226,32 @@ export function BookingModal({
       }
 
       // 3. Perform INSERT Booking
-      await apiClient.bookings.create({
-        court_id: court.id,
-        user_id: user.id,
-        date: todayStr,
-        time_slot: slot,
-        operating_hours: court.operating_hours,
-      });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (token) {
+        await backendApi.bookings.create(token, {
+          court_id: court.id,
+          user_id: user.id,
+          date: todayStr,
+          time_slot: slot,
+        }).catch(() =>
+          apiClient.bookings.create({
+            court_id: court.id,
+            user_id: user.id,
+            date: todayStr,
+            time_slot: slot,
+            operating_hours: court.operating_hours,
+          })
+        );
+      } else {
+        await apiClient.bookings.create({
+          court_id: court.id,
+          user_id: user.id,
+          date: todayStr,
+          time_slot: slot,
+          operating_hours: court.operating_hours,
+        });
+      }
 
       // 4. AUTOMATICALLY insert into public.matches (Social Cascade Match link)
       if (useAuthStore.getState().isDemoMode) {

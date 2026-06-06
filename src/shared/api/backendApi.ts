@@ -284,6 +284,69 @@ export const backendApi = {
       return fetchApi('/health');
     },
   },
+
+  users: {
+    async getAll(excludeUserId?: string) {
+      const endpoint = excludeUserId ? `/users?excludeUserId=${excludeUserId}` : '/users';
+      return fetchApi(endpoint);
+    },
+
+    async getLeaderboard() {
+      return fetchApi('/users/leaderboard');
+    },
+  },
+
+  wallet: {
+    async getBalance(userId: string) {
+      return fetchApi(`/wallet/${userId}/balance`);
+    },
+
+    async getTransactions(userId: string) {
+      return fetchApi(`/wallet/${userId}/transactions`);
+    },
+
+    async createTransaction(token: string, data: {
+      user_id: string;
+      amount: number;
+      description: string;
+      type: 'EARN' | 'SPEND';
+    }) {
+      return fetchApi('/wallet/transactions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+    },
+  },
+
+  sports: {
+    async getAll() {
+      return fetchApi('/sports');
+    },
+  },
+
+  bookings: {
+    async getByCourtAndDate(courtId: string, date: string) {
+      return fetchApi(`/bookings?courtId=${courtId}&date=${date}`);
+    },
+
+    async create(token: string, data: {
+      court_id: string;
+      date: string;
+      time_slot: string;
+      user_id: string;
+    }) {
+      return fetchApi('/bookings', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+    },
+  },
 };
 
 export default backendApi;

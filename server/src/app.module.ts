@@ -5,6 +5,10 @@ import { ProfilesModule } from './profiles/profiles.module';
 import { MatchesModule } from './matches/matches.module';
 import { CourtsModule } from './courts/courts.module';
 import { PostsModule } from './posts/posts.module';
+import { UsersModule } from './users/users.module';
+import { WalletModule } from './wallet/wallet.module';
+import { SportsModule } from './sports/sports.module';
+import { BookingsModule } from './bookings/bookings.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -15,6 +19,10 @@ import { PrismaModule } from './prisma/prisma.module';
     MatchesModule,
     CourtsModule,
     PostsModule,
+    UsersModule,
+    WalletModule,
+    SportsModule,
+    BookingsModule,
   ],
   controllers: [HealthController],
 })

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
 import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import {
   LayoutGrid,
   Plus,
@@ -239,8 +240,10 @@ function BusinessPage() {
         if (useAuthStore.getState().isDemoMode) {
           const courtsData = MOCK_COURTS.filter((c) => c.owner_id === businessId);
           setCourts(courtsData);
-          const sportsData = await apiClient.sports.getAll();
-          setSportsList(sportsData);
+          // Try backend first for sports, fallback to Supabase
+          const backendSports = await backendApi.sports.getAll().catch(() => null);
+          const sportsData = backendSports || await apiClient.sports.getAll();
+          setSportsList(sportsData as SportCatalog[]);
           setLoading(false);
           setLoadingCourts(false);
           return;
@@ -254,9 +257,10 @@ function BusinessPage() {
         if (courtsErr) throw courtsErr;
         setCourts((courtsData || []) as Court[]);
 
-        // Load sports catalog
-        const sportsData = await apiClient.sports.getAll();
-        setSportsList(sportsData);
+        // Load sports catalog - try backend first, fallback to Supabase
+        const backendSports = await backendApi.sports.getAll().catch(() => null);
+        const sportsData = backendSports || await apiClient.sports.getAll();
+        setSportsList(sportsData as SportCatalog[]);
       } catch (err) {
         console.error("Failed to load business dashboard data:", err);
         toast.error("Error al cargar datos del negocio");

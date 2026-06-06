@@ -15,6 +15,7 @@ import {
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { compressToWebP } from "@/shared/lib/imageUtils";
@@ -209,10 +210,18 @@ function Profile() {
         avatar_url: profile.avatar_url || "",
       });
 
-      apiClient.matches
-        .getUserMatches(profile.id)
-        .then(setUserMatches)
-        .catch(() => setUserMatches([]));
+      // Try backend first for user matches, fallback to Supabase
+      backendApi.matches.getAll()
+        .then((backendMatches) => {
+          const userMatches = (backendMatches as any[]).filter(m => m.creator_id === profile.id);
+          setUserMatches(userMatches as any);
+        })
+        .catch(() => {
+          apiClient.matches
+            .getUserMatches(profile.id)
+            .then(setUserMatches)
+            .catch(() => setUserMatches([]));
+        });
     }
   }, [profile]);
 

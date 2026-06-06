@@ -19,6 +19,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { useTranslation } from "react-i18next";
 import { calculateDistance } from "@/shared/api/geoService";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 
 export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const { t } = useTranslation();
@@ -37,15 +38,26 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     }
 
     setIsLoadingMatches(true);
-    apiClient.matches
-      .getUserMatches(inspectedUser.id)
-      .then((data) => {
+
+    // Try backend first for user matches, fallback to Supabase
+    backendApi.matches.getAll()
+      .then((backendMatches) => {
         if (active) {
-          setInspectedUserMatches(data);
+          const userMatches = (backendMatches as Match[]).filter(m => m.creator_id === inspectedUser.id);
+          setInspectedUserMatches(userMatches);
         }
       })
-      .catch((err) => {
-        console.error("Error loading inspected user matches:", err);
+      .catch(() => {
+        apiClient.matches
+          .getUserMatches(inspectedUser.id)
+          .then((data) => {
+            if (active) {
+              setInspectedUserMatches(data);
+            }
+          })
+          .catch((err) => {
+            console.error("Error loading inspected user matches:", err);
+          });
       })
       .finally(() => {
         if (active) {

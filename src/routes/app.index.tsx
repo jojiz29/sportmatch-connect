@@ -48,21 +48,26 @@ export const Route = createFileRoute("/app/")({
             console.warn("[/app loader] matches.getAll failed:", err?.message);
             return [] as Match[];
           }),
-      apiClient.users.getMatches().catch((err) => {
-        console.warn("[/app loader] users.getMatches failed:", err?.message);
-        return [] as User[];
-      }),
+      backendApi.users.getAll().catch(() =>
+        apiClient.users.getMatches().catch((err) => {
+          console.warn("[/app loader] users.getMatches failed:", err?.message);
+          return [] as User[];
+        })
+      ),
       backendCourts
         ? Promise.resolve(backendCourts as Court[])
         : apiClient.courts.getAll().catch((err) => {
             console.warn("[/app loader] courts.getAll failed:", err?.message);
             return [] as Court[];
           }),
-      apiClient.sports.getAll().catch((err) => {
-        console.warn("[/app loader] sports.getAll failed:", err?.message);
-        return [] as SportCatalog[];
-      }),
+      backendApi.sports.getAll().catch(() =>
+        apiClient.sports.getAll().catch((err) => {
+          console.warn("[/app loader] sports.getAll failed:", err?.message);
+          return [] as SportCatalog[];
+        })
+      ),
     ]);
+    return { matches, users: users as User[], courts, sports: sports as SportCatalog[] };
     return { matches, users, courts, sports };
   },
   component: Dashboard,
@@ -446,15 +451,25 @@ function Dashboard() {
 
     let active = true;
     setLoadingCourts(true);
-    apiClient.courts
-      .getAll(matchSport || undefined)
+
+    // Try backend first for courts, fallback to Supabase
+    backendApi.courts.getAll(matchSport || undefined)
       .then((res) => {
         if (active) {
-          setFilteredCourts(res);
+          setFilteredCourts(res as Court[]);
         }
       })
-      .catch((err) => {
-        console.error("Error loading filtered courts:", err);
+      .catch(() => {
+        apiClient.courts
+          .getAll(matchSport || undefined)
+          .then((res) => {
+            if (active) {
+              setFilteredCourts(res);
+            }
+          })
+          .catch((err) => {
+            console.error("Error loading filtered courts:", err);
+          });
       })
       .finally(() => {
         if (active) setLoadingCourts(false);
