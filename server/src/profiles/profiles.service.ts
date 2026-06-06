@@ -6,56 +6,42 @@ export class ProfilesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.profiles.findMany({
-      include: {
-        _count: {
-          select: {
-            posts: true,
-            created_matches: true,
-            followers: true,
-            following: true,
-          },
-        },
-      },
-    });
+    try {
+      return await this.prisma.profiles.findMany({
+        take: 30,
+      });
+    } catch (error) {
+      console.error('ProfilesService.findAll error:', error);
+      throw error;
+    }
   }
 
   async findOne(id: string) {
-    const profile = await this.prisma.profiles.findUnique({
-      where: { id },
-      include: {
-        posts: {
-          take: 10,
-          orderBy: { created_at: 'desc' },
-        },
-        created_matches: {
-          take: 10,
-          orderBy: { created_at: 'desc' },
-        },
-        followers: true,
-        following: true,
-        _count: {
-          select: {
-            posts: true,
-            created_matches: true,
-            followers: true,
-            following: true,
-          },
-        },
-      },
-    });
+    try {
+      const profile = await this.prisma.profiles.findUnique({
+        where: { id },
+      });
 
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
+      if (!profile) {
+        throw new NotFoundException('Profile not found');
+      }
+
+      return profile;
+    } catch (error) {
+      console.error('ProfilesService.findOne error:', error);
+      throw error;
     }
-
-    return profile;
   }
 
   async update(id: string, data: { name?: string; bio?: string; city?: string; age?: number; gender?: string }) {
-    return this.prisma.profiles.update({
-      where: { id },
-      data,
-    });
+    try {
+      return await this.prisma.profiles.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      console.error('ProfilesService.update error:', error);
+      throw error;
+    }
   }
 }

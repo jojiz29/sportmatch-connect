@@ -8,29 +8,24 @@ export class UsersService {
   async findAll(excludeUserId?: string) {
     try {
       const where = excludeUserId ? { id: { not: excludeUserId } } : {};
-      const result = await this.prisma.profiles.findMany({
+      return await this.prisma.profiles.findMany({
         where,
         take: 30,
       });
-      return result;
     } catch (error) {
-      console.error('Error in findAll:', error);
-      console.error('Error name:', error?.constructor?.name);
-      console.error('Error message:', error?.message);
+      console.error('UsersService.findAll error:', error);
       throw error;
     }
   }
 
   async getLeaderboard() {
     try {
-      const result = await this.prisma.profiles.findMany({
+      return await this.prisma.profiles.findMany({
         take: 20,
+        orderBy: { fitcoins_balance: 'desc' },
       });
-      return result;
     } catch (error) {
-      console.error('Error in getLeaderboard:', error);
-      console.error('Error name:', error?.constructor?.name);
-      console.error('Error message:', error?.message);
+      console.error('UsersService.getLeaderboard error:', error);
       throw error;
     }
   }
