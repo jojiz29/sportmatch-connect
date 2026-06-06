@@ -9,9 +9,14 @@ export class MatchesService {
   async findAll(sport?: string) {
     try {
       if (sport) {
-        return await this.prisma.$queryRaw`SELECT * FROM matches WHERE sport = ${sport} LIMIT 50`;
+        return await this.prisma.$queryRawUnsafe(
+          `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches WHERE sport = $1 LIMIT 50`,
+          [sport]
+        );
       }
-      return await this.prisma.$queryRaw`SELECT * FROM matches LIMIT 50`;
+      return await this.prisma.$queryRawUnsafe(
+        `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches LIMIT 50`
+      );
     } catch (error) {
       console.error('MatchesService.findAll error:', error);
       throw error;

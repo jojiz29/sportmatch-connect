@@ -7,11 +7,10 @@ export class UsersService {
 
   async findAll(excludeUserId?: string) {
     try {
-      const where = excludeUserId ? { id: { not: excludeUserId } } : {};
-      return await this.prisma.profiles.findMany({
-        where,
-        take: 30,
-      });
+      const result = await this.prisma.$queryRawUnsafe(
+        `SELECT id, name, avatar_url, city FROM profiles LIMIT 30`
+      );
+      return result;
     } catch (error) {
       console.error('UsersService.findAll error:', error);
       throw error;
@@ -20,7 +19,10 @@ export class UsersService {
 
   async getLeaderboard() {
     try {
-      return await this.prisma.$queryRaw`SELECT * FROM profiles WHERE fitcoins_balance IS NOT NULL ORDER BY fitcoins_balance DESC LIMIT 20`;
+      const result = await this.prisma.$queryRawUnsafe(
+        `SELECT id, name, avatar_url, fitcoins_balance FROM profiles WHERE fitcoins_balance IS NOT NULL ORDER BY fitcoins_balance DESC LIMIT 20`
+      );
+      return result;
     } catch (error) {
       console.error('UsersService.getLeaderboard error:', error);
       throw error;

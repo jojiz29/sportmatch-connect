@@ -7,7 +7,7 @@ export class ProfilesService {
 
   async findAll() {
     try {
-      return await this.prisma.$queryRaw`SELECT * FROM profiles LIMIT 30`;
+      return await this.prisma.$queryRawUnsafe(`SELECT id, name, avatar_url, city, bio FROM profiles LIMIT 30`);
     } catch (error) {
       console.error('ProfilesService.findAll error:', error);
       throw error;
@@ -16,7 +16,10 @@ export class ProfilesService {
 
   async findOne(id: string) {
     try {
-      const results = await this.prisma.$queryRaw`SELECT * FROM profiles WHERE id = ${id} LIMIT 1`;
+      const results = await this.prisma.$queryRawUnsafe(
+        `SELECT id, name, avatar_url, city, bio FROM profiles WHERE id = $1 LIMIT 1`,
+        [id]
+      );
       const profile = Array.isArray(results) ? results[0] : results;
 
       if (!profile) {
