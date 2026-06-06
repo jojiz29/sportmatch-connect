@@ -7,17 +7,14 @@ export class UsersService {
 
   async findAll(excludeUserId?: string) {
     try {
-      let where = {};
-      if (excludeUserId) {
-        where = { id: { not: excludeUserId } };
-      }
+      const where = excludeUserId ? { id: { not: excludeUserId } } : {};
       return await this.prisma.profiles.findMany({
         where,
         take: 30,
       });
     } catch (error) {
       console.error('Error in findAll:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -29,7 +26,7 @@ export class UsersService {
       });
     } catch (error) {
       console.error('Error in getLeaderboard:', error);
-      return [];
+      throw error;
     }
   }
 }
