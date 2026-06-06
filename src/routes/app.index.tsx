@@ -40,35 +40,36 @@ export const Route = createFileRoute("/app/")({
     // Try backend first, fallback to Supabase
     const backendMatches = await backendApi.matches.getAll().catch(() => null);
     const backendCourts = await backendApi.courts.getAll().catch(() => null);
+    const backendUsers = await backendApi.users.getAll().catch(() => null);
+    const backendSports = await backendApi.sports.getAll().catch(() => null);
 
     const [matches, users, courts, sports] = await Promise.all([
       backendMatches
-        ? Promise.resolve(backendMatches as Match[])
+        ? Promise.resolve((backendMatches as any).data || backendMatches)
         : apiClient.matches.getAll().catch((err) => {
             console.warn("[/app loader] matches.getAll failed:", err?.message);
             return [] as Match[];
           }),
-      backendApi.users.getAll().catch(() =>
-        apiClient.users.getMatches().catch((err) => {
-          console.warn("[/app loader] users.getMatches failed:", err?.message);
-          return [] as User[];
-        })
-      ),
+      backendUsers
+        ? Promise.resolve((backendUsers as any).data || [])
+        : apiClient.users.getMatches().catch((err) => {
+            console.warn("[/app loader] users.getMatches failed:", err?.message);
+            return [] as User[];
+          }),
       backendCourts
-        ? Promise.resolve(backendCourts as Court[])
+        ? Promise.resolve((backendCourts as any).data || backendCourts)
         : apiClient.courts.getAll().catch((err) => {
             console.warn("[/app loader] courts.getAll failed:", err?.message);
             return [] as Court[];
           }),
-      backendApi.sports.getAll().catch(() =>
-        apiClient.sports.getAll().catch((err) => {
-          console.warn("[/app loader] sports.getAll failed:", err?.message);
-          return [] as SportCatalog[];
-        })
-      ),
+      backendSports
+        ? Promise.resolve((backendSports as any).data || [])
+        : apiClient.sports.getAll().catch((err) => {
+            console.warn("[/app loader] sports.getAll failed:", err?.message);
+            return [] as SportCatalog[];
+          }),
     ]);
     return { matches, users: users as User[], courts, sports: sports as SportCatalog[] };
-    return { matches, users, courts, sports };
   },
   component: Dashboard,
 });
