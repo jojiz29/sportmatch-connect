@@ -37,39 +37,27 @@ import { BookingModal } from "@/components/BookingModal";
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
-    // Try backend first, fallback to Supabase
-    const backendMatches = await backendApi.matches.getAll().catch(() => null);
-    const backendCourts = await backendApi.courts.getAll().catch(() => null);
-    const backendUsers = await backendApi.users.getAll().catch(() => null);
-    const backendSports = await backendApi.sports.getAll().catch(() => null);
+    const timeout = (ms: number) => new Promise<null>((_, reject) => setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms));
 
-    const [matches, users, courts, sports] = await Promise.all([
-      backendMatches
-        ? Promise.resolve((backendMatches as any).data || backendMatches)
-        : apiClient.matches.getAll().catch((err) => {
-            console.warn("[/app loader] matches.getAll failed:", err?.message);
-            return [] as Match[];
-          }),
-      backendUsers
-        ? Promise.resolve((backendUsers as any).data || [])
-        : apiClient.users.getMatches().catch((err) => {
-            console.warn("[/app loader] users.getMatches failed:", err?.message);
-            return [] as User[];
-          }),
-      backendCourts
-        ? Promise.resolve((backendCourts as any).data || backendCourts)
-        : apiClient.courts.getAll().catch((err) => {
-            console.warn("[/app loader] courts.getAll failed:", err?.message);
-            return [] as Court[];
-          }),
-      backendSports
-        ? Promise.resolve((backendSports as any).data || [])
-        : apiClient.sports.getAll().catch((err) => {
-            console.warn("[/app loader] sports.getAll failed:", err?.message);
-            return [] as SportCatalog[];
-          }),
-    ]);
-    return { matches, users: users as User[], courts, sports: sports as SportCatalog[] };
+    const fetchWithTimeout = async <T,>(fn: () => Promise<T>, ms = 8000): Promise<T | null> => {
+      try {
+        return await Promise.race([fn(), timeout(ms)]);
+      } catch {
+        return null;
+      }
+    };
+
+    const backendMatches = await fetchWithTimeout(() => backendApi.matches.getAll());
+    const backendCourts = await fetchWithTimeout(() => backendApi.courts.getAll());
+    const backendUsers = await fetchWithTimeout(() => backendApi.users.getAll());
+    const backendSports = await fetchWithTimeout(() => backendApi.sports.getAll());
+
+    const matches = (backendMatches && (backendMatches as any).data) ? (backendMatches as any).data as Match[] : [];
+    const users = (backendUsers && (backendUsers as any).data) ? (backendUsers as any).data as User[] : [];
+    const courts = (backendCourts && (backendCourts as any).data) ? (backendCourts as any).data as Court[] : [];
+    const sports = (backendSports && (backendSports as any).data) ? (backendSports as any).data as SportCatalog[] : [];
+
+    return { matches, users, courts, sports };
   },
   component: Dashboard,
 });
