@@ -209,7 +209,7 @@ function Admin() {
                         </div>
                       </div>
                     </td>
-                    <td>{p.preferred_sports[0] || "Ninguno"}</td>
+                    <td>{p.preferred_sports?.[0] || "Ninguno"}</td>
                     <td>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${(p.trust_score || 0) >= 90 ? "bg-neon/20 text-neon" : "bg-warning/20 text-warning"}`}

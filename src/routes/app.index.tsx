@@ -827,7 +827,7 @@ function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold truncate">{p.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {p.preferred_sports[0]} ·{" "}
+                        {p.preferred_sports?.[0] || "Sin deporte"} ·{" "}
                         {baseLocation && p.last_location_lat && p.last_location_lng
                           ? `${calculateDistance(baseLocation.lat, baseLocation.lng, p.last_location_lat, p.last_location_lng).toFixed(1)} km`
                           : `${p.distance_km || 0} km`}
