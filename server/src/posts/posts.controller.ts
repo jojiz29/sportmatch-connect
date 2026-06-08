@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { CreatePostDto, UpdatePostDto, CreateCommentDto, CreateReactionDto } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -34,7 +34,7 @@ export class PostsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new post' })
   async create(@Body() dto: CreatePostDto, @Request() req: { user: { userId: string } }) {
@@ -42,7 +42,7 @@ export class PostsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a post' })
   async update(
@@ -54,7 +54,7 @@ export class PostsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a post' })
   async delete(@Param('id') id: string, @Request() req: { user: { userId: string } }) {
@@ -62,7 +62,7 @@ export class PostsController {
   }
 
   @Post(':id/comments')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a comment to a post' })
   async addComment(
@@ -74,7 +74,7 @@ export class PostsController {
   }
 
   @Delete('comments/:commentId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a comment' })
   async deleteComment(
@@ -85,7 +85,7 @@ export class PostsController {
   }
 
   @Post('comments/:commentId/reactions')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add or toggle reaction on a comment' })
   async addReaction(

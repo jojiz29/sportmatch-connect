@@ -223,9 +223,9 @@ export function useAuth() {
 
       if (token && import.meta.env.VITE_API_URL) {
         try {
-          const { data: backendProfile } = await backendApi.auth.getProfile(token);
-          if (backendProfile) {
-            profile = backendProfile;
+          const response = await backendApi.auth.getProfile(token);
+          if (response.data) {
+            profile = response.data;
           }
         } catch (backendError) {
           if (import.meta.env.DEV) console.warn("Backend profile fetch failed, falling back to Supabase:", backendError);

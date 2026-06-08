@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { MatchesService } from './matches.service';
 import { CreateMatchDto, UpdateMatchDto } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 
 @ApiTags('Matches')
 @Controller('matches')
@@ -34,7 +34,7 @@ export class MatchesController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new match' })
   async create(@Body() dto: CreateMatchDto, @Request() req: { user: { userId: string } }) {
@@ -42,7 +42,7 @@ export class MatchesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a match' })
   async update(
@@ -54,7 +54,7 @@ export class MatchesController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a match' })
   async delete(@Param('id') id: string, @Request() req: { user: { userId: string } }) {
@@ -62,7 +62,7 @@ export class MatchesController {
   }
 
   @Post(':id/join')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Join a match' })
   async join(@Param('id') id: string, @Request() req: { user: { userId: string } }) {
@@ -70,7 +70,7 @@ export class MatchesController {
   }
 
   @Post(':id/leave')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Leave a match' })
   async leave(@Param('id') id: string, @Request() req: { user: { userId: string } }) {

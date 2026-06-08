@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CourtsService } from './courts.service';
 import { CreateCourtDto, UpdateCourtDto } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 
 @ApiTags('Courts')
 @Controller('courts')
@@ -35,7 +35,7 @@ export class CourtsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new court' })
   async create(@Body() dto: CreateCourtDto) {
@@ -43,7 +43,7 @@ export class CourtsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a court' })
   async update(@Param('id') id: string, @Body() dto: UpdateCourtDto) {
@@ -51,7 +51,7 @@ export class CourtsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a court' })
   async delete(@Param('id') id: string) {
@@ -59,7 +59,7 @@ export class CourtsController {
   }
 
   @Post(':id/reviews')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a review for a court' })
   async createReview(
