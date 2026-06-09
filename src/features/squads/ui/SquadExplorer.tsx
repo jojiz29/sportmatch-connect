@@ -27,6 +27,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { createNotification } from "@/shared/api/notificationService";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { BookingModal } from "@/components/BookingModal";
 
 /**
@@ -135,10 +136,16 @@ export function SquadExplorer() {
       .catch((err) => console.error("Error fetching match users:", err));
 
     setLoadingCourts(true);
-    apiClient.courts
-      .getAll()
-      .then((courtsList) => setSquadCourts(courtsList))
-      .catch((err) => console.error("Error fetching courts:", err))
+
+    // Try backend first for courts, fallback to Supabase
+    backendApi.courts.getAll()
+      .then((courtsList) => setSquadCourts(courtsList as Court[]))
+      .catch(() => {
+        apiClient.courts
+          .getAll()
+          .then((courtsList) => setSquadCourts(courtsList))
+          .catch((err) => console.error("Error fetching courts:", err));
+      })
       .finally(() => setLoadingCourts(false));
   }, [currentUser]);
 

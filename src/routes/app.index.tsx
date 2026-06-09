@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { Match, User, Court, SportCatalog, Level } from "@/entities/types";
 import {
   Trophy,
@@ -36,26 +37,26 @@ import { BookingModal } from "@/components/BookingModal";
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
-    // Each API call is individually guarded so a single failing table
-    // (missing, RLS violation, network issue) never crashes the whole /app route.
-    const [matches, users, courts, sports] = await Promise.all([
-      apiClient.matches.getAll().catch((err) => {
-        console.warn("[/app loader] matches.getAll failed:", err?.message);
-        return [] as Match[];
-      }),
-      apiClient.users.getMatches().catch((err) => {
-        console.warn("[/app loader] users.getMatches failed:", err?.message);
-        return [] as User[];
-      }),
-      apiClient.courts.getAll().catch((err) => {
-        console.warn("[/app loader] courts.getAll failed:", err?.message);
-        return [] as Court[];
-      }),
-      apiClient.sports.getAll().catch((err) => {
-        console.warn("[/app loader] sports.getAll failed:", err?.message);
-        return [] as SportCatalog[];
-      }),
-    ]);
+    const timeout = (ms: number) => new Promise<null>((_, reject) => setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms));
+
+    const fetchWithTimeout = async <T,>(fn: () => Promise<T>, ms = 8000): Promise<T | null> => {
+      try {
+        return await Promise.race([fn(), timeout(ms)]);
+      } catch {
+        return null;
+      }
+    };
+
+    const backendMatches = await fetchWithTimeout(() => backendApi.matches.getAll());
+    const backendCourts = await fetchWithTimeout(() => backendApi.courts.getAll());
+    const backendUsers = await fetchWithTimeout(() => backendApi.users.getAll());
+    const backendSports = await fetchWithTimeout(() => backendApi.sports.getAll());
+
+    const matches = (backendMatches && (backendMatches as any).data) ? (backendMatches as any).data as Match[] : [];
+    const users = (backendUsers && (backendUsers as any).data) ? (backendUsers as any).data as User[] : [];
+    const courts = (backendCourts && (backendCourts as any).data) ? (backendCourts as any).data as Court[] : [];
+    const sports = (backendSports && (backendSports as any).data) ? (backendSports as any).data as SportCatalog[] : [];
+
     return { matches, users, courts, sports };
   },
   component: Dashboard,
@@ -439,15 +440,25 @@ function Dashboard() {
 
     let active = true;
     setLoadingCourts(true);
-    apiClient.courts
-      .getAll(matchSport || undefined)
+
+    // Try backend first for courts, fallback to Supabase
+    backendApi.courts.getAll(matchSport || undefined)
       .then((res) => {
         if (active) {
-          setFilteredCourts(res);
+          setFilteredCourts(res as Court[]);
         }
       })
-      .catch((err) => {
-        console.error("Error loading filtered courts:", err);
+      .catch(() => {
+        apiClient.courts
+          .getAll(matchSport || undefined)
+          .then((res) => {
+            if (active) {
+              setFilteredCourts(res);
+            }
+          })
+          .catch((err) => {
+            console.error("Error loading filtered courts:", err);
+          });
       })
       .finally(() => {
         if (active) setLoadingCourts(false);
@@ -471,19 +482,36 @@ function Dashboard() {
 
     try {
       setIsCreatingMatch(true);
-      const newMatch = await apiClient.matches.create({
+      let newMatch: Match;
+
+      // Try backend first, fallback to Supabase
+      const token = user.id;
+      const backendResult = await backendApi.matches.create(token, {
         title: matchTitle,
         sport: matchSport,
-        court_id: matchCourtId || null,
+        court_id: matchCourtId || undefined,
         date: matchDate,
         time: matchTime,
         max_players: Number(matchMaxPlayers),
         required_level: matchLevel,
-        creator_id: user.id,
-      });
+      }).catch(() => null);
+
+      if (backendResult?.data) {
+        newMatch = backendResult.data as Match;
+      } else {
+        newMatch = await apiClient.matches.create({
+          title: matchTitle,
+          sport: matchSport,
+          court_id: matchCourtId || null,
+          date: matchDate,
+          time: matchTime,
+          max_players: Number(matchMaxPlayers),
+          required_level: matchLevel,
+          creator_id: user.id,
+        });
+      }
 
       if (!useAuthStore.getState().isDemoMode) {
-        // Automatically join the creator to match_participants
         const { error: partError } = await withTimeout(
           supabase.from("match_participants").insert({
             match_id: newMatch.id,
@@ -500,7 +528,6 @@ function Dashboard() {
       toast.success("¡Partido creado con éxito!");
       setIsCreateModalOpen(false);
 
-      // Clear form
       setMatchTitle("");
       setMatchSport("");
       setMatchCourtId("");
@@ -800,7 +827,7 @@ function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold truncate">{p.name}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {p.preferred_sports[0]} ·{" "}
+                        {p.preferred_sports?.[0] || "Sin deporte"} ·{" "}
                         {baseLocation && p.last_location_lat && p.last_location_lng
                           ? `${calculateDistance(baseLocation.lat, baseLocation.lng, p.last_location_lat, p.last_location_lng).toFixed(1)} km`
                           : `${p.distance_km || 0} km`}

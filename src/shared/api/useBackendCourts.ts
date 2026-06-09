@@ -1,0 +1,95 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { backendApi } from "@/shared/api/backendApi";
+import { Court } from "@/entities/types";
+import { toast } from "sonner";
+
+export function useBackendCourts() {
+  const queryClient = useQueryClient();
+
+  const courtsQuery = useQuery({
+    queryKey: ["backendCourts"],
+    queryFn: async () => {
+      const { data, error } = await backendApi.courts.getAll();
+      if (error) throw new Error(error);
+      return data as Court[];
+    },
+  });
+
+  const getCourtByIdQuery = (id: string) =>
+    useQuery({
+      queryKey: ["backendCourt", id],
+      queryFn: async () => {
+        const { data, error } = await backendApi.courts.getById(id);
+        if (error) throw new Error(error);
+        return data as Court;
+      },
+    });
+
+  const createCourtMutation = useMutation({
+    mutationFn: async (court: {
+      name: string;
+      sport: string;
+      price_per_hour: number;
+      lat: number;
+      lng: number;
+      address?: string;
+      max_players?: number;
+      operating_hours?: string[];
+      amenities?: string[];
+    }) => {
+      const { data, error } = await backendApi.courts.create("", court);
+      if (error) throw new Error(error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backendCourts"] });
+      toast.success("Cancha creada", { description: "La cancha está disponible para reservas." });
+    },
+    onError: (err: Error) => {
+      toast.error("Error al crear cancha", { description: err.message });
+    },
+  });
+
+  const updateCourtMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Court> }) => {
+      const { data: result, error } = await backendApi.courts.update("", id, data as any);
+      if (error) throw new Error(error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backendCourts"] });
+      toast.success("Cancha actualizada");
+    },
+    onError: (err: Error) => {
+      toast.error("Error al actualizar", { description: err.message });
+    },
+  });
+
+  const addReviewMutation = useMutation({
+    mutationFn: async ({ courtId, review }: { courtId: string; review: { rating: number; comment?: string } }) => {
+      const { data, error } = await backendApi.courts.addReview("", courtId, review);
+      if (error) throw new Error(error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backendCourts"] });
+      toast.success("Reseña agregada", { description: "Gracias por tu opinión." });
+    },
+    onError: (err: Error) => {
+      toast.error("Error al agregar reseña", { description: err.message });
+    },
+  });
+
+  return {
+    courts: courtsQuery.data || [],
+    isLoading: courtsQuery.isLoading,
+    error: courtsQuery.error,
+    getCourtById: getCourtByIdQuery,
+    createCourt: createCourtMutation.mutate,
+    updateCourt: updateCourtMutation.mutate,
+    addReview: addReviewMutation.mutate,
+    isCreating: createCourtMutation.isPending,
+    isUpdating: updateCourtMutation.isPending,
+    isAddingReview: addReviewMutation.isPending,
+  };
+}

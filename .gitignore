@@ -38,3 +38,7 @@ dist-ssr
 playwright-report/
 test-results/
 scratch/
+
+# Supabase (sensitive connection info)
+supabase/.temp/pooler-url
+.vercel

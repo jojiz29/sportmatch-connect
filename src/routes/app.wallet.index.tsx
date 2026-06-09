@@ -10,6 +10,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { getCatalogItems, purchaseCatalogItem } from "@/shared/api/businessService";
 import { CatalogItem, User } from "@/entities/types";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { Reward } from "@/services/walletService";
 
 export const Route = createFileRoute("/app/wallet/")({
@@ -47,14 +48,23 @@ function Wallet() {
 
   useEffect(() => {
     let active = true;
-    apiClient.users
-      .getLeaderboard()
-      .then((users) => {
-        if (active) setLeaderboardUsers(users);
+
+    // Try backend first for leaderboard, fallback to Supabase
+    backendApi.users.getLeaderboard()
+      .then((backendUsers) => {
+        if (active) setLeaderboardUsers(backendUsers as User[]);
       })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.error("Error loading leaderboard users:", err);
+      .catch(() => {
+        apiClient.users
+          .getLeaderboard()
+          .then((users) => {
+            if (active) setLeaderboardUsers(users);
+          })
+          .catch((err) => {
+            if (import.meta.env.DEV) console.error("Error loading leaderboard users:", err);
+          });
       });
+
     return () => {
       active = false;
     };

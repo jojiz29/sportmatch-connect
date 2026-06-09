@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sportmatch-connect
+    env: node
+    region: oregon
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && node dist/main.js
+    envVars:
+      - key: FRONTEND_URL
+        value: https://sportmatch-connect-juan-alonso.vercel.app
+      - key: JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false

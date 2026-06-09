@@ -6,6 +6,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/admin")({
@@ -44,19 +45,26 @@ function Admin() {
 
   useEffect(() => {
     let active = true;
+
+    // Try backend first for courts, fallback to Supabase
+    backendApi.courts.getAll()
+      .then((backendCourts) => {
+        if (active) setCourtsList(backendCourts as Court[]);
+      })
+      .catch(() => {
+        apiClient.courts.getAll()
+          .then((courts) => {
+            if (active) setCourtsList(courts);
+          })
+          .catch((err) => console.error("Error loading courts for admin:", err));
+      });
+
     apiClient.users
       .getMatches()
       .then((users) => {
         if (active) setUsersList(users);
       })
       .catch((err) => console.error("Error loading users for admin:", err));
-
-    apiClient.courts
-      .getAll()
-      .then((courts) => {
-        if (active) setCourtsList(courts);
-      })
-      .catch((err) => console.error("Error loading courts for admin:", err));
 
     return () => {
       active = false;
@@ -201,7 +209,7 @@ function Admin() {
                         </div>
                       </div>
                     </td>
-                    <td>{p.preferred_sports[0] || "Ninguno"}</td>
+                    <td>{p.preferred_sports?.[0] || "Ninguno"}</td>
                     <td>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${(p.trust_score || 0) >= 90 ? "bg-neon/20 text-neon" : "bg-warning/20 text-warning"}`}

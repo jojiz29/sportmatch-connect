@@ -212,3 +212,24 @@ export interface AppNotification {
   is_read: boolean;
   created_at: string;
 }
+
+export type ReactionType = "LIKE" | "DISLIKE" | "❤️" | "🔥" | "👏" | "😂" | "😢" | "🎉";
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  parent_id: string | null;
+  user_name?: string;
+  user_avatar?: string;
+}
+
+export interface CommentReaction {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  reaction_type: ReactionType;
+  created_at: string;
+}

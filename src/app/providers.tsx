@@ -1,4 +1,5 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
+// VITE_API_URL configured: https://sportmatch-connect.onrender.com
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
