@@ -21,6 +21,7 @@ import { usePaymentGatewayStore, PaymentPayload, PaymentResult } from "@/feature
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 import { logPaymentAttempt } from "@/services/paymentService";
 import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
 
 export const Route = createFileRoute("/app/courts/$courtId")({
   validateSearch: (search: Record<string, unknown>): { book?: boolean } => {
@@ -213,7 +214,11 @@ function CourtDetail() {
     );
   }
 
-  const handlePaymentConfirm = async (selection: PaymentSelection) => {
+  const handlePaymentConfirm = async (
+    selection: PaymentSelection,
+    stripe?: Stripe | null,
+    elements?: StripeElements | null,
+  ) => {
     if (!slot) {
       toast.error("Por favor selecciona un horario.");
       return;
@@ -243,7 +248,7 @@ function CourtDetail() {
         amount: Math.max(0, Math.ceil(pricePerPerson) - selection.fitcoinsToUse),
       };
 
-      currentPaymentResult = await processPayment(paymentPayload, court.name);
+      currentPaymentResult = await processPayment(paymentPayload, court.name, stripe, elements);
       setPaymentResult(currentPaymentResult);
 
       if (!currentPaymentResult.success) {

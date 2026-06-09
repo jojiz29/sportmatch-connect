@@ -1,130 +1,81 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  ShieldCheck,
-  Smartphone,
-} from "lucide-react";
-import {
-  detectCardBrand,
-  formatCardNumber,
-  formatExpiry,
-  formatPhone,
-  PaymentMethod,
-  sanitizeCardNumber,
-  validateCardNumber,
-  validateExpiry,
-  validatePhoneNumber,
-} from "@/shared/lib/paymentUtils";
-
-export interface PaymentCardData {
-  holderName: string;
-  number: string;
-  expiry: string;
-  cvv: string;
-}
+import { useMemo, useState } from "react";
+import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
+import { PaymentMethod } from "@/shared/lib/paymentUtils";
+import { stripePromise, isStripeConfigured } from "@/shared/lib/stripe";
 
 export interface PaymentSelection {
   method: PaymentMethod;
   useFitcoins: boolean;
   fitcoinsToUse: number;
-  card?: PaymentCardData;
-  phone?: string;
+  cardHolderName?: string;
 }
 
 interface PaymentCheckoutProps {
   cost: number;
   userBalance: number;
-  onConfirm: (selection: PaymentSelection) => void;
+  onConfirm: (
+    selection: PaymentSelection,
+    stripe?: Stripe | null,
+    elements?: StripeElements | null,
+  ) => void;
   isProcessing?: boolean;
   disabled?: boolean;
 }
 
-const methodLabels: Record<PaymentMethod, string> = {
-  fitcoins: "FitCoins",
-  card: "Tarjeta débito/crédito",
-  yape: "Yape",
-  plin: "Plin",
+const cardElementOptions = {
+  style: {
+    base: {
+      color: "#f8fafc",
+      fontSize: "15px",
+      fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "::placeholder": {
+        color: "#94a3b8",
+      },
+      letterSpacing: "0.01em",
+    },
+    invalid: {
+      color: "#fb7185",
+    },
+  },
+  hidePostalCode: true,
 };
 
-const methodDescriptions: Record<PaymentMethod, string> = {
-  fitcoins: "Paga con el saldo de FitCoins disponible en tu billetera.",
-  card: "Ingresa los datos de tu tarjeta para pagar el resto.",
-  yape: "Recibe la solicitud de cobro en tu app Yape.",
-  plin: "Recibe la solicitud de cobro en tu app Plin.",
-};
-
-export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, disabled }: PaymentCheckoutProps) {
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("fitcoins");
-  const [useFitcoins, setUseFitcoins] = useState(true);
+function PaymentCheckoutForm({
+  cost,
+  userBalance,
+  onConfirm,
+  isProcessing,
+  disabled,
+}: PaymentCheckoutProps) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [useFitcoins, setUseFitcoins] = useState(userBalance > 0);
   const [cardHolder, setCardHolder] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [phone, setPhone] = useState("");
-  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [cardComplete, setCardComplete] = useState(false);
+  const [cardError, setCardError] = useState("");
 
   const availableFitcoins = Math.min(userBalance, cost);
-  const canCoverWithFitcoins = userBalance >= cost;
-  const fitcoinsToUse = selectedMethod === "fitcoins" ? cost : useFitcoins ? availableFitcoins : 0;
+  const fitcoinsToUse = useFitcoins ? availableFitcoins : 0;
   const amountToCharge = Math.max(0, cost - fitcoinsToUse);
+  const cardHolderValid = amountToCharge === 0 || cardHolder.trim().length >= 3;
 
-  const cardBrand = useMemo(() => detectCardBrand(cardNumber), [cardNumber]);
-  const sanitizedPhone = useMemo(() => formatPhone(phone), [phone]);
-  const sanitizedCardNumber = useMemo(() => sanitizeCardNumber(cardNumber), [cardNumber]);
-
-  const cardNumberValid = selectedMethod === "card" ? validateCardNumber(cardNumber) : true;
-  const cardHolderValid = selectedMethod === "card" ? cardHolder.trim().length >= 3 : true;
-  const cardExpiryValid = selectedMethod === "card" ? validateExpiry(cardExpiry) : true;
-  const cardCvvValid = selectedMethod === "card" ? /^[0-9]{3}$/.test(cardCvv) : true;
-  const phoneValid = selectedMethod === "yape" || selectedMethod === "plin" ? validatePhoneNumber(sanitizedPhone) : true;
-
-  const cardNumberError = selectedMethod === "card" && touchedFields.cardNumber && !cardNumberValid
-    ? "Ingresa 16 dígitos válidos de tarjeta."
-    : "";
-  const cardHolderError = selectedMethod === "card" && touchedFields.cardHolder && !cardHolderValid
-    ? "El nombre del titular debe tener al menos 3 letras y solo puede contener letras y espacios."
-    : "";
-  const cardExpiryError = selectedMethod === "card" && touchedFields.cardExpiry && !cardExpiryValid
-    ? "Fecha inválida o vencida. Usa formato MM/AA."
-    : "";
-  const cardCvvError = selectedMethod === "card" && touchedFields.cardCvv && !cardCvvValid
-    ? "CVV inválido. Debe tener 3 dígitos."
-    : "";
-  const phoneError = (selectedMethod === "yape" || selectedMethod === "plin") && touchedFields.phone && !phoneValid
-    ? "Ingresa un número de celular válido de 9 dígitos."
-    : "";
-
-  const showFitcoinToggle = selectedMethod === "card" && userBalance > 0;
-
-  const paymentDisabled = useMemo(() => {
-    if (disabled || isProcessing) return true;
-    if (selectedMethod === "fitcoins") return !canCoverWithFitcoins;
-    if (selectedMethod === "card") return !(cardNumberValid && cardHolderValid && cardExpiryValid && cardCvvValid);
-    if (selectedMethod === "yape" || selectedMethod === "plin") return !phoneValid;
-    return true;
-  }, [selectedMethod, disabled, isProcessing, canCoverWithFitcoins, cardNumberValid, cardHolderValid, cardExpiryValid, cardCvvValid, phoneValid]);
-
-  useEffect(() => {
-    if (selectedMethod !== "card") {
-      setUseFitcoins(true);
-    }
-  }, [selectedMethod]);
+  const paymentDisabled = disabled
+    || isProcessing
+    || (amountToCharge > 0 && (!cardComplete || !cardHolderValid));
 
   const handleConfirm = () => {
     if (paymentDisabled) return;
-    onConfirm({
-      method: selectedMethod,
-      useFitcoins: selectedMethod === "fitcoins" || useFitcoins,
-      fitcoinsToUse,
-      card: selectedMethod === "card"
-        ? {
-            holderName: cardHolder.trim(),
-            number: sanitizedCardNumber,
-            expiry: cardExpiry,
-            cvv: cardCvv,
-          }
-        : undefined,
-      phone: selectedMethod === "yape" || selectedMethod === "plin" ? sanitizedPhone : undefined,
-    });
+    onConfirm(
+      {
+        method: "card",
+        useFitcoins,
+        fitcoinsToUse,
+        cardHolderName: cardHolder.trim(),
+      },
+      stripe,
+      elements,
+    );
   };
 
   return (
@@ -132,168 +83,62 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
       <div className="rounded-3xl border border-border/70 p-4 bg-card/80">
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold">Selecciona el método de pago</p>
+            <p className="text-sm font-semibold">Tarjeta débito/crédito</p>
             <p className="text-xs text-muted-foreground leading-relaxed break-words">
-              Elige el método y completa solo los datos necesarios para confirmar tu reserva.
+              Ingresa los datos de tu tarjeta para pagar el resto de tu reserva.
             </p>
           </div>
           <div className="rounded-full px-3 py-1 bg-muted text-[11px] uppercase tracking-[0.2em] font-semibold">
-            {availableFitcoins} FC disponibles
+            Tarjeta
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(Object.keys(methodLabels) as PaymentMethod[]).map((method) => {
-            const selected = selectedMethod === method;
-            return (
-              <button
-                key={method}
-                type="button"
-                onClick={() => setSelectedMethod(method)}
-                className={`text-left min-h-[6rem] rounded-2xl border p-4 transition-all ${selected ? "border-neon bg-neon/10" : "border-border/50 bg-background hover:border-primary"}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-sm leading-tight break-words">{methodLabels[method]}</div>
-                  </div>
-                  <div className="flex-shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] font-semibold">
-                    {method === "fitcoins" ? "Saldo" : method === "card" ? "Tarjeta" : method.toUpperCase()}
-                  </div>
-                </div>
-                <p className="mt-3 text-[11px] text-muted-foreground leading-snug break-words">
-                  {methodDescriptions[method]}
-                </p>
-                {method === "fitcoins" && (
-                  <p className={`mt-3 text-xs font-semibold ${canCoverWithFitcoins ? "text-emerald-500" : "text-rose-500"}`}>
-                    {canCoverWithFitcoins ? "Tu saldo cubre el total" : "Saldo insuficiente para cubrir el total"}
-                  </p>
-                )}
-              </button>
-            );
-          })}
+        <div className="rounded-3xl border border-border/60 bg-background p-4 space-y-4">
+          <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Nombre del titular
+            <input
+              type="text"
+              autoComplete="cc-name"
+              value={cardHolder}
+              onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").slice(0, 50))}
+              placeholder="Nombre como en la tarjeta"
+              className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${!cardHolderValid && cardHolder ? "border-rose-500" : "border-border/60"}`}
+              maxLength={50}
+            />
+          </label>
+          <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Datos de la tarjeta
+            <div className="mt-2 rounded-2xl border border-border/60 bg-background p-3">
+              <CardElement
+                options={cardElementOptions}
+                onChange={(event) => {
+                  setCardComplete(event.complete);
+                  setCardError(event.error?.message || "");
+                }}
+              />
+            </div>
+            {cardError ? <p className="mt-2 text-[11px] text-rose-500">{cardError}</p> : null}
+          </label>
+          {amountToCharge === 0 ? (
+            <div className="rounded-2xl bg-emerald-900/10 border border-emerald-500/30 p-3 text-sm text-emerald-300">
+              El total está cubierto con FitCoins. No se requiere tarjeta para completar este pago.
+            </div>
+          ) : null}
+
+          {userBalance > 0 && (
+            <button
+              type="button"
+              className="inline-flex items-center justify-between w-full rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm font-semibold text-foreground"
+              onClick={() => setUseFitcoins((prev) => !prev)}
+            >
+              <span>Usar mis FitCoins disponibles como descuento</span>
+              <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${useFitcoins ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                {useFitcoins ? "Activado" : "Desactivado"}
+              </span>
+            </button>
+          )}
         </div>
       </div>
-
-      {selectedMethod === "card" && (
-        <div className="rounded-3xl border border-border/70 p-4 bg-card/80 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">Datos de la tarjeta</p>
-              <p className="text-xs text-muted-foreground">No se almacena el número completo de la tarjeta.</p>
-            </div>
-            <div className="text-[11px] uppercase tracking-[0.2em] font-semibold text-muted-foreground">
-              {cardBrand}
-            </div>
-          </div>
-
-          <div className="grid gap-3">
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Número de tarjeta
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                value={cardNumber}
-                onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
-                onBlur={() => setTouchedFields((prev) => ({ ...prev, cardNumber: true }))}
-                placeholder="0000 0000 0000 0000"
-                className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardNumberError ? "border-rose-500" : "border-border/60"}`}
-                maxLength={19}
-              />
-              {cardNumberError ? <p className="mt-2 text-[11px] text-rose-500">{cardNumberError}</p> : null}
-            </label>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Nombre del titular
-              <input
-                type="text"
-                autoComplete="cc-name"
-                value={cardHolder}
-                onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").slice(0, 50))}
-                onBlur={() => setTouchedFields((prev) => ({ ...prev, cardHolder: true }))}
-                placeholder="Nombre como en la tarjeta"
-                className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardHolderError ? "border-rose-500" : "border-border/60"}`}
-                maxLength={50}
-              />
-              {cardHolderError ? <p className="mt-2 text-[11px] text-rose-500">{cardHolderError}</p> : null}
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Fecha (MM/AA)
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  value={cardExpiry}
-                  onChange={(event) => setCardExpiry(formatExpiry(event.target.value))}
-                  onBlur={() => setTouchedFields((prev) => ({ ...prev, cardExpiry: true }))}
-                  placeholder="MM/AA"
-                  className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardExpiryError ? "border-rose-500" : "border-border/60"}`}
-                  maxLength={5}
-                />
-                {cardExpiryError ? <p className="mt-2 text-[11px] text-rose-500">{cardExpiryError}</p> : null}
-              </label>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                CVV
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  value={cardCvv}
-                  onChange={(event) => setCardCvv(event.target.value.replace(/\D/g, "").slice(0, 3))}
-                  onBlur={() => setTouchedFields((prev) => ({ ...prev, cardCvv: true }))}
-                  placeholder="•••"
-                  className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${cardCvvError ? "border-rose-500" : "border-border/60"}`}
-                  maxLength={3}
-                />
-                {cardCvvError ? <p className="mt-2 text-[11px] text-rose-500">{cardCvvError}</p> : null}
-              </label>
-            </div>
-
-            {showFitcoinToggle && (
-              <button
-                type="button"
-                className="inline-flex items-center justify-between w-full rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm font-semibold text-foreground"
-                onClick={() => setUseFitcoins((prev) => !prev)}
-              >
-                <span>Usar mis FitCoins disponibles como descuento</span>
-                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${useFitcoins ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
-                  {useFitcoins ? "Activado" : "Desactivado"}
-                </span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {(selectedMethod === "yape" || selectedMethod === "plin") && (
-        <div className={`rounded-3xl border border-border/70 p-4 bg-card/80 ${selectedMethod === "yape" ? "ring-2 ring-emerald-500/20" : "ring-2 ring-sky-500/20"}`}>
-          <div className="flex items-center gap-3 mb-3">
-            {selectedMethod === "yape" ? <Smartphone className="h-5 w-5 text-emerald-500" /> : <ShieldCheck className="h-5 w-5 text-sky-500" />}
-            <div>
-              <p className="text-sm font-semibold">Número de celular</p>
-              <p className="text-xs text-muted-foreground">Ingresa el número que recibiría la solicitud de cobro.</p>
-            </div>
-          </div>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={sanitizedPhone}
-            onChange={(event) => setPhone(formatPhone(event.target.value))}
-            onBlur={() => setTouchedFields((prev) => ({ ...prev, phone: true }))}
-            placeholder="999999999"
-            className="w-full rounded-2xl border border-border/60 bg-background px-3 py-3 text-sm outline-none focus:border-primary"
-            maxLength={9}
-          />
-          {touchedFields.phone && !phoneValid && (
-            <p className="mt-2 text-xs text-rose-500">Ingresa un número de celular válido de 9 dígitos.</p>
-          )}
-          <div className="mt-4 rounded-2xl bg-background/70 p-3 text-xs text-muted-foreground">
-            {selectedMethod === "yape"
-              ? "Acepta el cobro desde tu app de Yape para confirmar la reserva."
-              : "Acepta el cobro desde tu app de Plin para continuar con la reserva."}
-          </div>
-        </div>
-      )}
 
       <div className="rounded-3xl border border-border/70 p-4 bg-background/80 space-y-3 text-xs">
         <div className="flex justify-between">
@@ -326,3 +171,20 @@ export function PaymentCheckout({ cost, userBalance, onConfirm, isProcessing, di
     </div>
   );
 }
+
+export function PaymentCheckout(props: PaymentCheckoutProps) {
+  if (!isStripeConfigured) {
+    return (
+      <div className="rounded-3xl border border-rose-500/40 bg-rose-950/10 p-6 text-sm text-rose-200">
+        Stripe no está configurado. Revisa tu `VITE_STRIPE_PUBLISHABLE_KEY` en `.env`.
+      </div>
+    );
+  }
+
+  return (
+    <Elements stripe={stripePromise}>
+      <PaymentCheckoutForm {...props} />
+    </Elements>
+  );
+}
+

@@ -2,27 +2,16 @@ import { create } from "zustand";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { logPaymentAttempt } from "@/services/paymentService";
-import {
-  validateCardNumber,
-  validateExpiry,
-  validatePhoneNumber,
-  sanitizeCardNumber,
-  PaymentMethod,
-} from "@/shared/lib/paymentUtils";
-
-export interface PaymentCardData {
-  holderName: string;
-  number: string;
-  expiry: string;
-  cvv: string;
-}
+import { PaymentMethod } from "@/shared/lib/paymentUtils";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
+import { CardElement } from "@stripe/react-stripe-js";
 
 export interface PaymentPayload {
   method: PaymentMethod;
   amount: number;
   useFitcoins: boolean;
   fitcoinsToUse: number;
-  card?: PaymentCardData;
+  cardHolderName?: string;
   phone?: string;
 }
 
@@ -41,7 +30,12 @@ interface PaymentGatewayState {
   error: string | null;
   errorCode: string | null;
   lastPaymentMethod: PaymentMethod | null;
-  processPayment: (payload: PaymentPayload, courtName: string) => Promise<PaymentResult>;
+  processPayment: (
+    payload: PaymentPayload,
+    courtName: string,
+    stripe?: Stripe | null,
+    elements?: StripeElements | null,
+  ) => Promise<PaymentResult>;
   resetPayment: () => void;
 }
 
@@ -53,7 +47,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
   errorCode: null,
   lastPaymentMethod: null,
 
-  processPayment: async (payload: PaymentPayload, courtName: string) => {
+  processPayment: async (payload, courtName, stripe, elements) => {
     set({ isProcessing: true, status: "processing", error: null, errorCode: null, transactionId: null });
 
     const attempt = {
@@ -67,26 +61,96 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
     };
 
     const isDemo = useAuthStore.getState().isDemoMode;
-    const sanitizeCard = payload.card ? sanitizeCardNumber(payload.card.number) : "";
 
-    if (payload.method === "card") {
-      if (!payload.card || sanitizeCard.length !== 16 || !validateCardNumber(payload.card.number)) {
-        const errorCode = "CARD_INVALID";
-        const error = "Número de tarjeta inválido";
+    if (payload.method === "card" && payload.amount > 0) {
+      if (!payload.cardHolderName || payload.cardHolderName.trim().length < 3) {
+        const errorCode = "CARD_HOLDER_INVALID";
+        const error = "El nombre del titular debe tener al menos 3 letras.";
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
       }
-      if (!validateExpiry(payload.card.expiry)) {
-        const errorCode = "CARD_EXPIRED";
-        const error = "Fecha de vencimiento inválida o vencida";
+
+      if (!stripe || !elements) {
+        const errorCode = "STRIPE_NOT_READY";
+        const error = "Stripe no está listo. Recarga la página y vuelve a intentar.";
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
       }
-      if (!/^[0-9]{3,4}$/.test(payload.card.cvv)) {
-        const errorCode = "CARD_DATA_INVALID";
-        const error = "CVV inválido";
+
+      const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
+      const supabaseUrl = supabaseUrlRaw
+        .replace(/\/(?:rest\/v1|functions\/v1)\/?$/, "")
+        .replace(/\/+$/, "");
+      const supabaseFunctionsUrl =
+        (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined) ??
+        `${supabaseUrl}/functions/v1`;
+
+      try {
+        const response = await fetch(`${supabaseFunctionsUrl}/create-stripe-payment-intent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ amount: payload.amount }),
+        });
+
+        if (!response.ok) {
+          const responseBody = await response.text();
+          const errorCode = "STRIPE_INTENT_ERROR";
+          const error = `No se pudo crear el PaymentIntent: ${responseBody}`;
+          set({ isProcessing: false, status: "failed", error, errorCode });
+          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
+          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+        }
+
+        const { clientSecret } = await response.json();
+        if (!clientSecret) {
+          const errorCode = "STRIPE_SECRET_MISSING";
+          const error = "No se recibió client_secret de Stripe.";
+          set({ isProcessing: false, status: "failed", error, errorCode });
+          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
+          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+        }
+
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          const errorCode = "CARD_ELEMENT_MISSING";
+          const error = "No se pudo leer los datos de la tarjeta.";
+          set({ isProcessing: false, status: "failed", error, errorCode });
+          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
+          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+        }
+
+        const confirmResult = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: payload.cardHolderName.trim() || "Cliente SportMatch",
+            },
+          },
+        });
+
+        if (confirmResult.error) {
+          const errorCode = "STRIPE_PAYMENT_FAILED";
+          const error = confirmResult.error.message || "El pago fue rechazado.";
+          set({ isProcessing: false, status: "failed", error, errorCode });
+          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
+          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+        }
+
+        if (!confirmResult.paymentIntent || confirmResult.paymentIntent.status !== "succeeded") {
+          const errorCode = "STRIPE_PAYMENT_INCOMPLETE";
+          const error = "El pago no se completó correctamente.";
+          set({ isProcessing: false, status: "failed", error, errorCode });
+          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
+          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+        }
+      } catch (err) {
+        const errorCode = "STRIPE_REQUEST_FAILED";
+        const error = err instanceof Error ? err.message : "Error al procesar el pago con Stripe.";
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
@@ -94,7 +158,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
     }
 
     if (payload.method === "yape" || payload.method === "plin") {
-      if (!payload.phone || !validatePhoneNumber(payload.phone)) {
+      if (!payload.phone || !/^[0-9]{9}$/.test(payload.phone)) {
         const errorCode = "PHONE_INVALID";
         const error = "Número de celular inválido";
         set({ isProcessing: false, status: "failed", error, errorCode });
@@ -103,39 +167,15 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       }
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1400));
-
-    const simulationRoll = Math.random();
-    if (!isDemo) {
-      if (payload.method === "card" && simulationRoll > 0.92) {
-        const errorCode = "CARD_DECLINED";
-        const error = "La tarjeta fue rechazada por el emisor";
+    if (payload.useFitcoins && payload.fitcoinsToUse > 0) {
+      const ledgerDesc = `Reserva: ${courtName}`;
+      const ledgerSuccess = await useWalletStore.getState().redeem(payload.fitcoinsToUse, ledgerDesc);
+      if (!ledgerSuccess && !isDemo) {
+        const errorCode = "FITCOINS_INSUFFICIENT";
+        const error = "Saldo de FitCoins insuficiente para completar esta transacción.";
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
-      if ((payload.method === "yape" || payload.method === "plin") && simulationRoll > 0.84) {
-        const errorCode = simulationRoll > 0.94 ? "PAYMENT_TIMEOUT" : "PAYMENT_REJECTED";
-        const error = errorCode === "PAYMENT_TIMEOUT"
-          ? "El cobro expiró después de 60 segundos. Intenta nuevamente."
-          : `El ${payload.method.toUpperCase()} rechazó el pago.`;
-        set({ isProcessing: false, status: "failed", error, errorCode });
-        logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-        return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
-    }
-
-    if (payload.method === "fitcoins" || payload.useFitcoins) {
-      if (payload.fitcoinsToUse > 0) {
-        const ledgerDesc = `Reserva: ${courtName}`;
-        const ledgerSuccess = await useWalletStore.getState().redeem(payload.fitcoinsToUse, ledgerDesc);
-        if (!ledgerSuccess && !isDemo) {
-          const errorCode = "FITCOINS_INSUFFICIENT";
-          const error = "Saldo de FitCoins insuficiente para completar esta transacción.";
-          set({ isProcessing: false, status: "failed", error, errorCode });
-          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-        }
       }
     }
 
