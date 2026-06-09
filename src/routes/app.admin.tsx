@@ -47,12 +47,14 @@ function Admin() {
     let active = true;
 
     // Try backend first for courts, fallback to Supabase
-    backendApi.courts.getAll()
+    backendApi.courts
+      .getAll()
       .then((backendCourts) => {
         if (active) setCourtsList(backendCourts as Court[]);
       })
       .catch(() => {
-        apiClient.courts.getAll()
+        apiClient.courts
+          .getAll()
           .then((courts) => {
             if (active) setCourtsList(courts);
           })

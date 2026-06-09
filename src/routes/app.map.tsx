@@ -33,13 +33,9 @@ export const Route = createFileRoute("/app/map")({
     ]);
 
     const [courts, players, matches] = await Promise.all([
-      backendCourts
-        ? Promise.resolve(backendCourts as Court[])
-        : apiClient.courts.getAll(),
+      backendCourts ? Promise.resolve(backendCourts as Court[]) : apiClient.courts.getAll(),
       apiClient.users.getMatches(),
-      backendMatches
-        ? Promise.resolve(backendMatches as Match[])
-        : apiClient.matches.getAll(),
+      backendMatches ? Promise.resolve(backendMatches as Match[]) : apiClient.matches.getAll(),
     ]);
     return { courts, players, matches };
   },

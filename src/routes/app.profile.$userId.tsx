@@ -19,6 +19,7 @@ import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, User } from "@/entities/types";
+import { BadgeEngine } from "@/components/BadgeEngine";
 
 export const Route = createFileRoute("/app/profile/$userId")({
   head: () => ({ meta: [{ title: "Perfil de Jugador — SportMatch" }] }),
@@ -102,7 +103,7 @@ function UserProfile() {
             // Try backend first, fallback to Supabase
             const backendMatches = await backendApi.matches.getAll().catch(() => null);
             const matchesData = backendMatches
-              ? (backendMatches as Match[]).filter(m => m.creator_id === userId)
+              ? (backendMatches as Match[]).filter((m) => m.creator_id === userId)
               : await apiClient.matches.getUserMatches(userId);
             setUserMatches(matchesData);
           }
@@ -206,15 +207,20 @@ function UserProfile() {
               {profile.city} · {t("profile.age_label", { age: profile.age })}
             </p>
             <p className="text-sm mt-2">{profile.bio || t("register.default_player_bio")}</p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {profile.preferred_sports.map((s) => (
-                <span
-                  key={s}
-                  className="px-3 py-1 rounded-full bg-violet/20 text-sm border border-violet/30"
-                >
-                  {s}
-                </span>
-              ))}
+            <div className="mt-4">
+              <BadgeEngine
+                sports_matrix={
+                  profile.sport_preferences?.sports_matrix ||
+                  profile.preferred_sports.reduce(
+                    (acc, sport) => {
+                      acc[sport] = { level: profile.level || "Intermediate", weight: 2 };
+                      return acc;
+                    },
+                    {} as Record<string, unknown>,
+                  )
+                }
+                size="md"
+              />
             </div>
           </div>
           {!isMe && (

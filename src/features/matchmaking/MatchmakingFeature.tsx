@@ -40,10 +40,13 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     setIsLoadingMatches(true);
 
     // Try backend first for user matches, fallback to Supabase
-    backendApi.matches.getAll()
+    backendApi.matches
+      .getAll()
       .then((backendMatches) => {
         if (active) {
-          const userMatches = (backendMatches as Match[]).filter(m => m.creator_id === inspectedUser.id);
+          const userMatches = (backendMatches as Match[]).filter(
+            (m) => m.creator_id === inspectedUser.id,
+          );
           setInspectedUserMatches(userMatches);
         }
       })

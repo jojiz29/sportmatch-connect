@@ -290,32 +290,43 @@ function Landing() {
   const currentProfile = mockProfiles[activeCardIndex];
 
   return (
-    <div className="min-h-screen bg-[#0B132B] text-[#F5F7FA] overflow-x-hidden font-sans relative">
-      {/* Premium World Cup Vector Curves & Glowing Waves */}
+    <div className="min-h-screen bg-[#0B132B] text-[#F5F7FA] overflow-x-hidden relative">
       <WorldCupBackground />
 
       {/* Header */}
       <header className="relative z-20 w-full bg-[#0B132B]/60 backdrop-blur-md border-b border-white/5 py-4 sm:py-6 px-4 md:px-8 xl:px-16">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
               <Zap className="h-5 w-5 text-[#0B132B]" />
             </div>
-            <span className="font-extrabold text-xl sm:text-2xl tracking-wider text-white">
+            <span className="font-heading text-2xl sm:text-3xl tracking-wide text-white">
               SportMatch
             </span>
           </div>
-          <nav className="hidden lg:flex items-center gap-10 text-sm font-semibold text-[#B2B8C2]">
-            <a href="#matchmaking" className="hover:text-[#39FF14] transition-colors duration-200">
+          <nav className="hidden lg:flex items-center gap-10 text-sm font-medium text-[#B2B8C2]">
+            <a
+              href="#matchmaking"
+              className="hover:text-[#39FF14] transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-[#39FF14] after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.matchmaking_title")}
             </a>
-            <a href="#squads" className="hover:text-[#39FF14] transition-colors duration-200">
+            <a
+              href="#squads"
+              className="hover:text-[#39FF14] transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-[#39FF14] after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.squads_title")}
             </a>
-            <a href="#map" className="hover:text-[#39FF14] transition-colors duration-200">
+            <a
+              href="#map"
+              className="hover:text-[#39FF14] transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-[#39FF14] after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.map_title")}
             </a>
-            <a href="#challenges" className="hover:text-[#39FF14] transition-colors duration-200">
+            <a
+              href="#challenges"
+              className="hover:text-[#39FF14] transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-[#39FF14] after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.challenges_title")}
             </a>
           </nav>
@@ -349,8 +360,10 @@ function Landing() {
             <span className="h-2 w-2 rounded-full bg-[#39FF14] animate-ping" />
             Beta · Lima 2026 Active Venues Mapped
           </span>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl xl:text-8xl font-black tracking-tight leading-[0.95] text-white">
-            Tu próximo <span className="text-gradient">partido</span>
+          <h1 className="font-heading text-5xl sm:text-7xl md:text-8xl xl:text-9xl leading-[0.9] tracking-wide text-white">
+            Tu próximo
+            <br />
+            <span className="text-gradient text-glow">partido</span>
             <br />
             está a un swipe.
           </h1>
@@ -577,7 +590,7 @@ function Landing() {
           <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
             {t("landing.features_title")}
           </span>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white">
+          <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
             {t("landing.matchmaking_title")}
           </h2>
           <p className="mt-6 text-[#B2B8C2] max-w-3xl mx-auto text-base sm:text-lg md:text-xl leading-relaxed">
@@ -627,7 +640,7 @@ function Landing() {
             <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
               {t("landing.squads_title")}
             </span>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white">
+            <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
               Pago Dividido y Chats de Squad
             </h2>
             <p className="mt-6 text-[#B2B8C2] text-base sm:text-lg md:text-xl leading-relaxed">
@@ -814,7 +827,7 @@ function Landing() {
               <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
                 Ubicación Deportiva
               </span>
-              <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight">
+              <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
                 {t("landing.map_title")}
               </h2>
               <p className="mt-6 text-[#B2B8C2] text-sm sm:text-base leading-relaxed">
@@ -943,7 +956,7 @@ function Landing() {
             <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
               Gamificación
             </span>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white">
+            <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
               {t("landing.challenges_title")}
             </h2>
             <p className="mt-6 text-[#B2B8C2] text-sm sm:text-base md:text-lg leading-relaxed">

@@ -50,7 +50,8 @@ function Wallet() {
     let active = true;
 
     // Try backend first for leaderboard, fallback to Supabase
-    backendApi.users.getLeaderboard()
+    backendApi.users
+      .getLeaderboard()
       .then((backendUsers) => {
         if (active) setLeaderboardUsers(backendUsers as User[]);
       })

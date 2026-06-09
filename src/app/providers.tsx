@@ -3,6 +3,7 @@ import React, { createContext, useEffect, useRef, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { useThemeStore } from "@/features/theme/store";
 import { I18nextProvider } from "react-i18next";
 import i18n from "@/shared/i18n";
 
@@ -212,11 +213,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={{ isLoading }}>{children}</AuthContext.Provider>;
 }
 
+function ThemeInitializer({ children }: { children: React.ReactNode }) {
+  const theme = useThemeStore((s) => s.theme);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("light", "dark", "dark-footballer", "world-cup");
+    root.classList.add(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  if (!hydrated) return <>{children}</>;
+
+  return <>{children}</>;
+}
+
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeInitializer>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeInitializer>
       </QueryClientProvider>
     </I18nextProvider>
   );

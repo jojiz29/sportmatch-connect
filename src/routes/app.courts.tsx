@@ -14,7 +14,7 @@ export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
   loader: async () => {
     const backendCourts = await backendApi.courts.getAll().catch(() => null);
-    return backendCourts ? backendCourts as Court[] : await apiClient.courts.getAll();
+    return backendCourts ? (backendCourts as Court[]) : await apiClient.courts.getAll();
   },
   component: Courts,
 });

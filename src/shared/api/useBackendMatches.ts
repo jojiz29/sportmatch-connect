@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { backendApi } from "@/shared/api/backendApi";
-import { apiClient } from "@/shared/api/apiClient";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { Match } from "@/entities/types";
 import { toast } from "sonner";
@@ -93,7 +92,11 @@ export function useMatchOperations() {
 
   const updateMatchMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Match> }) => {
-      const { data: result, error } = await backendApi.matches.update("", id, data as any);
+      const { data: result, error } = await backendApi.matches.update(
+        "",
+        id,
+        data as Parameters<typeof backendApi.matches.update>[2],
+      );
       if (error) throw new Error(error);
       return result;
     },

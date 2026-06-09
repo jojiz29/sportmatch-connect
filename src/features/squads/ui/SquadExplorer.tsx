@@ -138,7 +138,8 @@ export function SquadExplorer() {
     setLoadingCourts(true);
 
     // Try backend first for courts, fallback to Supabase
-    backendApi.courts.getAll()
+    backendApi.courts
+      .getAll()
       .then((courtsList) => setSquadCourts(courtsList as Court[]))
       .catch(() => {
         apiClient.courts

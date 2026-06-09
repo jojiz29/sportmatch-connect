@@ -242,7 +242,7 @@ function BusinessPage() {
           setCourts(courtsData);
           // Try backend first for sports, fallback to Supabase
           const backendSports = await backendApi.sports.getAll().catch(() => null);
-          const sportsData = backendSports || await apiClient.sports.getAll();
+          const sportsData = backendSports || (await apiClient.sports.getAll());
           setSportsList(sportsData as SportCatalog[]);
           setLoading(false);
           setLoadingCourts(false);
@@ -259,7 +259,7 @@ function BusinessPage() {
 
         // Load sports catalog - try backend first, fallback to Supabase
         const backendSports = await backendApi.sports.getAll().catch(() => null);
-        const sportsData = backendSports || await apiClient.sports.getAll();
+        const sportsData = backendSports || (await apiClient.sports.getAll());
         setSportsList(sportsData as SportCatalog[]);
       } catch (err) {
         console.error("Failed to load business dashboard data:", err);

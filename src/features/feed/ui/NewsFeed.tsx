@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { getFeed, createPost } from "@/shared/api/feedService";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { Post, Sport } from "@/entities/types";
+import { Post, Sport, SportCatalog } from "@/entities/types";
 import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -32,10 +32,12 @@ export function NewsFeed() {
 
   useEffect(() => {
     // Try backend first for sports, fallback to Supabase
-    backendApi.sports.getAll()
-      .then((data) => {
-        if (data && (data as any[]).length > 0) {
-          setSportsList((data as any[]).map((s: any) => s.name));
+    backendApi.sports
+      .getAll()
+      .then((res) => {
+        const response = res as { data?: SportCatalog[] };
+        if (response?.data && response.data.length > 0) {
+          setSportsList(response.data.map((s) => s.name));
         }
       })
       .catch(() => {

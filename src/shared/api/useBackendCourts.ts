@@ -3,6 +3,17 @@ import { backendApi } from "@/shared/api/backendApi";
 import { Court } from "@/entities/types";
 import { toast } from "sonner";
 
+export function useGetCourtByIdQuery(id: string) {
+  return useQuery({
+    queryKey: ["backendCourt", id],
+    queryFn: async () => {
+      const { data, error } = await backendApi.courts.getById(id);
+      if (error) throw new Error(error);
+      return data as Court;
+    },
+  });
+}
+
 export function useBackendCourts() {
   const queryClient = useQueryClient();
 
@@ -14,16 +25,6 @@ export function useBackendCourts() {
       return data as Court[];
     },
   });
-
-  const getCourtByIdQuery = (id: string) =>
-    useQuery({
-      queryKey: ["backendCourt", id],
-      queryFn: async () => {
-        const { data, error } = await backendApi.courts.getById(id);
-        if (error) throw new Error(error);
-        return data as Court;
-      },
-    });
 
   const createCourtMutation = useMutation({
     mutationFn: async (court: {
@@ -52,7 +53,11 @@ export function useBackendCourts() {
 
   const updateCourtMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Court> }) => {
-      const { data: result, error } = await backendApi.courts.update("", id, data as any);
+      const { data: result, error } = await backendApi.courts.update(
+        "",
+        id,
+        data as Parameters<typeof backendApi.courts.update>[2],
+      );
       if (error) throw new Error(error);
       return result;
     },
@@ -66,7 +71,13 @@ export function useBackendCourts() {
   });
 
   const addReviewMutation = useMutation({
-    mutationFn: async ({ courtId, review }: { courtId: string; review: { rating: number; comment?: string } }) => {
+    mutationFn: async ({
+      courtId,
+      review,
+    }: {
+      courtId: string;
+      review: { rating: number; comment?: string };
+    }) => {
       const { data, error } = await backendApi.courts.addReview("", courtId, review);
       if (error) throw new Error(error);
       return data;
@@ -84,7 +95,6 @@ export function useBackendCourts() {
     courts: courtsQuery.data || [],
     isLoading: courtsQuery.isLoading,
     error: courtsQuery.error,
-    getCourtById: getCourtByIdQuery,
     createCourt: createCourtMutation.mutate,
     updateCourt: updateCourtMutation.mutate,
     addReview: addReviewMutation.mutate,

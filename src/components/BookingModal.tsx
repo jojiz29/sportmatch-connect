@@ -115,7 +115,7 @@ export function BookingModal({
         const backendResult = await backendApi.bookings.getByCourtAndDate(court!.id, todayStr);
         const booked = (backendResult.data as string[]) || [];
         setBookedSlots(booked);
-      } catch (_) {
+      } catch {
         try {
           const booked = await apiClient.bookings.getByCourtAndDate(court!.id, todayStr);
           setBookedSlots(booked);
@@ -206,7 +206,7 @@ export function BookingModal({
       try {
         const backendResult = await backendApi.bookings.getByCourtAndDate(court.id, todayStr);
         booked = (backendResult.data as string[]) || [];
-      } catch (_) {
+      } catch {
         booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
       }
       if (booked.includes(slot)) {
@@ -229,20 +229,22 @@ export function BookingModal({
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (token) {
-        await backendApi.bookings.create(token, {
-          court_id: court.id,
-          user_id: user.id,
-          date: todayStr,
-          time: slot,
-        }).catch(() =>
-          apiClient.bookings.create({
+        await backendApi.bookings
+          .create(token, {
             court_id: court.id,
             user_id: user.id,
             date: todayStr,
-            time_slot: slot,
-            operating_hours: court.operating_hours,
+            time: slot,
           })
-        );
+          .catch(() =>
+            apiClient.bookings.create({
+              court_id: court.id,
+              user_id: user.id,
+              date: todayStr,
+              time_slot: slot,
+              operating_hours: court.operating_hours,
+            }),
+          );
       } else {
         await apiClient.bookings.create({
           court_id: court.id,
@@ -259,15 +261,17 @@ export function BookingModal({
           ? `Partido de Squad: ${squadForGroupBooking.name}`
           : `Partido en ${court.name}`;
 
-        const backendResult = await backendApi.matches.create(user.id, {
-          title: matchTitle,
-          sport: court.sport,
-          court_id: court.id,
-          date: todayStr,
-          time: slot,
-          max_players: squadForGroupBooking ? bookingMembersCount : maxPlayers,
-          required_level: user.level || "Intermedio",
-        }).catch(() => null);
+        const backendResult = await backendApi.matches
+          .create(user.id, {
+            title: matchTitle,
+            sport: court.sport,
+            court_id: court.id,
+            date: todayStr,
+            time: slot,
+            max_players: squadForGroupBooking ? bookingMembersCount : maxPlayers,
+            required_level: user.level || "Intermedio",
+          })
+          .catch(() => null);
 
         if (!backendResult?.data) {
           await apiClient.matches.create({
