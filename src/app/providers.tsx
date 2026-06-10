@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initAuth() {
       try {
-        // SEC-05: Strict 1.5s timeout on Supabase authentication sync
+        // SEC-05: Strict 3s timeout on Supabase authentication sync (increased for OAuth)
         // If it takes longer, we automatically fallback to local mock mode so the user is NEVER stuck (Task 2.4 / 2.5)
         timeoutId = setTimeout(() => {
           if (mounted) {
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             useAuthStore.getState().login(fallbackUser);
             setIsLoading(false);
           }
-        }, 1500);
+        }, 3000);
 
         const {
           data: { session },
