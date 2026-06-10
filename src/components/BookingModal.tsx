@@ -252,7 +252,6 @@ export function BookingModal({
     }
 
     setPaymentSelection(selection);
-    setPaymentDialogOpen(false);
     setIsBooking(true);
     let currentPaymentResult: PaymentResult | null = null;
 
@@ -281,6 +280,8 @@ export function BookingModal({
         setIsBooking(false);
         return;
       }
+
+      setPaymentDialogOpen(false);
 
       await apiClient.bookings.create({
         court_id: court.id,
