@@ -161,6 +161,7 @@ async function initAuth() {
       }
 
       if (event === "SIGNED_IN" && session?.user) {
+        console.log("Processing SIGNED_IN, user:", session.user.email);
         let profile = null;
         const { data: existingProfile, error } = await supabase
           .from("profiles")
@@ -168,6 +169,7 @@ async function initAuth() {
           .eq("id", session.user.id)
           .single();
 
+        console.log("Profile fetch result:", existingProfile, error);
         if (existingProfile && !error) {
           profile = existingProfile;
         } else {
@@ -213,6 +215,7 @@ async function initAuth() {
         }
 
         if (profile && mounted) {
+          console.log("Logging in with profile:", profile.name);
           loginRef.current(profile);
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -221,6 +224,8 @@ async function initAuth() {
           }
           initializedRef.current = true;
           setIsLoading(false);
+        } else {
+          console.log("Profile or mounted false:", { profile: !!profile, mounted });
         }
       } else if (event === "SIGNED_OUT") {
         logoutRef.current();
