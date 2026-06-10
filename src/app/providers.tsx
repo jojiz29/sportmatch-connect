@@ -44,19 +44,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
 
-    async function initAuth() {
+async function initAuth() {
       try {
-        // SEC-05: Strict 3s timeout on Supabase authentication sync (increased for OAuth)
-        // If it takes longer, we automatically fallback to local mock mode so the user is NEVER stuck (Task 2.4 / 2.5)
-        timeoutId = setTimeout(() => {
-          if (mounted) {
-            console.warn("Auth synchronization timed out. Falling back to demo mode.");
-            useAuthStore.getState().setDemoMode(true);
-            const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
-            useAuthStore.getState().login(fallbackUser);
-            setIsLoading(false);
-          }
-        }, 3000);
+        // Only apply timeout if there's no hash in the URL (not during OAuth callback)
+        const isOAuthCallback = typeof window !== "undefined" && window.location.hash.includes("access_token");
+        const timeoutMs = isOAuthCallback ? 10000 : 3000; // Give more time during OAuth callback
+
+        if (!isOAuthCallback) {
+          timeoutId = setTimeout(() => {
+            if (mounted) {
+              console.warn("Auth synchronization timed out. Falling back to demo mode.");
+              useAuthStore.getState().setDemoMode(true);
+              const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
+              useAuthStore.getState().login(fallbackUser);
+              setIsLoading(false);
+            }
+          }, timeoutMs);
+        }
 
         const {
           data: { session },
@@ -137,9 +141,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("onAuthStateChange fired:", event, session?.user?.email);
       if (!mounted) return;
       // Skip INITIAL_SESSION — already handled synchronously by initAuth()
-      if (!initializedRef.current) return;
+      if (!initializedRef.current) {
+        console.log("Skipping because not initialized yet, event:", event);
+        return;
+      }
 
       if (event === "SIGNED_IN" && session?.user) {
         let profile = null;
