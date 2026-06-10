@@ -16,6 +16,7 @@ import {
   Check,
   QrCode,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Court, Squad } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient } from "@/shared/api/apiClient";
@@ -23,8 +24,11 @@ import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { calculateDistance } from "@/shared/api/geoService";
-import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
+import { usePaymentGatewayStore, PaymentPayload, PaymentResult } from "@/features/wallet/usePaymentGatewayStore";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
+import { logPaymentAttempt } from "@/services/paymentService";
+import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 
 interface BookingModalProps {
@@ -50,6 +54,11 @@ export function BookingModal({
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
   const [actualSquadMembersCount, setActualSquadMembersCount] = useState<number | null>(null);
+  const [paymentSelection, setPaymentSelection] = useState<PaymentSelection | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const [holdExpiry, setHoldExpiry] = useState<number | null>(null);
+  const [holdCountdown, setHoldCountdown] = useState("05:00");
 
   useEffect(() => {
     if (!squadForGroupBooking || !isOpen) {
@@ -99,9 +108,46 @@ export function BookingModal({
     if (isOpen) {
       setSlot(null);
       setConfirmed(false);
+      setPaymentSelection(null);
+      setPaymentResult(null);
+      setHoldExpiry(null);
+      setHoldCountdown("05:00");
+      setPaymentDialogOpen(false);
       resetPayment();
     }
   }, [isOpen, court?.id, resetPayment]);
+
+  useEffect(() => {
+    if (confirmed) {
+      setPaymentDialogOpen(false);
+    }
+  }, [confirmed]);
+
+  useEffect(() => {
+    if (!slot) {
+      setHoldExpiry(null);
+      return;
+    }
+    setHoldExpiry(Date.now() + 5 * 60 * 1000);
+  }, [slot]);
+
+  useEffect(() => {
+    if (!holdExpiry) return;
+    const interval = window.setInterval(() => {
+      const diff = holdExpiry - Date.now();
+      if (diff <= 0) {
+        setSlot(null);
+        setHoldExpiry(null);
+        setHoldCountdown("00:00");
+        toast.error("El tiempo de retención del horario venció. Selecciona otro horario.");
+        return;
+      }
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setHoldCountdown(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [holdExpiry]);
 
   useEffect(() => {
     if (!isOpen || !court) return;
@@ -185,30 +231,35 @@ export function BookingModal({
     : maxPlayers;
   const pricePerPerson = (court.price_per_hour + 3) / bookingMembersCount;
   const cost = Math.ceil(pricePerPerson);
+  const selectedDiscount = paymentSelection?.fitcoinsToUse ?? 0;
+  const totalPaid = paymentResult?.amountCharged ?? Math.max(0, cost - selectedDiscount);
+  const paymentMethodLabel = paymentSelection?.method === "fitcoins"
+    ? "FitCoins"
+    : paymentSelection?.method === "card"
+      ? "Tarjeta"
+      : paymentSelection?.method === "yape"
+        ? "Yape"
+        : "Plin";
 
-  const handleBook = async () => {
+  const handlePaymentConfirm = async (
+    selection: PaymentSelection,
+    stripe?: Stripe | null,
+    elements?: StripeElements | null,
+  ) => {
     if (!slot) {
       toast.error("Por favor selecciona un horario.");
       return;
     }
 
-    if (user.fitcoins_balance < cost) {
-      setIsBalanceModalOpen(true);
-      return;
-    }
+    setPaymentSelection(selection);
+    setPaymentDialogOpen(false);
+    setIsBooking(true);
+    let currentPaymentResult: PaymentResult | null = null;
 
     try {
-      setIsBooking(true);
       const todayStr = new Date().toISOString().split("T")[0];
 
-      // 1. Double Booking Prevention: Check availability in database
-      let booked: string[] = [];
-      try {
-        const backendResult = await backendApi.bookings.getByCourtAndDate(court.id, todayStr);
-        booked = (backendResult.data as string[]) || [];
-      } catch {
-        booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
-      }
+      const booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
       if (booked.includes(slot)) {
         toast.error("Este horario ya ha sido reservado. Por favor elige otro.");
         setBookedSlots(booked);
@@ -216,37 +267,35 @@ export function BookingModal({
         return;
       }
 
-      // 2. Process Simulated Payment
-      const paymentSuccess = await processPayment(cost, court.name);
-      if (!paymentSuccess) {
+      const paymentPayload: PaymentPayload = {
+        ...selection,
+        amount: Math.max(0, cost - selection.fitcoinsToUse),
+      };
+
+      currentPaymentResult = await processPayment(paymentPayload, court.name, stripe, elements);
+      setPaymentResult(currentPaymentResult);
+
+      if (!currentPaymentResult.success) {
         const currentError = usePaymentGatewayStore.getState().error;
         toast.error(currentError || "El pago no pudo ser procesado.");
         setIsBooking(false);
         return;
       }
 
-      // 3. Perform INSERT Booking
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (token) {
-        await backendApi.bookings
-          .create(token, {
-            court_id: court.id,
-            user_id: user.id,
-            date: todayStr,
-            time: slot,
-          })
-          .catch(() =>
-            apiClient.bookings.create({
-              court_id: court.id,
-              user_id: user.id,
-              date: todayStr,
-              time_slot: slot,
-              operating_hours: court.operating_hours,
-            }),
-          );
-      } else {
-        await apiClient.bookings.create({
+      await apiClient.bookings.create({
+        court_id: court.id,
+        user_id: user.id,
+        date: todayStr,
+        time_slot: slot,
+        operating_hours: court.operating_hours,
+      });
+
+      if (useAuthStore.getState().isDemoMode) {
+        await apiClient.matches.create({
+          title: squadForGroupBooking
+            ? `Partido de Squad: ${squadForGroupBooking.name}`
+            : `Partido en ${court.name}`,
+          sport: court.sport,
           court_id: court.id,
           user_id: user.id,
           date: todayStr,
@@ -296,6 +345,19 @@ export function BookingModal({
       );
     } catch (err: unknown) {
       console.error("Booking error:", err);
+      if (currentPaymentResult?.success) {
+        logPaymentAttempt({
+          id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: new Date().toISOString(),
+          courtName: court.name,
+          method: selection.method,
+          amount: Math.max(0, cost - selection.fitcoinsToUse),
+          fitcoinsUsed: selection.fitcoinsToUse,
+          status: "partial_failure",
+          errorCode: "BOOKING_PARTIAL_FAILURE",
+        });
+      }
+
       const { handleWalletError } = await import("@/services/walletService");
       const handled = handleWalletError(err);
       if (!handled) {
@@ -342,7 +404,8 @@ export function BookingModal({
         </DialogHeader>
 
         {!confirmed ? (
-          <div className="grid md:grid-cols-2 gap-6 pt-2">
+          <>
+            <div className="grid md:grid-cols-2 gap-6 pt-2">
             {/* Court Detail Preview & Info */}
             <div className="space-y-4">
               <div className="relative h-44 rounded-2xl overflow-hidden border border-border/50 shadow-md">
@@ -407,16 +470,13 @@ export function BookingModal({
                 </label>
                 <div className="p-3 rounded-xl border border-border bg-background/50 text-xs font-semibold flex justify-between items-center cursor-not-allowed opacity-80">
                   <span>
-                    Hoy,{" "}
-                    {new Date().toLocaleDateString("es-AR", {
+                    Hoy, {new Date().toLocaleDateString("es-AR", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",
                     })}
                   </span>
-                  <span className="text-neon text-[10px] uppercase font-bold tracking-wider">
-                    Hoy
-                  </span>
+                  <span className="text-neon text-[10px] uppercase font-bold tracking-wider">Hoy</span>
                 </div>
               </div>
 
@@ -451,27 +511,68 @@ export function BookingModal({
                 </div>
               </div>
 
-              <div className="pt-2">
+              {slot && holdExpiry && (
+                <div className="rounded-2xl border border-warning/30 bg-warning/10 p-3 text-[12px] text-warning-foreground">
+                  <strong>Reserva pendiente:</strong> Este horario se mantiene reservado por <span className="font-semibold">{holdCountdown}</span> mientras completas el pago.
+                </div>
+              )}
+
+              <div className="rounded-3xl border border-border/70 bg-background/80 p-4 space-y-4 text-xs">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Resumen de la reserva</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed break-words">
+                      Selecciona un horario y luego elige la forma de pago en una ventana separada.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-muted px-3 py-1 text-[11px] uppercase tracking-[0.2em] font-semibold">
+                    {slot ? "Horario listo" : "Selecciona horario"}
+                  </span>
+                </div>
+                <div className="grid gap-3">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Horario elegido</span>
+                    <span className="font-semibold text-foreground">{slot ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Costo total</span>
+                    <span className="font-semibold text-foreground">S/ {cost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Método actual</span>
+                    <span className="font-semibold text-foreground">{paymentSelection ? paymentMethodLabel : "Sin seleccionar"}</span>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={handleBook}
                   disabled={!slot || isBooking}
-                  className="w-full py-3.5 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
+                  onClick={() => setPaymentDialogOpen(true)}
+                  className="w-full rounded-2xl bg-gradient-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  {isBooking ? (
-                    <>
-                      <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                      <span>Procesando reserva...</span>
-                    </>
-                  ) : slot ? (
-                    `Confirmar para las ${slot}`
-                  ) : (
-                    "Selecciona un horario"
-                  )}
+                  {paymentSelection ? "Cambiar método de pago" : "Elegir método de pago"}
                 </button>
               </div>
             </div>
           </div>
+
+          <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-xl font-bold">Selecciona tu forma de pago</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Elige el método que prefieras y completa los datos en esta ventana segura.
+                </DialogDescription>
+              </DialogHeader>
+              <PaymentCheckout
+                cost={cost}
+                userBalance={user.fitcoins_balance}
+                onConfirm={handlePaymentConfirm}
+                isProcessing={isProcessing}
+                disabled={isBooking}
+              />
+            </DialogContent>
+          </Dialog>
+          </>
         ) : (
           /* Confirmation Ticket */
           <div className="bg-gradient-card border border-neon/30 rounded-3xl p-6 text-center shadow-neon relative overflow-hidden font-sans pt-8">
@@ -533,25 +634,37 @@ export function BookingModal({
                   <span>Comisión de Servicio</span>
                   <span>S/ 3.00</span>
                 </div>
+                {selectedDiscount > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-500">
+                    <span>Descuento (FitCoins gastados)</span>
+                    <span className="font-semibold">-S/ {selectedDiscount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Descuento (FitCoins gastados)</span>
-                  <span className="text-neon">-S/ {cost.toFixed(2)}</span>
+                  <span>Método de pago</span>
+                  <span>{paymentMethodLabel}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
                   <span>Total Pagado</span>
-                  <span>S/ 0.00</span>
+                  <span>S/ {totalPaid.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* QR Code section */}
-            <div className="mt-5 space-y-2 flex flex-col items-center">
+            <div className="mt-5 space-y-3 flex flex-col items-center">
               <p className="text-[10px] text-muted-foreground">
                 Muestra este QR de check-in al ingresar al club
               </p>
               <div className="h-28 w-28 rounded-xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
                 <QrCode className="h-24 w-24 text-black" />
               </div>
+              <Link
+                to="/app/profile"
+                className="mt-4 inline-flex items-center justify-center rounded-2xl bg-neon px-5 py-3 text-sm font-semibold text-background shadow-glow hover:scale-[1.01] transition-all"
+              >
+                Ver mi reserva
+              </Link>
             </div>
           </div>
         )}
