@@ -228,10 +228,11 @@ async function initAuth() {
             console.log("Cleared auth timeout after SIGNED_IN");
           }
           initializedRef.current = true;
-          setIsLoading(false);
         } else {
           console.log("Profile or mounted false:", { profile: !!profile, mounted });
         }
+        // Always clear loading state when SIGNED_IN is processed
+        setIsLoading(false);
       } else if (event === "SIGNED_OUT") {
         logoutRef.current();
       }
