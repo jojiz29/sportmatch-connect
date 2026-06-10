@@ -46,9 +46,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 async function initAuth() {
       try {
+        // Emergency timeout: if init takes > 5s, just show login screen
+        const emergencyTimeout = setTimeout(() => {
+          if (mounted) {
+            console.warn("Auth init timed out, showing login screen");
+            initializedRef.current = true;
+            setIsLoading(false);
+          }
+        }, 5000);
+
         const {
           data: { session },
         } = await supabase.auth.getSession();
+        clearTimeout(emergencyTimeout);
         if (!mounted) return;
 
         if (session?.user) {
