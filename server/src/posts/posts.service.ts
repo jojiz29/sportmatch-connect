@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreatePostDto, UpdatePostDto, CreateCommentDto, CreateReactionDto } from './dto';
+import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreatePostDto, UpdatePostDto, CreateCommentDto, CreateReactionDto } from "./dto";
 
 @Injectable()
 export class PostsService {
@@ -21,13 +21,13 @@ export class PostsService {
             },
             post_comment_reactions: true,
           },
-          orderBy: { created_at: 'desc' },
+          orderBy: { created_at: "desc" },
         },
         _count: {
           select: { post_comments: true },
         },
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { created_at: "desc" },
     });
   }
 
@@ -51,13 +51,13 @@ export class PostsService {
               },
             },
           },
-          orderBy: { created_at: 'desc' },
+          orderBy: { created_at: "desc" },
         },
       },
     });
 
     if (!post) {
-      throw new NotFoundException('Post not found');
+      throw new NotFoundException("Post not found");
     }
 
     return post;
@@ -81,11 +81,11 @@ export class PostsService {
     const post = await this.prisma.posts.findUnique({ where: { id } });
 
     if (!post) {
-      throw new NotFoundException('Post not found');
+      throw new NotFoundException("Post not found");
     }
 
     if (post.user_id !== userId) {
-      throw new ForbiddenException('You can only update your own posts');
+      throw new ForbiddenException("You can only update your own posts");
     }
 
     return this.prisma.posts.update({
@@ -98,11 +98,11 @@ export class PostsService {
     const post = await this.prisma.posts.findUnique({ where: { id } });
 
     if (!post) {
-      throw new NotFoundException('Post not found');
+      throw new NotFoundException("Post not found");
     }
 
     if (post.user_id !== userId) {
-      throw new ForbiddenException('You can only delete your own posts');
+      throw new ForbiddenException("You can only delete your own posts");
     }
 
     return this.prisma.posts.delete({ where: { id } });
@@ -111,7 +111,7 @@ export class PostsService {
   async addComment(postId: string, data: CreateCommentDto, userId: string) {
     const post = await this.prisma.posts.findUnique({ where: { id: postId } });
     if (!post) {
-      throw new NotFoundException('Post not found');
+      throw new NotFoundException("Post not found");
     }
 
     return this.prisma.post_comments.create({
@@ -135,11 +135,11 @@ export class PostsService {
     });
 
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
     if (comment.user_id !== userId) {
-      throw new ForbiddenException('You can only delete your own comments');
+      throw new ForbiddenException("You can only delete your own comments");
     }
 
     return this.prisma.post_comments.delete({ where: { id: commentId } });
@@ -150,7 +150,7 @@ export class PostsService {
       where: { id: commentId },
     });
     if (!comment) {
-      throw new NotFoundException('Comment not found');
+      throw new NotFoundException("Comment not found");
     }
 
     const existing = await this.prisma.post_comment_reactions.findUnique({
@@ -167,7 +167,7 @@ export class PostsService {
         await this.prisma.post_comment_reactions.delete({
           where: { id: existing.id },
         });
-        return { action: 'removed' };
+        return { action: "removed" };
       }
 
       return this.prisma.post_comment_reactions.update({

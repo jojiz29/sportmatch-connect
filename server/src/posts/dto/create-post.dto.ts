@@ -1,23 +1,23 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, MaxLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreatePostDto {
-  @ApiProperty({ example: 'Busco jugadores para partido de futbol' })
+  @ApiProperty({ example: "Busco jugadores para partido de futbol" })
   @IsString()
   @MaxLength(1000)
   content: string;
 
-  @ApiPropertyOptional({ example: 'IMAGE' })
+  @ApiPropertyOptional({ example: "IMAGE" })
   @IsString()
   @IsOptional()
   type?: string;
 
-  @ApiPropertyOptional({ example: 'https://example.com/image.jpg' })
+  @ApiPropertyOptional({ example: "https://example.com/image.jpg" })
   @IsString()
   @IsOptional()
   media_url?: string;
 
-  @ApiPropertyOptional({ example: 'Futbol' })
+  @ApiPropertyOptional({ example: "Futbol" })
   @IsString()
   @IsOptional()
   sport?: string;
@@ -31,7 +31,7 @@ export class UpdatePostDto {
 }
 
 export class CreateCommentDto {
-  @ApiProperty({ example: 'Gran partido!' })
+  @ApiProperty({ example: "Gran partido!" })
   @IsString()
   @MaxLength(500)
   content: string;
@@ -43,7 +43,7 @@ export class CreateCommentDto {
 }
 
 export class CreateReactionDto {
-  @ApiProperty({ example: 'LIKE' })
+  @ApiProperty({ example: "LIKE" })
   @IsString()
   reaction_type: string;
 }

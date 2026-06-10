@@ -1,12 +1,21 @@
-import { IsString, IsInt, IsOptional, IsNumber, IsBoolean, IsArray, Min, Max } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsInt,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  IsArray,
+  Min,
+  Max,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateCourtDto {
-  @ApiProperty({ example: 'Cancha Sol de Lima' })
+  @ApiProperty({ example: "Cancha Sol de Lima" })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'Futbol' })
+  @ApiProperty({ example: "Futbol" })
   @IsString()
   sport: string;
 
@@ -44,7 +53,7 @@ export class CreateCourtDto {
   @IsOptional()
   amenities?: string[];
 
-  @ApiPropertyOptional({ example: 'Av. Peru 123' })
+  @ApiPropertyOptional({ example: "Av. Peru 123" })
   @IsString()
   @IsOptional()
   address?: string;
@@ -59,7 +68,7 @@ export class CreateCourtDto {
   @IsOptional()
   operating_hours?: string[];
 
-  @ApiPropertyOptional({ example: 'Lince' })
+  @ApiPropertyOptional({ example: "Lince" })
   @IsString()
   @IsOptional()
   district?: string;

@@ -1,92 +1,93 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-type Theme = 'dark' | 'light' | 'system'
+type Theme = "dark" | "light" | "system";
 
 type ThemeProviderProps = {
-  children: ReactNode
-  defaultTheme?: Theme
-  storageKey?: string
-}
+  children: ReactNode;
+  defaultTheme?: Theme;
+  storageKey?: string;
+};
 
 type ThemeProviderState = {
-  theme: Theme
-  setTheme: (theme: Theme) => void
-}
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+};
 
 const initialState: ThemeProviderState = {
-  theme: 'system',
+  theme: "system",
   setTheme: () => null,
-}
+};
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'system',
-  storageKey = 'vite-ui-theme',
+  defaultTheme = "system",
+  storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Try localStorage first, fall back to sessionStorage, then default
     try {
-      return (localStorage.getItem(storageKey) as Theme) ||
-             (sessionStorage.getItem(storageKey) as Theme) ||
-             defaultTheme
-    } catch (e) {
+      return (
+        (localStorage.getItem(storageKey) as Theme) ||
+        (sessionStorage.getItem(storageKey) as Theme) ||
+        defaultTheme
+      );
+    } catch {
       // Storage unavailable (incognito/privacy mode) - use default
-      return defaultTheme
+      return defaultTheme;
     }
-  })
+  });
 
   useEffect(() => {
-    const root = window.document.documentElement
+    const root = window.document.documentElement;
 
-    root.classList.remove('light', 'dark')
+    root.classList.remove("light", "dark");
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light'
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
 
-      root.classList.add(systemTheme)
-      return
+      root.classList.add(systemTheme);
+      return;
     }
 
-    root.classList.add(theme)
-  }, [theme])
+    root.classList.add(theme);
+  }, [theme]);
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
       // Try to persist to localStorage, fall back to sessionStorage
       try {
-        localStorage.setItem(storageKey, theme)
-      } catch (e) {
+        localStorage.setItem(storageKey, theme);
+      } catch {
         // localStorage unavailable (incognito) - use sessionStorage
         try {
-          sessionStorage.setItem(storageKey, theme)
-        } catch (err) {
+          sessionStorage.setItem(storageKey, theme);
+        } catch {
           // Both unavailable - just update state without persistence
-          console.warn('Storage unavailable, theme preference will not persist')
+          console.warn("Storage unavailable, theme preference will not persist");
         }
       }
-      setTheme(theme)
+      setTheme(theme);
     },
-  }
+  };
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
       {children}
     </ThemeProviderContext.Provider>
-  )
+  );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
-  const context = useContext(ThemeProviderContext)
+  const context = useContext(ThemeProviderContext);
 
-  if (context === undefined)
-    throw new Error('useTheme must be used within a ThemeProvider')
+  if (context === undefined) throw new Error("useTheme must be used within a ThemeProvider");
 
-  return context
-}
+  return context;
+};
