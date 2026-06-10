@@ -46,22 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 async function initAuth() {
       try {
-        // Only apply timeout if there's no hash in the URL (not during OAuth callback)
-        const isOAuthCallback = typeof window !== "undefined" && window.location.hash.includes("access_token");
-        const timeoutMs = isOAuthCallback ? 10000 : 3000; // Give more time during OAuth callback
-
-        if (!isOAuthCallback) {
-          timeoutRef.current = setTimeout(() => {
-            if (mounted) {
-              console.warn("Auth synchronization timed out. Falling back to demo mode.");
-              useAuthStore.getState().setDemoMode(true);
-              const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
-              useAuthStore.getState().login(fallbackUser);
-              setIsLoading(false);
-            }
-          }, timeoutMs);
-        }
-
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -128,10 +112,6 @@ async function initAuth() {
         console.error("AuthProvider initAuth error:", err);
         logoutRef.current();
       } finally {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
         if (mounted) {
           initializedRef.current = true;
           setIsLoading(false);
