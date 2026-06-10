@@ -103,7 +103,8 @@ function Chat() {
       .catch((err) => console.warn("Failed to load user squads for attachments:", err));
 
     // Try backend first for matches, fallback to Supabase
-    backendApi.matches.getAll()
+    backendApi.matches
+      .getAll()
       .then((list) => setSystemMatches(list as Match[]))
       .catch(() => {
         apiClient.matches

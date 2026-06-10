@@ -290,32 +290,43 @@ function Landing() {
   const currentProfile = mockProfiles[activeCardIndex];
 
   return (
-    <div className="min-h-screen bg-[#0B132B] text-[#F5F7FA] overflow-x-hidden font-sans relative">
-      {/* Premium World Cup Vector Curves & Glowing Waves */}
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden relative transition-colors duration-300">
       <WorldCupBackground />
 
       {/* Header */}
-      <header className="relative z-20 w-full bg-[#0B132B]/60 backdrop-blur-md border-b border-white/5 py-4 sm:py-6 px-4 md:px-8 xl:px-16">
+      <header className="relative z-20 w-full bg-background/60 backdrop-blur-md border-b border-border/40 py-4 sm:py-6 px-4 md:px-8 xl:px-16">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
-              <Zap className="h-5 w-5 text-[#0B132B]" />
+              <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-extrabold text-xl sm:text-2xl tracking-wider text-white">
+            <span className="font-heading text-2xl sm:text-3xl tracking-wide text-foreground">
               SportMatch
             </span>
           </div>
-          <nav className="hidden lg:flex items-center gap-10 text-sm font-semibold text-[#B2B8C2]">
-            <a href="#matchmaking" className="hover:text-[#39FF14] transition-colors duration-200">
+          <nav className="hidden lg:flex items-center gap-10 text-sm font-medium text-muted-foreground">
+            <a
+              href="#matchmaking"
+              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.matchmaking_title")}
             </a>
-            <a href="#squads" className="hover:text-[#39FF14] transition-colors duration-200">
+            <a
+              href="#squads"
+              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.squads_title")}
             </a>
-            <a href="#map" className="hover:text-[#39FF14] transition-colors duration-200">
+            <a
+              href="#map"
+              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.map_title")}
             </a>
-            <a href="#challenges" className="hover:text-[#39FF14] transition-colors duration-200">
+            <a
+              href="#challenges"
+              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+            >
               {t("landing.challenges_title")}
             </a>
           </nav>
@@ -324,7 +335,7 @@ function Landing() {
               to="/login"
               className={
                 buttonVariants({ variant: "outline", size: "sm" }) +
-                " text-white border-white/10 hover:border-white/20 text-xs sm:text-sm"
+                " text-foreground border-border hover:border-primary/50 text-xs sm:text-sm"
               }
             >
               {t("login.title_signin")}
@@ -333,7 +344,7 @@ function Landing() {
               to="/demo"
               className={
                 buttonVariants({ variant: "default", size: "sm" }) +
-                " shadow-glow text-[#0B132B] font-bold text-xs sm:text-sm"
+                " shadow-glow text-primary-foreground font-bold text-xs sm:text-sm"
               }
             >
               {t("login.btn_demo")}
@@ -345,16 +356,18 @@ function Landing() {
       {/* Hero Section */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16 pt-16 md:pt-24 lg:pt-32 pb-24 lg:pb-36 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
         <div className="lg:col-span-7 xl:col-span-6 flex flex-col justify-center">
-          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-[#39FF14] mb-8 w-fit shadow-neon">
-            <span className="h-2 w-2 rounded-full bg-[#39FF14] animate-ping" />
+          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-background/50 border border-border/40 text-xs text-[#00e676] mb-8 w-fit shadow-neon">
+            <span className="h-2 w-2 rounded-full bg-[#00e676] animate-ping" />
             Beta · Lima 2026 Active Venues Mapped
           </span>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl xl:text-8xl font-black tracking-tight leading-[0.95] text-white">
-            Tu próximo <span className="text-gradient">partido</span>
+          <h1 className="font-heading text-5xl sm:text-7xl md:text-8xl xl:text-9xl leading-[0.9] tracking-wide text-foreground">
+            Tu próximo
+            <br />
+            <span className="text-gradient text-glow">partido</span>
             <br />
             está a un swipe.
           </h1>
-          <p className="mt-8 text-base sm:text-lg md:text-xl text-[#B2B8C2] leading-relaxed max-w-2xl">
+          <p className="mt-8 text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl">
             Matchmaking inteligente para deportistas amateur. Encontrá gente compatible, reservá
             canchas y subí tu Trust Score con cada partido jugado en tu distrito.
           </p>
@@ -362,28 +375,28 @@ function Landing() {
             {/* Pulsing Electric Orange Action CTA Button */}
             <Link
               to="/demo"
-              className="relative inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl bg-gradient-primary text-[#0B132B] font-black text-base shadow-glow hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
+              className="relative inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl bg-gradient-primary text-primary-foreground font-black text-base shadow-glow hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
             >
-              <span className="absolute -inset-1 rounded-2xl bg-[#FF6B35]/25 blur opacity-75 animate-pulse pointer-events-none" />
+              <span className="absolute -inset-1 rounded-2xl bg-primary/25 blur opacity-75 animate-pulse pointer-events-none" />
               <span className="relative flex items-center gap-2">
                 {t("landing.empezar")} <ArrowRight className="h-5 w-5" />
               </span>
             </Link>
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md text-white font-bold text-base hover:bg-white/10 transition-all duration-300"
+              className="inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl border border-border/45 bg-background/50 backdrop-blur-md text-foreground font-bold text-base hover:bg-background/80 transition-all duration-300"
             >
               {t("landing.crear_cuenta")}
             </Link>
           </div>
-          <div className="mt-14 flex items-center gap-8 text-sm sm:text-base text-[#B2B8C2]">
+          <div className="mt-14 flex items-center gap-8 text-sm sm:text-base text-muted-foreground">
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 fill-[#FFD60A] text-[#FFD60A]" />
-              <span className="font-bold text-white">4.9</span> · App Store
+              <span className="font-bold text-foreground">4.9</span> · App Store
             </div>
-            <div className="h-4 w-[1px] bg-white/10" />
+            <div className="h-4 w-[1px] bg-border/30" />
             <div>
-              <span className="font-bold text-white">200K+</span> partidos jugados
+              <span className="font-bold text-foreground">200K+</span> partidos jugados
             </div>
           </div>
         </div>
@@ -577,7 +590,7 @@ function Landing() {
           <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
             {t("landing.features_title")}
           </span>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white">
+          <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
             {t("landing.matchmaking_title")}
           </h2>
           <p className="mt-6 text-[#B2B8C2] max-w-3xl mx-auto text-base sm:text-lg md:text-xl leading-relaxed">
@@ -627,7 +640,7 @@ function Landing() {
             <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
               {t("landing.squads_title")}
             </span>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white">
+            <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
               Pago Dividido y Chats de Squad
             </h2>
             <p className="mt-6 text-[#B2B8C2] text-base sm:text-lg md:text-xl leading-relaxed">
@@ -814,7 +827,7 @@ function Landing() {
               <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
                 Ubicación Deportiva
               </span>
-              <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight">
+              <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
                 {t("landing.map_title")}
               </h2>
               <p className="mt-6 text-[#B2B8C2] text-sm sm:text-base leading-relaxed">
@@ -943,7 +956,7 @@ function Landing() {
             <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
               Gamificación
             </span>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white">
+            <h2 className="font-heading text-5xl sm:text-6xl md:text-7xl tracking-wide text-white">
               {t("landing.challenges_title")}
             </h2>
             <p className="mt-6 text-[#B2B8C2] text-sm sm:text-base md:text-lg leading-relaxed">

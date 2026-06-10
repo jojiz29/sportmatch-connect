@@ -125,9 +125,21 @@ export function NotificationBell() {
     activeCount++;
 
     if (!activeChannel) {
+      const channelName = `user-notifications-${user.id}`;
+      try {
+        const existing = supabase
+          .getChannels()
+          .find((c) => c.topic === `realtime:${channelName}` || c.topic === channelName);
+        if (existing) {
+          supabase.removeChannel(existing);
+        }
+      } catch (err) {
+        console.warn("Failed to clean up existing notification channel from Supabase cache:", err);
+      }
+
       activeChannelUserId = user.id;
       activeChannel = supabase
-        .channel(`user-notifications-${user.id}`)
+        .channel(channelName)
         .on(
           "postgres_changes",
           {

@@ -40,10 +40,13 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     setIsLoadingMatches(true);
 
     // Try backend first for user matches, fallback to Supabase
-    backendApi.matches.getAll()
+    backendApi.matches
+      .getAll()
       .then((backendMatches) => {
         if (active) {
-          const userMatches = (backendMatches as Match[]).filter(m => m.creator_id === inspectedUser.id);
+          const userMatches = (backendMatches as Match[]).filter(
+            (m) => m.creator_id === inspectedUser.id,
+          );
           setInspectedUserMatches(userMatches);
         }
       })
@@ -241,11 +244,11 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                       <div className="px-5 pb-2 space-y-2 z-10 relative">
                         {/* Name + age */}
                         <div className="flex items-baseline justify-center gap-2 text-center">
-                          <h2 className="text-xl font-black text-white">
+                          <h2 className="text-xl font-black text-foreground">
                             {p.company_name || p.name || t("matchmaking.user_default")}
                           </h2>
                           {p.user_role !== "BUSINESS" && (
-                            <span className="text-sm font-semibold text-white/60">
+                            <span className="text-sm font-semibold text-muted-foreground">
                               {p.age || "?"}a
                             </span>
                           )}
@@ -270,10 +273,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                               <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
                                 {activeSport}
                               </span>
-                              <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
+                              <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
                                 {displayLevel}
                               </span>
-                              <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-white/65 text-[10px] font-medium flex items-center gap-1">
+                              <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
                                 <MapPin className="h-2.5 w-2.5 text-[#39FF14]" /> {dist.toFixed(1)}{" "}
                                 km
                               </span>
@@ -283,7 +286,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
                         {/* Bio italic */}
                         {p.bio && (
-                          <p className="text-xs text-white/60 leading-relaxed italic text-center line-clamp-2 px-2">
+                          <p className="text-xs text-muted-foreground leading-relaxed italic text-center line-clamp-2 px-2">
                             "{p.bio}"
                           </p>
                         )}
@@ -296,11 +299,11 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                             </span>
                           )}
                           {(p.trust_score || 0) >= 80 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/8 text-white/60 font-semibold">
+                            <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
                               #BuenNivel
                             </span>
                           )}
-                          <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/8 text-white/60 font-semibold">
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
                             #Puntual
                           </span>
                         </div>
@@ -308,7 +311,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
                       {/* ── ACTION BUTTONS (always shown for top card) ── */}
                       {isTop && (
-                        <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-white/5 mt-auto">
+                        <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
                           {/* Dislike / Pass */}
                           <button
                             onClick={() => swipe(p.id, "pass")}
@@ -320,7 +323,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           {/* Info / View Profile */}
                           <button
                             onClick={() => setInspectedUser(p)}
-                            className="h-10 w-10 rounded-full border border-white/12 bg-white/6 hover:bg-white/12 active:scale-95 text-white/70 flex items-center justify-center transition-all duration-200 cursor-pointer"
+                            className="h-10 w-10 rounded-full border border-border bg-muted/80 hover:bg-muted active:scale-95 text-foreground/75 flex items-center justify-center transition-all duration-200 cursor-pointer"
                             aria-label={t("matchmaking.view_profile")}
                           >
                             <Info className="h-5 w-5" />

@@ -27,19 +27,29 @@ export const Route = createFileRoute("/app/map")({
     ],
   }),
   loader: async () => {
+    // If in demo mode, bypass backend fetch immediately for zero-lag (Task 2.4 / 2.5)
+    if (useAuthStore.getState().isDemoMode) {
+      const [courts, players, matches] = await Promise.all([
+        apiClient.courts.getAll().catch(() => []),
+        apiClient.users.getMatches().catch(() => []),
+        apiClient.matches.getAll().catch(() => []),
+      ]);
+      return { courts, players, matches };
+    }
+
     const [backendCourts, backendMatches] = await Promise.all([
       backendApi.courts.getAll().catch(() => null),
       backendApi.matches.getAll().catch(() => null),
     ]);
 
     const [courts, players, matches] = await Promise.all([
-      backendCourts
-        ? Promise.resolve(backendCourts as Court[])
-        : apiClient.courts.getAll(),
-      apiClient.users.getMatches(),
-      backendMatches
-        ? Promise.resolve(backendMatches as Match[])
-        : apiClient.matches.getAll(),
+      backendCourts && backendCourts.data
+        ? Promise.resolve(backendCourts.data as Court[])
+        : apiClient.courts.getAll().catch(() => []),
+      apiClient.users.getMatches().catch(() => []),
+      backendMatches && backendMatches.data
+        ? Promise.resolve(backendMatches.data as Match[])
+        : apiClient.matches.getAll().catch(() => []),
     ]);
     return { courts, players, matches };
   },

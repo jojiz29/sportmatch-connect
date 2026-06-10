@@ -5,7 +5,6 @@ import {
   Map,
   MessageSquare,
   Trophy,
-  Activity,
   LayoutDashboard,
   User,
   Zap,
@@ -13,16 +12,14 @@ import {
   LogOut,
   Rss,
   Shield,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
+import { useThemeStore } from "@/features/theme/store";
 import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
-import { initOneSignal, requestPushPermission } from "@/shared/lib/onesignal";
-import { supabase } from "@/shared/api/supabase";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
 
 const GROUPS = [
   {
@@ -44,8 +41,8 @@ const GROUPS = [
   {
     titleKey: "nav.groups.analytics",
     items: [
-      { to: "/app/iot", labelKey: "nav.telemetria", icon: Activity },
       { to: "/app/wallet", labelKey: "nav.wallet", icon: Trophy },
+      { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
     ],
   },
 ];
@@ -61,8 +58,52 @@ const MOBILE_NAV = [
   { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
   { to: "/app/map", labelKey: "nav.map_and_courts", icon: Map },
   { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
+  { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
   { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
 ];
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useThemeStore();
+
+  const getThemeDetails = () => {
+    switch (theme) {
+      case "light":
+        return {
+          title: "Modo Futbolista Oscuro",
+          icon: <Sun className="h-5 w-5 text-amber-500 hover:scale-110 transition-transform" />,
+        };
+      case "dark-footballer":
+        return {
+          title: "Modo Copa del Mundo",
+          icon: <Moon className="h-5 w-5 text-[#39FF14] hover:scale-110 transition-transform" />,
+        };
+      case "world-cup":
+        return {
+          title: "Modo Claro",
+          icon: (
+            <Trophy className="h-5 w-5 text-[#D4AF37] hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(212,175,55,0.7)]" />
+          ),
+        };
+      default:
+        return {
+          title: "Cambiar Tema",
+          icon: <Moon className="h-5 w-5" />,
+        };
+    }
+  };
+
+  const { title, icon } = getThemeDetails();
+
+  return (
+    <button
+      onClick={toggleTheme}
+      title={title}
+      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all active:scale-90 flex items-center justify-center cursor-pointer"
+    >
+      {icon}
+    </button>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -71,20 +112,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentUser = useAuthStore((s) => s.user);
   const { signOut } = useAuth();
   const navigate = useNavigate();
-
-  const [showPrompt, setShowPrompt] = useState(false);
-
-  useEffect(() => {
-    if (currentUser) {
-      initOneSignal();
-
-      const dismissed = localStorage.getItem("sportmatch-push-prompt-dismissed");
-      if (!currentUser.push_token && !dismissed) {
-        const timer = setTimeout(() => setShowPrompt(true), 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [currentUser]);
 
   const handleLogout = async () => {
     await signOut();
@@ -124,20 +151,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col glass border-r border-border z-30">
-          <div className="px-6 py-6 flex items-center justify-between">
-            <Link to="/app" className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow hover:scale-105 active:scale-95 transition-transform">
-                <Zap className="h-5 w-5 text-white" />
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col glass border-r border-border/40 z-30">
+          <div className="px-5 py-5 flex items-center justify-between border-b border-border/10">
+            <Link to="/app" className="flex items-center gap-3 group">
+              <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow group-hover:scale-110 active:scale-95 transition-all duration-300">
+                <Zap className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-lg tracking-tight text-gradient">SportMatch</span>
+              <span className="font-heading text-xl tracking-wide text-white">SportMatch</span>
             </Link>
-            <NotificationBell />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <NotificationBell />
+            </div>
           </div>
-          <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
             {GROUPS.map((group) => (
-              <div key={group.titleKey} className="space-y-1 animate-fade-in">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 mb-1.5">
+              <div key={group.titleKey} className="space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
                   {t(group.titleKey)}
                 </div>
                 {group.items.map((item) => {
@@ -147,14 +177,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                      className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                          : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
                       }`}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
+                      <Icon className="h-5 w-5 shrink-0" />
                       {t(item.labelKey)}
+                      {active && (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />
+                      )}
                     </Link>
                   );
                 })}
@@ -162,8 +195,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
 
             {filteredAccountItems.length > 0 && (
-              <div className="space-y-1 pt-2 border-t border-border/20">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 mb-1.5">
+              <div className="space-y-1 pt-4 border-t border-border/10">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
                   {t("nav.groups.account")}
                 </div>
                 {filteredAccountItems.map((item) => {
@@ -173,39 +206,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                      className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                          : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
                       }`}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
+                      <Icon className="h-5 w-5 shrink-0" />
                       {t(item.labelKey)}
+                      {active && (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />
+                      )}
                     </Link>
                   );
                 })}
               </div>
             )}
           </nav>
-          <div className="p-4 m-3 rounded-2xl bg-gradient-card border border-border shadow-card hover:border-primary/20 transition-all duration-300">
+          <div className="p-3 m-3 rounded-2xl bg-gradient-card border border-border/40 shadow-card hover:border-primary/20 transition-all duration-300 group">
             <div className="flex items-center gap-3">
-              <img
-                src={currentUser.avatar_url}
-                alt={currentUser.name}
-                className="h-10 w-10 rounded-full bg-muted object-cover border border-border/40"
-              />
+              <div className="relative shrink-0">
+                <img
+                  src={currentUser.avatar_url}
+                  alt={currentUser.name}
+                  className="h-10 w-10 rounded-full bg-muted object-cover border border-border/40 group-hover:border-neon/30 transition-colors"
+                />
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-neon border-2 border-background" />
+              </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate leading-tight">
+                <div className="text-sm font-semibold truncate leading-tight text-foreground/90">
                   {currentUser.name}
                 </div>
-                <div className="text-xs text-neon flex items-center gap-1 mt-0.5 font-medium">
+                <div className="text-xs text-neon/80 flex items-center gap-1 mt-0.5 font-medium">
                   <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 title={t("nav.logout")}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90"
+                className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all active:scale-90"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -232,8 +271,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Mobile bottom nav */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border">
-          <div className="grid grid-cols-5 px-2 py-2">
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border/40">
+          <div className="grid grid-cols-5 px-1 py-1">
             {MOBILE_NAV.map((item) => {
               const active = item.end ? path === item.to : path.startsWith(item.to);
               const Icon = item.icon;
@@ -241,95 +280,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`flex flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all duration-200 active:scale-95 ${
-                    active ? "text-neon" : "text-muted-foreground"
+                  className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all duration-200 active:scale-90 rounded-xl ${
+                    active
+                      ? "text-neon bg-neon/5"
+                      : "text-muted-foreground/60 hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  {t(item.labelKey)}
+                  <div
+                    className={`p-1.5 rounded-lg transition-all duration-200 ${active ? "bg-neon/10" : ""}`}
+                  >
+                    <Icon className={`h-5 w-5 ${active ? "text-neon" : ""}`} />
+                  </div>
+                  <span>{t(item.labelKey)}</span>
                 </Link>
               );
             })}
           </div>
         </nav>
 
-        <main className="lg:pl-64 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
+        <main className="lg:pl-72 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
           {children}
         </main>
-
-        <AnimatePresence>
-          {showPrompt && (
-            <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 max-w-sm w-[calc(100vw-32px)] glass border border-neon/30 rounded-2xl p-5 shadow-neon z-50 overflow-hidden"
-              id="push-notification-prompt"
-            >
-              {/* FIFA World Cup theme border/glowing effects */}
-              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-neon via-primary to-electric" />
-              <div className="flex gap-4">
-                <div className="h-10 w-10 shrink-0 bg-neon/10 rounded-xl flex items-center justify-center border border-neon/20 shadow-glow">
-                  <Zap className="h-5 w-5 text-neon" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-sm text-foreground">
-                    ¡Activa las Convocatorias! ⚽
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Recibe alertas de partidos en tu zona, resultados y chats al instante. No te
-                    quedes fuera.
-                  </p>
-                  <div className="flex items-center gap-3 mt-4">
-                    <button
-                      onClick={async () => {
-                        try {
-                          const token = await requestPushPermission();
-                          if (token) {
-                            const isDemo =
-                              useAuthStore.getState().isDemoMode ||
-                              import.meta.env.VITE_USE_MOCKS === "true";
-                            if (!isDemo) {
-                              await supabase
-                                .from("profiles")
-                                .update({ push_token: token })
-                                .eq("id", currentUser.id);
-                            }
-                            useAuthStore.setState({
-                              user: { ...currentUser, push_token: token },
-                            });
-                            toast.success("¡Notificaciones push activadas! 🏆");
-                          } else {
-                            toast.error("No se pudo obtener el permiso de notificaciones.");
-                          }
-                        } catch (err) {
-                          console.error("Error setting up notifications:", err);
-                        } finally {
-                          setShowPrompt(false);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-xl bg-neon text-neon-foreground text-[11px] font-bold shadow-neon hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                      id="allow-notifications-btn"
-                    >
-                      Permitir
-                    </button>
-                    <button
-                      onClick={() => {
-                        localStorage.setItem("sportmatch-push-prompt-dismissed", "true");
-                        setShowPrompt(false);
-                        toast.info("Notificaciones omitidas. Puedes activarlas desde tu perfil.");
-                      }}
-                      className="px-3 py-2 rounded-xl bg-accent text-accent-foreground text-[11px] font-semibold hover:bg-accent/80 transition-colors cursor-pointer"
-                      id="dismiss-notifications-btn"
-                    >
-                      Quizás más tarde
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

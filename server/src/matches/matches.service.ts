@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateMatchDto, UpdateMatchDto } from './dto';
+import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateMatchDto, UpdateMatchDto } from "./dto";
 
 @Injectable()
 export class MatchesService {
@@ -11,14 +11,14 @@ export class MatchesService {
       if (sport) {
         return await this.prisma.$queryRawUnsafe(
           `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches WHERE sport = $1 LIMIT 50`,
-          [sport]
+          [sport],
         );
       }
       return await this.prisma.$queryRawUnsafe(
-        `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches LIMIT 50`
+        `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches LIMIT 50`,
       );
     } catch (error) {
-      console.error('MatchesService.findAll error:', error);
+      console.error("MatchesService.findAll error:", error);
       throw error;
     }
   }
@@ -30,12 +30,12 @@ export class MatchesService {
       });
 
       if (!match) {
-        throw new NotFoundException('Match not found');
+        throw new NotFoundException("Match not found");
       }
 
       return match;
     } catch (error) {
-      console.error('MatchesService.findOne error:', error);
+      console.error("MatchesService.findOne error:", error);
       throw error;
     }
   }
@@ -46,11 +46,11 @@ export class MatchesService {
         data: {
           ...data,
           creator_id: creatorId,
-          status: 'OPEN',
+          status: "OPEN",
         },
       });
     } catch (error) {
-      console.error('MatchesService.create error:', error);
+      console.error("MatchesService.create error:", error);
       throw error;
     }
   }
@@ -62,11 +62,11 @@ export class MatchesService {
       });
 
       if (!match) {
-        throw new NotFoundException('Match not found');
+        throw new NotFoundException("Match not found");
       }
 
       if (match.creator_id !== userId) {
-        throw new ForbiddenException('You can only update your own matches');
+        throw new ForbiddenException("You can only update your own matches");
       }
 
       return await this.prisma.matches.update({
@@ -74,7 +74,7 @@ export class MatchesService {
         data,
       });
     } catch (error) {
-      console.error('MatchesService.update error:', error);
+      console.error("MatchesService.update error:", error);
       throw error;
     }
   }
@@ -86,18 +86,18 @@ export class MatchesService {
       });
 
       if (!match) {
-        throw new NotFoundException('Match not found');
+        throw new NotFoundException("Match not found");
       }
 
       if (match.creator_id !== userId) {
-        throw new ForbiddenException('You can only delete your own matches');
+        throw new ForbiddenException("You can only delete your own matches");
       }
 
       return await this.prisma.matches.delete({
         where: { id },
       });
     } catch (error) {
-      console.error('MatchesService.delete error:', error);
+      console.error("MatchesService.delete error:", error);
       throw error;
     }
   }
@@ -109,18 +109,18 @@ export class MatchesService {
       });
 
       if (!match) {
-        throw new NotFoundException('Match not found');
+        throw new NotFoundException("Match not found");
       }
 
       return await this.prisma.match_participants.create({
         data: {
           match_id: matchId,
           user_id: userId,
-          status: 'CONFIRMED',
+          status: "CONFIRMED",
         },
       });
     } catch (error) {
-      console.error('MatchesService.join error:', error);
+      console.error("MatchesService.join error:", error);
       throw error;
     }
   }
@@ -132,11 +132,11 @@ export class MatchesService {
       });
 
       if (!match) {
-        throw new NotFoundException('Match not found');
+        throw new NotFoundException("Match not found");
       }
 
       if (match.creator_id === userId) {
-        throw new ForbiddenException('Creator cannot leave the match');
+        throw new ForbiddenException("Creator cannot leave the match");
       }
 
       return await this.prisma.match_participants.deleteMany({
@@ -146,7 +146,7 @@ export class MatchesService {
         },
       });
     } catch (error) {
-      console.error('MatchesService.leave error:', error);
+      console.error("MatchesService.leave error:", error);
       throw error;
     }
   }

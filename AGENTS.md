@@ -1,115 +1,40 @@
 # SportMatch Connect — AGENTS.md
 
-## Project Overview
+## 🏗 Project Architecture & Domains
 
-SportMatch Connect is a React 19 + TypeScript + Supabase sports matchmaking platform using Feature-Sliced Design (FSD).
+- **Frontend:** React 19 + TypeScript + Supabase + Vite using **Feature-Sliced Design (FSD)**.
+- **Backend:** NestJS + Prisma backend located in `/server/`.
+- **Database:** Supabase PostgreSQL with Row Level Security (RLS) enabled.
 
-**Branches:**
-- `main` - Production branch
-- `Juan` - Development branch with comments/reactions feature and `/server` Express backend
+## ⚠️ High-Signal Quirks & Developer Commands
 
----
+- **Frontend Dev Server:** Run `npx vite`. (Do NOT run `npm run dev` for the frontend!)
+- **Backend Dev Server:** `npm run dev` in the root actually starts the **backend** (`cd server && npm install && npm run build && npm run start:prod`).
+- **Tests:** `npm run test` (Vitest), `npm run test:e2e` (Playwright).
+- **Pre-commit constraints:** Hook runs `eslint --fix` → `prettier --write` → `tsc --noEmit`. Fix all TS errors before committing.
 
-## Critical Architecture Rules
+## 🗄️ Database & Prisma Dual-URL Architecture (us-west-2)
 
-### Feature-Sliced Design Layers (imports only downward)
-```
-src/app          → Root layout, providers, styles
-src/routes       → TanStack Router page definitions
-src/widgets      → Complex composite components
-src/features    → Business capabilities (matchmaking, wallet, etc.)
-src/entities     → Types, stores (user, match, court)
-src/shared      → UI components, apiClient, i18n
-```
+**CRITICAL PROTOCOL:** The project relies on a Dual-URL Prisma setup with Supabase's Oregon (`us-west-2`) pooler.
+If modifying environment variables or Prisma configuration, STRICTLY adhere to:
 
-**Rule:** `shared` → `entities` → `features` → `widgets/routes`. Never import upward.
+1. **Environment Config** (both root `.env` and `/server/.env`):
+   - `DATABASE_URL="postgresql://postgres.gzyoxfhzuxknqacplapi:[PASSWORD]@aws-1-us-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true"`
+   - `DIRECT_URL="postgresql://postgres.gzyoxfhzuxknqacplapi:[PASSWORD]@aws-1-us-west-2.pooler.supabase.com:5432/postgres"`
+2. **Prisma Schema (`/server/prisma/schema.prisma`)**:
+   - The datasource MUST enforce dual-routing: `url = env("DATABASE_URL")` and `directUrl = env("DIRECT_URL")`.
+3. **Backend Entrypoint (`/server/src/main.ts`)**:
+   - MUST perform absolute environment loading via `dotenv` at Line 1 (resolving root `.env` and server `.env`) before `NestFactory` compiles, to avoid `dist/` context bugs.
 
-### TypeScript Rules
-- **Zero `any` tolerance** - Type everything explicitly
-- **No hardcoded strings** - Use `useTranslation()` + `es.json`/`en.json`
-- Routes (`src/routes/`) must NOT contain business logic - delegate to `features/`
+## 📁 Feature-Sliced Design (FSD) Rules
 
----
+- **Layer Order:** `app` → `routes` → `widgets` → `features` → `entities` → `shared`.
+- **Import Rule:** Only import _downward_. Never import upward.
+- **Business Logic:** `src/routes/` must NOT contain business logic; delegate to `features/` or `entities/`.
 
-## Key Commands
+## 🐛 Common Pitfalls
 
-```bash
-npm run dev         # Start dev server (port 5178+)
-npm run typecheck   # tsc --noEmit (runs pre-commit)
-npm run lint        # ESLint
-npm run format      # Prettier
-npm run test         # Vitest unit tests
-npm run test:e2e    # Playwright E2E tests
-npm run build       # Vite production build
-```
-
-**Pre-commit hook runs:** `eslint --fix` → `prettier --write` → `typecheck`
-
----
-
-## Environment Variables
-
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `VITE_SUPABASE_URL` | Supabase project URL | For production |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon key | For production |
-| `VITE_USE_MOCKS=true` | Enable local mock mode (default) | For offline dev |
-
-**DO NOT commit `.env`** - Use `.env.example` as template.
-
----
-
-## Supabase Database Info
-
-- **Project:** `gzyoxfhzuxknqacplapi.supabase.co`
-- **Tables:** profiles, matches, courts, posts, post_comments, post_comment_reactions, squads, messages, wallet_transactions, notifications, etc.
-- **Auth:** Supabase Auth (email/password)
-- **RLS:** Row Level Security enabled on all tables
-
----
-
-## Backend Server (`/server`)
-
-Express + Prisma backend exists at `server/` but is NOT deployed. Created for future NestJS migration.
-
-Current endpoints (not deployed):
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `GET /api/v1/auth/profile`
-
-**Planned migration:** Convert to NestJS and deploy as Vercel Serverless Functions.
-
----
-
-## Testing Notes
-
-- **Vitest:** Unit tests in `src/**/*.test.ts`
-- **Playwright:** E2E tests in `tests/e2e/`
-- **Demo mode:** Set `VITE_USE_MOCKS=true` for offline development without Supabase
-
----
-
-## Vercel Deployment
-
-- **Frontend:** https://sportmatch-connect-juan-alonso.vercel.app (branch `Juan`)
-- **Supabase Auth redirect:** Configured in Supabase Dashboard
-
----
-
-## Common Pitfalls
-
-1. **PostgREST schema cache** - After DB schema changes, run `NOTIFY pgrst, 'reload schema'`
-2. **Foreign keys in Supabase** - Use Supabase Dashboard SQL Editor to add FKs manually (Prisma `db push` fails due to pooler)
-3. **User ID type mismatch** - `profiles.id` is `uuid`, some legacy tables use `varchar`
-4. **Supabase pooler connection** - Direct Prisma introspection fails; schema must be written manually or via Supabase Management API
-
----
-
-## File Paths
-
-- Types: `src/entities/types.ts`
-- Auth store: `src/entities/user/useAuth.ts`
-- API client: `src/shared/api/apiClient.ts`
-- Supabase client: `src/lib/supabase.ts` or `src/shared/api/supabase.ts`
-- i18n: `src/shared/i18n/locales/{es,en}.json`
-- Migrations: `supabase/migrations/`
+- **Prisma Migrations with Pooler:** Direct Prisma introspection/push sometimes fails through the pooler. Foreign Keys must often be added manually via Supabase Dashboard.
+- **PostgREST Cache:** If you change the DB schema directly in Supabase, run `NOTIFY pgrst, 'reload schema'` in the SQL Editor so the frontend client sees the changes.
+- **User ID typing:** Legacy tables might use `varchar` for user IDs, but `profiles.id` is `uuid`. Match them carefully.
+- **Mock Mode:** Offline dev is supported via `VITE_USE_MOCKS=true`.

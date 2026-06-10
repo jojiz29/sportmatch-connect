@@ -1,13 +1,14 @@
 {
   "nav": {
     "inicio": "Inicio",
-    "matchmaking": "Matchmaking (The Loop)",
+    "matchmaking": "Matchmaking",
     "map_and_courts": "Reservas y Mapa",
     "comunidad": "Comunidad (Feed)",
     "squads": "Squads (Clanes)",
     "mensajes": "Mensajes (Inbox)",
     "telemetria": "Mi Rendimiento (Telemetry)",
     "wallet": "FitCoins (Wallet)",
+    "torneos": "Torneos Relámpago",
     "perfil": "Mi Perfil",
     "business": "Mi Negocio",
     "admin": "Panel de Admin",

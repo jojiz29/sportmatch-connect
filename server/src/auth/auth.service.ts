@@ -1,5 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { SupabaseAuthService } from './supabase-auth.service';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { SupabaseAuthService } from "./supabase-auth.service";
 
 @Injectable()
 export class AuthService {
@@ -10,7 +10,7 @@ export class AuthService {
       const payload = await this.supabaseAuth.validateToken(token);
       return payload;
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException("Invalid token");
     }
   }
 
@@ -23,15 +23,15 @@ export class AuthService {
   async updateProfile(token: string, data: { name?: string; bio?: string; avatar_url?: string }) {
     const { userId } = await this.supabaseAuth.validateToken(token);
 
-    const { data: updatedProfile, error } = await this.supabaseAuth['supabaseAdmin']
-      .from('profiles')
+    const { data: updatedProfile, error } = await this.supabaseAuth["supabaseAdmin"]
+      .from("profiles")
       .update(data)
-      .eq('id', userId)
+      .eq("id", userId)
       .select()
       .single();
 
     if (error || !updatedProfile) {
-      throw new UnauthorizedException('Failed to update profile');
+      throw new UnauthorizedException("Failed to update profile");
     }
 
     return updatedProfile;

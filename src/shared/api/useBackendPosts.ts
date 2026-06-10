@@ -3,6 +3,17 @@ import { backendApi } from "@/shared/api/backendApi";
 import { Post } from "@/entities/types";
 import { toast } from "sonner";
 
+export function useGetPostByIdQuery(id: string) {
+  return useQuery({
+    queryKey: ["backendPost", id],
+    queryFn: async () => {
+      const { data, error } = await backendApi.posts.getById(id);
+      if (error) throw new Error(error);
+      return data as Post;
+    },
+  });
+}
+
 export function useBackendPosts() {
   const queryClient = useQueryClient();
 
@@ -14,16 +25,6 @@ export function useBackendPosts() {
       return data as Post[];
     },
   });
-
-  const getPostByIdQuery = (id: string) =>
-    useQuery({
-      queryKey: ["backendPost", id],
-      queryFn: async () => {
-        const { data, error } = await backendApi.posts.getById(id);
-        if (error) throw new Error(error);
-        return data as Post;
-      },
-    });
 
   const createPostMutation = useMutation({
     mutationFn: async (post: {
@@ -61,7 +62,13 @@ export function useBackendPosts() {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async ({ postId, comment }: { postId: string; comment: { content: string; parent_id?: string } }) => {
+    mutationFn: async ({
+      postId,
+      comment,
+    }: {
+      postId: string;
+      comment: { content: string; parent_id?: string };
+    }) => {
       const { data, error } = await backendApi.posts.addComment("", postId, comment);
       if (error) throw new Error(error);
       return data;
@@ -76,7 +83,13 @@ export function useBackendPosts() {
   });
 
   const addReactionMutation = useMutation({
-    mutationFn: async ({ postId, reaction }: { postId: string; reaction: { comment_id: string; reaction_type: string } }) => {
+    mutationFn: async ({
+      postId,
+      reaction,
+    }: {
+      postId: string;
+      reaction: { comment_id: string; reaction_type: string };
+    }) => {
       const { data, error } = await backendApi.posts.addReaction("", postId, reaction);
       if (error) throw new Error(error);
       return data;
@@ -93,7 +106,6 @@ export function useBackendPosts() {
     posts: postsQuery.data || [],
     isLoading: postsQuery.isLoading,
     error: postsQuery.error,
-    getPostById: getPostByIdQuery,
     createPost: createPostMutation.mutate,
     deletePost: deletePostMutation.mutate,
     addComment: addCommentMutation.mutate,

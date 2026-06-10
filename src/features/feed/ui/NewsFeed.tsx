@@ -2,13 +2,31 @@ import React, { useState, useEffect, useRef } from "react";
 import { getFeed, createPost } from "@/shared/api/feedService";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { Post, Sport } from "@/entities/types";
+import { Post, Sport, SportCatalog } from "@/entities/types";
 import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
-import { Send, Loader2, Zap, MessageCircle } from "lucide-react";
+import { Send, Loader2, Zap, MessageCircle, AlertTriangle, ShieldAlert, Image } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PostComments } from "./PostComments";
+import { ReportModal } from "@/components/ReportModal";
+import { SkeletonLoader } from "@/components/SkeletonLoader";
+
+const SPORT_EMOJIS: Record<string, string> = {
+  Pádel: "🏓",
+  Fútbol: "⚽",
+  Tenis: "🎾",
+  Básquet: "🏀",
+  Vóley: "🏐",
+  Running: "🏃",
+  Gimnasio: "🏋️",
+  Calistenia: "🤸",
+  Natación: "🏊",
+  Ciclismo: "🚴",
+  "Boxeo / MMA": "🥊",
+  Béisbol: "⚾",
+  Golf: "⛳",
+};
 
 /**
  * NewsFeed component with post creation, dynamic listing, and real-time updates.
@@ -32,10 +50,12 @@ export function NewsFeed() {
 
   useEffect(() => {
     // Try backend first for sports, fallback to Supabase
-    backendApi.sports.getAll()
-      .then((data) => {
-        if (data && (data as any[]).length > 0) {
-          setSportsList((data as any[]).map((s: any) => s.name));
+    backendApi.sports
+      .getAll()
+      .then((res) => {
+        const response = res as { data?: SportCatalog[] };
+        if (response?.data && response.data.length > 0) {
+          setSportsList(response.data.map((s) => s.name));
         }
       })
       .catch(() => {
@@ -49,10 +69,47 @@ export function NewsFeed() {
           .catch((err) => console.error("Error loading sports in NewsFeed:", err));
       });
   }, []);
-  const [postType, setPostType] = useState<Post["type"]>("TEXT");
+  const [showImageDropzone, setShowImageDropzone] = useState<boolean>(false);
   const [mediaUrl, setMediaUrl] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+
+  // States for Sprint 3.2 Drag-and-Drop + Moderation
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [revealedPosts, setRevealedPosts] = useState<Record<string, boolean>>({});
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ id: string; type: "post" | "comment" } | null>(
+    null,
+  );
+
+  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change (Task 2.4)
+  useEffect(() => {
+    return () => {
+      if (mediaUrl && mediaUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(mediaUrl);
+      }
+    };
+  }, [mediaUrl]);
+
+  const handleImageFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El archivo supera el límite de 5MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecciona un archivo de imagen válido");
+      return;
+    }
+
+    // Eliminate all client-side Base64 string conversions to prevent database bloating (Task 2.2)
+    // We use lightweight URL.createObjectURL for preview, and store the raw File in state.
+    const localUrl = URL.createObjectURL(file);
+    setMediaUrl(localUrl);
+    setImageFile(file);
+    toast.success("Imagen cargada correctamente");
+  };
 
   // Track current user ID in a ref so the Realtime callback can reference it
   // without being included in the subscription's dependency array.
@@ -163,12 +220,17 @@ export function NewsFeed() {
 
     try {
       setSubmitting(true);
+
+      // Auto-detect post type based on attachments (Task 2.1)
+      const inferredPostType = imageFile ? "PHOTO" : "TEXT";
+
       const newPost = await createPost(
         currentUser.id,
         content,
-        postType,
+        inferredPostType,
         mediaUrl || undefined,
         sport || undefined,
+        imageFile || undefined,
       );
 
       // Optimistic prepend — Realtime will skip it via the user_id guard above
@@ -178,8 +240,9 @@ export function NewsFeed() {
       });
       setContent("");
       setSport("");
-      setPostType("TEXT");
       setMediaUrl("");
+      setImageFile(null);
+      setShowImageDropzone(false);
       toast.success("¡Publicación compartida con éxito!");
     } catch (err) {
       console.error("Failed to create post:", err);
@@ -214,57 +277,124 @@ export function NewsFeed() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <select
-                value={postType}
-                onChange={(e) => setPostType(e.target.value as Post["type"])}
-                className="bg-background/80 border border-border rounded-lg px-2.5 py-1.5 focus:outline-none text-xs"
-                id="feed-post-type"
-              >
-                <option value="TEXT">Texto</option>
-                <option value="MATCH_RESULT">Resultado de Partido</option>
-                <option value="PHOTO">Foto</option>
-                <option value="SQUAD_ANNOUNCEMENT">Anuncio de Squad</option>
-              </select>
+          {/* Emojis Sport Selection Pills (Sprint 3.6 Overhaul) */}
+          <div className="space-y-1.5 pt-2 border-t border-border/20">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide block mb-1">
+              ¿De qué deporte vas a postear?
+            </span>
+            <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+              {sportsList.map((sportName) => {
+                const emoji = SPORT_EMOJIS[sportName] || "🏆";
+                const isSelected = sport === sportName;
+                return (
+                  <button
+                    key={sportName}
+                    type="button"
+                    onClick={() => setSport(isSelected ? "" : (sportName as Sport))}
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                      isSelected
+                        ? "bg-gradient-neon text-neon-foreground shadow-neon border-transparent font-black"
+                        : "bg-muted border-border/45 text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <span className="text-sm">{emoji}</span>
+                    <span>{sportName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              <select
-                value={sport}
-                onChange={(e) => setSport(e.target.value as Sport | "")}
-                className="bg-background/80 border border-border rounded-lg px-2.5 py-1.5 focus:outline-none text-xs"
-              >
-                <option value="">Deporte (Opcional)</option>
-                {sportsList.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+          <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
+            {/* Facebook-style "Foto/Video" button trigger (Sprint 3.6 Overhaul) */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowImageDropzone(!showImageDropzone)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    showImageDropzone || mediaUrl
+                      ? "bg-[#00e676]/10 text-[#00e676] border-[#00e676]/30 shadow-neon"
+                      : "bg-muted border-border/45 text-foreground hover:bg-accent"
+                  }`}
+                >
+                  <Image className="h-4 w-4 shrink-0" />
+                  <span>Foto / Video</span>
+                </button>
+              </div>
 
-              {postType === "PHOTO" && (
-                <input
-                  type="text"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  placeholder="URL de la imagen..."
-                  className="bg-background/80 border border-border rounded-lg px-2.5 py-1.5 focus:outline-none text-xs w-40"
-                />
-              )}
+              <button
+                type="submit"
+                disabled={submitting || !content.trim()}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                id="feed-post-submit"
+              >
+                {submitting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                Compartir
+              </button>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting || !content.trim()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform"
-              id="feed-post-submit"
-            >
-              {submitting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              Compartir
-            </button>
+            {/* Collapsible Drag-and-Drop Dropzone */}
+            {(showImageDropzone || mediaUrl) && (
+              <div className="w-full animate-slide-up">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageFile(file);
+                  }}
+                  accept="image/*"
+                  className="hidden"
+                />
+                {mediaUrl ? (
+                  <div className="relative mt-2 rounded-xl overflow-hidden border border-border/50 max-h-48 bg-muted group animate-scale-in">
+                    <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaUrl("");
+                        setImageFile(null);
+                      }}
+                      className="absolute top-2 right-2 px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                    >
+                      Quitar foto
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) handleImageFile(file);
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`mt-2 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1 ${
+                      isDragging
+                        ? "border-[#39FF14] bg-[#39FF14]/5 text-[#39FF14]"
+                        : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span className="text-xs md:text-sm font-semibold">
+                      Arrastra y suelta tu imagen aquí
+                    </span>
+                    <span className="text-[10px] md:text-xs">
+                      O haz clic para explorar (máximo 5MB)
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </form>
       </div>
@@ -277,9 +407,8 @@ export function NewsFeed() {
 
       {/* Feed List */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-neon" />
-          <span>Cargando feed de noticias...</span>
+        <div className="space-y-4">
+          <SkeletonLoader type="post-feed" count={2} />
         </div>
       ) : (
         <div className="space-y-4" id="feed-posts-list">
@@ -330,29 +459,68 @@ export function NewsFeed() {
                           </span>
                         </div>
 
-                        <p className="text-sm text-foreground mt-3 whitespace-pre-wrap">
-                          {post.content}
-                        </p>
-
-                        {post.media_url && (
-                          <div className="mt-3 rounded-xl overflow-hidden border border-border/50 max-h-60 bg-muted">
-                            <img
-                              src={post.media_url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
+                        {/* Sensitivity Filter Overlay (Task 2.2) */}
+                        {!!(post.sensitive || post.flagged) && !revealedPosts[post.id] ? (
+                          <div className="relative mt-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-scale-in">
+                            <div className="flex items-start gap-2 text-xs md:text-sm text-red-500 font-semibold leading-normal">
+                              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-bold">Contenido Sensible</p>
+                                <p className="text-[11px] text-red-400 font-medium mt-0.5">
+                                  Esta publicación ha sido identificada como potencialmente delicada
+                                  o inapropiada.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() =>
+                                setRevealedPosts((prev) => ({ ...prev, [post.id]: true }))
+                              }
+                              className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all shadow-glow shadow-red-500/10 shrink-0 cursor-pointer"
+                            >
+                              Mostrar Contenido
+                            </button>
                           </div>
+                        ) : (
+                          <>
+                            <p className="text-sm text-foreground mt-3 whitespace-pre-wrap">
+                              {post.content}
+                            </p>
+
+                            {post.media_url && (
+                              <div className="mt-3 rounded-xl overflow-hidden border border-border/50 max-h-60 bg-muted">
+                                <img
+                                  src={post.media_url}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                          </>
                         )}
 
-                        <button
-                          onClick={() =>
-                            setExpandedPostId(expandedPostId === post.id ? null : post.id)
-                          }
-                          className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground hover:text-neon transition-colors"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          <span>Comentar</span>
-                        </button>
+                        <div className="flex gap-4 items-center mt-3">
+                          <button
+                            onClick={() =>
+                              setExpandedPostId(expandedPostId === post.id ? null : post.id)
+                            }
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#39FF14] transition-colors cursor-pointer"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            <span>Comentar</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setReportTarget({ id: post.id, type: "post" });
+                              setIsReportOpen(true);
+                            }}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-500 transition-colors cursor-pointer"
+                          >
+                            <ShieldAlert className="h-3.5 w-3.5" />
+                            <span>Reportar</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -379,6 +547,18 @@ export function NewsFeed() {
             )}
           </AnimatePresence>
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportModal
+          isOpen={isReportOpen}
+          onClose={() => {
+            setIsReportOpen(false);
+            setReportTarget(null);
+          }}
+          targetId={reportTarget.id}
+          targetType={reportTarget.type}
+        />
       )}
     </div>
   );

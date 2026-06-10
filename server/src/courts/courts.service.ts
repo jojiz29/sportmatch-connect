@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateCourtDto, UpdateCourtDto } from './dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateCourtDto, UpdateCourtDto } from "./dto";
 
 @Injectable()
 export class CourtsService {
@@ -16,7 +16,7 @@ export class CourtsService {
       include: {
         reviews: {
           take: 5,
-          orderBy: { created_at: 'desc' },
+          orderBy: { created_at: "desc" },
           include: {
             user: {
               select: { id: true, name: true, avatar_url: true },
@@ -27,7 +27,7 @@ export class CourtsService {
           select: { reviews: true, matches: true },
         },
       },
-      orderBy: [{ is_sponsored: 'desc' }, { rating: 'desc' }],
+      orderBy: [{ is_sponsored: "desc" }, { rating: "desc" }],
     });
   }
 
@@ -43,15 +43,15 @@ export class CourtsService {
           },
         },
         matches: {
-          where: { status: 'OPEN' },
+          where: { status: "OPEN" },
           take: 10,
-          orderBy: { date: 'asc' },
+          orderBy: { date: "asc" },
         },
       },
     });
 
     if (!court) {
-      throw new NotFoundException('Court not found');
+      throw new NotFoundException("Court not found");
     }
 
     return court;
@@ -69,7 +69,7 @@ export class CourtsService {
   async update(id: string, data: UpdateCourtDto) {
     const court = await this.prisma.courts.findUnique({ where: { id } });
     if (!court) {
-      throw new NotFoundException('Court not found');
+      throw new NotFoundException("Court not found");
     }
 
     return this.prisma.courts.update({
@@ -81,20 +81,16 @@ export class CourtsService {
   async delete(id: string) {
     const court = await this.prisma.courts.findUnique({ where: { id } });
     if (!court) {
-      throw new NotFoundException('Court not found');
+      throw new NotFoundException("Court not found");
     }
 
     return this.prisma.courts.delete({ where: { id } });
   }
 
-  async createReview(
-    courtId: string,
-    userId: string,
-    data: { rating: number; comment?: string },
-  ) {
+  async createReview(courtId: string, userId: string, data: { rating: number; comment?: string }) {
     const court = await this.prisma.courts.findUnique({ where: { id: courtId } });
     if (!court) {
-      throw new NotFoundException('Court not found');
+      throw new NotFoundException("Court not found");
     }
 
     const review = await this.prisma.reviews.create({
@@ -114,8 +110,7 @@ export class CourtsService {
     const allReviews = await this.prisma.reviews.findMany({
       where: { court_id: courtId },
     });
-    const avgRating =
-      allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
 
     await this.prisma.courts.update({
       where: { id: courtId },
