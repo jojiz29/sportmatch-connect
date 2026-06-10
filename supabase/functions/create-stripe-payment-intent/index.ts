@@ -9,7 +9,7 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "OPTIONS,POST",
-  "access-control-allow-headers": "Content-Type, Authorization",
+  "access-control-allow-headers": "Content-Type, Authorization, apikey",
   "content-type": "application/json",
 };
 

@@ -54,11 +54,22 @@ function PaymentCheckoutForm({
   const [cardHolder, setCardHolder] = useState("");
   const [cardComplete, setCardComplete] = useState(false);
   const [cardError, setCardError] = useState("");
+  const [cardHolderTouched, setCardHolderTouched] = useState(false);
 
+  const CARD_HOLDER_MAX_LENGTH = 30;
   const availableFitcoins = Math.min(userBalance, cost);
   const fitcoinsToUse = useFitcoins ? availableFitcoins : 0;
   const amountToCharge = Math.max(0, cost - fitcoinsToUse);
   const cardHolderValid = amountToCharge === 0 || cardHolder.trim().length >= 3;
+  const cardHolderError = (() => {
+    if (amountToCharge === 0) return "";
+    if (!cardHolderTouched && !cardHolder) return "";
+
+    const trimmed = cardHolder.trim();
+    if (!trimmed) return "El nombre del titular es obligatorio.";
+    if (trimmed.length < 3) return "El nombre del titular debe tener al menos 3 caracteres.";
+    return "";
+  })();
 
   const paymentDisabled = disabled
     || isProcessing
@@ -100,11 +111,18 @@ function PaymentCheckoutForm({
               type="text"
               autoComplete="cc-name"
               value={cardHolder}
-              onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").slice(0, 50))}
+              onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s'-]/g, "").slice(0, CARD_HOLDER_MAX_LENGTH))}
+              onBlur={() => setCardHolderTouched(true)}
               placeholder="Nombre como en la tarjeta"
               className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${!cardHolderValid && cardHolder ? "border-rose-500" : "border-border/60"}`}
-              maxLength={50}
+              maxLength={CARD_HOLDER_MAX_LENGTH}
             />
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <p className={`min-h-[1.2rem] ${cardHolderError ? "text-rose-500" : "text-muted-foreground"}`}>
+                {cardHolderError || "Solo se permiten letras, espacios, guiones y apóstrofes."}
+              </p>
+              <span className="text-muted-foreground">{cardHolder.length}/{CARD_HOLDER_MAX_LENGTH}</span>
+            </div>
           </label>
           <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Datos de la tarjeta

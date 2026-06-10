@@ -90,6 +90,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       try {
         const response = await fetch(`${supabaseFunctionsUrl}/create-stripe-payment-intent`, {
           method: "POST",
+          mode: "cors",
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -150,7 +151,10 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         }
       } catch (err) {
         const errorCode = "STRIPE_REQUEST_FAILED";
-        const error = err instanceof Error ? err.message : "Error al procesar el pago con Stripe.";
+        let error = err instanceof Error ? err.message : "Error al procesar el pago con Stripe.";
+        if (error === "Failed to fetch" || error.includes("NetworkError")) {
+          error = "No se pudo conectar con el servidor de pagos. Verifica la configuración de CORS y la URL de la función de Stripe.";
+        }
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
