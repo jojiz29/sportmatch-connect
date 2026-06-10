@@ -143,8 +143,16 @@ async function initAuth() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("onAuthStateChange fired:", event, session?.user?.email);
       if (!mounted) return;
-      // Skip INITIAL_SESSION — already handled synchronously by initAuth()
-      if (!initializedRef.current) {
+
+      // Only skip INITIAL_SESSION if already initialized (already handled by initAuth)
+      // But ALWAYS process SIGNED_IN — it comes from OAuth callback and needs to be handled
+      if (event === "INITIAL_SESSION" && initializedRef.current) {
+        return;
+      }
+
+      // If not initialized yet and event is SIGNED_IN, process it (OAuth callback)
+      // If not initialized yet and event is anything else, skip
+      if (!initializedRef.current && event !== "SIGNED_IN") {
         console.log("Skipping because not initialized yet, event:", event);
         return;
       }
