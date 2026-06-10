@@ -46,19 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 async function initAuth() {
       try {
-        // Emergency timeout: if init takes > 5s, just show login screen
-        const emergencyTimeout = setTimeout(() => {
-          if (mounted) {
-            console.warn("Auth init timed out, showing login screen");
-            initializedRef.current = true;
-            setIsLoading(false);
-          }
-        }, 5000);
-
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        clearTimeout(emergencyTimeout);
         if (!mounted) return;
 
         if (session?.user) {
@@ -72,7 +62,6 @@ async function initAuth() {
           if (existingProfile && !error) {
             profile = existingProfile;
           } else {
-            // New Google/OAuth user profile auto-creation
             const userMeta = session.user.user_metadata || {};
             const name = userMeta.full_name || userMeta.name || "Jugador Google";
             const avatarUrl =
@@ -97,8 +86,6 @@ async function initAuth() {
             if (!insertError && newProfile) {
               profile = newProfile;
             } else {
-              console.error("Error creating profile for Google login:", insertError);
-              // Fallback: Retry fetching the profile in case the trigger inserted it concurrently
               const { data: retriedProfile } = await supabase
                 .from("profiles")
                 .select("*")
@@ -112,6 +99,10 @@ async function initAuth() {
 
           if (profile) {
             loginRef.current(profile);
+            // Clean URL hash after successful OAuth login
+            if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
+              window.history.replaceState(null, "", window.location.pathname + window.location.search);
+            }
           } else {
             logoutRef.current();
           }
@@ -218,6 +209,11 @@ async function initAuth() {
             console.log("Cleared auth timeout after SIGNED_IN");
           }
           initializedRef.current = true;
+          // Clean URL hash after successful OAuth login
+          if (window.location.hash.includes("access_token")) {
+            window.history.replaceState(null, "", window.location.pathname + window.location.search);
+            console.log("Cleaned OAuth hash from URL");
+          }
         } else {
           console.log("Profile or mounted false:", { profile: !!profile, mounted });
         }
