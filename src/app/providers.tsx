@@ -162,6 +162,11 @@ async function initAuth() {
 
       if (event === "SIGNED_IN" && session?.user) {
         console.log("Processing SIGNED_IN, user:", session.user.email);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+          console.log("Cleared auth timeout at start of SIGNED_IN");
+        }
         let profile = null;
         const { data: existingProfile, error } = await supabase
           .from("profiles")
