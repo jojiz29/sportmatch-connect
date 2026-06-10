@@ -3,6 +3,7 @@ import { Post } from "@/entities/types";
 import { calculateDistance } from "./geoService";
 import { createNotification } from "./notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { backendApi } from "./backendApi";
 import { withTimeout } from "./timeoutHelper";
 import { getCatalogItems } from "./businessService";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
@@ -173,6 +174,7 @@ export async function createPost(
   type: Post["type"],
   mediaUrl?: string,
   sport?: Post["sport"],
+  imageFile?: File,
 ): Promise<Post> {
   if (useAuthStore.getState().isDemoMode) {
     const currentUser = useAuthStore.getState().user;
@@ -232,6 +234,26 @@ export async function createPost(
 
     return newPost;
   }
+
+  // E2E Hydration: If an image file was supplied, upload via multipart FormData to NestJS (Task 2.2)
+  if (imageFile) {
+    const formData = new FormData();
+    formData.append("userId", userId);
+    formData.append("content", content);
+    formData.append("type", type);
+    if (sport) formData.append("sport", sport);
+    formData.append("image", imageFile);
+
+    const { data: uploadResult, error: uploadError } = await backendApi.posts.createMultipart(
+      "",
+      formData,
+    );
+    if (uploadError || !uploadResult) {
+      throw new Error(uploadError || "Failed to create post with image file");
+    }
+    return uploadResult as Post;
+  }
+
   const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   // 1. Insert post in Supabase

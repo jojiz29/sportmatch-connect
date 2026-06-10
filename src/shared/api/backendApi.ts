@@ -1,3 +1,7 @@
+import { supabase } from "./supabase";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { toast } from "sonner";
+
 const API_URL = (import.meta.env.VITE_API_URL || "") + "/api/v1";
 
 interface ApiResponse<T> {
@@ -7,13 +11,36 @@ interface ApiResponse<T> {
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
+    // SEC-03: Dynamically retrieve standard access_token from active Supabase session (Task 2.1)
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const headers: Record<string, string> = {
+      ...options?.headers,
+    } as Record<string, string>;
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Unless the body is a native FormData object, enforce application/json MIME-type (Task 2.1 / Task 2.2)
+    if (!(options?.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
+      headers,
     });
+
+    if (response.status === 401) {
+      toast.error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+      useAuthStore.getState().logout();
+      window.location.href = "/login";
+      return { error: "Unauthorized" };
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
@@ -265,6 +292,16 @@ export const backendApi = {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(post),
+      });
+    },
+
+    async createMultipart(token: string, formData: FormData) {
+      return fetchApi("/posts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       });
     },
 

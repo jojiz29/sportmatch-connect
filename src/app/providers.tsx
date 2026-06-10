@@ -5,6 +5,7 @@ import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
 import { I18nextProvider } from "react-i18next";
+import { MOCK_USERS } from "@/shared/api/apiClient";
 import i18n from "@/shared/i18n";
 
 const queryClient = new QueryClient({
@@ -41,9 +42,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     async function initAuth() {
       try {
+        // SEC-05: Strict 1.5s timeout on Supabase authentication sync
+        // If it takes longer, we automatically fallback to local mock mode so the user is NEVER stuck (Task 2.4 / 2.5)
+        timeoutId = setTimeout(() => {
+          if (mounted) {
+            console.warn("Auth synchronization timed out. Falling back to demo mode.");
+            useAuthStore.getState().setDemoMode(true);
+            const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
+            useAuthStore.getState().login(fallbackUser);
+            setIsLoading(false);
+          }
+        }, 1500);
+
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -110,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("AuthProvider initAuth error:", err);
         logoutRef.current();
       } finally {
+        clearTimeout(timeoutId);
         if (mounted) {
           initializedRef.current = true;
           setIsLoading(false);

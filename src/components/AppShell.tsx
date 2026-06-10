@@ -40,7 +40,10 @@ const GROUPS = [
   },
   {
     titleKey: "nav.groups.analytics",
-    items: [{ to: "/app/wallet", labelKey: "nav.wallet", icon: Trophy }],
+    items: [
+      { to: "/app/wallet", labelKey: "nav.wallet", icon: Trophy },
+      { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
+    ],
   },
 ];
 
@@ -55,6 +58,7 @@ const MOBILE_NAV = [
   { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
   { to: "/app/map", labelKey: "nav.map_and_courts", icon: Map },
   { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
+  { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
   { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
 ];
 

@@ -578,7 +578,7 @@ function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-6 relative">
           <div>
             <div className="text-sm text-muted-foreground/70 font-medium mb-1">Hola,</div>
-            <h1 className="font-heading text-4xl md:text-5xl tracking-wide text-white">
+            <h1 className="font-heading text-4xl md:text-5xl tracking-wide text-foreground">
               {user.name.split(" ")[0]}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -629,7 +629,7 @@ function Dashboard() {
             className={`shrink-0 px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-all ${
               selectedSport === s.name
                 ? "bg-gradient-neon text-neon-foreground shadow-neon font-semibold"
-                : "glass hover:bg-accent"
+                : "bg-muted border border-border/40 text-foreground hover:bg-accent"
             }`}
           >
             <span>{s.emoji}</span> {s.name}
@@ -657,7 +657,7 @@ function Dashboard() {
                     <span className="text-[9px] bg-neon/20 text-neon font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                       {nextMatch.sport}
                     </span>
-                    <h4 className="font-heading text-xl tracking-wide text-white mt-1">
+                    <h4 className="font-heading text-xl tracking-wide text-foreground mt-1">
                       {nextMatch.title}
                     </h4>
                     <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
@@ -713,7 +713,7 @@ function Dashboard() {
           <div className="space-y-4">
             <div className="flex items-end justify-between mb-1">
               <div>
-                <h2 className="font-heading text-2xl tracking-wide text-white">
+                <h2 className="font-heading text-2xl tracking-wide text-foreground">
                   Partidos recomendados
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -754,7 +754,7 @@ function Dashboard() {
                 <div className="p-1.5 rounded-lg bg-neon/10">
                   <Flame className="h-4 w-4 text-neon" />
                 </div>
-                <h3 className="font-heading text-lg tracking-wide text-white">
+                <h3 className="font-heading text-lg tracking-wide text-foreground">
                   {t("onboarding.streak_title", "Racha Deportiva")}
                 </h3>
               </div>
@@ -766,7 +766,7 @@ function Dashboard() {
                       ? t("onboarding.streak_unit_sing", "sem")
                       : t("onboarding.streak_unit_plur", "sems")}
                   </span>
-                  <span className="text-white/20">·</span>
+                  <span className="text-border">·</span>
                   <span>
                     <span className="text-muted-foreground">max</span>{" "}
                     <strong className="text-foreground">{streak.max_streak}</strong>
@@ -777,12 +777,7 @@ function Dashboard() {
 
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <svg
-                  width="220"
-                  height="110"
-                  viewBox="0 0 220 110"
-                  className="text-muted-foreground/50"
-                >
+                <svg width="220" height="110" viewBox="0 0 220 110" className="text-foreground/80">
                   <text x="5" y="18" fontSize="7" fill="currentColor" className="font-mono">
                     {t("onboarding.day_mon", "Lun")}
                   </text>
@@ -809,10 +804,10 @@ function Dashboard() {
                         width="10"
                         height="10"
                         rx="2"
-                        fill={isAttended ? "#39FF14" : "rgba(255,255,255,0.04)"}
-                        stroke={isAttended ? "#39FF14" : "rgba(255,255,255,0.06)"}
+                        fill={isAttended ? "var(--neon)" : "var(--muted)"}
+                        stroke={isAttended ? "var(--neon)" : "var(--border)"}
                         strokeWidth="0.5"
-                        className={`transition-all duration-300 hover:stroke-white hover:stroke-[1.5px] ${isAttended ? "shadow-neon" : ""}`}
+                        className={`transition-all duration-300 hover:stroke-foreground hover:stroke-[1.5px] ${isAttended ? "shadow-neon" : ""}`}
                       >
                         <title>{cell.date}</title>
                       </rect>
@@ -829,7 +824,9 @@ function Dashboard() {
 
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading text-lg tracking-wide text-white">Jugadores cerca</h3>
+              <h3 className="font-heading text-lg tracking-wide text-foreground">
+                Jugadores cerca
+              </h3>
               <Link
                 to="/app/match"
                 className="text-[10px] text-neon hover:text-neon/80 flex items-center gap-1 font-semibold transition-colors"
@@ -879,7 +876,9 @@ function Dashboard() {
           </div>
 
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
-            <h3 className="font-heading text-lg tracking-wide text-white mb-4">Canchas cercanas</h3>
+            <h3 className="font-heading text-lg tracking-wide text-foreground mb-4">
+              Canchas cercanas
+            </h3>
             <div className="space-y-3">
               {closestCourts.map((c) => (
                 <CourtCard
@@ -899,7 +898,7 @@ function Dashboard() {
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="max-w-md bg-background border border-border/60 rounded-3xl p-6 shadow-card">
           <DialogHeader>
-            <DialogTitle className="font-heading text-2xl tracking-wide text-white">
+            <DialogTitle className="font-heading text-2xl tracking-wide text-foreground">
               Crear nuevo partido
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground/70">
@@ -1050,7 +1049,7 @@ function Dashboard() {
       >
         <DialogContent className="max-w-md bg-background border border-border/60 rounded-3xl p-6 shadow-card">
           <DialogHeader>
-            <DialogTitle className="font-heading text-2xl tracking-wide text-white">
+            <DialogTitle className="font-heading text-2xl tracking-wide text-foreground">
               {t("feedback.modal_title")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground/70">
@@ -1296,7 +1295,9 @@ function MatchCard({ match }: { match: Match }) {
           {new Date(match.date).toLocaleDateString()}
         </span>
       </div>
-      <h3 className="font-heading text-xl tracking-wide text-white leading-tight">{match.title}</h3>
+      <h3 className="font-heading text-xl tracking-wide text-foreground leading-tight">
+        {match.title}
+      </h3>
       <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
         <MapPin className="h-3 w-3 shrink-0" /> {match.court?.name || "Sin cancha asignada"}
       </p>
