@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { Court } from "@/entities/types";
 import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
@@ -11,7 +12,10 @@ import { Search, MapPin, SlidersHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/app/courts")({
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
-  loader: async () => apiClient.courts.getAll(),
+  loader: async () => {
+    const backendCourts = await backendApi.courts.getAll().catch(() => null);
+    return backendCourts ? (backendCourts as Court[]) : await apiClient.courts.getAll();
+  },
   component: Courts,
 });
 

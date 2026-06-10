@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { User, Court, Match, Squad } from "@/entities/types";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { supabase } from "@/shared/api/supabase";
@@ -101,10 +102,16 @@ function Chat() {
       .then((list) => setUserSquads(list))
       .catch((err) => console.warn("Failed to load user squads for attachments:", err));
 
-    apiClient.matches
+    // Try backend first for matches, fallback to Supabase
+    backendApi.matches
       .getAll()
-      .then((list) => setSystemMatches(list))
-      .catch((err) => console.warn("Failed to load active matches for attachments:", err));
+      .then((list) => setSystemMatches(list as Match[]))
+      .catch(() => {
+        apiClient.matches
+          .getAll()
+          .then((list) => setSystemMatches(list))
+          .catch((err) => console.warn("Failed to load active matches for attachments:", err));
+      });
   }, [currentUser]);
 
   const socialUserIds = useMemo(() => {
@@ -204,8 +211,14 @@ function Chat() {
 
   const handlePlayCheckout = async (courtId: string) => {
     try {
-      const courtData = await apiClient.courts.getById(courtId);
-      setSelectedCourtForBooking(courtData);
+      // Try backend first, fallback to Supabase
+      const backendResult = await backendApi.courts.getById(courtId);
+      if (backendResult.data) {
+        setSelectedCourtForBooking(backendResult.data as Court);
+      } else {
+        const courtData = await apiClient.courts.getById(courtId);
+        setSelectedCourtForBooking(courtData);
+      }
     } catch (err) {
       console.error("Failed to load court for checkout:", err);
       toast.error("No se pudo cargar los detalles de la cancha.");

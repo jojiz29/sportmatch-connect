@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { PageHeader } from "@/components/PageHeader";
+
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { Match, User, Court, SportCatalog, Level } from "@/entities/types";
 import {
   Trophy,
@@ -36,26 +37,41 @@ import { BookingModal } from "@/components/BookingModal";
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
-    // Each API call is individually guarded so a single failing table
-    // (missing, RLS violation, network issue) never crashes the whole /app route.
-    const [matches, users, courts, sports] = await Promise.all([
-      apiClient.matches.getAll().catch((err) => {
-        console.warn("[/app loader] matches.getAll failed:", err?.message);
-        return [] as Match[];
-      }),
-      apiClient.users.getMatches().catch((err) => {
-        console.warn("[/app loader] users.getMatches failed:", err?.message);
-        return [] as User[];
-      }),
-      apiClient.courts.getAll().catch((err) => {
-        console.warn("[/app loader] courts.getAll failed:", err?.message);
-        return [] as Court[];
-      }),
-      apiClient.sports.getAll().catch((err) => {
-        console.warn("[/app loader] sports.getAll failed:", err?.message);
-        return [] as SportCatalog[];
-      }),
-    ]);
+    const timeout = (ms: number) =>
+      new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms),
+      );
+
+    const fetchWithTimeout = async <T,>(fn: () => Promise<T>, ms = 8000): Promise<T | null> => {
+      try {
+        return await Promise.race([fn(), timeout(ms)]);
+      } catch {
+        return null;
+      }
+    };
+
+    const backendMatches = await fetchWithTimeout(() => backendApi.matches.getAll());
+    const backendCourts = await fetchWithTimeout(() => backendApi.courts.getAll());
+    const backendUsers = await fetchWithTimeout(() => backendApi.users.getAll());
+    const backendSports = await fetchWithTimeout(() => backendApi.sports.getAll());
+
+    const matches =
+      backendMatches && typeof backendMatches === "object" && "data" in backendMatches
+        ? (backendMatches as { data: Match[] }).data
+        : [];
+    const users =
+      backendUsers && typeof backendUsers === "object" && "data" in backendUsers
+        ? (backendUsers as { data: User[] }).data
+        : [];
+    const courts =
+      backendCourts && typeof backendCourts === "object" && "data" in backendCourts
+        ? (backendCourts as { data: Court[] }).data
+        : [];
+    const sports =
+      backendSports && typeof backendSports === "object" && "data" in backendSports
+        ? (backendSports as { data: SportCatalog[] }).data
+        : [];
+
     return { matches, users, courts, sports };
   },
   component: Dashboard,
@@ -439,15 +455,26 @@ function Dashboard() {
 
     let active = true;
     setLoadingCourts(true);
-    apiClient.courts
+
+    // Try backend first for courts, fallback to Supabase
+    backendApi.courts
       .getAll(matchSport || undefined)
       .then((res) => {
         if (active) {
-          setFilteredCourts(res);
+          setFilteredCourts(res as Court[]);
         }
       })
-      .catch((err) => {
-        console.error("Error loading filtered courts:", err);
+      .catch(() => {
+        apiClient.courts
+          .getAll(matchSport || undefined)
+          .then((res) => {
+            if (active) {
+              setFilteredCourts(res);
+            }
+          })
+          .catch((err) => {
+            console.error("Error loading filtered courts:", err);
+          });
       })
       .finally(() => {
         if (active) setLoadingCourts(false);
@@ -471,19 +498,38 @@ function Dashboard() {
 
     try {
       setIsCreatingMatch(true);
-      const newMatch = await apiClient.matches.create({
-        title: matchTitle,
-        sport: matchSport,
-        court_id: matchCourtId || null,
-        date: matchDate,
-        time: matchTime,
-        max_players: Number(matchMaxPlayers),
-        required_level: matchLevel,
-        creator_id: user.id,
-      });
+      let newMatch: Match;
+
+      // Try backend first, fallback to Supabase
+      const token = user.id;
+      const backendResult = await backendApi.matches
+        .create(token, {
+          title: matchTitle,
+          sport: matchSport,
+          court_id: matchCourtId || undefined,
+          date: matchDate,
+          time: matchTime,
+          max_players: Number(matchMaxPlayers),
+          required_level: matchLevel,
+        })
+        .catch(() => null);
+
+      if (backendResult?.data) {
+        newMatch = backendResult.data as Match;
+      } else {
+        newMatch = await apiClient.matches.create({
+          title: matchTitle,
+          sport: matchSport,
+          court_id: matchCourtId || null,
+          date: matchDate,
+          time: matchTime,
+          max_players: Number(matchMaxPlayers),
+          required_level: matchLevel,
+          creator_id: user.id,
+        });
+      }
 
       if (!useAuthStore.getState().isDemoMode) {
-        // Automatically join the creator to match_participants
         const { error: partError } = await withTimeout(
           supabase.from("match_participants").insert({
             match_id: newMatch.id,
@@ -500,7 +546,6 @@ function Dashboard() {
       toast.success("¡Partido creado con éxito!");
       setIsCreateModalOpen(false);
 
-      // Clear form
       setMatchTitle("");
       setMatchSport("");
       setMatchCourtId("");
@@ -527,31 +572,35 @@ function Dashboard() {
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       {/* Hero */}
-      <div className="rounded-3xl bg-gradient-card border border-border p-6 md:p-8 shadow-card relative overflow-hidden mb-8">
-        <div className="absolute -right-10 -top-10 h-60 w-60 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
+      <div className="rounded-3xl bg-gradient-card border border-border/60 p-6 md:p-8 shadow-card relative overflow-hidden mb-8 group">
+        <div className="absolute -right-10 -top-10 h-60 w-60 rounded-full bg-gradient-primary opacity-15 blur-3xl group-hover:opacity-25 transition-opacity duration-700" />
+        <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-neon/5 blur-3xl" />
         <div className="flex flex-wrap items-center justify-between gap-6 relative">
           <div>
-            <div className="text-sm text-muted-foreground">Hola,</div>
-            <h1 className="text-3xl md:text-4xl font-bold">{user.name.split(" ")[0]} 👋</h1>
-            <p className="text-muted-foreground mt-1">
-              Tenés {matches.length} partidos compatibles cerca tuyo hoy.
+            <div className="text-sm text-muted-foreground/70 font-medium mb-1">Hola,</div>
+            <h1 className="font-heading text-4xl md:text-5xl tracking-wide text-foreground">
+              {user.name.split(" ")[0]}
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Tenés <span className="text-neon font-semibold">{matches.length}</span> partidos
+              compatibles cerca tuyo hoy.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 to="/app/match"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold shadow-glow"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-sm shadow-glow hover:scale-105 active:scale-95 transition-all duration-200"
               >
                 <Sparkles className="h-4 w-4" /> Encontrar partido
               </Link>
               <Link
                 to="/app/courts"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glass"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass text-sm font-semibold hover:bg-white/10 transition-all duration-200"
               >
                 <Calendar className="h-4 w-4" /> Reservar cancha
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 min-w-[280px]">
+          <div className="grid grid-cols-3 gap-3 min-w-[260px]">
             <Stat
               icon={<Trophy className="h-4 w-4 text-neon" />}
               label="FitCoins"
@@ -580,7 +629,7 @@ function Dashboard() {
             className={`shrink-0 px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-all ${
               selectedSport === s.name
                 ? "bg-gradient-neon text-neon-foreground shadow-neon font-semibold"
-                : "glass hover:bg-accent"
+                : "bg-muted border border-border/40 text-foreground hover:bg-accent"
             }`}
           >
             <span>{s.emoji}</span> {s.name}
@@ -593,12 +642,12 @@ function Dashboard() {
         <div className="lg:col-span-2 space-y-6">
           {/* Próximo Partido Card */}
           {nextMatch ? (
-            <div className="animate-fade-in">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 mb-2.5 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-neon animate-pulse" />
+            <div className="animate-slide-up">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 mb-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-neon animate-pulse-ring" />
                 {t("dashboard.next_match", "Próximo Partido")}
               </h3>
-              <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5 shadow-neon relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5 shadow-neon relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 card-lift">
                 <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-neon/5 blur-2xl pointer-events-none" />
                 <div className="flex gap-4 min-w-0">
                   <div className="h-12 w-12 rounded-xl bg-gradient-neon shrink-0 grid place-items-center shadow-neon">
@@ -608,10 +657,10 @@ function Dashboard() {
                     <span className="text-[9px] bg-neon/20 text-neon font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                       {nextMatch.sport}
                     </span>
-                    <h4 className="font-bold text-base mt-1 text-foreground leading-tight truncate">
+                    <h4 className="font-heading text-xl tracking-wide text-foreground mt-1">
                       {nextMatch.title}
                     </h4>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                    <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 shrink-0" />
                       {nextMatch.date} a las {nextMatch.time} hrs
                     </p>
@@ -627,14 +676,14 @@ function Dashboard() {
                   <Link
                     to="/app/courts/$courtId"
                     params={{ courtId: nextMatch.court_id }}
-                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform shrink-0 w-full sm:w-auto text-center cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-all duration-200 shrink-0 w-full sm:w-auto text-center"
                   >
                     Ver Detalles
                   </Link>
                 ) : (
                   <Link
                     to="/app/map"
-                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform shrink-0 w-full sm:w-auto text-center cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xs shadow-glow hover:scale-105 active:scale-95 transition-all duration-200 shrink-0 w-full sm:w-auto text-center"
                   >
                     Ver Mapa
                   </Link>
@@ -642,18 +691,18 @@ function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="p-4 bg-gradient-card border border-border rounded-2xl flex items-center justify-between gap-4">
+            <div className="p-5 bg-gradient-card border border-border/60 rounded-2xl flex items-center justify-between gap-4 card-lift">
               <div>
-                <h4 className="font-semibold text-xs text-foreground">
+                <h4 className="font-semibold text-sm text-foreground">
                   {t("dashboard.no_next_match", "No tienes partidos programados")}
                 </h4>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Organiza una pichanga o únete a una hoy.
                 </p>
               </div>
               <Link
                 to="/app/match"
-                className="px-3.5 py-2 rounded-xl bg-accent text-foreground hover:bg-accent/80 font-bold text-xs transition-colors shrink-0"
+                className="px-4 py-2 rounded-xl bg-accent text-foreground hover:bg-accent/80 font-bold text-xs transition-colors shrink-0"
               >
                 {t("dashboard.find_one", "Encontrar")}
               </Link>
@@ -662,24 +711,34 @@ function Dashboard() {
 
           {/* Recommended Matches List */}
           <div className="space-y-4">
-            <PageHeader
-              title="Partidos recomendados"
-              subtitle="Curado por IA según tu nivel y horarios"
-              action={
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Crear Partido
-                </button>
-              }
-            />
+            <div className="flex items-end justify-between mb-1">
+              <div>
+                <h2 className="font-heading text-2xl tracking-wide text-foreground">
+                  Partidos recomendados
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Curado por IA según tu nivel y horarios
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear Partido
+              </button>
+            </div>
             <div className="grid sm:grid-cols-2 gap-4">
               {filteredMatches.length > 0 ? (
                 filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
               ) : (
-                <div className="col-span-2 p-8 text-center text-muted-foreground glass rounded-2xl border border-border">
-                  No hay partidos recomendados para este deporte.
+                <div className="col-span-2 p-10 text-center text-muted-foreground/60 glass rounded-2xl border border-border/40">
+                  <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-sm font-medium">
+                    No hay partidos recomendados para este deporte.
+                  </p>
+                  <p className="text-xs text-muted-foreground/40 mt-1">
+                    Prueba con otro deporte o crea uno nuevo.
+                  </p>
                 </div>
               )}
             </div>
@@ -689,26 +748,27 @@ function Dashboard() {
         {/* Side */}
         <div className="space-y-6">
           {/* Weekly Streak & Contribution Graph Widget */}
-          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
+          <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-neon" />
-                <h3 className="font-bold text-sm">
+                <div className="p-1.5 rounded-lg bg-neon/10">
+                  <Flame className="h-4 w-4 text-neon" />
+                </div>
+                <h3 className="font-heading text-lg tracking-wide text-foreground">
                   {t("onboarding.streak_title", "Racha Deportiva")}
                 </h3>
               </div>
               {streak && (
-                <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                <div className="text-[9px] text-muted-foreground flex items-center gap-1.5 font-mono">
                   <span>
-                    {t("onboarding.streak_current", "Racha actual:")}{" "}
-                    <strong className="text-neon">{streak.current_streak}</strong>{" "}
+                    <strong className="text-neon">{streak.current_streak}</strong>
                     {streak.current_streak === 1
                       ? t("onboarding.streak_unit_sing", "sem")
                       : t("onboarding.streak_unit_plur", "sems")}
                   </span>
-                  <span>·</span>
+                  <span className="text-border">·</span>
                   <span>
-                    {t("onboarding.streak_max", "Máx:")}{" "}
+                    <span className="text-muted-foreground">max</span>{" "}
                     <strong className="text-foreground">{streak.max_streak}</strong>
                   </span>
                 </div>
@@ -717,27 +777,20 @@ function Dashboard() {
 
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <svg
-                  width="220"
-                  height="110"
-                  viewBox="0 0 220 110"
-                  className="text-muted-foreground"
-                >
-                  {/* Days labels */}
-                  <text x="5" y="18" fontSize="8" fill="currentColor">
+                <svg width="220" height="110" viewBox="0 0 220 110" className="text-foreground/80">
+                  <text x="5" y="18" fontSize="7" fill="currentColor" className="font-mono">
                     {t("onboarding.day_mon", "Lun")}
                   </text>
-                  <text x="5" y="46" fontSize="8" fill="currentColor">
+                  <text x="5" y="46" fontSize="7" fill="currentColor" className="font-mono">
                     {t("onboarding.day_wed", "Mié")}
                   </text>
-                  <text x="5" y="74" fontSize="8" fill="currentColor">
+                  <text x="5" y="74" fontSize="7" fill="currentColor" className="font-mono">
                     {t("onboarding.day_fri", "Vie")}
                   </text>
-                  <text x="5" y="102" fontSize="8" fill="currentColor">
+                  <text x="5" y="102" fontSize="7" fill="currentColor" className="font-mono">
                     {t("onboarding.day_sun", "Dom")}
                   </text>
 
-                  {/* Grid Cells */}
                   {contributionGrid.map((cell, idx) => {
                     const isAttended = attendanceDays.includes(cell.date);
                     const x = 35 + cell.col * 36;
@@ -751,10 +804,10 @@ function Dashboard() {
                         width="10"
                         height="10"
                         rx="2"
-                        fill={isAttended ? "#39FF14" : "#1e293b"}
-                        stroke={isAttended ? "#39FF14" : "rgba(255,255,255,0.05)"}
+                        fill={isAttended ? "var(--neon)" : "var(--muted)"}
+                        stroke={isAttended ? "var(--neon)" : "var(--border)"}
                         strokeWidth="0.5"
-                        className="transition-all duration-300 hover:stroke-white hover:stroke-[1.5px]"
+                        className={`transition-all duration-300 hover:stroke-foreground hover:stroke-[1.5px] ${isAttended ? "shadow-neon" : ""}`}
                       >
                         <title>{cell.date}</title>
                       </rect>
@@ -762,27 +815,26 @@ function Dashboard() {
                   })}
                 </svg>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">
-                {t(
-                  "onboarding.streak_footer_prefix",
-                  "Los días con asistencia verificada se iluminan en",
-                )}{" "}
-                <span className="text-[#39FF14] font-bold">
-                  {t("onboarding.streak_footer_color", "Verde Neón")}
-                </span>
-                .
+              <p className="text-[9px] text-muted-foreground/70 text-center leading-relaxed">
+                Los días con asistencia se iluminan en{" "}
+                <span className="text-neon font-bold">Verde Neón</span>.
               </p>
             </div>
           </div>
 
-          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
+          <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Jugadores cerca</h3>
-              <Link to="/app/match" className="text-xs text-neon flex items-center gap-1">
+              <h3 className="font-heading text-lg tracking-wide text-foreground">
+                Jugadores cerca
+              </h3>
+              <Link
+                to="/app/match"
+                className="text-[10px] text-neon hover:text-neon/80 flex items-center gap-1 font-semibold transition-colors"
+              >
                 Ver todos <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {users.slice(0, 4).map((p) => {
                 const isMe = p.id === user?.id;
                 return (
@@ -790,24 +842,32 @@ function Dashboard() {
                     key={p.id}
                     to={isMe ? "/app/profile" : "/app/profile/$userId"}
                     params={isMe ? undefined : { userId: p.id }}
-                    className="flex items-center gap-3 hover:bg-accent/30 p-1.5 rounded-xl transition-all cursor-pointer text-left w-full"
+                    className="flex items-center gap-3 hover:bg-white/5 p-2 rounded-xl transition-all cursor-pointer text-left w-full group"
                   >
-                    <img
-                      src={p.avatar_url}
-                      alt=""
-                      className="h-10 w-10 rounded-full bg-muted shrink-0 object-cover"
-                    />
+                    <div className="relative shrink-0">
+                      <img
+                        src={p.avatar_url}
+                        alt=""
+                        className="h-10 w-10 rounded-full bg-muted object-cover border border-border/30 group-hover:border-neon/30 transition-colors"
+                      />
+                      <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-neon border-2 border-background" />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate">{p.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {p.preferred_sports[0]} ·{" "}
+                      <div className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">
+                        {p.name}
+                        {isMe && (
+                          <span className="text-[9px] text-muted-foreground ml-1">(tú)</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground/70 truncate">
+                        {p.preferred_sports?.[0] || "Sin deporte"} ·{" "}
                         {baseLocation && p.last_location_lat && p.last_location_lng
                           ? `${calculateDistance(baseLocation.lat, baseLocation.lng, p.last_location_lat, p.last_location_lng).toFixed(1)} km`
                           : `${p.distance_km || 0} km`}
                       </div>
                     </div>
-                    <span className="text-xs text-neon flex items-center gap-1 shrink-0">
-                      <Star className="h-3 w-3 fill-neon animate-pulse" /> {p.trust_score}
+                    <span className="text-[11px] text-neon flex items-center gap-1 shrink-0 font-semibold">
+                      <Star className="h-3 w-3 fill-neon" /> {p.trust_score}
                     </span>
                   </Link>
                 );
@@ -815,8 +875,10 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card">
-            <h3 className="font-semibold mb-4">Canchas más cercanas</h3>
+          <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
+            <h3 className="font-heading text-lg tracking-wide text-foreground mb-4">
+              Canchas cercanas
+            </h3>
             <div className="space-y-3">
               {closestCourts.map((c) => (
                 <CourtCard
@@ -834,17 +896,19 @@ function Dashboard() {
 
       {/* Dialog for Match Creation */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-md bg-background border border-border rounded-3xl p-6">
+        <DialogContent className="max-w-md bg-background border border-border/60 rounded-3xl p-6 shadow-card">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Crear nuevo partido</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogTitle className="font-heading text-2xl tracking-wide text-foreground">
+              Crear nuevo partido
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground/70">
               Completa los detalles para invitar a otros jugadores.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateMatch} className="space-y-4 mt-2">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                 Título del partido
               </label>
               <input
@@ -853,13 +917,13 @@ function Dashboard() {
                 value={matchTitle}
                 onChange={(e) => setMatchTitle(e.target.value)}
                 placeholder="Ej. Dobles de Pádel"
-                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 focus:ring-1 focus:ring-neon/20 transition-all placeholder:text-muted-foreground/30"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                   Deporte
                 </label>
                 <select
@@ -869,7 +933,7 @@ function Dashboard() {
                     setMatchSport(e.target.value);
                     setMatchCourtId("");
                   }}
-                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                  className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 transition-all"
                 >
                   <option value="">Selecciona...</option>
                   {sports.map((s) => (
@@ -880,14 +944,14 @@ function Dashboard() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                   Nivel requerido
                 </label>
                 <select
                   required
                   value={matchLevel}
                   onChange={(e) => setMatchLevel(e.target.value as Level)}
-                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                  className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 transition-all"
                 >
                   <option value="Principiante">Principiante</option>
                   <option value="Intermedio">Intermedio</option>
@@ -898,14 +962,14 @@ function Dashboard() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                 Cancha (Opcional)
               </label>
               <select
                 value={matchCourtId}
                 onChange={(e) => setMatchCourtId(e.target.value)}
                 disabled={!matchSport}
-                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none disabled:opacity-50"
+                className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 transition-all disabled:opacity-40"
               >
                 <option value="">
                   {!matchSport
@@ -926,7 +990,7 @@ function Dashboard() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                   Fecha
                 </label>
                 <input
@@ -934,11 +998,11 @@ function Dashboard() {
                   required
                   value={matchDate}
                   onChange={(e) => setMatchDate(e.target.value)}
-                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                  className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 transition-all"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                   Hora
                 </label>
                 <input
@@ -946,13 +1010,13 @@ function Dashboard() {
                   required
                   value={matchTime}
                   onChange={(e) => setMatchTime(e.target.value)}
-                  className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                  className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 block mb-1.5">
                 Máx. Jugadores
               </label>
               <input
@@ -961,14 +1025,14 @@ function Dashboard() {
                 min="1"
                 value={matchMaxPlayers}
                 onChange={(e) => setMatchMaxPlayers(Number(e.target.value))}
-                className="w-full bg-accent/40 border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none"
+                className="w-full bg-accent/30 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-neon/40 transition-all"
               />
             </div>
 
             <button
               type="submit"
               disabled={isCreatingMatch}
-              className="w-full py-3 mt-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow disabled:opacity-50 transition-all"
+              className="w-full py-3.5 mt-2 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow disabled:opacity-50 transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] text-sm tracking-wide"
             >
               {isCreatingMatch ? "Creando..." : "Crear Partido"}
             </button>
@@ -983,10 +1047,12 @@ function Dashboard() {
           if (!open) setReviewMatch(null);
         }}
       >
-        <DialogContent className="max-w-md bg-background border border-border rounded-3xl p-6">
+        <DialogContent className="max-w-md bg-background border border-border/60 rounded-3xl p-6 shadow-card">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{t("feedback.modal_title")}</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogTitle className="font-heading text-2xl tracking-wide text-foreground">
+              {t("feedback.modal_title")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground/70">
               Ayúdanos a mantener una comunidad saludable calificando tu experiencia.
             </DialogDescription>
           </DialogHeader>
@@ -1028,11 +1094,11 @@ function Stat({
   value: string | number;
 }) {
   return (
-    <div className="glass rounded-xl p-3 text-center">
-      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+    <div className="glass rounded-xl p-3 text-center hover:bg-white/5 transition-all duration-200">
+      <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
         {icon} {label}
       </div>
-      <div className="text-lg font-bold mt-1">{value}</div>
+      <div className="text-xl font-bold mt-1 font-mono text-foreground">{value}</div>
     </div>
   );
 }
@@ -1195,74 +1261,82 @@ function MatchCard({ match }: { match: Match }) {
   };
 
   return (
-    <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card hover:ring-glow transition-all">
+    <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs px-2 py-1 rounded-full bg-violet/20 text-violet-foreground border border-violet/30">
+          <span className="text-[10px] px-2.5 py-1 rounded-full bg-violet/15 text-violet-foreground border border-violet/30 font-extrabold uppercase tracking-wider">
             {match.sport}
           </span>
           {(match.status as string) === "Finished" ||
           (match.status as string) === "COMPLETED" ||
           match.status === "Cancelled" ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-[#B2B8C2] border border-white/10 font-semibold flex items-center gap-1">
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/5 text-[#B2B8C2] border border-white/10 font-semibold flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#B2B8C2]" />
               Finalizado
             </span>
           ) : match.status === "IN_PROGRESS" ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FFD60A]/15 text-[#FFD60A] border border-[#FFD60A]/30 font-semibold flex items-center gap-1">
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#FFD60A]/15 text-[#FFD60A] border border-[#FFD60A]/30 font-semibold flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#FFD60A] animate-pulse" />
               En Curso
             </span>
           ) : isFull ? (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF3B30]/15 text-[#FF3B30] border border-[#FF3B30]/30 font-semibold flex items-center gap-1">
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#FF3B30]/15 text-[#FF3B30] border border-[#FF3B30]/30 font-semibold flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#FF3B30]" />
               Lleno
             </span>
           ) : (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/30 font-semibold flex items-center gap-1">
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/30 font-semibold flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#39FF14]" />
               Buscando
             </span>
           )}
         </div>
-        <span className="text-xs text-neon">{new Date(match.date).toLocaleDateString()}</span>
+        <span className="text-[10px] font-mono text-muted-foreground">
+          {new Date(match.date).toLocaleDateString()}
+        </span>
       </div>
-      <h3 className="font-semibold">{match.title}</h3>
-      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-        <MapPin className="h-3 w-3" /> {match.court?.name}
+      <h3 className="font-heading text-xl tracking-wide text-foreground leading-tight">
+        {match.title}
+      </h3>
+      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+        <MapPin className="h-3 w-3 shrink-0" /> {match.court?.name || "Sin cancha asignada"}
       </p>
       <div className="mt-4 flex items-center justify-between">
         <div>
-          <div className="text-xs text-muted-foreground">Cupos</div>
-          <div className="text-sm font-semibold">
-            {spotsTaken}/{match.max_players}
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+            Cupos
+          </div>
+          <div className="text-sm font-bold font-mono text-foreground">
+            {spotsTaken}
+            <span className="text-muted-foreground/50">/{match.max_players}</span>
           </div>
         </div>
 
         {showCheckIn && !checkedIn ? (
           <button
             onClick={handleCheckIn}
-            className="px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 hover:shadow-glow transition-all active:scale-95 cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 hover:shadow-glow transition-all active:scale-95 cursor-pointer"
           >
             {t("game_day.confirm_attendance")}
           </button>
         ) : checkedIn || match.status === "IN_PROGRESS" ? (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            Asistiendo 🟢
+          <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Asistiendo
           </span>
         ) : (
           <button
             onClick={handleJoin}
             disabled={isParticipant || isFull || isJoining}
-            className="px-3 py-1.5 rounded-lg bg-gradient-neon text-neon-foreground text-sm font-semibold disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-gradient-neon text-neon-foreground text-sm font-bold disabled:opacity-50 transition-all active:scale-95 cursor-pointer shadow-neon hover:scale-105"
           >
             {isJoining ? "..." : isParticipant ? "Unido" : isFull ? "Lleno" : "Unirme"}
           </button>
         )}
       </div>
-      <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+      <div className="mt-4 h-1.5 rounded-full bg-muted/30 overflow-hidden">
         <div
-          className="h-full bg-gradient-primary transition-all duration-500"
+          className="h-full bg-gradient-primary rounded-full transition-all duration-700 ease-out"
           style={{ width: `${(spotsTaken / match.max_players) * 100}%` }}
         />
       </div>

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
+import { backendApi } from "@/shared/api/backendApi";
 import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { MOCK_USERS } from "@/shared/api/apiClient";
@@ -28,83 +29,12 @@ export const useAuthStore = create<AuthState>()(
       isDemoMode: import.meta.env.VITE_USE_MOCKS === "true",
       login: (user) => {
         set({ user, isAuthenticated: true });
-        try {
-          if (typeof window !== "undefined" && window.OneSignal) {
-            const userId = user.id;
-            if (typeof window.OneSignal.login === "function") {
-              window.OneSignal.login(userId).catch((err: unknown) => {
-                console.warn("OneSignal login promise rejected:", err);
-              });
-            } else if (Array.isArray(window.OneSignal)) {
-              window.OneSignal.push(async () => {
-                try {
-                  if (typeof window.OneSignal.login === "function") {
-                    await window.OneSignal.login(userId);
-                  }
-                } catch (e) {
-                  console.warn("OneSignal delayed login failed:", e);
-                }
-              });
-            }
-          }
-        } catch (oneSignalTelemetryError) {
-          console.warn(
-            "OneSignal push sequence bypassed safely to prevent auth blocking:",
-            oneSignalTelemetryError,
-          );
-        }
       },
       logout: () => {
         set({ user: null, isAuthenticated: false, isDemoMode: false });
-        try {
-          if (typeof window !== "undefined" && window.OneSignal) {
-            if (typeof window.OneSignal.logout === "function") {
-              window.OneSignal.logout().catch((err: unknown) => {
-                console.warn("OneSignal logout promise rejected:", err);
-              });
-            } else if (Array.isArray(window.OneSignal)) {
-              window.OneSignal.push(async () => {
-                try {
-                  if (typeof window.OneSignal.logout === "function") {
-                    await window.OneSignal.logout();
-                  }
-                } catch (e) {
-                  console.warn("OneSignal delayed logout failed:", e);
-                }
-              });
-            }
-          }
-        } catch (oneSignalTelemetryError) {
-          console.warn("OneSignal logout sequence bypassed safely:", oneSignalTelemetryError);
-        }
       },
       register: (user) => {
         set({ user, isAuthenticated: true });
-        try {
-          if (typeof window !== "undefined" && window.OneSignal) {
-            const userId = user.id;
-            if (typeof window.OneSignal.login === "function") {
-              window.OneSignal.login(userId).catch((err: unknown) => {
-                console.warn("OneSignal login promise rejected:", err);
-              });
-            } else if (Array.isArray(window.OneSignal)) {
-              window.OneSignal.push(async () => {
-                try {
-                  if (typeof window.OneSignal.login === "function") {
-                    await window.OneSignal.login(userId);
-                  }
-                } catch (e) {
-                  console.warn("OneSignal delayed login failed:", e);
-                }
-              });
-            }
-          }
-        } catch (oneSignalTelemetryError) {
-          console.warn(
-            "OneSignal push sequence bypassed safely to prevent auth blocking:",
-            oneSignalTelemetryError,
-          );
-        }
       },
       setDemoMode: (status) => set({ isDemoMode: status }),
     }),
@@ -217,16 +147,33 @@ export function useAuth() {
         throw new Error("Usuario no encontrado");
       }
 
-      // Fetch user profile from profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", authData.user.id)
-        .single();
+      const token = authData.session?.access_token;
+      let profile = null;
 
-      if (profileError) {
-        if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
-        throw profileError;
+      if (token && import.meta.env.VITE_API_URL) {
+        try {
+          const response = await backendApi.auth.getProfile(token);
+          if (response.data) {
+            profile = response.data;
+          }
+        } catch (backendError) {
+          if (import.meta.env.DEV)
+            console.warn("Backend profile fetch failed, falling back to Supabase:", backendError);
+        }
+      }
+
+      if (!profile) {
+        const { data: supabaseProfile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authData.user.id)
+          .single();
+
+        if (profileError) {
+          if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
+          throw profileError;
+        }
+        profile = supabaseProfile;
       }
 
       store.setDemoMode(false);

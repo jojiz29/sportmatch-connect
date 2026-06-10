@@ -167,6 +167,8 @@ export interface Post {
   sport?: Sport;
   user_name?: string;
   user_avatar?: string;
+  flagged?: boolean;
+  sensitive?: boolean;
 }
 
 export interface Squad {
@@ -224,6 +226,8 @@ export interface PostComment {
   parent_id: string | null;
   user_name?: string;
   user_avatar?: string;
+  flagged?: boolean;
+  sensitive?: boolean;
 }
 
 export interface CommentReaction {

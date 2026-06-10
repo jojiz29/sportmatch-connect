@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
 import { Court, Match, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -423,10 +422,8 @@ export function MapFeature({
           />
         )}
 
-        <MarkerClusterGroup chunkedLoading>
-          {courtMarkers}
-          {matchMarkers}
-        </MarkerClusterGroup>
+        {courtMarkers}
+        {matchMarkers}
       </MapContainer>
     </div>
   );

@@ -15,6 +15,7 @@ import {
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { apiClient } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { compressToWebP } from "@/shared/lib/imageUtils";
@@ -22,6 +23,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, Sport, User } from "@/entities/types";
+import { useStrictForm } from "@/shared/hooks/useStrictForm";
+import { BadgeEngine } from "@/components/BadgeEngine";
 import {
   Dialog,
   DialogContent,
@@ -81,12 +84,73 @@ function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    city: "",
-    bio: "",
-    preferred_sports: "",
-    avatar_url: "",
+  const {
+    values: editForm,
+    setValues: setEditForm,
+    handleChange,
+    handleBlur,
+    handleSubmit: handleFormSubmit,
+  } = useStrictForm({
+    initialValues: {
+      name: "",
+      city: "",
+      bio: "",
+      preferred_sports: "",
+      avatar_url: "",
+    },
+    validate: (vals) => {
+      const errors: Record<string, string> = {};
+      if (!vals.name.trim()) {
+        errors.name = "El nombre es requerido";
+      }
+      return errors;
+    },
+    onSubmit: async (vals) => {
+      if (!profile) return;
+      const sportsKeys = Object.keys(editSportsMatrix);
+
+      // Structure user_sports array of objects containing sport_id AND specific level
+      const userSports = sportsKeys.map((key) => ({
+        sport_id: key,
+        level: editSportsMatrix[key] as 1 | 2 | 3,
+      }));
+
+      // Structure legacy sport_preferences mapping for backward compatibility
+      const legacyMatrix: Record<
+        string,
+        { level: "Amateur" | "Intermediate" | "Advanced" | "Pro"; weight: number }
+      > = {};
+      sportsKeys.forEach((key) => {
+        const lvl = editSportsMatrix[key];
+        const stringLevel = lvl === 1 ? "Amateur" : lvl === 2 ? "Intermediate" : "Advanced";
+        const weight = lvl === 1 ? 1.0 : lvl === 2 ? 2.0 : 3.5;
+        legacyMatrix[key] = { level: stringLevel, weight };
+      });
+
+      const firstSportKey = sportsKeys[0];
+      const primaryLevelVal = firstSportKey ? editSportsMatrix[firstSportKey] : 2;
+      const translatedLevel =
+        primaryLevelVal === 1 ? "Principiante" : primaryLevelVal === 2 ? "Intermedio" : "Avanzado";
+
+      updateProfile({
+        name: vals.name,
+        city: vals.city,
+        bio: vals.bio,
+        avatar_url: vals.avatar_url,
+        preferred_sports: sportsKeys as Sport[],
+        level: translatedLevel as User["level"],
+        user_sports: userSports,
+        sport_preferences: {
+          sports_matrix: legacyMatrix,
+          behavioral_intent: {
+            weekly_hours: profile.sport_preferences?.behavioral_intent?.weekly_hours || 6,
+            intent: profile.sport_preferences?.behavioral_intent?.intent || "Competitivo",
+          },
+        },
+      });
+      setIsEditing(false);
+    },
+    successMessage: t("profile.updated"),
   });
 
   const [editSportsMatrix, setEditSportsMatrix] = useState<Record<string, 1 | 2 | 3>>({});
@@ -209,12 +273,23 @@ function Profile() {
         avatar_url: profile.avatar_url || "",
       });
 
-      apiClient.matches
-        .getUserMatches(profile.id)
-        .then(setUserMatches)
-        .catch(() => setUserMatches([]));
+      // Try backend first for user matches, fallback to Supabase
+      backendApi.matches
+        .getAll()
+        .then((backendMatches) => {
+          const userMatches = (backendMatches as Match[]).filter(
+            (m) => m.creator_id === profile.id,
+          );
+          setUserMatches(userMatches);
+        })
+        .catch(() => {
+          apiClient.matches
+            .getUserMatches(profile.id)
+            .then(setUserMatches)
+            .catch(() => setUserMatches([]));
+        });
     }
-  }, [profile]);
+  }, [profile, setEditForm]);
 
   if (!profile) {
     return (
@@ -259,51 +334,7 @@ function Profile() {
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    const sportsKeys = Object.keys(editSportsMatrix);
-
-    // Structure user_sports array of objects containing sport_id AND specific level
-    const userSports = sportsKeys.map((key) => ({
-      sport_id: key,
-      level: editSportsMatrix[key] as 1 | 2 | 3,
-    }));
-
-    // Structure legacy sport_preferences mapping for backward compatibility
-    const legacyMatrix: Record<
-      string,
-      { level: "Amateur" | "Intermediate" | "Advanced" | "Pro"; weight: number }
-    > = {};
-    sportsKeys.forEach((key) => {
-      const lvl = editSportsMatrix[key];
-      const stringLevel = lvl === 1 ? "Amateur" : lvl === 2 ? "Intermediate" : "Advanced";
-      const weight = lvl === 1 ? 1.0 : lvl === 2 ? 2.0 : 3.5;
-      legacyMatrix[key] = { level: stringLevel, weight };
-    });
-
-    const firstSportKey = sportsKeys[0];
-    const primaryLevelVal = firstSportKey ? editSportsMatrix[firstSportKey] : 2;
-    const translatedLevel =
-      primaryLevelVal === 1 ? "Principiante" : primaryLevelVal === 2 ? "Intermedio" : "Avanzado";
-
-    updateProfile({
-      name: editForm.name,
-      city: editForm.city,
-      bio: editForm.bio,
-      avatar_url: editForm.avatar_url,
-      preferred_sports: sportsKeys as Sport[],
-      level: translatedLevel as User["level"],
-      user_sports: userSports,
-      sport_preferences: {
-        sports_matrix: legacyMatrix,
-        behavioral_intent: {
-          weekly_hours: profile.sport_preferences?.behavioral_intent?.weekly_hours || 6,
-          intent: profile.sport_preferences?.behavioral_intent?.intent || "Competitivo",
-        },
-      },
-    });
-    setIsEditing(false);
-    toast.success(t("profile.updated"));
-  };
+  const handleSave = () => handleFormSubmit();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const target = e.target;
@@ -409,21 +440,27 @@ function Profile() {
               <div className="space-y-3 mt-1">
                 <input
                   type="text"
+                  name="name"
                   value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
                   className="w-full bg-background border border-border rounded-xl px-3 py-2 font-bold text-xl focus:border-primary focus:outline-none"
                   placeholder={t("profile.placeholder_name")}
                 />
                 <input
                   type="text"
+                  name="city"
                   value={editForm.city}
-                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
                   className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   placeholder={t("profile.placeholder_city")}
                 />
                 <textarea
+                  name="bio"
                   value={editForm.bio}
-                  onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
                   className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none"
                   placeholder={t("profile.placeholder_bio")}
                   rows={2}
@@ -503,15 +540,20 @@ function Profile() {
                   {profile.city} · {t("profile.age_label", { age: profile.age })}
                 </p>
                 <p className="text-sm mt-2">{profile.bio}</p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {profile.preferred_sports.map((s) => (
-                    <span
-                      key={s}
-                      className="px-3 py-1 rounded-full bg-violet/20 text-sm border border-violet/30"
-                    >
-                      {s}
-                    </span>
-                  ))}
+                <div className="mt-4">
+                  <BadgeEngine
+                    sports_matrix={
+                      profile.sport_preferences?.sports_matrix ||
+                      profile.preferred_sports.reduce(
+                        (acc, sport) => {
+                          acc[sport] = { level: profile.level || "Intermediate", weight: 2 };
+                          return acc;
+                        },
+                        {} as Record<string, unknown>,
+                      )
+                    }
+                    size="md"
+                  />
                 </div>
               </>
             )}

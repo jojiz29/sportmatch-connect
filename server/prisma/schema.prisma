@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model profiles {
+  id                   String    @id @default(uuid())
+  created_at           DateTime  @default(now()) @map("created_at")
+  updated_at           DateTime  @updatedAt @map("updated_at")
+  name                 String?
+  age                  Int?
+  city                 String?
+  avatar_url           String?   @map("avatar_url")
+  bio                  String?
+  trust_score          Int?      @default(100) @map("trust_score")
+  fitcoins_balance     Int?      @default(0) @map("fitcoins_balance")
+  level                String?
+  preferred_sports     String[]  @map("preferred_sports")
+  matches_played       Int?      @default(0) @map("matches_played")
+  last_location_lat    Float?    @map("last_location_lat")
+  last_location_lng    Float?    @map("last_location_lng")
+  user_role            String?   @map("user_role")
+  company_name         String?   @map("company_name")
+  business_category    String?   @map("business_category")
+  is_sponsored         Boolean?  @default(false) @map("is_sponsored")
+  is_admin             Boolean?  @default(false) @map("is_admin")
+  gender               String?
+  user_sports          Json?     @map("user_sports")
+  onboarding_completed Boolean?  @default(false) @map("onboarding_completed")
+  sport_preferences    Json?     @map("sport_preferences")
+  user_id              String?   @unique @map("user_id")
+
+  posts                posts[]
+  created_matches      matches[] @relation("match_creator")
+  match_participants   match_participants[]
+  wallet_transactions  wallet_transactions[]
+  notifications        notifications[]
+  reviews              reviews[]
+  followers            followers[]           @relation("following")
+  following            followers[]           @relation("follower")
+  squad_members        squad_members[]
+  created_squads       squads[]              @relation("squad_creator")
+  post_comments        post_comments[]
+  post_comment_reactions post_comment_reactions[]
+  bookings             bookings[]
+  sent_messages        messages[]            @relation("sender_messages")
+  received_messages    messages[]            @relation("receiver_messages")
+
+  @@map("profiles")
+}
+
+model posts {
+  id         String   @id @default(uuid())
+  user_id    String   @map("user_id")
+  content    String
+  type       String   @default("TEXT")
+  created_at DateTime @default(now()) @map("created_at")
+  media_url  String?  @map("media_url")
+  sport      String?
+
+  user       profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  post_comments post_comments[]
+
+  @@map("posts")
+}
+
+model post_comments {
+  id         String   @id @default(uuid())
+  post_id    String   @map("post_id")
+  user_id    String   @map("user_id")
+  content    String
+  created_at DateTime @default(now()) @map("created_at")
+  parent_id  String?  @map("parent_id")
+
+  post       posts    @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  parent     post_comments?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies    post_comments[] @relation("CommentReplies")
+  post_comment_reactions post_comment_reactions[]
+
+  @@map("post_comments")
+}
+
+model post_comment_reactions {
+  id           String   @id @default(uuid())
+  comment_id   String   @map("comment_id")
+  user_id      String   @map("user_id")
+  reaction_type String  @map("reaction_type")
+  created_at   DateTime @default(now()) @map("created_at")
+
+  comment     post_comments @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user        profiles      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([comment_id, user_id])
+  @@map("post_comment_reactions")
+}
+
+model matches {
+  id           String   @id @default(uuid())
+  court_id    String?  @map("court_id")
+  sport        String
+  title        String
+  date         String
+  time         String
+  max_players  Int      @map("max_players")
+  required_level String @map("required_level")
+  creator_id   String   @map("creator_id")
+  status       String?
+  created_at   DateTime @default(now()) @map("created_at")
+
+  court        courts?   @relation(fields: [court_id], references: [id])
+  creator      profiles  @relation("match_creator", fields: [creator_id], references: [id])
+  match_participants match_participants[]
+
+  @@map("matches")
+}
+
+model match_participants {
+  match_id   String @map("match_id")
+  user_id    String @map("user_id")
+  status     String @default("PENDING")
+  joined_at  DateTime @default(now()) @map("joined_at")
+
+  match      matches @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  user       profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([match_id, user_id])
+  @@map("match_participants")
+}
+
+model courts {
+  id                String  @id @default(uuid())
+  name              String
+  sport             String
+  price_per_hour    Int     @map("price_per_hour")
+  rating            Float
+  reviews_count     Int     @map("reviews_count")
+  lat               Float
+  lng               Float
+  image_url         String? @map("image_url")
+  amenities         String[]
+  is_available      Boolean @default(true) @map("is_available")
+  address           String?
+  max_players       Int?    @map("max_players")
+  operating_hours   String[] @map("operating_hours")
+  district          String?
+  is_sponsored      Boolean @default(false) @map("is_sponsored")
+  owner_id          String? @map("owner_id")
+  created_at        DateTime @default(now()) @map("created_at")
+
+  matches           matches[]
+  reviews           reviews[]
+  bookings          bookings[]
+
+  @@map("courts")
+}
+
+model reviews {
+  id          String   @id @default(uuid())
+  court_id    String   @map("court_id")
+  user_id     String   @map("user_id")
+  rating      Int
+  comment     String?
+  created_at  DateTime @default(now()) @map("created_at")
+
+  court       courts   @relation(fields: [court_id], references: [id], onDelete: Cascade)
+  user        profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model bookings {
+  id          String   @id @default(uuid())
+  court_id    String   @map("court_id")
+  user_id     String   @map("user_id")
+  date        String
+  time        String
+  hours       Int
+  total_price Int      @map("total_price")
+  status      String   @default("PENDING")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  court       courts   @relation(fields: [court_id], references: [id])
+  user        profiles @relation(fields: [user_id], references: [id])
+
+  @@map("bookings")
+}
+
+model sports {
+  id                  String  @id @default(uuid())
+  name                String
+  icon_slug           String  @map("icon_slug")
+  default_max_players Int     @map("default_max_players")
+  created_at          DateTime @default(now()) @map("created_at")
+
+  @@map("sports")
+}
+
+model squads {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  created_at  DateTime @default(now()) @map("created_at")
+  creator_id  String   @map("creator_id")
+  avatar_url  String?  @map("avatar_url")
+
+  creator     profiles     @relation("squad_creator", fields: [creator_id], references: [id])
+  squad_members squad_members[]
+
+  @@map("squads")
+}
+
+model squad_members {
+  squad_id   String   @map("squad_id")
+  user_id    String   @map("user_id")
+  joined_at  DateTime @default(now()) @map("joined_at")
+
+  squad      squads   @relation(fields: [squad_id], references: [id], onDelete: Cascade)
+  user       profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([squad_id, user_id])
+  @@map("squad_members")
+}
+
+model followers {
+  follower_id  String @map("follower_id")
+  following_id String @map("following_id")
+  created_at   DateTime @default(now()) @map("created_at")
+
+  follower    profiles @relation("follower", fields: [follower_id], references: [id], onDelete: Cascade)
+  following   profiles @relation("following", fields: [following_id], references: [id], onDelete: Cascade)
+
+  @@id([follower_id, following_id])
+  @@map("followers")
+}
+
+model wallet_transactions {
+  id          String   @id @default(uuid())
+  user_id     String   @map("user_id")
+  amount      Int
+  description String
+  type        String
+  created_at  DateTime @default(now()) @map("created_at")
+
+  user        profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+}
+
+model notifications {
+  id         String   @id @default(uuid())
+  user_id    String   @map("user_id")
+  type       String
+  title      String
+  content    String
+  link       String?
+  is_read    Boolean  @default(false) @map("is_read")
+  created_at DateTime @default(now()) @map("created_at")
+
+  user       profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model user_stats {
+  id            String   @id @default(uuid())
+  user_id       String   @unique @map("user_id")
+  total_matches Int      @default(0) @map("total_matches")
+  win_rate      Float    @default(0) @map("win_rate")
+  streak_days   Int      @default(0) @map("streak_days")
+  last_active   DateTime @default(now()) @map("last_active")
+
+  @@map("user_stats")
+}
+
+model business_catalog {
+  id          String  @id @default(uuid())
+  business_id String  @map("business_id")
+  name        String
+  description String?
+  price       Int
+  type        String
+  image_url   String? @map("image_url")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  @@map("business_catalog")
+}
+
+model messages {
+  id         String   @id @default(uuid())
+  sender_id  String   @map("sender_id")
+  receiver_id String  @map("receiver_id")
+  content    String
+  is_read    Boolean  @default(false) @map("is_read")
+  created_at DateTime @default(now()) @map("created_at")
+
+  sender     profiles @relation("sender_messages", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver   profiles @relation("receiver_messages", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}

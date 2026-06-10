@@ -62,7 +62,7 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
 
     const { data: comments, error } = await supabase
       .from("post_comments")
-      .select("*, profile:profiles(id, name, avatar_url)")
+      .select("*")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
 
@@ -72,14 +72,26 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
     }
 
     const commentIds = ((comments as unknown as SupabaseComment[]) || []).map((c) => c.id);
+    const userIds = [
+      ...new Set(((comments as unknown as SupabaseComment[]) || []).map((c) => c.user_id)),
+    ];
 
     let reactions: SupabaseReaction[] = [];
+    const profiles: Record<string, { name: string; avatar_url: string | null }> = {};
+
     if (commentIds.length > 0) {
-      const { data: reactionsData } = await supabase
-        .from("post_comment_reactions")
-        .select("*")
-        .in("comment_id", commentIds);
-      reactions = (reactionsData as SupabaseReaction[]) || [];
+      const [reactionsResult, profilesResult] = await Promise.all([
+        supabase.from("post_comment_reactions").select("*").in("comment_id", commentIds),
+        userIds.length > 0
+          ? supabase.from("profiles").select("id, name, avatar_url").in("id", userIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      reactions = (reactionsResult.data as SupabaseReaction[]) || [];
+      const profilesData = profilesResult.data || [];
+      profilesData.forEach((p: { id: string; name: string; avatar_url: string | null }) => {
+        profiles[p.id] = { name: p.name, avatar_url: p.avatar_url };
+      });
     }
 
     const reactionMap: Record<string, ReactionType> = {};
@@ -98,8 +110,8 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
         content: c.content,
         created_at: c.created_at,
         parent_id: c.parent_id || null,
-        user_name: c.profile?.name || "Deportista",
-        user_avatar: c.profile?.avatar_url || "",
+        user_name: profiles[c.user_id]?.name || "Deportista",
+        user_avatar: profiles[c.user_id]?.avatar_url || "",
         replies: [],
       };
       commentMap[c.id] = comment;
@@ -158,7 +170,7 @@ export async function createComment(
       content,
       parent_id: parentId || null,
     })
-    .select("*, profile:profiles(id, name, avatar_url)")
+    .select()
     .single();
 
   if (error) {
@@ -166,6 +178,7 @@ export async function createComment(
     throw error;
   }
 
+  const currentUser = useAuthStore.getState().user;
   const c = comment as unknown as SupabaseComment;
   return {
     id: c.id,
@@ -174,8 +187,8 @@ export async function createComment(
     content: c.content,
     created_at: c.created_at,
     parent_id: c.parent_id || null,
-    user_name: c.profile?.name || "Deportista",
-    user_avatar: c.profile?.avatar_url || "",
+    user_name: currentUser?.name || "Deportista",
+    user_avatar: currentUser?.avatar_url || "",
   };
 }
 

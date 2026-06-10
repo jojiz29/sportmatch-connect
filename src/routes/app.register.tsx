@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { MapPin, User as UserIcon, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { signInWithGoogle } from "@/services/authService";
+import { useStrictForm } from "@/shared/hooks/useStrictForm";
 
 export const Route = createFileRoute("/app/register")({
   component: RegisterPage,
@@ -87,11 +88,6 @@ function RegisterPage() {
   const navigate = useNavigate();
 
   const [role, setRole] = useState<"PLAYER" | "BUSINESS">("PLAYER");
-  const [fullName, setFullName] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [category, setCategory] = useState<"Canchas" | "Gym" | "Tienda" | "Bebidas">("Tienda");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const [lat, setLat] = useState<number | null>(null);
@@ -116,43 +112,44 @@ function RegisterPage() {
     }
   }, []);
 
-  const emailError = email ? getEmailValidationError(email, t) : null;
-  const criteria = getPasswordCriteria(password);
-  const isPasswordValid = Object.values(criteria).every(Boolean);
-  const strength = getPasswordStrength(criteria);
-  const strengthPercent = (Object.values(criteria).filter(Boolean).length / 5) * 100;
-
-  const isPlayerStep1Valid =
-    fullName.trim().length > 0 && email.length > 0 && emailError === null && isPasswordValid;
-
-  const isFormValid =
-    (role === "PLAYER" ? isPlayerStep1Valid : companyName.trim().length > 0) &&
-    email.length > 0 &&
-    emailError === null &&
-    isPasswordValid;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isFormValid) {
-      toast.error(t("register.error_toast"));
-      return;
-    }
-
-    try {
+  const { values, handleChange, handleBlur, handleSubmit, isSubmitting } = useStrictForm({
+    initialValues: {
+      fullName: "",
+      companyName: "",
+      category: "Tienda" as "Canchas" | "Gym" | "Tienda" | "Bebidas",
+      email: "",
+      password: "",
+    },
+    validate: (vals) => {
+      const errors: Record<string, string> = {};
+      const emailErr = getEmailValidationError(vals.email, t);
+      if (emailErr) errors.email = emailErr;
+      const criteria = getPasswordCriteria(vals.password);
+      if (!Object.values(criteria).every(Boolean)) {
+        errors.password = "La contraseña no cumple con todos los requisitos.";
+      }
+      if (role === "PLAYER" && !vals.fullName.trim()) {
+        errors.fullName = "El nombre completo es requerido.";
+      }
+      if (role === "BUSINESS" && !vals.companyName.trim()) {
+        errors.companyName = "El nombre de la empresa es requerido.";
+      }
+      return errors;
+    },
+    onSubmit: async (vals) => {
       const newUser = {
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
-        name: role === "BUSINESS" ? companyName : fullName,
+        name: role === "BUSINESS" ? vals.companyName : vals.fullName,
         age: role === "BUSINESS" ? 0 : 25,
         city: "Lima",
         avatar_url:
           role === "BUSINESS"
-            ? `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(companyName)}`
-            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`,
+            ? `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(vals.companyName)}`
+            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(vals.fullName)}`,
         bio:
           role === "BUSINESS"
-            ? t("register.business_bio_template", { companyName })
+            ? t("register.business_bio_template", { companyName: vals.companyName })
             : t("profile.placeholder_bio") || t("register.default_player_bio"),
         trust_score: 50,
         fitcoins_balance: 0,
@@ -162,27 +159,41 @@ function RegisterPage() {
         last_location_lat: lat || -12.14,
         last_location_lng: lng || -76.995,
         user_role: role,
-        company_name: role === "BUSINESS" ? companyName : undefined,
-        business_category: role === "BUSINESS" ? category : undefined,
+        company_name: role === "BUSINESS" ? vals.companyName : undefined,
+        business_category: role === "BUSINESS" ? vals.category : undefined,
         is_sponsored: false,
-        email,
-        password,
+        email: vals.email,
+        password: vals.password,
       };
 
       await register(newUser);
 
-      toast.success(t("register.success_toast"));
       if (role === "BUSINESS") {
         navigate({ to: "/app/business" });
       } else {
         navigate({ to: "/app" });
       }
-    } catch (err: unknown) {
-      console.error("Error en registro:", err);
-      const errorMessage = err instanceof Error ? err.message : t("register.error_toast");
-      toast.error(`Error: ${errorMessage}`);
-    }
-  };
+    },
+    successMessage: t("register.success_toast"),
+  });
+
+  const emailError = values.email ? getEmailValidationError(values.email, t) : null;
+  const criteria = getPasswordCriteria(values.password);
+  const isPasswordValid = Object.values(criteria).every(Boolean);
+  const strength = getPasswordStrength(criteria);
+  const strengthPercent = (Object.values(criteria).filter(Boolean).length / 5) * 100;
+
+  const isPlayerStep1Valid =
+    values.fullName.trim().length > 0 &&
+    values.email.length > 0 &&
+    emailError === null &&
+    isPasswordValid;
+
+  const isFormValid =
+    (role === "PLAYER" ? isPlayerStep1Valid : values.companyName.trim().length > 0) &&
+    values.email.length > 0 &&
+    emailError === null &&
+    isPasswordValid;
 
   const handleGoogleLogin = async () => {
     try {
@@ -244,8 +255,10 @@ function RegisterPage() {
                 <input
                   type="text"
                   required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  name="fullName"
+                  value={values.fullName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
                   className="w-full pl-12 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   placeholder={t("profile.placeholder_name") || "Tu nombre completo"}
                   id="register-fullname-input"
@@ -263,8 +276,10 @@ function RegisterPage() {
                   <input
                     type="text"
                     required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
+                    name="companyName"
+                    value={values.companyName}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
                     className="w-full pl-12 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     placeholder={t("register.placeholder_company") || "Ej. Deportes Flores S.A.C."}
                     id="register-company-name"
@@ -277,10 +292,9 @@ function RegisterPage() {
                   {t("register.businessCategory")}
                 </label>
                 <select
-                  value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value as "Canchas" | "Gym" | "Tienda" | "Bebidas")
-                  }
+                  name="category"
+                  value={values.category}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
                   id="register-business-category"
                 >
@@ -338,8 +352,10 @@ function RegisterPage() {
               <input
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                name="email"
+                value={values.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
                 className={`w-full pl-12 pr-4 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
                   emailError ? "border-red-500/50" : "border-border"
                 }`}
@@ -359,10 +375,12 @@ function RegisterPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                name="password"
+                value={values.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
                 className={`w-full pl-12 pr-12 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  password && !isPasswordValid ? "border-red-500/50" : "border-border"
+                  values.password && !isPasswordValid ? "border-red-500/50" : "border-border"
                 }`}
                 placeholder="••••••••"
                 id="register-password-input"
@@ -377,7 +395,7 @@ function RegisterPage() {
               </button>
             </div>
 
-            {password && (
+            {values.password && (
               <div className="mt-3 space-y-2 animate-fade-in">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground">{t("auth.password_strength_title")}</span>
@@ -467,7 +485,7 @@ function RegisterPage() {
 
           <button
             type="submit"
-            disabled={role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid}
+            disabled={(role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid) || isSubmitting}
             className="w-full py-4 mt-4 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 text-primary-foreground font-bold rounded-xl shadow-glow transition-all cursor-pointer"
             id="register-player-next-btn"
           >

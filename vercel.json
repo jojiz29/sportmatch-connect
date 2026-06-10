@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npx vite build",
+  "devCommand": "npm run dev",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

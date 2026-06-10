@@ -15,6 +15,7 @@ import { Court } from "@/entities/types";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
+import { backendApi } from "@/shared/api/backendApi";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
 import { usePaymentGatewayStore, PaymentPayload, PaymentResult } from "@/features/wallet/usePaymentGatewayStore";
@@ -163,10 +164,17 @@ function CourtDetail() {
     async function fetchBookedSlots() {
       try {
         setLoadingBookings(true);
-        const booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
+        // Try backend first, fallback to Supabase
+        const backendResult = await backendApi.bookings.getByCourtAndDate(court.id, todayStr);
+        const booked = (backendResult.data as string[]) || [];
         setBookedSlots(booked);
-      } catch (err) {
-        console.error("Error loading booked slots:", err);
+      } catch {
+        try {
+          const booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
+          setBookedSlots(booked);
+        } catch (err) {
+          console.error("Error loading booked slots:", err);
+        }
       } finally {
         setLoadingBookings(false);
       }
@@ -271,12 +279,40 @@ function CourtDetail() {
           title: `Partido en ${court.name}`,
           sport: court.sport,
           court_id: court.id,
+          user_id: user.id,
           date: todayStr,
-          time: slot,
-          max_players: maxPlayers,
-          required_level: user.level || "Intermedio",
-          creator_id: user.id,
+          time_slot: slot,
+          operating_hours: court.operating_hours,
         });
+      }
+
+      // 4. Create match in memory for local demo correctness
+      if (useAuthStore.getState().isDemoMode) {
+        // Try backend first, fallback to Supabase
+        const backendResult = await backendApi.matches
+          .create(user.id, {
+            title: `Partido en ${court.name}`,
+            sport: court.sport,
+            court_id: court.id,
+            date: todayStr,
+            time: slot,
+            max_players: maxPlayers,
+            required_level: user.level || "Intermedio",
+          })
+          .catch(() => null);
+
+        if (!backendResult?.data) {
+          await apiClient.matches.create({
+            title: `Partido en ${court.name}`,
+            sport: court.sport,
+            court_id: court.id,
+            date: todayStr,
+            time: slot,
+            max_players: maxPlayers,
+            required_level: user.level || "Intermedio",
+            creator_id: user.id,
+          });
+        }
       }
 
       setConfirmed(true);
