@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    const timeoutRef = { current: null as NodeJS.Timeout | null };
 
 async function initAuth() {
       try {
@@ -51,7 +51,7 @@ async function initAuth() {
         const timeoutMs = isOAuthCallback ? 10000 : 3000; // Give more time during OAuth callback
 
         if (!isOAuthCallback) {
-          timeoutId = setTimeout(() => {
+          timeoutRef.current = setTimeout(() => {
             if (mounted) {
               console.warn("Auth synchronization timed out. Falling back to demo mode.");
               useAuthStore.getState().setDemoMode(true);
@@ -128,7 +128,10 @@ async function initAuth() {
         console.error("AuthProvider initAuth error:", err);
         logoutRef.current();
       } finally {
-        clearTimeout(timeoutId);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         if (mounted) {
           initializedRef.current = true;
           setIsLoading(false);
@@ -211,6 +214,13 @@ async function initAuth() {
 
         if (profile && mounted) {
           loginRef.current(profile);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+            console.log("Cleared auth timeout after SIGNED_IN");
+          }
+          initializedRef.current = true;
+          setIsLoading(false);
         }
       } else if (event === "SIGNED_OUT") {
         logoutRef.current();
