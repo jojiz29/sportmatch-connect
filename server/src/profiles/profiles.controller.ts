@@ -35,10 +35,7 @@ export class ProfilesController {
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Verify identity with DNI" })
-  async verifyDni(
-    @Request() req: { user: { userId: string } },
-    @Body() data: { dni: string },
-  ) {
+  async verifyDni(@Request() req: { user: { userId: string } }, @Body() data: { dni: string }) {
     return this.profilesService.verifyDni(req.user.userId, data.dni);
   }
 }
