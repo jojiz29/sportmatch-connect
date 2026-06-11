@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PostComments } from "./PostComments";
 import { ReportModal } from "@/components/ReportModal";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
+import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 
 const SPORT_EMOJIS: Record<string, string> = {
   Pádel: "🏓",
@@ -84,6 +85,10 @@ export function NewsFeed() {
     null,
   );
 
+  // AI Moderation Engine States
+  const { analyzeImage } = useNSFWJS();
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState<boolean>(false);
+
   // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change (Task 2.4)
   useEffect(() => {
     return () => {
@@ -93,7 +98,7 @@ export function NewsFeed() {
     };
   }, [mediaUrl]);
 
-  const handleImageFile = (file: File) => {
+  const handleImageFile = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
       toast.error("El archivo supera el límite de 5MB");
       return;
@@ -103,12 +108,31 @@ export function NewsFeed() {
       return;
     }
 
-    // Eliminate all client-side Base64 string conversions to prevent database bloating (Task 2.2)
-    // We use lightweight URL.createObjectURL for preview, and store the raw File in state.
+    // Set preview URL and raw File in state immediately
     const localUrl = URL.createObjectURL(file);
     setMediaUrl(localUrl);
     setImageFile(file);
-    toast.success("Imagen cargada correctamente");
+    setIsAnalyzingImage(true);
+
+    try {
+      const isSafe = await analyzeImage(file);
+      if (!isSafe) {
+        setImageFile(null);
+        setMediaUrl("");
+        URL.revokeObjectURL(localUrl);
+        toast.error("Bloqueado por Seguridad: La imagen viola nuestras Normas de la Comunidad.", {
+          className: "bg-red-500 text-white border-red-600",
+        });
+      } else {
+        toast.success("Imagen cargada correctamente");
+      }
+    } catch (error) {
+      console.error("Error checking image safety:", error);
+      // Fallback gracefully: treat as safe
+      toast.success("Imagen cargada correctamente");
+    } finally {
+      setIsAnalyzingImage(false);
+    }
   };
 
   // Track current user ID in a ref so the Realtime callback can reference it
@@ -216,7 +240,7 @@ export function NewsFeed() {
   // ── Post submission ─────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !content.trim()) return;
+    if (!currentUser || !content.trim() || isAnalyzingImage) return;
 
     try {
       setSubmitting(true);
@@ -325,7 +349,7 @@ export function NewsFeed() {
 
               <button
                 type="submit"
-                disabled={submitting || !content.trim()}
+                disabled={submitting || isAnalyzingImage || !content.trim()}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                 id="feed-post-submit"
               >
@@ -354,16 +378,26 @@ export function NewsFeed() {
                 {mediaUrl ? (
                   <div className="relative mt-2 rounded-xl overflow-hidden border border-border/50 max-h-48 bg-muted group animate-scale-in">
                     <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMediaUrl("");
-                        setImageFile(null);
-                      }}
-                      className="absolute top-2 right-2 px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
-                    >
-                      Quitar foto
-                    </button>
+                    {isAnalyzingImage && (
+                      <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-2 backdrop-blur-sm animate-pulse z-10">
+                        <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                        <span className="text-xs font-bold text-foreground">
+                          🛡️ Analizando imagen con IA...
+                        </span>
+                      </div>
+                    )}
+                    {!isAnalyzingImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaUrl("");
+                          setImageFile(null);
+                        }}
+                        className="absolute top-2 right-2 px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                      >
+                        Quitar foto
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div

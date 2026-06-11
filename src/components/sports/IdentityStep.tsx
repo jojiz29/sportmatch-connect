@@ -4,6 +4,7 @@ import { Camera, Award } from "lucide-react";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { compressToWebP } from "@/shared/lib/imageUtils";
+import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 
 interface IdentityStepProps {
   userId: string;
@@ -40,6 +41,10 @@ export function IdentityStep({
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
+
+  // AI Moderation Hook and States
+  const { analyzeImage } = useNSFWJS();
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
   // 1. Silent Geolocation Fetch on Mount
   useEffect(() => {
@@ -87,6 +92,28 @@ export function IdentityStep({
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));
       return;
+    }
+
+    setIsAnalyzingImage(true);
+    const scanToastId = toast.loading("🛡️ Analizando imagen con IA...");
+
+    try {
+      const isSafe = await analyzeImage(file);
+      toast.dismiss(scanToastId);
+      if (!isSafe) {
+        toast.error("Bloqueado por Seguridad: La imagen viola nuestras Normas de la Comunidad.", {
+          className: "bg-red-500 text-white border-red-600",
+        });
+        if (e.target) e.target.value = "";
+        setIsAnalyzingImage(false);
+        return;
+      }
+    } catch (err) {
+      console.error("AI Moderation error:", err);
+      toast.dismiss(scanToastId);
+      // Fallback gracefully: treat as safe
+    } finally {
+      setIsAnalyzingImage(false);
     }
 
     setIsUploading(true);
@@ -229,25 +256,32 @@ export function IdentityStep({
       {/* Circular Glassmorphism Avatar Uploader */}
       <div className="flex flex-col items-center gap-3">
         <div
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => !isUploading && !isAnalyzingImage && fileInputRef.current?.click()}
           className={`h-32 w-32 rounded-full border-4 cursor-pointer relative overflow-hidden bg-background/30 flex items-center justify-center transition-all duration-300 ${getGenderGlowClass()}`}
         >
-          {avatarUrl ? (
+          {isAnalyzingImage ? (
+            <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-2 backdrop-blur-sm animate-pulse z-10 p-2 text-center">
+              <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              <span className="text-[9px] font-bold text-foreground">🛡️ Analizando...</span>
+            </div>
+          ) : avatarUrl ? (
             <img src={avatarUrl} alt="Avatar Preview" className="h-full w-full object-cover" />
           ) : (
             renderFallbackAvatar()
           )}
 
-          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold transition-opacity">
-            {isUploading ? (
-              <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            ) : (
-              <>
-                <Camera className="h-5 w-5 mb-1" />
-                <span>{t("profile.change_photo", "Subir Foto")}</span>
-              </>
-            )}
-          </div>
+          {!isAnalyzingImage && (
+            <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold transition-opacity">
+              {isUploading ? (
+                <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <>
+                  <Camera className="h-5 w-5 mb-1" />
+                  <span>{t("profile.change_photo", "Subir Foto")}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <input
           type="file"
@@ -255,7 +289,7 @@ export function IdentityStep({
           onChange={handleFileChange}
           accept="image/*"
           className="hidden"
-          disabled={isUploading}
+          disabled={isUploading || isAnalyzingImage}
         />
         <span className="text-[10px] text-muted-foreground">
           {avatarUrl
@@ -384,7 +418,7 @@ export function IdentityStep({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving || isUploading}
+          disabled={isSaving || isUploading || isAnalyzingImage}
           className="flex-1 py-3.5 bg-gradient-primary text-primary-foreground font-bold rounded-xl shadow-glow transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer text-sm"
           id="onboarding-finish-btn"
         >

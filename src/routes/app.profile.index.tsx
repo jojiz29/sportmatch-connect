@@ -23,6 +23,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, Sport, User } from "@/entities/types";
+import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
 import { BadgeEngine } from "@/components/BadgeEngine";
 import {
@@ -83,6 +84,10 @@ function Profile() {
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
+
+  // AI Moderation Hook and States
+  const { analyzeImage } = useNSFWJS();
+  const [isAnalyzingAvatar, setIsAnalyzingAvatar] = useState(false);
 
   const {
     values: editForm,
@@ -341,6 +346,40 @@ function Profile() {
     const file = target?.files?.[0];
     if (!file || !profile) return;
 
+    // Check size limit: 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));
+      return;
+    }
+
+    setIsAnalyzingAvatar(true);
+    const scanToastId = toast.loading("🛡️ Analizando imagen con IA...");
+
+    try {
+      const isSafe = await analyzeImage(file);
+      toast.dismiss(scanToastId);
+      if (!isSafe) {
+        toast.error("Bloqueado por Seguridad: La imagen viola nuestras Normas de la Comunidad.", {
+          className: "bg-red-500 text-white border-red-600",
+        });
+        if (target) {
+          try {
+            target.value = "";
+          } catch (resetErr) {
+            if (import.meta.env.DEV) console.warn("Could not reset input file value:", resetErr);
+          }
+        }
+        setIsAnalyzingAvatar(false);
+        return;
+      }
+    } catch (err) {
+      console.error("AI Moderation error:", err);
+      toast.dismiss(scanToastId);
+      // Fallback gracefully: treat as safe
+    } finally {
+      setIsAnalyzingAvatar(false);
+    }
+
     setIsUploadingAvatar(true);
     const toastId = toast.loading(t("profile.uploading_photo"));
 
@@ -411,10 +450,17 @@ function Profile() {
             {isEditing && (
               <label
                 className={`absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors ${
-                  isUploadingAvatar ? "pointer-events-none" : ""
+                  isUploadingAvatar || isAnalyzingAvatar ? "pointer-events-none" : ""
                 }`}
               >
-                {isUploadingAvatar ? (
+                {isAnalyzingAvatar ? (
+                  <div className="flex flex-col items-center justify-center gap-1.5 p-1 text-center animate-pulse z-10">
+                    <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    <span className="text-[9px] text-foreground font-bold leading-tight">
+                      🛡️ Analizando IA...
+                    </span>
+                  </div>
+                ) : isUploadingAvatar ? (
                   <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 ) : (
                   <>
@@ -427,7 +473,7 @@ function Profile() {
                   accept="image/*"
                   onChange={handleFileChange}
                   className="hidden"
-                  disabled={isUploadingAvatar}
+                  disabled={isUploadingAvatar || isAnalyzingAvatar}
                 />
               </label>
             )}
@@ -562,14 +608,16 @@ function Profile() {
             {isEditing ? (
               <>
                 <button
+                  disabled={isUploadingAvatar || isAnalyzingAvatar}
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <X className="h-4 w-4" /> {t("profile.cancel")}
                 </button>
                 <button
+                  disabled={isUploadingAvatar || isAnalyzingAvatar}
                   onClick={handleSave}
-                  className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground flex items-center gap-2 text-sm hover:shadow-neon transition-all font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground flex items-center gap-2 text-sm hover:shadow-neon transition-all font-semibold cursor-pointer disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" /> {t("profile.save")}
                 </button>
