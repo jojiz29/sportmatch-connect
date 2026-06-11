@@ -1,5 +1,14 @@
 import { supabase } from "./supabase";
-import { User, Court, Match, Transaction, SportCatalog, Sport, Level } from "@/entities/types";
+import {
+  User,
+  Court,
+  Venue,
+  Match,
+  Transaction,
+  SportCatalog,
+  Sport,
+  Level,
+} from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { withTimeout } from "./timeoutHelper";
 
@@ -10,7 +19,8 @@ const demoBookingsCache: Record<string, string[]> = {};
 let cachedSportsCatalog: SportCatalog[] | null = null;
 
 import { EXCEL_MOCK_COURTS } from "./mockCourtsData";
-export const MOCK_COURTS: Court[] = EXCEL_MOCK_COURTS;
+export const MOCK_VENUES: Venue[] = EXCEL_MOCK_COURTS;
+export const MOCK_COURTS: Court[] = MOCK_VENUES;
 
 export const MOCK_USERS: User[] = [
   {
@@ -61,21 +71,180 @@ export const MOCK_USERS: User[] = [
     id: "user-puka-power",
     created_at: new Date().toISOString(),
     name: "Puka Power",
+    email: "puka@puka.com",
     age: 42,
     city: "Surco, Lima",
     avatar_url: "https://api.dicebear.com/7.x/identicon/svg?seed=Puka",
-    bio: "Representante de bebidas premium energéticas.",
+    bio: "Representante de bebidas premium energéticas y organizador de torneos locales de pádel.",
     trust_score: 100,
     fitcoins_balance: 10000,
     level: "Elite",
-    preferred_sports: [],
+    preferred_sports: ["Pádel"],
     matches_played: 0,
     last_location_lat: -12.086,
     last_location_lng: -76.975,
     user_role: "BUSINESS",
     company_name: "Puka Power Inc.",
-    business_category: "Bebidas",
+    business_category: "Patrocinador",
     is_sponsored: true,
+    address: "Av. Jockey Plaza 450",
+    district: "Santiago de Surco",
+    whatsapp: "+51999888777",
+    instagram: "@pukapower.pe",
+    website: "https://pukapower.com",
+    operating_hours: ["08:00 - 20:00"],
+    images: ["https://images.unsplash.com/photo-1622483767028-3f66f32aef97"],
+  },
+  {
+    id: "business-gym-1",
+    created_at: new Date().toISOString(),
+    name: "Megatlon Center",
+    email: "megatlon@sportmatch.app",
+    age: 35,
+    city: "San Borja, Lima",
+    avatar_url:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=200",
+    bio: "Gimnasio de alto rendimiento con zonas exclusivas para preparación física de padeleros y tenistas.",
+    trust_score: 98,
+    fitcoins_balance: 8000,
+    level: "Avanzado",
+    preferred_sports: ["Gimnasio"],
+    matches_played: 0,
+    last_location_lat: -12.1067,
+    last_location_lng: -76.9989,
+    user_role: "BUSINESS",
+    company_name: "Megatlon Club",
+    business_category: "Gym",
+    is_sponsored: true,
+    address: "Av. San Borja Sur 789",
+    district: "San Borja",
+    whatsapp: "+51987654321",
+    instagram: "@megatlon.pe",
+    website: "https://megatlon.com.pe",
+    operating_hours: ["06:00 - 23:00"],
+    images: [
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
+      "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+    ],
+  },
+  {
+    id: "business-academy-1",
+    created_at: new Date().toISOString(),
+    name: "Padel Academy Lima",
+    email: "academy@sportmatch.app",
+    age: 38,
+    city: "Santiago de Surco, Lima",
+    avatar_url:
+      "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=200",
+    bio: "Clases y entrenamientos de pádel para todos los niveles con entrenadores certificados. Conectando deportistas.",
+    trust_score: 97,
+    fitcoins_balance: 9500,
+    level: "Elite",
+    preferred_sports: ["Pádel"],
+    matches_played: 0,
+    last_location_lat: -12.1314,
+    last_location_lng: -76.9812,
+    user_role: "BUSINESS",
+    company_name: "Padel Academy Lima",
+    business_category: "Academia",
+    is_sponsored: true,
+    address: "Av. Primavera 1230",
+    district: "Santiago de Surco",
+    whatsapp: "+51912345678",
+    instagram: "@padelacademy.pe",
+    website: "https://padelacademy.pe",
+    operating_hours: ["07:00 - 22:00"],
+    images: [
+      "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+      "https://images.unsplash.com/photo-1622279457486-62dcc4a631d6",
+    ],
+  },
+  {
+    id: "business-store-1",
+    created_at: new Date().toISOString(),
+    name: "Marathon Sports Miraflores",
+    email: "marathon@sportmatch.app",
+    age: 40,
+    city: "Miraflores, Lima",
+    avatar_url:
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200",
+    bio: "Equipamiento premium para tenis, running y pádel. Te ayudamos a encontrar el calzado y raqueta ideal para tu nivel.",
+    trust_score: 99,
+    fitcoins_balance: 15000,
+    level: "Avanzado",
+    preferred_sports: ["Running", "Tenis", "Pádel"],
+    matches_played: 0,
+    last_location_lat: -12.1228,
+    last_location_lng: -77.0282,
+    user_role: "BUSINESS",
+    company_name: "Marathon Sports",
+    business_category: "Tienda",
+    is_sponsored: false,
+    address: "Av. Larco 450",
+    district: "Miraflores",
+    whatsapp: "+51999777666",
+    instagram: "@marathonsports.pe",
+    website: "https://marathon.com.pe",
+    operating_hours: ["09:00 - 21:00"],
+    images: ["https://images.unsplash.com/photo-1441986300917-64674bd600d8"],
+  },
+  {
+    id: "business-nutri-1",
+    created_at: new Date().toISOString(),
+    name: "NutriSport Lince",
+    email: "nutrisport@sportmatch.app",
+    age: 32,
+    city: "Lince, Lima",
+    avatar_url:
+      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=200",
+    bio: "Asesoría nutricional deportiva especializada. Evaluaciones corporales InBody para optimizar tu rendimiento y evitar fatiga.",
+    trust_score: 95,
+    fitcoins_balance: 6000,
+    level: "Intermedio",
+    preferred_sports: ["Fútbol", "Running", "Gimnasio"],
+    matches_played: 0,
+    last_location_lat: -12.0833,
+    last_location_lng: -77.0333,
+    user_role: "BUSINESS",
+    company_name: "NutriSport Lince",
+    business_category: "Nutricionista",
+    is_sponsored: false,
+    address: "Av. Arequipa 2450",
+    district: "Lince",
+    whatsapp: "+51955444333",
+    instagram: "@nutrisport.pe",
+    website: "https://nutrisport.pe",
+    operating_hours: ["09:00 - 18:00"],
+    images: ["https://images.unsplash.com/photo-1490645935967-10de6ba17061"],
+  },
+  {
+    id: "business-physio-1",
+    created_at: new Date().toISOString(),
+    name: "FisioKine Magdalena",
+    email: "fisiokine@sportmatch.app",
+    age: 34,
+    city: "Magdalena, Lima",
+    avatar_url:
+      "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=200",
+    bio: "Terapia física y descarga muscular para atletas. Prevención de lesiones deportivas y rehabilitación post-partido.",
+    trust_score: 96,
+    fitcoins_balance: 5500,
+    level: "Avanzado",
+    preferred_sports: ["Fútbol", "Pádel", "Tenis"],
+    matches_played: 0,
+    last_location_lat: -12.0911,
+    last_location_lng: -77.0694,
+    user_role: "BUSINESS",
+    company_name: "FisioKine Magdalena",
+    business_category: "Fisioterapia",
+    is_sponsored: false,
+    address: "Jirón Tacna 650",
+    district: "Magdalena",
+    whatsapp: "+51922333444",
+    instagram: "@fisiokine.pe",
+    website: "https://fisiokine.pe",
+    operating_hours: ["08:00 - 20:00"],
+    images: ["https://images.unsplash.com/photo-1544367567-0f2fcb009e0b"],
   },
   {
     id: "user-1",
@@ -296,7 +465,10 @@ export const apiClient = {
   users: {
     async getMatches(excludeUserId?: string): Promise<User[]> {
       if (useAuthStore.getState().isDemoMode) {
-        return excludeUserId ? MOCK_USERS.filter((u) => u.id !== excludeUserId) : MOCK_USERS;
+        const storedUsers = localStorage.getItem("sportmatch_demo_users");
+        const demoUsers = storedUsers ? JSON.parse(storedUsers) : MOCK_USERS;
+        const players = demoUsers.filter((u: User) => u.user_role !== "BUSINESS");
+        return excludeUserId ? players.filter((u: User) => u.id !== excludeUserId) : players;
       }
 
       let query = supabase.from("profiles").select("*").eq("user_role", "PLAYER").limit(30);
@@ -306,6 +478,26 @@ export const apiClient = {
       const { data, error } = await query;
       if (error) {
         if (import.meta.env.DEV) console.error("Error fetching users/profiles:", error);
+        throw error;
+      }
+      return (data || []) as User[];
+    },
+
+    async getBusinesses(): Promise<User[]> {
+      if (useAuthStore.getState().isDemoMode) {
+        const storedUsers = localStorage.getItem("sportmatch_demo_users");
+        const demoUsers = storedUsers ? JSON.parse(storedUsers) : MOCK_USERS;
+        return demoUsers.filter((u: User) => u.user_role === "BUSINESS");
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_role", "BUSINESS")
+        .limit(30);
+
+      if (error) {
+        if (import.meta.env.DEV) console.error("Error fetching businesses:", error);
         throw error;
       }
       return (data || []) as User[];
@@ -397,11 +589,19 @@ export const apiClient = {
       sport: string;
       court_id: string | null;
       date: string;
-      time: string;
-      max_players: number;
-      required_level: string;
-      creator_id: string;
+      time?: string;
+      time_slot?: string;
+      max_players?: number;
+      required_level?: string;
+      creator_id?: string;
+      user_id?: string;
+      operating_hours?: string[];
     }): Promise<Match> {
+      const creatorId = match.creator_id || match.user_id || "";
+      const timeVal = match.time || match.time_slot || "";
+      const maxPlayersVal = match.max_players || 4;
+      const requiredLevelVal = match.required_level || "Intermedio";
+
       if (useAuthStore.getState().isDemoMode) {
         const newMatch: Match = {
           id: `match-demo-${Date.now()}`,
@@ -410,10 +610,10 @@ export const apiClient = {
           sport: match.sport as Sport,
           court_id: match.court_id || "",
           date: match.date,
-          time: match.time,
-          max_players: match.max_players,
-          required_level: match.required_level as Level,
-          creator_id: match.creator_id,
+          time: timeVal,
+          max_players: maxPlayersVal,
+          required_level: requiredLevelVal as Level,
+          creator_id: creatorId,
           status: "Open",
           court: MOCK_COURTS.find((c) => c.id === match.court_id),
           current_players: [useAuthStore.getState().user as User],
@@ -430,10 +630,10 @@ export const apiClient = {
             sport: match.sport,
             court_id: match.court_id,
             date: match.date,
-            time: match.time,
-            max_players: match.max_players,
-            required_level: match.required_level,
-            creator_id: match.creator_id,
+            time: timeVal,
+            max_players: maxPlayersVal,
+            required_level: requiredLevelVal,
+            creator_id: creatorId,
             status: "Open",
           })
           .select()
@@ -564,13 +764,25 @@ export const apiClient = {
     },
   },
 
-  courts: {
-    async getAll(sport?: string): Promise<Court[]> {
+  venues: {
+    async getAll(sport?: string): Promise<Venue[]> {
       if (useAuthStore.getState().isDemoMode) {
-        if (sport) {
-          return MOCK_COURTS.filter((c) => c.sport === sport);
+        const stored = localStorage.getItem("sportmatch_demo_venues");
+        let list: Venue[] = [];
+        if (stored) {
+          try {
+            list = JSON.parse(stored);
+          } catch {
+            list = [...MOCK_VENUES];
+          }
+        } else {
+          list = [...MOCK_VENUES];
+          localStorage.setItem("sportmatch_demo_venues", JSON.stringify(list));
         }
-        return MOCK_COURTS;
+        if (sport) {
+          return list.filter((c) => c.sport === sport);
+        }
+        return list;
       }
 
       let query = supabase.from("courts").select("*");
@@ -579,22 +791,38 @@ export const apiClient = {
       }
       const { data, error } = await query;
       if (error) {
-        if (import.meta.env.DEV) console.error("Error fetching courts:", error);
+        if (import.meta.env.DEV) console.error("Error fetching venues:", error);
         throw error;
       }
-      return (data || []) as Court[];
+      return (data || []) as Venue[];
     },
 
-    async getById(id: string): Promise<Court> {
+    async getById(id: string): Promise<Venue> {
       if (useAuthStore.getState().isDemoMode) {
-        const found = MOCK_COURTS.find((c) => c.id === id);
-        if (!found) throw new Error("Court not found");
+        const stored = localStorage.getItem("sportmatch_demo_venues");
+        let list: Venue[] = [];
+        if (stored) {
+          try {
+            list = JSON.parse(stored);
+          } catch {
+            list = [...MOCK_VENUES];
+          }
+        } else {
+          list = [...MOCK_VENUES];
+          localStorage.setItem("sportmatch_demo_venues", JSON.stringify(list));
+        }
+        const found = list.find((c) => c.id === id);
+        if (!found) throw new Error("Venue not found");
         return found;
       }
       const { data, error } = await supabase.from("courts").select("*").eq("id", id).single();
       if (error) throw error;
-      return data as Court;
+      return data as Venue;
     },
+  },
+
+  get courts() {
+    return this.venues;
   },
 
   sports: {
@@ -688,7 +916,16 @@ export const apiClient = {
         }
       }
 
-      const { time_slot, court_id, date, user_id, precio_cancha, porcentaje_comision, monto_comision, total_cobrado } = booking;
+      const {
+        time_slot,
+        court_id,
+        date,
+        user_id,
+        precio_cancha,
+        porcentaje_comision,
+        monto_comision,
+        total_cobrado,
+      } = booking;
       const { error } = await withTimeout(
         supabase.from("bookings").insert({
           court_id,
@@ -698,7 +935,7 @@ export const apiClient = {
           precio_cancha,
           porcentaje_comision,
           monto_comision,
-          total_cobrado
+          total_cobrado,
         }),
       );
       if (error) {

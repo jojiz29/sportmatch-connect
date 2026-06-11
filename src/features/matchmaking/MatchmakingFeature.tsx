@@ -23,6 +23,20 @@ import { apiClient } from "@/shared/api/apiClient";
 import { supabase } from "@/shared/api/supabase";
 import { backendApi } from "@/shared/api/backendApi";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
+import { toast } from "sonner";
+import { rankMatchCandidates, MatchRecommendation } from "./matchmakingScore";
+import {
+  PlayerChallenge,
+  getPendingChallengesSent,
+  getPendingChallengesReceived,
+  createPlayerChallenge,
+  respondToPlayerChallenge,
+} from "@/shared/api/challengeService";
+import {
+  getPlayerConnections,
+  createPlayerConnection,
+  PlayerConnection,
+} from "@/shared/api/connectionService";
 
 export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const { t } = useTranslation();
@@ -152,8 +166,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
   const topRecommendation = rankedStack[0];
   const challengeSport =
-    rankedStack.find((recommendation) => recommendation.user.id === challengeTarget?.id)
-      ?.matchedSport ??
+    rankedStack.find(
+      (recommendation: MatchRecommendation) => recommendation.user.id === challengeTarget?.id,
+    )?.matchedSport ??
     (activeSport === "Todos" ? challengeTarget?.preferred_sports?.[0] : activeSport);
   useEffect(() => {
     if (!currentUser) return;
@@ -161,21 +176,27 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
     // Restauramos pendientes del deporte activo para mantener el estado entre recargas.
     getPendingChallengesSent(currentUser.id)
-      .then((challenges) => {
+      .then((challenges: PlayerChallenge[]) => {
         if (active) {
           setPendingChallengeUserIds(
             challenges
-              .filter((challenge) => activeSport === "Todos" || challenge.sport === activeSport)
-              .map((challenge) => challenge.challenged_id),
+              .filter(
+                (challenge: PlayerChallenge) =>
+                  activeSport === "Todos" || challenge.sport === activeSport,
+              )
+              .map((challenge: PlayerChallenge) => challenge.challenged_id),
           );
           setContactedUserIds((current) =>
             Array.from(
-              new Set([...current, ...challenges.map((challenge) => challenge.challenged_id)]),
+              new Set([
+                ...current,
+                ...challenges.map((challenge: PlayerChallenge) => challenge.challenged_id),
+              ]),
             ),
           );
         }
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         console.error("Error al cargar desafíos pendientes:", error);
       });
 
@@ -190,10 +211,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
     // La bandeja muestra únicamente solicitudes que todavía requieren respuesta.
     getPendingChallengesReceived(currentUser.id)
-      .then((challenges) => {
+      .then((challenges: PlayerChallenge[]) => {
         if (active) setReceivedChallenges(challenges);
       })
-      .catch((error) => console.error("Error al cargar desafíos recibidos:", error));
+      .catch((error: Error) => console.error("Error al cargar desafíos recibidos:", error));
 
     return () => {
       active = false;
@@ -249,19 +270,19 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
     // Las conexiones guardadas no vuelven a mostrarse en el carrusel después de recargar.
     getPlayerConnections(currentUser.id)
-      .then((connections) => {
+      .then((connections: PlayerConnection[]) => {
         if (active) {
           setContactedUserIds((current) =>
             Array.from(
               new Set([
                 ...current,
-                ...connections.map((connection) => connection.connected_user_id),
+                ...connections.map((connection: PlayerConnection) => connection.connected_user_id),
               ]),
             ),
           );
         }
       })
-      .catch((error) => console.error("Error al cargar conexiones deportivas:", error));
+      .catch((error: Error) => console.error("Error al cargar conexiones deportivas:", error));
 
     return () => {
       active = false;
@@ -270,7 +291,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
   const handleConnect = async (target: User) => {
     if (!currentUser || isSavingConnection) return;
-    const recommendation = rankedStack.find((item) => item.user.id === target.id);
+    const recommendation = rankedStack.find(
+      (item: MatchRecommendation) => item.user.id === target.id,
+    );
 
     try {
       setIsSavingConnection(true);
@@ -417,182 +440,186 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               {rankedStack
                 .slice(0, 3)
                 .reverse()
-                .map((recommendation, i, arr) => {
-                  const p = recommendation.user;
-                  const idx = arr.length - 1 - i;
-                  const isTop = idx === 0;
-                  const dist = recommendation.distanceKm ?? p.distance_km ?? null;
+                .map(
+                  (recommendation: MatchRecommendation, i: number, arr: MatchRecommendation[]) => {
+                    const p = recommendation.user;
+                    const idx = arr.length - 1 - i;
+                    const isTop = idx === 0;
+                    const dist = recommendation.distanceKm ?? p.distance_km ?? null;
 
-                  return (
-                    <motion.div
-                      key={p.id}
-                      drag={isTop ? "x" : false}
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={1}
-                      onDragEnd={(e, info) => {
-                        if (info.offset.x > 100) void handleConnect(p);
-                        else if (info.offset.x < -100) swipe(p.id, "pass");
-                      }}
-                      className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
-                      style={{
-                        transform: `translateY(${idx * 12}px) scale(${1 - idx * 0.03})`,
-                        zIndex: 10 - idx,
-                        opacity: 1 - idx * 0.1,
-                      }}
-                      animate={isTop ? { x: 0, rotate: 0 } : undefined}
-                      exit={{ x: isTop ? 200 : 0, opacity: 0, transition: { duration: 0.2 } }}
-                      whileDrag={{ rotate: 5, scale: 1.05 }}
-                    >
-                      {/* ── HEADER BADGES ── */}
-                      <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
-                        {/* La compatibilidad representa recomendación, no un match confirmado. */}
-                        <span className="px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black uppercase tracking-widest font-mono shadow-[0_0_8px_rgba(57,255,20,0.25)]">
-                          {recommendation.score}% COMPATIBLE
-                        </span>
-                        {/* Top-Right: Grey Trust Score badge */}
-                        <span className="px-2.5 py-1 rounded-full bg-white/8 border border-white/12 text-white/80 text-[10px] font-semibold backdrop-blur-sm">
-                          {p.trust_score || 0}% Trust Score
-                        </span>
-                      </div>
-
-                      {/* ── AVATAR with World Cup gradient ring & status dot ── */}
-                      <div className="flex justify-center items-center py-4 relative z-10">
-                        {/* Gradient aura glow */}
-                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-[#FF007F] to-[#7B2CBF] opacity-30 blur-lg pointer-events-none" />
-                        {/* Thick gradient ring */}
-                        <div
-                          className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center"
-                          style={{
-                            background: "linear-gradient(135deg, #FF007F, #FF6B35, #7B2CBF)",
-                          }}
-                        >
-                          {/* Inner avatar */}
-                          <div className="h-full w-full rounded-full overflow-hidden border-2 border-[#0D152D] bg-[#1A2544]">
-                            <Link
-                              to="/app/profile/$userId"
-                              params={{ userId: p.id }}
-                              className="block h-full w-full"
-                            >
-                              <img
-                                src={p.avatar_url}
-                                alt={p.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </Link>
-                          </div>
-                          {/* Glowing active status dot */}
-                          <span
-                            className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-[#39FF14] border-[3px] border-[#0D152D] flex items-center justify-center"
-                            style={{ boxShadow: "0 0 6px 2px rgba(57,255,20,0.6)" }}
-                          >
-                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                    return (
+                      <motion.div
+                        key={p.id}
+                        drag={isTop ? "x" : false}
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={1}
+                        onDragEnd={(e, info) => {
+                          if (info.offset.x > 100) void handleConnect(p);
+                          else if (info.offset.x < -100) swipe(p.id, "pass");
+                        }}
+                        className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
+                        style={{
+                          transform: `translateY(${idx * 12}px) scale(${1 - idx * 0.03})`,
+                          zIndex: 10 - idx,
+                          opacity: 1 - idx * 0.1,
+                        }}
+                        animate={isTop ? { x: 0, rotate: 0 } : undefined}
+                        exit={{ x: isTop ? 200 : 0, opacity: 0, transition: { duration: 0.2 } }}
+                        whileDrag={{ rotate: 5, scale: 1.05 }}
+                      >
+                        {/* ── HEADER BADGES ── */}
+                        <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
+                          {/* La compatibilidad representa recomendación, no un match confirmado. */}
+                          <span className="px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black uppercase tracking-widest font-mono shadow-[0_0_8px_rgba(57,255,20,0.25)]">
+                            {recommendation.score}% COMPATIBLE
+                          </span>
+                          {/* Top-Right: Grey Trust Score badge */}
+                          <span className="px-2.5 py-1 rounded-full bg-white/8 border border-white/12 text-white/80 text-[10px] font-semibold backdrop-blur-sm">
+                            {p.trust_score || 0}% Trust Score
                           </span>
                         </div>
-                      </div>
 
-                      {/* ── PROFILE INFO ── */}
-                      <div className="px-5 pb-2 space-y-2 z-10 relative">
-                        {/* Name + age */}
-                        <div className="flex items-baseline justify-center gap-2 text-center">
-                          <h2 className="text-xl font-black text-foreground flex items-center justify-center gap-1.5">
-                            {p.company_name || p.name || t("matchmaking.user_default")}
-                            {p.dni_verificado && <VerifiedBadge />}
-                          </h2>
-                          {p.user_role !== "BUSINESS" && (
-                            <span className="text-sm font-semibold text-muted-foreground">
-                              {p.age || "?"}a
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Sport / Level / Distance capsule badges */}
-                        {(() => {
-                          const matrix = p.sport_preferences?.sports_matrix;
-                          const sportLevel = matrix?.[activeSport]?.level || p.level;
-                          const displayLevel =
-                            sportLevel === "Amateur"
-                              ? t("skills.amateur", "Amateur")
-                              : sportLevel === "Intermediate" || sportLevel === "Intermedio"
-                                ? t("skills.intermedio", "Intermedio")
-                                : sportLevel === "Advanced" || sportLevel === "Avanzado"
-                                  ? t("skills.avanzado", "Avanzado")
-                                  : sportLevel === "Pro"
-                                    ? t("skills.pro", "Pro")
-                                    : sportLevel;
-                          return (
-                            <div className="flex flex-wrap justify-center gap-1.5">
-                              <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
-                                {recommendation.matchedSport || activeSport}
-                              </span>
-                              <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
-                                {displayLevel}
-                              </span>
-                              <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5 text-[#39FF14]" />{" "}
-                                {dist == null ? p.city || "Sin ubicación" : `${dist.toFixed(1)} km`}
-                              </span>
+                        {/* ── AVATAR with World Cup gradient ring & status dot ── */}
+                        <div className="flex justify-center items-center py-4 relative z-10">
+                          {/* Gradient aura glow */}
+                          <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-[#FF007F] to-[#7B2CBF] opacity-30 blur-lg pointer-events-none" />
+                          {/* Thick gradient ring */}
+                          <div
+                            className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center"
+                            style={{
+                              background: "linear-gradient(135deg, #FF007F, #FF6B35, #7B2CBF)",
+                            }}
+                          >
+                            {/* Inner avatar */}
+                            <div className="h-full w-full rounded-full overflow-hidden border-2 border-[#0D152D] bg-[#1A2544]">
+                              <Link
+                                to="/app/profile/$userId"
+                                params={{ userId: p.id }}
+                                className="block h-full w-full"
+                              >
+                                <img
+                                  src={p.avatar_url}
+                                  alt={p.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </Link>
                             </div>
-                          );
-                        })()}
-
-                        {/* Bio italic */}
-                        {p.bio && (
-                          <p className="text-xs text-muted-foreground leading-relaxed italic text-center line-clamp-2 px-2">
-                            "{p.bio}"
-                          </p>
-                        )}
-
-                        {/* Hashtag pills from trust_score tiers */}
-                        <div className="flex flex-wrap justify-center gap-1 pt-0.5">
-                          {(p.trust_score || 0) >= 90 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded bg-[#39FF14]/10 border border-[#39FF14]/15 text-[#39FF14]/80 font-semibold">
-                              #Confiable
+                            {/* Glowing active status dot */}
+                            <span
+                              className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-[#39FF14] border-[3px] border-[#0D152D] flex items-center justify-center"
+                              style={{ boxShadow: "0 0 6px 2px rgba(57,255,20,0.6)" }}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                             </span>
+                          </div>
+                        </div>
+
+                        {/* ── PROFILE INFO ── */}
+                        <div className="px-5 pb-2 space-y-2 z-10 relative">
+                          {/* Name + age */}
+                          <div className="flex items-baseline justify-center gap-2 text-center">
+                            <h2 className="text-xl font-black text-foreground flex items-center justify-center gap-1.5">
+                              {p.company_name || p.name || t("matchmaking.user_default")}
+                              {p.dni_verificado && <VerifiedBadge />}
+                            </h2>
+                            {p.user_role !== "BUSINESS" && (
+                              <span className="text-sm font-semibold text-muted-foreground">
+                                {p.age || "?"}a
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Sport / Level / Distance capsule badges */}
+                          {(() => {
+                            const matrix = p.sport_preferences?.sports_matrix;
+                            const sportLevel = matrix?.[activeSport]?.level || p.level;
+                            const displayLevel =
+                              sportLevel === "Amateur"
+                                ? t("skills.amateur", "Amateur")
+                                : sportLevel === "Intermediate" || sportLevel === "Intermedio"
+                                  ? t("skills.intermedio", "Intermedio")
+                                  : sportLevel === "Advanced" || sportLevel === "Avanzado"
+                                    ? t("skills.avanzado", "Avanzado")
+                                    : sportLevel === "Pro"
+                                      ? t("skills.pro", "Pro")
+                                      : sportLevel;
+                            return (
+                              <div className="flex flex-wrap justify-center gap-1.5">
+                                <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
+                                  {recommendation.matchedSport || activeSport}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
+                                  {displayLevel}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
+                                  <MapPin className="h-2.5 w-2.5 text-[#39FF14]" />{" "}
+                                  {dist == null
+                                    ? p.city || "Sin ubicación"
+                                    : `${dist.toFixed(1)} km`}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Bio italic */}
+                          {p.bio && (
+                            <p className="text-xs text-muted-foreground leading-relaxed italic text-center line-clamp-2 px-2">
+                              "{p.bio}"
+                            </p>
                           )}
-                          {(p.trust_score || 0) >= 80 && (
+
+                          {/* Hashtag pills from trust_score tiers */}
+                          <div className="flex flex-wrap justify-center gap-1 pt-0.5">
+                            {(p.trust_score || 0) >= 90 && (
+                              <span className="text-[9px] px-2 py-0.5 rounded bg-[#39FF14]/10 border border-[#39FF14]/15 text-[#39FF14]/80 font-semibold">
+                                #Confiable
+                              </span>
+                            )}
+                            {(p.trust_score || 0) >= 80 && (
+                              <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
+                                #BuenNivel
+                              </span>
+                            )}
                             <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
-                              #BuenNivel
+                              #Puntual
                             </span>
-                          )}
-                          <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
-                            #Puntual
-                          </span>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* ── ACTION BUTTONS (always shown for top card) ── */}
-                      {isTop && (
-                        <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
-                          {/* Dislike / Pass */}
-                          <button
-                            onClick={() => swipe(p.id, "pass")}
-                            className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
-                            aria-label={t("matchmaking.keep_swiping")}
-                          >
-                            <X className="h-6 w-6" />
-                          </button>
-                          {/* Info / View Profile */}
-                          <button
-                            onClick={() => setInspectedUser(p)}
-                            className="h-10 w-10 rounded-full border border-border bg-muted/80 hover:bg-muted active:scale-95 text-foreground/75 flex items-center justify-center transition-all duration-200 cursor-pointer"
-                            aria-label={t("matchmaking.view_profile")}
-                          >
-                            <Info className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => void handleConnect(p)}
-                            disabled={isSavingConnection}
-                            className="h-14 px-5 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
-                            aria-label={`Conectar con ${p.name}`}
-                          >
-                            <Users className="h-5 w-5" />
-                            <span className="text-xs font-bold">Conectar</span>
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
+                        {/* ── ACTION BUTTONS (always shown for top card) ── */}
+                        {isTop && (
+                          <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
+                            {/* Dislike / Pass */}
+                            <button
+                              onClick={() => swipe(p.id, "pass")}
+                              className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
+                              aria-label={t("matchmaking.keep_swiping")}
+                            >
+                              <X className="h-6 w-6" />
+                            </button>
+                            {/* Info / View Profile */}
+                            <button
+                              onClick={() => setInspectedUser(p)}
+                              className="h-10 w-10 rounded-full border border-border bg-muted/80 hover:bg-muted active:scale-95 text-foreground/75 flex items-center justify-center transition-all duration-200 cursor-pointer"
+                              aria-label={t("matchmaking.view_profile")}
+                            >
+                              <Info className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => void handleConnect(p)}
+                              disabled={isSavingConnection}
+                              className="h-14 px-5 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
+                              aria-label={`Conectar con ${p.name}`}
+                            >
+                              <Users className="h-5 w-5" />
+                              <span className="text-xs font-bold">Conectar</span>
+                            </button>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  },
+                )}
             </AnimatePresence>
           )}
         </div>

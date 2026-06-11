@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { Stripe, StripeElements } from "@stripe/stripe-js";
 import { PaymentMethod } from "@/shared/lib/paymentUtils";
 import { stripePromise, isStripeConfigured } from "@/shared/lib/stripe";
+import { useAuthStore } from "@/entities/user/useAuth";
 
 export interface PaymentSelection {
   method: PaymentMethod;
@@ -28,7 +29,8 @@ const cardElementOptions = {
     base: {
       color: "#f8fafc",
       fontSize: "15px",
-      fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      fontFamily:
+        "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       "::placeholder": {
         color: "#94a3b8",
       },
@@ -71,9 +73,8 @@ function PaymentCheckoutForm({
     return "";
   })();
 
-  const paymentDisabled = disabled
-    || isProcessing
-    || (amountToCharge > 0 && (!cardComplete || !cardHolderValid));
+  const paymentDisabled =
+    disabled || isProcessing || (amountToCharge > 0 && (!cardComplete || !cardHolderValid));
 
   const handleConfirm = () => {
     if (paymentDisabled) return;
@@ -111,7 +112,13 @@ function PaymentCheckoutForm({
               type="text"
               autoComplete="cc-name"
               value={cardHolder}
-              onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").slice(0, CARD_HOLDER_MAX_LENGTH))}
+              onChange={(event) =>
+                setCardHolder(
+                  event.target.value
+                    .replace(/[^A-Za-zÀ-ÿ\s'-]/g, "")
+                    .slice(0, CARD_HOLDER_MAX_LENGTH),
+                )
+              }
               onBlur={() => setCardHolderTouched(true)}
               placeholder="Nombre como en la tarjeta (mín. 3 letras)"
               className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${!cardHolderValid && cardHolder ? "border-rose-500" : "border-border/60"}`}
@@ -119,23 +126,62 @@ function PaymentCheckoutForm({
               maxLength={CARD_HOLDER_MAX_LENGTH}
             />
             <div className="mt-2 flex items-center justify-between text-xs">
-              <p className={`min-h-[1.2rem] ${cardHolderError ? "text-rose-500" : "text-transparent"}`}>
-                {cardHolderError}
+              <p
+                className={`min-h-[1.2rem] ${cardHolderError ? "text-rose-500" : "text-muted-foreground"}`}
+              >
+                {cardHolderError || "Solo se permiten letras, espacios, guiones y apóstrofes."}
               </p>
-              <span className="text-muted-foreground">{cardHolder.length}/{CARD_HOLDER_MAX_LENGTH}</span>
+              <span className="text-muted-foreground">
+                {cardHolder.length}/{CARD_HOLDER_MAX_LENGTH}
+              </span>
             </div>
           </label>
           <label className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Datos de la tarjeta
-            <div className="mt-2 rounded-2xl border border-border/60 bg-background p-3">
-              <CardElement
-                options={cardElementOptions}
-                onChange={(event) => {
-                  setCardComplete(event.complete);
-                  setCardError(event.error?.message || "");
-                }}
-              />
-            </div>
+            {!stripe || !elements ? (
+              <div className="space-y-3 mt-2">
+                <div className="rounded-2xl border border-border/60 bg-background p-3">
+                  <input
+                    type="text"
+                    placeholder="Número de tarjeta simulado (16 dígitos)"
+                    className="w-full bg-transparent text-sm outline-none text-white border-0"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setCardComplete(val.length >= 16);
+                    }}
+                    maxLength={19}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-2xl border border-border/60 bg-background p-3">
+                    <input
+                      type="text"
+                      placeholder="MM/AA"
+                      className="w-full bg-transparent text-sm outline-none text-white border-0"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-background p-3">
+                    <input
+                      type="password"
+                      placeholder="CVC"
+                      className="w-full bg-transparent text-sm outline-none text-white border-0"
+                      maxLength={4}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 rounded-2xl border border-border/60 bg-background p-3">
+                <CardElement
+                  options={cardElementOptions}
+                  onChange={(event) => {
+                    setCardComplete(event.complete);
+                    setCardError(event.error?.message || "");
+                  }}
+                />
+              </div>
+            )}
             {cardError ? <p className="mt-2 text-[11px] text-rose-500">{cardError}</p> : null}
           </label>
           {amountToCharge === 0 ? (
@@ -151,7 +197,9 @@ function PaymentCheckoutForm({
               onClick={() => setUseFitcoins((prev) => !prev)}
             >
               <span>Usar mis FitCoins disponibles como descuento</span>
-              <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${useFitcoins ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+              <span
+                className={`rounded-full px-2 py-1 text-[11px] font-semibold ${useFitcoins ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}
+              >
                 {useFitcoins ? "Activado" : "Desactivado"}
               </span>
             </button>
@@ -192,12 +240,18 @@ function PaymentCheckoutForm({
 }
 
 export function PaymentCheckout(props: PaymentCheckoutProps) {
-  if (!isStripeConfigured) {
+  const isDemo = useAuthStore((s) => s.isDemoMode);
+
+  if (!isStripeConfigured && !isDemo) {
     return (
       <div className="rounded-3xl border border-rose-500/40 bg-rose-950/10 p-6 text-sm text-rose-200">
         Stripe no está configurado. Revisa tu `VITE_STRIPE_PUBLISHABLE_KEY` en `.env`.
       </div>
     );
+  }
+
+  if (!isStripeConfigured && isDemo) {
+    return <PaymentCheckoutForm {...props} />;
   }
 
   return (
@@ -206,4 +260,3 @@ export function PaymentCheckout(props: PaymentCheckoutProps) {
     </Elements>
   );
 }
-

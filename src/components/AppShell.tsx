@@ -14,6 +14,11 @@ import {
   Shield,
   Sun,
   Moon,
+  Megaphone,
+  TrendingUp,
+  Settings,
+  Package,
+  MapPin,
 } from "lucide-react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
@@ -21,45 +26,10 @@ import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 import { useTranslation } from "react-i18next";
 
-const GROUPS = [
-  {
-    titleKey: "nav.groups.action",
-    items: [
-      { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
-      { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
-      { to: "/app/map", labelKey: "nav.map_and_courts", icon: Map },
-    ],
-  },
-  {
-    titleKey: "nav.groups.social",
-    items: [
-      { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
-      { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
-      { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
-    ],
-  },
-  {
-    titleKey: "nav.groups.analytics",
-    items: [
-      { to: "/app/wallet", labelKey: "nav.wallet", icon: Trophy },
-      { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
-    ],
-  },
-];
-
 const ACCOUNT_ITEMS = [
   { to: "/app/profile", labelKey: "nav.perfil", icon: User },
   { to: "/app/business", labelKey: "nav.business", icon: Store },
   { to: "/app/admin", labelKey: "nav.admin", icon: LayoutDashboard },
-];
-
-const MOBILE_NAV = [
-  { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
-  { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
-  { to: "/app/map", labelKey: "nav.map_and_courts", icon: Map },
-  { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
-  { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
-  { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
 ];
 
 function ThemeToggle() {
@@ -74,7 +44,7 @@ function ThemeToggle() {
         };
       case "dark-footballer":
         return {
-          title: "Modo Copa del Mundo",
+          title: "Modo Claro",
           icon: <Moon className="h-5 w-5 text-[#39FF14] hover:scale-110 transition-transform" />,
         };
       case "world-cup":
@@ -107,7 +77,8 @@ function ThemeToggle() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const path = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const path = routerState.location.pathname;
   const isRegister = path === "/app/register";
   const currentUser = useAuthStore((s) => s.user);
   const { signOut } = useAuth();
@@ -131,11 +102,158 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  const isBusiness = currentUser.user_role === "BUSINESS";
+
+  interface NavItem {
+    to: string;
+    search?: Record<string, unknown>;
+    labelKey: string;
+    label?: string;
+    icon: React.ComponentType<{ className?: string }>;
+    end?: boolean;
+  }
+
+  interface NavGroup {
+    titleKey: string;
+    title?: string;
+    items: NavItem[];
+  }
+
+  const dynamicGroups: NavGroup[] = isBusiness
+    ? [
+        {
+          titleKey: "nav.groups.business",
+          title: "Mi Negocio",
+          items: [
+            {
+              to: "/app/business",
+              search: { tab: "profile" },
+              labelKey: "nav.business_profile",
+              label: "Perfil Comercial",
+              icon: Store,
+            },
+            {
+              to: "/app/business",
+              search: { tab: "venues" },
+              labelKey: "nav.business_venues",
+              label: "Mis Sedes",
+              icon: MapPin,
+            },
+            {
+              to: "/app/business",
+              search: { tab: "ads" },
+              labelKey: "nav.business_ads",
+              label: "Gestión de Anuncios",
+              icon: Megaphone,
+            },
+            {
+              to: "/app/business",
+              search: { tab: "catalog" },
+              labelKey: "nav.business_catalog",
+              label: "Catálogo",
+              icon: Package,
+            },
+            {
+              to: "/app/business",
+              search: { tab: "analytics" },
+              labelKey: "nav.business_analytics",
+              label: "Métricas y Alcance",
+              icon: TrendingUp,
+            },
+            {
+              to: "/app/business",
+              search: { tab: "settings" },
+              labelKey: "nav.business_settings",
+              label: "Configuración",
+              icon: Settings,
+            },
+          ],
+        },
+      ]
+    : [
+        {
+          titleKey: "nav.groups.action",
+          items: [
+            { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
+            { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
+            { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa Comercial", icon: Map },
+          ],
+        },
+        {
+          titleKey: "nav.groups.social",
+          items: [
+            { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
+            { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
+            { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
+          ],
+        },
+        {
+          titleKey: "nav.groups.analytics",
+          items: [{ to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy }],
+        },
+      ];
+
+  const dynamicMobileNav: NavItem[] = isBusiness
+    ? [
+        {
+          to: "/app/business",
+          search: { tab: "profile" },
+          labelKey: "nav.business_profile",
+          label: "Perfil",
+          icon: Store,
+        },
+        {
+          to: "/app/business",
+          search: { tab: "venues" },
+          labelKey: "nav.business_venues",
+          label: "Sedes",
+          icon: MapPin,
+        },
+        {
+          to: "/app/business",
+          search: { tab: "ads" },
+          labelKey: "nav.business_ads",
+          label: "Anuncios",
+          icon: Megaphone,
+        },
+        {
+          to: "/app/business",
+          search: { tab: "analytics" },
+          labelKey: "nav.business_analytics",
+          label: "Métricas",
+          icon: TrendingUp,
+        },
+        {
+          to: "/app/business",
+          search: { tab: "settings" },
+          labelKey: "nav.business_settings",
+          label: "Config",
+          icon: Settings,
+        },
+      ]
+    : [
+        { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
+        { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
+        { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa", icon: Map },
+        { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
+        { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
+      ];
+
   // Filter accounts list dynamically based on permissions
   const filteredAccountItems = ACCOUNT_ITEMS.filter((item) => {
-    if (item.to === "/app/business" && currentUser.user_role !== "BUSINESS") {
+    if (isBusiness) {
+      if (item.to === "/app/profile") return false;
+      if (item.to === "/app/business") return true;
+      if (item.to === "/app/admin") {
+        return (
+          currentUser.email === "ejuniorfloress@gmail.com" ||
+          currentUser.name === "Edwin Flores" ||
+          currentUser.is_admin
+        );
+      }
       return false;
     }
+    if (item.to === "/app/business") return false;
     if (item.to === "/app/admin") {
       return (
         currentUser.email === "ejuniorfloress@gmail.com" ||
@@ -153,7 +271,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Sidebar (desktop) */}
         <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col glass border-r border-border/40 z-30">
           <div className="px-5 py-5 flex items-center justify-between border-b border-border/10">
-            <Link to="/app" className="flex items-center gap-3 group">
+            <Link
+              to={isBusiness ? "/app/business" : "/app"}
+              className="flex items-center gap-3 group"
+            >
               <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow group-hover:scale-110 active:scale-95 transition-all duration-300">
                 <Zap className="h-6 w-6 text-white" />
               </div>
@@ -165,18 +286,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
-            {GROUPS.map((group) => (
+            {dynamicGroups.map((group) => (
               <div key={group.titleKey} className="space-y-1">
                 <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
-                  {t(group.titleKey)}
+                  {group.title || t(group.titleKey)}
                 </div>
                 {group.items.map((item) => {
-                  const active = item.end ? path === item.to : path.startsWith(item.to);
+                  const currentSearchTab =
+                    (routerState.location.search as { tab?: string })?.tab || "profile";
+                  const itemSearchTab = item.search?.tab;
+                  const isSamePath = item.end ? path === item.to : path.startsWith(item.to);
+                  const active =
+                    isSamePath && (!itemSearchTab || itemSearchTab === currentSearchTab);
                   const Icon = item.icon;
                   return (
                     <Link
-                      key={item.to}
+                      key={`${item.to}-${item.search?.tab || ""}`}
                       to={item.to}
+                      search={item.search}
                       className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
@@ -184,7 +311,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       }`}
                     >
                       <Icon className="h-5 w-5 shrink-0" />
-                      {t(item.labelKey)}
+                      {item.label || t(item.labelKey)}
                       {active && (
                         <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />
                       )}
@@ -238,7 +365,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {currentUser.name}
                 </div>
                 <div className="text-xs text-neon/80 flex items-center gap-1 mt-0.5 font-medium">
-                  <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
+                  {isBusiness ? (
+                    <span>🏢 {currentUser.business_category}</span>
+                  ) : (
+                    <span>🏆 {currentUser.level}</span>
+                  )}
                 </div>
               </div>
               <button
@@ -255,7 +386,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Mobile top header with notification bell */}
         <header className="lg:hidden fixed top-0 inset-x-0 z-40 glass border-b border-border">
           <div className="flex items-center justify-between px-4 py-3">
-            <Link to="/app" className="flex items-center gap-2">
+            <Link to={isBusiness ? "/app/business" : "/app"} className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-primary grid place-items-center shadow-glow">
                 <Zap className="h-4 w-4 text-white" />
               </div>
@@ -263,7 +394,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <div className="flex items-center gap-2">
               <span className="text-xs text-neon font-semibold flex items-center gap-1">
-                <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
+                {isBusiness ? (
+                  <span>🏢 {currentUser.business_category}</span>
+                ) : (
+                  <span>🏆 {currentUser.level}</span>
+                )}
               </span>
               <NotificationBell />
             </div>
@@ -272,14 +407,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Mobile bottom nav */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border/40">
-          <div className="grid grid-cols-5 px-1 py-1">
-            {MOBILE_NAV.map((item) => {
-              const active = item.end ? path === item.to : path.startsWith(item.to);
+          <div
+            className="grid grid-cols-5 px-1 py-1"
+            style={{ gridTemplateColumns: `repeat(${dynamicMobileNav.length}, minmax(0, 1fr))` }}
+          >
+            {dynamicMobileNav.map((item) => {
+              const currentSearchTab =
+                (routerState.location.search as { tab?: string })?.tab || "profile";
+              const itemSearchTab = item.search?.tab;
+              const isSamePath = item.end ? path === item.to : path.startsWith(item.to);
+              const active = isSamePath && (!itemSearchTab || itemSearchTab === currentSearchTab);
               const Icon = item.icon;
               return (
                 <Link
-                  key={item.to}
+                  key={`${item.to}-${item.search?.tab || ""}`}
                   to={item.to}
+                  search={item.search}
                   className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all duration-200 active:scale-90 rounded-xl ${
                     active
                       ? "text-neon bg-neon/5"
@@ -291,7 +434,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   >
                     <Icon className={`h-5 w-5 ${active ? "text-neon" : ""}`} />
                   </div>
-                  <span>{t(item.labelKey)}</span>
+                  <span>{item.label || t(item.labelKey)}</span>
                 </Link>
               );
             })}

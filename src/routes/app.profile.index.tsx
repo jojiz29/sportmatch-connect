@@ -114,9 +114,10 @@ function Profile() {
           useAuthStore.setState({ user: updatedUser });
           useProfileStore.setState({ profile: updatedUser });
           const attemptsLeft = 3 - nextIntentos;
-          const suffix = attemptsLeft > 0 
-            ? ` Te quedan ${attemptsLeft} intentos.`
-            : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte.";
+          const suffix =
+            attemptsLeft > 0
+              ? ` Te quedan ${attemptsLeft} intentos.`
+              : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte.";
           setDniError(`El nombre en tu cuenta no coincide con el DNI ingresado.${suffix}`);
           toast.error("Error de verificación.");
         } else {
@@ -165,18 +166,19 @@ function Profile() {
       toast.success("¡Identidad verificada exitosamente!");
       setIsDniDialogOpen(false);
       setDni("");
-    } catch (err: any) {
-      console.error("DNI verification error:", err);
-      const msg = err.message || "Error al verificar el DNI.";
+    } catch (err) {
+      const error = err as { message?: string };
+      console.error("DNI verification error:", error);
+      const msg = error.message || "Error al verificar el DNI.";
       setDniError(msg);
       toast.error("La verificación falló.");
-      
+
       const { data: currentProfile } = await supabase
         .from("profiles")
         .select("dni_intentos")
         .eq("id", profile!.id)
         .single();
-        
+
       if (currentProfile) {
         const updatedUser = {
           ...profile!,
@@ -592,7 +594,7 @@ function Profile() {
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-background/95 border-border shadow-2xl rounded-3xl p-6">
                     <DialogHeader>
-                      <DialogTitle className="text-xl font-black text-white">
+                      <DialogTitle className="text-xl font-black text-foreground">
                         {t("onboarding.step1_title", "Elige tus disciplinas")}
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">
@@ -751,7 +753,10 @@ function Profile() {
                   🛡️ Identidad verificada
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-1 block">
-                  Verificado el {profile.fecha_verificacion ? new Date(profile.fecha_verificacion).toLocaleDateString() : ""}
+                  Verificado el{" "}
+                  {profile.fecha_verificacion
+                    ? new Date(profile.fecha_verificacion).toLocaleDateString()
+                    : ""}
                 </span>
               </div>
             ) : (profile.dni_intentos || 0) >= 3 ? (
@@ -760,7 +765,8 @@ function Profile() {
                   🚫 Verificación bloqueada
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-1.5 block leading-normal">
-                  Has superado los 3 intentos. Ponte en contacto con el soporte técnico en soporte@sportmatch.app.
+                  Has superado los 3 intentos. Ponte en contacto con el soporte técnico en
+                  soporte@sportmatch.app.
                 </span>
               </div>
             ) : (
@@ -786,7 +792,8 @@ function Profile() {
                         Verificar mi identidad (DNI)
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">
-                        Ingresa tu número de DNI peruano (8 dígitos) para validar tu identidad real contra RENIEC.
+                        Ingresa tu número de DNI peruano (8 dígitos) para validar tu identidad real
+                        contra RENIEC.
                       </DialogDescription>
                     </DialogHeader>
 

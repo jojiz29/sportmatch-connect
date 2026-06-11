@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -11,11 +11,19 @@ import { calculateDistance } from "@/shared/api/geoService";
 import { Search, MapPin, SlidersHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/app/courts")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
   loader: async () => {
     const backendCourts = await backendApi.courts.getAll().catch(() => null);
-    if (backendCourts && Array.isArray((backendCourts as any).data)) {
-      return (backendCourts as any).data as Court[];
+    if (
+      backendCourts &&
+      typeof backendCourts === "object" &&
+      "data" in backendCourts &&
+      Array.isArray((backendCourts as { data: Court[] }).data)
+    ) {
+      return (backendCourts as { data: Court[] }).data;
     }
     return await apiClient.courts.getAll();
   },

@@ -12,6 +12,19 @@ export const Route = createFileRoute("/app")({
       throw redirect({ to: "/login" });
     }
     const user = useAuthStore.getState().user;
+
+    // Role-based route guards
+    if (user && user.user_role === "BUSINESS") {
+      if (!location.pathname.startsWith("/app/business")) {
+        throw redirect({ to: "/app/business" });
+      }
+    }
+    if (user && user.user_role === "PLAYER") {
+      if (location.pathname.startsWith("/app/business")) {
+        throw redirect({ to: "/app" });
+      }
+    }
+
     if (
       user &&
       user.user_role === "PLAYER" &&

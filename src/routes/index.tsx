@@ -304,28 +304,28 @@ function Landing() {
               SportMatch
             </span>
           </div>
-          <nav className="hidden lg:flex items-center gap-10 text-sm font-medium text-muted-foreground">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-10 text-xs xl:text-sm font-medium text-muted-foreground">
             <a
               href="#matchmaking"
-              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[140px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
             >
               {t("landing.matchmaking_title")}
             </a>
             <a
               href="#squads"
-              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[140px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
             >
               {t("landing.squads_title")}
             </a>
             <a
               href="#map"
-              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[150px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
             >
               {t("landing.map_title")}
             </a>
             <a
               href="#challenges"
-              className="hover:text-primary transition-colors duration-200 relative after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[140px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
             >
               {t("landing.challenges_title")}
             </a>

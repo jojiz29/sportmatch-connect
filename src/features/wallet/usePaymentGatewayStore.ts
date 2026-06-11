@@ -48,7 +48,13 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
   lastPaymentMethod: null,
 
   processPayment: async (payload, courtName, stripe, elements) => {
-    set({ isProcessing: true, status: "processing", error: null, errorCode: null, transactionId: null });
+    set({
+      isProcessing: true,
+      status: "processing",
+      error: null,
+      errorCode: null,
+      transactionId: null,
+    });
 
     const attempt = {
       id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -69,6 +75,26 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+      }
+
+      if (isDemo) {
+        // Simular éxito de pago con tarjeta en modo demo
+        const txId = `TXN-DEMO-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+        set({
+          isProcessing: false,
+          status: "success",
+          transactionId: txId,
+          error: null,
+          errorCode: null,
+          lastPaymentMethod: payload.method,
+        });
+        logPaymentAttempt({ ...attempt, status: "success", errorCode: undefined });
+        return {
+          success: true,
+          transactionId: txId,
+          amountCharged: payload.amount,
+          fitcoinsUsed: payload.fitcoinsToUse,
+        };
       }
 
       if (!stripe || !elements) {
@@ -98,7 +124,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
           },
           body: JSON.stringify({
             amount: payload.amount,
-            monto_cancha: payload.amount / 1.10,
+            monto_cancha: payload.amount / 1.1,
           }),
         });
 
@@ -157,7 +183,8 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         const errorCode = "STRIPE_REQUEST_FAILED";
         let error = err instanceof Error ? err.message : "Error al procesar el pago con Stripe.";
         if (error === "Failed to fetch" || error.includes("NetworkError")) {
-          error = "No se pudo conectar con el servidor de pagos. Verifica la configuración de CORS y la URL de la función de Stripe.";
+          error =
+            "No se pudo conectar con el servidor de pagos. Verifica la configuración de CORS y la URL de la función de Stripe.";
         }
         set({ isProcessing: false, status: "failed", error, errorCode });
         logPaymentAttempt({ ...attempt, status: "failed", errorCode });
@@ -177,7 +204,9 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
 
     if (payload.useFitcoins && payload.fitcoinsToUse > 0) {
       const ledgerDesc = `Reserva: ${courtName}`;
-      const ledgerSuccess = await useWalletStore.getState().redeem(payload.fitcoinsToUse, ledgerDesc);
+      const ledgerSuccess = await useWalletStore
+        .getState()
+        .redeem(payload.fitcoinsToUse, ledgerDesc);
       if (!ledgerSuccess && !isDemo) {
         const errorCode = "FITCOINS_INSUFFICIENT";
         const error = "Saldo de FitCoins insuficiente para completar esta transacción.";
@@ -188,7 +217,14 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
     }
 
     const txId = `TXN-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
-    set({ isProcessing: false, status: "success", transactionId: txId, error: null, errorCode: null, lastPaymentMethod: payload.method });
+    set({
+      isProcessing: false,
+      status: "success",
+      transactionId: txId,
+      error: null,
+      errorCode: null,
+      lastPaymentMethod: payload.method,
+    });
     logPaymentAttempt({ ...attempt, status: "success", errorCode: undefined });
     return {
       success: true,
@@ -199,6 +235,13 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
   },
 
   resetPayment: () => {
-    set({ isProcessing: false, status: "idle", transactionId: null, error: null, errorCode: null, lastPaymentMethod: null });
+    set({
+      isProcessing: false,
+      status: "idle",
+      transactionId: null,
+      error: null,
+      errorCode: null,
+      lastPaymentMethod: null,
+    });
   },
 }));

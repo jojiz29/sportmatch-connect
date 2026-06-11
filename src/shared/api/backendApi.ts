@@ -410,8 +410,6 @@ export const backendApi = {
     },
   },
 
-
-
   bookings: {
     async getByCourtAndDate(courtId: string, date: string) {
       return fetchApi(`/bookings?courtId=${courtId}&date=${date}`);

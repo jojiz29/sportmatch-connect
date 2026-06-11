@@ -40,13 +40,16 @@ serve(async (req) => {
     const monto_cancha = Number(body?.monto_cancha || body?.amount);
 
     if (!monto_cancha || monto_cancha <= 0) {
-      return new Response(JSON.stringify({ error: "El monto de la cancha debe ser un número mayor que cero." }), {
-        status: 400,
-        headers: CORS_HEADERS,
-      });
+      return new Response(
+        JSON.stringify({ error: "El monto de la cancha debe ser un número mayor que cero." }),
+        {
+          status: 400,
+          headers: CORS_HEADERS,
+        },
+      );
     }
 
-    const comision_servicio = monto_cancha * 0.10;
+    const comision_servicio = monto_cancha * 0.1;
     const total_amount = monto_cancha + comision_servicio;
 
     const paymentIntent = await stripe.paymentIntents.create({

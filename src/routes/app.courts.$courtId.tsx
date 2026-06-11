@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Star,
@@ -18,13 +18,20 @@ import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
-import { usePaymentGatewayStore, PaymentPayload, PaymentResult } from "@/features/wallet/usePaymentGatewayStore";
+import {
+  usePaymentGatewayStore,
+  PaymentPayload,
+  PaymentResult,
+} from "@/features/wallet/usePaymentGatewayStore";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 import { logPaymentAttempt } from "@/services/paymentService";
 import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
 import type { Stripe, StripeElements } from "@stripe/stripe-js";
 
 export const Route = createFileRoute("/app/courts/$courtId")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   validateSearch: (search: Record<string, unknown>): { book?: boolean } => {
     return {
       book: search.book === "true" || search.book === true || undefined,
@@ -126,7 +133,9 @@ function CourtDetail() {
       }
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
-      setHoldCountdown(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+      setHoldCountdown(
+        `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+      );
     }, 1000);
     return () => window.clearInterval(interval);
   }, [holdExpiry]);
@@ -225,7 +234,7 @@ function CourtDetail() {
   const maxPlayers = court.max_players || 4;
   const baseCourtPrice = court.price_per_hour / maxPlayers;
   const commissionPercentage = 10;
-  const commissionAmount = baseCourtPrice * 0.10;
+  const commissionAmount = baseCourtPrice * 0.1;
   const totalCost = baseCourtPrice + commissionAmount;
   const pricePerPerson = totalCost;
 
@@ -374,7 +383,8 @@ function CourtDetail() {
   // Variables (maxPlayers, pricePerPerson) defined above handlePaymentConfirm for closure scope correctness
 
   const holdPaymentDiscount = paymentSelection?.fitcoinsToUse ?? 0;
-  const chargeAmount = paymentResult?.amountCharged ?? Math.max(0, Math.ceil(pricePerPerson) - holdPaymentDiscount);
+  const chargeAmount =
+    paymentResult?.amountCharged ?? Math.max(0, Math.ceil(pricePerPerson) - holdPaymentDiscount);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -502,7 +512,8 @@ function CourtDetail() {
 
               {slot && holdExpiry && (
                 <div className="rounded-2xl border border-warning/30 bg-warning/10 p-3 text-[12px] text-warning-foreground mb-4">
-                  <strong>Horario pendiente:</strong> el horario seleccionado se mantiene bloqueado por {holdCountdown} mientras completas el pago.
+                  <strong>Horario pendiente:</strong> el horario seleccionado se mantiene bloqueado
+                  por {holdCountdown} mientras completas el pago.
                 </div>
               )}
 
@@ -513,103 +524,111 @@ function CourtDetail() {
                 isProcessing={isProcessing}
                 disabled={isBooking || confirmed}
               />
-              </div>
             </div>
           </div>
+        </div>
 
-          {confirmed && (
-            <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-6 relative overflow-hidden font-sans">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
+        {confirmed && (
+          <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-6 relative overflow-hidden font-sans">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
 
-              <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
-                <Check className="h-6 w-6 text-neon" />
+            <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
+              <Check className="h-6 w-6 text-neon" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
+            <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
+
+            {/* Ticket separator dashed line */}
+            <div className="my-5 border-t-2 border-dashed border-border/60 relative">
+              <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
+              <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
+            </div>
+
+            <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
+              <div className="flex justify-between items-center pb-2 border-b border-border/30">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Transacción
+                </span>
+                <span className="font-mono text-xs font-bold text-neon">
+                  {transactionId || "TXN-DEMO123"}
+                </span>
               </div>
-              <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
-              <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
 
-              {/* Ticket separator dashed line */}
-              <div className="my-5 border-t-2 border-dashed border-border/60 relative">
-                <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
-                <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
+              <div className="space-y-1">
+                <div className="font-bold text-foreground text-sm">{court.name}</div>
+                <div className="text-[11px] text-muted-foreground leading-normal">
+                  {court.address}
+                </div>
               </div>
 
-              <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
-                <div className="flex justify-between items-center pb-2 border-b border-border/30">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    Transacción
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                <div>
+                  <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
+                  <div className="text-xs font-bold text-foreground">{court.sport}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground font-semibold">
+                    Fecha y Hora
+                  </div>
+                  <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-border/30 space-y-1.5">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Detalle del Pago
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Precio Cancha / Hora</span>
+                  <span>S/ {court.price_per_hour.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Comisión de Servicio</span>
+                  <span>S/ 3.00</span>
+                </div>
+                {holdPaymentDiscount > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-500">
+                    <span>Descuento (FitCoins gastados)</span>
+                    <span className="font-semibold">-S/ {holdPaymentDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Método de pago</span>
+                  <span>
+                    {paymentSelection?.method === "fitcoins"
+                      ? "FitCoins"
+                      : paymentSelection?.method === "card"
+                        ? "Tarjeta"
+                        : paymentSelection?.method === "yape"
+                          ? "Yape"
+                          : "Plin"}
                   </span>
-                  <span className="font-mono text-xs font-bold text-neon">
-                    {transactionId || "TXN-DEMO123"}
-                  </span>
                 </div>
-
-                <div className="space-y-1">
-                  <div className="font-bold text-foreground text-sm">{court.name}</div>
-                  <div className="text-[11px] text-muted-foreground leading-normal">
-                    {court.address}
-                  </div>
+                <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
+                  <span>Total Pagado</span>
+                  <span>S/ {chargeAmount.toFixed(2)}</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-1">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
-                    <div className="text-xs font-bold text-foreground">{court.sport}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">
-                      Fecha y Hora
-                    </div>
-                    <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-border/30 space-y-1.5">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                    Detalle del Pago
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Precio Cancha / Hora</span>
-                    <span>S/ {court.price_per_hour.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Comisión de servicio (10%)</span>
-                    <span>S/ {(court.price_per_hour * 0.10).toFixed(2)}</span>
-                  </div>
-                  {holdPaymentDiscount > 0 && (
-                    <div className="flex justify-between text-xs text-emerald-500">
-                      <span>Descuento (FitCoins gastados)</span>
-                      <span className="font-semibold">-S/ {holdPaymentDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Método de pago</span>
-                    <span>{paymentSelection?.method === "fitcoins" ? "FitCoins" : paymentSelection?.method === "card" ? "Tarjeta" : paymentSelection?.method === "yape" ? "Yape" : "Plin"}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
-                    <span>Total Pagado</span>
-                    <span>S/ {chargeAmount.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* QR Code section */}
-              <div className="mt-5 space-y-3">
-                <p className="text-[10px] text-muted-foreground">
-                  Mostrá este QR de check-in al ingresar al club
-                </p>
-                <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
-                  <QrCode className="h-28 w-28 text-black" />
-                </div>
-                <Link
-                  to="/app/profile"
-                  className="mx-auto inline-flex items-center justify-center rounded-2xl bg-neon px-5 py-3 text-sm font-semibold text-background shadow-glow hover:scale-[1.01] transition-all"
-                >
-                  Ver mi reserva
-                </Link>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* QR Code section */}
+            <div className="mt-5 space-y-3">
+              <p className="text-[10px] text-muted-foreground">
+                Mostrá este QR de check-in al ingresar al club
+              </p>
+              <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
+                <QrCode className="h-28 w-28 text-black" />
+              </div>
+              <Link
+                to="/app/profile"
+                className="mx-auto inline-flex items-center justify-center rounded-2xl bg-neon px-5 py-3 text-sm font-semibold text-background shadow-glow hover:scale-[1.01] transition-all"
+              >
+                Ver mi reserva
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
 
       {isProcessing && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex flex-col items-center justify-center space-y-6">

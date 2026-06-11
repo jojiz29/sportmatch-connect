@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import * as crypto from "crypto";
 
@@ -11,12 +16,12 @@ function matchNames(profileName: string, apiName: string): boolean {
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, "")
       .split(/\s+/)
-      .filter(w => w.length > 2 && w !== "del" && w !== "las" && w !== "los" && w !== "con");
+      .filter((w) => w.length > 2 && w !== "del" && w !== "las" && w !== "los" && w !== "con");
   };
   const profileWords = normalize(profileName);
   const apiWords = normalize(apiName);
   if (profileWords.length === 0) return false;
-  return profileWords.every(word => apiWords.includes(word));
+  return profileWords.every((word) => apiWords.includes(word));
 }
 
 @Injectable()
@@ -84,7 +89,7 @@ export class ProfilesService {
 
       if ((profile.dni_intentos || 0) >= 3) {
         throw new ForbiddenException(
-          "Has superado el límite de 3 intentos de verificación. Por favor, contacta al soporte técnico en soporte@sportmatch.app."
+          "Has superado el límite de 3 intentos de verificación. Por favor, contacta al soporte técnico en soporte@sportmatch.app.",
         );
       }
 
@@ -135,7 +140,7 @@ export class ProfilesService {
       } else {
         const apiKey = process.env.VERIFICAPE_API_KEY || "vp_live_2eef1b0a64d44e268af708478d9f5ea1";
         const url = `https://api.verificape.com/v2/dni/${dni}`;
-        
+
         try {
           const res = await fetch(url, {
             headers: {
@@ -155,11 +160,12 @@ export class ProfilesService {
           apiNombres = resData.data.names || resData.data.nombres || "";
           apiApePaterno = resData.data.paternalSurname || resData.data.apellido_paterno || "";
           apiApeMaterno = resData.data.maternalSurname || resData.data.apellido_materno || "";
-          apiFullName = resData.data.fullName || `${apiNombres} ${apiApePaterno} ${apiApeMaterno}`.trim();
+          apiFullName =
+            resData.data.fullName || `${apiNombres} ${apiApePaterno} ${apiApeMaterno}`.trim();
         } catch (apiErr) {
           console.error("RENIEC API Request Error:", apiErr);
           throw new BadRequestException(
-            "No se pudo completar la consulta con RENIEC en este momento. Inténtalo de nuevo más tarde."
+            "No se pudo completar la consulta con RENIEC en este momento. Inténtalo de nuevo más tarde.",
           );
         }
       }
@@ -171,14 +177,15 @@ export class ProfilesService {
             dni_intentos: { increment: 1 },
           },
         });
-        
+
         const attemptsLeft = 3 - (updatedProfile.dni_intentos || 0);
-        const suffix = attemptsLeft > 0 
-          ? ` Te quedan ${attemptsLeft} intento${attemptsLeft === 1 ? "" : "s"}.`
-          : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte.";
-          
+        const suffix =
+          attemptsLeft > 0
+            ? ` Te quedan ${attemptsLeft} intento${attemptsLeft === 1 ? "" : "s"}.`
+            : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte.";
+
         throw new BadRequestException(
-          `El nombre en tu cuenta no coincide con el DNI ingresado.${suffix}`
+          `El nombre en tu cuenta no coincide con el DNI ingresado.${suffix}`,
         );
       }
 

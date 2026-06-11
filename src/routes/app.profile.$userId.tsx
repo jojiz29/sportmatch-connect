@@ -319,7 +319,8 @@ function UserProfile() {
                   Identidad no verificada
                 </span>
                 <span className="text-[10px] text-muted-foreground mt-1.5 block leading-normal">
-                  Este jugador aún no ha verificado su cuenta. ¡Verifica la tuya en tu perfil para destacar!
+                  Este jugador aún no ha verificado su cuenta. ¡Verifica la tuya en tu perfil para
+                  destacar!
                 </span>
               </div>
             )}

@@ -136,7 +136,6 @@ export function ChatWindow({
   activeChat,
   currentUser,
   registeredUsers,
-  areProfilesLoading,
   text,
   setText,
   handleSend,
@@ -225,7 +224,9 @@ export function ChatWindow({
             <div className="font-semibold flex items-center gap-1">
               {activeChat.name}
               {(() => {
-                const otherPlayerId = activeChat.current_players?.find((id: any) => id !== currentUser?.id);
+                const otherPlayerId = activeChat.current_players?.find(
+                  (id: string) => id !== currentUser?.id,
+                );
                 const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
                 return otherPlayer?.dni_verificado ? <VerifiedBadge /> : null;
               })()}

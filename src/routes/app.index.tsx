@@ -593,19 +593,13 @@ function Dashboard() {
               >
                 <Sparkles className="h-4 w-4" /> Encontrar partido
               </Link>
-              <Link
-                to="/app/courts"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass text-sm font-semibold hover:bg-white/10 transition-all duration-200"
-              >
-                <Calendar className="h-4 w-4" /> Reservar cancha
-              </Link>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3 min-w-[260px]">
             <Stat
               icon={<Trophy className="h-4 w-4 text-neon" />}
-              label="FitCoins"
-              value={user.fitcoins_balance}
+              label="Nivel"
+              value={user.level}
             />
             <Stat
               icon={<Flame className="h-4 w-4 text-warning" />}
