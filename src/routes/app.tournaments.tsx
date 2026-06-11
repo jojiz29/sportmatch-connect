@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TournamentHub } from "@/components/TournamentHub";
+import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 
 export const Route = createFileRoute("/app/tournaments")({
   head: () => ({ meta: [{ title: "Torneos Relámpago — SportMatch" }] }),
@@ -9,7 +10,9 @@ export const Route = createFileRoute("/app/tournaments")({
 function TournamentsPage() {
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8 animate-fade-in">
-      <TournamentHub />
+      <ErrorBoundary>
+        <TournamentHub />
+      </ErrorBoundary>
     </div>
   );
 }

@@ -346,6 +346,8 @@ function Profile() {
     const file = target?.files?.[0];
     if (!file || !profile) return;
 
+    if (isAnalyzingAvatar || isUploadingAvatar) return;
+
     // Check size limit: 5MB
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));

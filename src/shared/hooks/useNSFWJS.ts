@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 interface Prediction {
   className: "Porn" | "Hentai" | "Sexy" | "Neutral" | "Drawing";
@@ -40,11 +40,6 @@ export const useNSFWJS = () => {
       return null;
     }
   }, [model]);
-
-  // Load the model as soon as the hook mounts to prepare for user interaction
-  useEffect(() => {
-    loadModel();
-  }, [loadModel]);
 
   const analyzeImage = useCallback(
     async (file: File): Promise<boolean> => {

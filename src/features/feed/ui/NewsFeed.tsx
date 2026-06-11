@@ -99,6 +99,11 @@ export function NewsFeed() {
   }, [mediaUrl]);
 
   const handleImageFile = async (file: File) => {
+    if (isAnalyzingImage) {
+      toast.error("Ya hay un análisis de imagen en curso. Por favor, espere.");
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error("El archivo supera el límite de 5MB");
       return;

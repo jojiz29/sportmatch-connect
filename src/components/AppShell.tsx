@@ -20,6 +20,7 @@ import { useThemeStore } from "@/features/theme/store";
 import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 import { useTranslation } from "react-i18next";
+import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 
 const GROUPS = [
   {
@@ -122,7 +123,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-background relative flex flex-col overflow-hidden">
         <WorldCupBackground />
-        <div className="relative z-10 flex-1 flex flex-col">{children}</div>
+        <div className="relative z-10 flex-1 flex flex-col">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </div>
       </div>
     );
   }
@@ -299,7 +302,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <main className="lg:pl-72 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
     </div>

@@ -83,10 +83,11 @@ export function IdentityStep({
     syncGoogleAvatar();
   }, [isDemoMode]);
 
-  // 3. Image Upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (isAnalyzingImage || isUploading) return;
 
     // Check size limit: 5MB
     if (file.size > 5 * 1024 * 1024) {

@@ -27,16 +27,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-6 m-4 bg-destructive/10 border border-destructive rounded-xl flex items-start gap-3">
-          <AlertCircle className="h-6 w-6 text-destructive shrink-0" />
-          <div>
-            <h3 className="font-semibold text-destructive">Algo salió mal en esta sección.</h3>
-            <p className="text-sm text-destructive/80 mt-1">{this.state.error?.message}</p>
+        <div className="p-6 m-4 bg-destructive/10 border border-destructive/30 rounded-3xl backdrop-blur-md flex flex-col sm:flex-row items-start gap-4 shadow-card animate-scale-in">
+          <div className="p-3 bg-destructive/20 rounded-2xl shrink-0">
+            <AlertCircle className="h-6 w-6 text-red-500" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-white text-base">Ocurrió un error inesperado.</h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-lg leading-relaxed">
+              {this.state.error?.message ||
+                "Hubo un problema procesando este componente de la aplicación."}
+            </p>
             <button
               onClick={() => this.setState({ hasError: false })}
-              className="mt-4 px-3 py-1.5 bg-destructive text-destructive-foreground rounded-lg text-sm font-medium"
+              className="mt-4 px-4 py-2 bg-gradient-primary text-primary-foreground font-semibold text-xs rounded-xl shadow-glow hover:scale-105 active:scale-95 transition-transform cursor-pointer"
             >
-              Intentar de nuevo
+              Recargar Módulo
             </button>
           </div>
         </div>
