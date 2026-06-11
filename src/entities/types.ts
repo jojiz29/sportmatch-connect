@@ -89,6 +89,10 @@ export interface User {
   onboarding_completed?: boolean;
   push_token?: string | null;
   gender?: "Masculino" | "Femenino" | "Mixto";
+  dni_verificado?: boolean;
+  dni_hash?: string | null;
+  dni_intentos?: number;
+  fecha_verificacion?: string | null;
 }
 
 export interface Court {

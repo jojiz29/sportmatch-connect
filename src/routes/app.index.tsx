@@ -33,6 +33,7 @@ import { useChatStore } from "@/features/chat/useChatStore";
 import { useTranslation } from "react-i18next";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
@@ -853,8 +854,9 @@ function Dashboard() {
                       <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-neon border-2 border-background" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">
+                      <div className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors flex items-center gap-1">
                         {p.name}
+                        {p.dni_verificado && <VerifiedBadge />}
                         {isMe && (
                           <span className="text-[9px] text-muted-foreground ml-1">(tú)</span>
                         )}

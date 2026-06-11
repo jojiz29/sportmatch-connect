@@ -18,7 +18,19 @@ export class BookingsController {
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create booking" })
-  async create(@Body() data: { court_id: string; date: string; time: string; user_id: string }) {
+  async create(
+    @Body()
+    data: {
+      court_id: string;
+      date: string;
+      time: string;
+      user_id: string;
+      precio_cancha?: number;
+      porcentaje_comision?: number;
+      monto_comision?: number;
+      total_cobrado?: number;
+    },
+  ) {
     return this.bookingsService.create(data);
   }
 }

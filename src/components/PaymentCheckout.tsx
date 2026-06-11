@@ -111,15 +111,16 @@ function PaymentCheckoutForm({
               type="text"
               autoComplete="cc-name"
               value={cardHolder}
-              onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s'-]/g, "").slice(0, CARD_HOLDER_MAX_LENGTH))}
+              onChange={(event) => setCardHolder(event.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").slice(0, CARD_HOLDER_MAX_LENGTH))}
               onBlur={() => setCardHolderTouched(true)}
-              placeholder="Nombre como en la tarjeta"
+              placeholder="Nombre como en la tarjeta (mín. 3 letras)"
               className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${!cardHolderValid && cardHolder ? "border-rose-500" : "border-border/60"}`}
+              minLength={3}
               maxLength={CARD_HOLDER_MAX_LENGTH}
             />
             <div className="mt-2 flex items-center justify-between text-xs">
-              <p className={`min-h-[1.2rem] ${cardHolderError ? "text-rose-500" : "text-muted-foreground"}`}>
-                {cardHolderError || "Solo se permiten letras, espacios, guiones y apóstrofes."}
+              <p className={`min-h-[1.2rem] ${cardHolderError ? "text-rose-500" : "text-transparent"}`}>
+                {cardHolderError}
               </p>
               <span className="text-muted-foreground">{cardHolder.length}/{CARD_HOLDER_MAX_LENGTH}</span>
             </div>

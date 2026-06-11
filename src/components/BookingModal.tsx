@@ -229,7 +229,11 @@ export function BookingModal({
       ? actualSquadMembersCount
       : squadForGroupBooking.members_count || 1
     : maxPlayers;
-  const pricePerPerson = (court.price_per_hour + 3) / bookingMembersCount;
+  const baseCourtPrice = court.price_per_hour / bookingMembersCount;
+  const commissionPercentage = 10;
+  const commissionAmount = baseCourtPrice * 0.10;
+  const totalCost = baseCourtPrice + commissionAmount;
+  const pricePerPerson = totalCost;
   const cost = Math.ceil(pricePerPerson);
   const selectedDiscount = paymentSelection?.fitcoinsToUse ?? 0;
   const totalPaid = paymentResult?.amountCharged ?? Math.max(0, cost - selectedDiscount);
@@ -252,7 +256,6 @@ export function BookingModal({
     }
 
     setPaymentSelection(selection);
-    setPaymentDialogOpen(false);
     setIsBooking(true);
     let currentPaymentResult: PaymentResult | null = null;
 
@@ -282,12 +285,18 @@ export function BookingModal({
         return;
       }
 
+      setPaymentDialogOpen(false);
+
       await apiClient.bookings.create({
         court_id: court.id,
         user_id: user.id,
         date: todayStr,
         time_slot: slot,
         operating_hours: court.operating_hours,
+        precio_cancha: baseCourtPrice,
+        porcentaje_comision: commissionPercentage,
+        monto_comision: commissionAmount,
+        total_cobrado: totalCost,
       });
 
       if (useAuthStore.getState().isDemoMode) {
@@ -297,10 +306,11 @@ export function BookingModal({
             : `Partido en ${court.name}`,
           sport: court.sport,
           court_id: court.id,
-          user_id: user.id,
+          creator_id: user.id,
           date: todayStr,
-          time_slot: slot,
-          operating_hours: court.operating_hours,
+          time: slot,
+          max_players: bookingMembersCount,
+          required_level: user.level || "Intermedio",
         });
       }
 
@@ -432,8 +442,8 @@ export function BookingModal({
                   <span className="text-foreground">S/ {court.price_per_hour.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Comisión de Servicio</span>
-                  <span className="text-foreground">S/ 3.00</span>
+                  <span className="text-muted-foreground">Comisión de servicio (10%)</span>
+                  <span className="text-foreground">S/ {(court.price_per_hour * 0.10).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Dividido entre</span>
@@ -631,8 +641,8 @@ export function BookingModal({
                   <span>S/ {court.price_per_hour.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Comisión de Servicio</span>
-                  <span>S/ 3.00</span>
+                  <span>Comisión de servicio (10%)</span>
+                  <span>S/ {(court.price_per_hour * 0.10).toFixed(2)}</span>
                 </div>
                 {selectedDiscount > 0 && (
                   <div className="flex justify-between text-xs text-emerald-500">

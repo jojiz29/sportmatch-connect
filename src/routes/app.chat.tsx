@@ -14,7 +14,7 @@ import { joinSquad, getSquads } from "@/shared/api/squadService";
 import { BookingModal } from "@/components/BookingModal";
 import { toast } from "sonner";
 import { ChatWindow } from "@/components/chat/ChatWindow";
-import { getMutualPlayerConnections, PlayerConnection } from "@/shared/api/connectionService";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/chat")({
   head: () => ({ meta: [{ title: "Chat — SportMatch" }] }),
@@ -356,75 +356,21 @@ function Chat() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {sidebarView === "chats" &&
-              filteredUserChats.map((c) => {
-                const lastMessage = c.messages[c.messages.length - 1];
-                const isActive = c.id === activeConversationId;
+            {filteredUserChats.map((c) => {
+              const lastMessage = c.messages[c.messages.length - 1];
+              const isActive = c.id === activeConversationId;
+              const otherPlayerId = c.current_players.find((id) => id !== currentUser.id);
+              const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
+              const isVerified = otherPlayer?.dni_verificado;
 
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setActiveConversation(c.id)}
-                    className={`w-full p-4 flex items-center gap-3 transition-colors text-left border-b border-border/50 ${isActive ? "bg-accent/50" : "hover:bg-accent/30"}`}
-                  >
-                    <div className="relative">
-                      {c.avatar.startsWith("http") ? (
-                        <img
-                          src={c.avatar}
-                          alt=""
-                          className="h-12 w-12 rounded-full bg-muted object-cover"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center text-xl">
-                          🎾
-                        </div>
-                      )}
-                      {c.unread > 0 && (
-                        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-neon border-2 border-background" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-semibold truncate">{c.name}</span>
-                        <span
-                          className={`text-[10px] ${c.unread ? "text-neon font-semibold" : "text-muted-foreground"}`}
-                        >
-                          {lastMessage
-                            ? new Date(lastMessage.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ""}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground truncate">
-                          {lastMessage ? lastMessage.text : t("chat.no_messages")}
-                        </span>
-                        {c.unread > 0 && (
-                          <span className="h-5 w-5 rounded-full bg-neon text-neon-foreground text-[10px] font-bold grid place-items-center ml-2 shrink-0">
-                            {c.unread}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-
-            {sidebarView === "connections" &&
-              filteredConnections.map((connection) => {
-                const profile =
-                  connection.connected_user ||
-                  registeredUsers.find((user) => user.id === connection.connected_user_id);
-                if (!profile) return null;
-
-                return (
-                  <div
-                    key={connection.id}
-                    className="p-4 border-b border-border/50 hover:bg-accent/20 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setActiveConversation(c.id)}
+                  className={`w-full p-4 flex items-center gap-3 transition-colors text-left border-b border-border/50 ${isActive ? "bg-accent/50" : "hover:bg-accent/30"}`}
+                >
+                  <div className="relative">
+                    {c.avatar.startsWith("http") ? (
                       <img
                         src={profile.avatar_url}
                         alt={profile.name}
@@ -439,6 +385,27 @@ function Chat() {
                             : ""}
                         </div>
                       </div>
+                    )}
+                    {c.unread > 0 && (
+                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-neon border-2 border-background" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-semibold truncate flex items-center gap-1">
+                        {c.name}
+                        {isVerified && <VerifiedBadge />}
+                      </span>
+                      <span
+                        className={`text-[10px] ${c.unread ? "text-neon font-semibold" : "text-muted-foreground"}`}
+                      >
+                        {lastMessage
+                          ? new Date(lastMessage.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <button
@@ -561,7 +528,10 @@ function Chat() {
                       className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate">{u.name}</div>
+                      <div className="font-semibold text-sm truncate flex items-center gap-1">
+                        {u.name}
+                        {u.dni_verificado && <VerifiedBadge />}
+                      </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {u.bio || t("register.role_player")}
                       </div>
@@ -655,7 +625,10 @@ function Chat() {
                           className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm truncate">{u.name}</div>
+                          <div className="font-semibold text-sm truncate flex items-center gap-1">
+                            {u.name}
+                            {u.dni_verificado && <VerifiedBadge />}
+                          </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {u.bio || t("register.role_player")}
                           </div>
