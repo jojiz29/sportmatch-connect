@@ -268,6 +268,15 @@ function Profile() {
     };
   }, [profile]);
 
+  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change
+  useEffect(() => {
+    return () => {
+      if (editForm.avatar_url && editForm.avatar_url.startsWith("blob:")) {
+        URL.revokeObjectURL(editForm.avatar_url);
+      }
+    };
+  }, [editForm.avatar_url]);
+
   useEffect(() => {
     if (profile) {
       setEditForm({
@@ -361,9 +370,12 @@ function Profile() {
       const isSafe = await analyzeImage(file);
       toast.dismiss(scanToastId);
       if (!isSafe) {
-        toast.error("Bloqueado por Seguridad: La imagen viola nuestras Normas de la Comunidad.", {
-          className: "bg-red-500 text-white border-red-600",
-        });
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
         if (target) {
           try {
             target.value = "";
@@ -456,10 +468,20 @@ function Profile() {
                 }`}
               >
                 {isAnalyzingAvatar ? (
-                  <div className="flex flex-col items-center justify-center gap-1.5 p-1 text-center animate-pulse z-10">
-                    <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    <span className="text-[9px] text-foreground font-bold leading-tight">
-                      🛡️ Analizando IA...
+                  <div
+                    className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 p-2 text-center border-2 rounded-2xl animate-[scale-in_0.2s_ease-out]"
+                    style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+                  >
+                    <style>{`
+                      @keyframes pulseBorder {
+                        0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                        50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
+                        100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                      }
+                    `}</style>
+                    <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+                    <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                      🛡️ Escaneando...
                     </span>
                   </div>
                 ) : isUploadingAvatar ? (

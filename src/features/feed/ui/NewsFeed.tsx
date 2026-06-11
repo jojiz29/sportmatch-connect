@@ -125,9 +125,12 @@ export function NewsFeed() {
         setImageFile(null);
         setMediaUrl("");
         URL.revokeObjectURL(localUrl);
-        toast.error("Bloqueado por Seguridad: La imagen viola nuestras Normas de la Comunidad.", {
-          className: "bg-red-500 text-white border-red-600",
-        });
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
       } else {
         toast.success("Imagen cargada correctamente");
       }
@@ -384,10 +387,20 @@ export function NewsFeed() {
                   <div className="relative mt-2 rounded-xl overflow-hidden border border-border/50 max-h-48 bg-muted group animate-scale-in">
                     <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
                     {isAnalyzingImage && (
-                      <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-2 backdrop-blur-sm animate-pulse z-10">
-                        <Loader2 className="h-6 w-6 text-primary animate-spin" />
-                        <span className="text-xs font-bold text-foreground">
-                          🛡️ Analizando imagen con IA...
+                      <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-2 z-10 border-2 rounded-xl"
+                        style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+                      >
+                        <style>{`
+                          @keyframes pulseBorder {
+                            0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                            50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
+                            100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                          }
+                        `}</style>
+                        <Loader2 className="h-6 w-6 text-[#FF6B35] animate-spin" />
+                        <span className="text-xs font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                          🛡️ Escaneando contenido...
                         </span>
                       </div>
                     )}

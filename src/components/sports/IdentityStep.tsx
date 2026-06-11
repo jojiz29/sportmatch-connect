@@ -83,6 +83,15 @@ export function IdentityStep({
     syncGoogleAvatar();
   }, [isDemoMode]);
 
+  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change
+  useEffect(() => {
+    return () => {
+      if (avatarUrl && avatarUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarUrl);
+      }
+    };
+  }, [avatarUrl]);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -102,9 +111,12 @@ export function IdentityStep({
       const isSafe = await analyzeImage(file);
       toast.dismiss(scanToastId);
       if (!isSafe) {
-        toast.error("Bloqueado por Seguridad: La imagen viola nuestras Normas de la Comunidad.", {
-          className: "bg-red-500 text-white border-red-600",
-        });
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
         if (e.target) e.target.value = "";
         setIsAnalyzingImage(false);
         return;
@@ -261,9 +273,21 @@ export function IdentityStep({
           className={`h-32 w-32 rounded-full border-4 cursor-pointer relative overflow-hidden bg-background/30 flex items-center justify-center transition-all duration-300 ${getGenderGlowClass()}`}
         >
           {isAnalyzingImage ? (
-            <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-2 backdrop-blur-sm animate-pulse z-10 p-2 text-center">
-              <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              <span className="text-[9px] font-bold text-foreground">🛡️ Analizando...</span>
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 z-10 p-2 text-center border-2 rounded-full"
+              style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+            >
+              <style>{`
+                @keyframes pulseBorder {
+                  0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                  50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
+                  100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                }
+              `}</style>
+              <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+              <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                🛡️ Escaneando...
+              </span>
             </div>
           ) : avatarUrl ? (
             <img src={avatarUrl} alt="Avatar Preview" className="h-full w-full object-cover" />
