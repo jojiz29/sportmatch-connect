@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { Filter } from "lucide-react";
+import { Filter, Zap, Globe } from "lucide-react";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { apiClient } from "@/shared/api/apiClient";
 import { MatchmakingFeature } from "@/features/matchmaking/MatchmakingFeature";
+import { PublicMatchBoard } from "@/features/matchmaking/ui/PublicMatchBoard";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 
 export const Route = createFileRoute("/app/match/")({
   head: () => ({
@@ -51,9 +53,12 @@ function MatchPendingComponent() {
   );
 }
 
+type TabKey = "ia" | "public";
+
 function Match() {
   const { t } = useTranslation();
   const initialStack = Route.useLoaderData();
+  const [activeTab, setActiveTab] = useState<TabKey>("ia");
 
   if (!initialStack) {
     return (
@@ -64,17 +69,55 @@ function Match() {
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader
-        title={t("matchmaking.title")}
-        subtitle={t("matchmaking.subtitle")}
+        title={activeTab === "ia" ? t("matchmaking.title") : "Partidos Públicos"}
+        subtitle={
+          activeTab === "ia"
+            ? t("matchmaking.subtitle")
+            : "Únete o crea partidos abiertos cerca de ti"
+        }
         action={
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm cursor-pointer">
-            <Filter className="h-4 w-4" /> {t("matchmaking.filters")}
-          </button>
+          activeTab === "ia" ? (
+            <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm cursor-pointer">
+              <Filter className="h-4 w-4" /> {t("matchmaking.filters")}
+            </button>
+          ) : undefined
         }
       />
 
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 bg-muted/60 border border-border rounded-2xl w-fit mb-6">
+        <button
+          onClick={() => setActiveTab("ia")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === "ia"
+              ? "bg-gradient-primary text-primary-foreground shadow-glow"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          id="tab-ia-matchmaking"
+        >
+          <Zap className="h-4 w-4" />
+          Matchmaking IA
+        </button>
+        <button
+          onClick={() => setActiveTab("public")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === "public"
+              ? "bg-gradient-primary text-primary-foreground shadow-glow"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          id="tab-public-matches"
+        >
+          <Globe className="h-4 w-4" />
+          Partidos Públicos
+        </button>
+      </div>
+
       <ErrorBoundary>
-        <MatchmakingFeature initialStack={initialStack} />
+        {activeTab === "ia" ? (
+          <MatchmakingFeature initialStack={initialStack} />
+        ) : (
+          <PublicMatchBoard />
+        )}
       </ErrorBoundary>
     </div>
   );

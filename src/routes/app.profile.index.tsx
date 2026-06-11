@@ -25,6 +25,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, Sport, User } from "@/entities/types";
+import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
 import { BadgeEngine } from "@/components/BadgeEngine";
 import {
@@ -86,6 +87,9 @@ function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
 
+  // AI Moderation Hook and States
+  const { analyzeImage } = useNSFWJS();
+  const [isAnalyzingAvatar, setIsAnalyzingAvatar] = useState(false);
   const [dni, setDni] = useState("");
   const [isVerifyingDni, setIsVerifyingDni] = useState(false);
   const [dniError, setDniError] = useState("");
@@ -371,6 +375,15 @@ function Profile() {
     };
   }, [profile]);
 
+  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change
+  useEffect(() => {
+    return () => {
+      if (editForm.avatar_url && editForm.avatar_url.startsWith("blob:")) {
+        URL.revokeObjectURL(editForm.avatar_url);
+      }
+    };
+  }, [editForm.avatar_url]);
+
   useEffect(() => {
     if (profile) {
       setEditForm({
@@ -449,6 +462,45 @@ function Profile() {
     const file = target?.files?.[0];
     if (!file || !profile) return;
 
+    if (isAnalyzingAvatar || isUploadingAvatar) return;
+
+    // Check size limit: 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));
+      return;
+    }
+
+    setIsAnalyzingAvatar(true);
+    const scanToastId = toast.loading("🛡️ Analizando imagen con IA...");
+
+    try {
+      const isSafe = await analyzeImage(file);
+      toast.dismiss(scanToastId);
+      if (!isSafe) {
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
+        if (target) {
+          try {
+            target.value = "";
+          } catch (resetErr) {
+            if (import.meta.env.DEV) console.warn("Could not reset input file value:", resetErr);
+          }
+        }
+        setIsAnalyzingAvatar(false);
+        return;
+      }
+    } catch (err) {
+      console.error("AI Moderation error:", err);
+      toast.dismiss(scanToastId);
+      // Fallback gracefully: treat as safe
+    } finally {
+      setIsAnalyzingAvatar(false);
+    }
+
     setIsUploadingAvatar(true);
     const toastId = toast.loading(t("profile.uploading_photo"));
 
@@ -519,10 +571,27 @@ function Profile() {
             {isEditing && (
               <label
                 className={`absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors ${
-                  isUploadingAvatar ? "pointer-events-none" : ""
+                  isUploadingAvatar || isAnalyzingAvatar ? "pointer-events-none" : ""
                 }`}
               >
-                {isUploadingAvatar ? (
+                {isAnalyzingAvatar ? (
+                  <div
+                    className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 p-2 text-center border-2 rounded-2xl animate-[scale-in_0.2s_ease-out]"
+                    style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+                  >
+                    <style>{`
+                      @keyframes pulseBorder {
+                        0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                        50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
+                        100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                      }
+                    `}</style>
+                    <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+                    <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                      🛡️ Escaneando...
+                    </span>
+                  </div>
+                ) : isUploadingAvatar ? (
                   <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 ) : (
                   <>
@@ -535,7 +604,7 @@ function Profile() {
                   accept="image/*"
                   onChange={handleFileChange}
                   className="hidden"
-                  disabled={isUploadingAvatar}
+                  disabled={isUploadingAvatar || isAnalyzingAvatar}
                 />
               </label>
             )}
@@ -673,14 +742,16 @@ function Profile() {
             {isEditing ? (
               <>
                 <button
+                  disabled={isUploadingAvatar || isAnalyzingAvatar}
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <X className="h-4 w-4" /> {t("profile.cancel")}
                 </button>
                 <button
+                  disabled={isUploadingAvatar || isAnalyzingAvatar}
                   onClick={handleSave}
-                  className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground flex items-center gap-2 text-sm hover:shadow-neon transition-all font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground flex items-center gap-2 text-sm hover:shadow-neon transition-all font-semibold cursor-pointer disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" /> {t("profile.save")}
                 </button>

@@ -622,7 +622,10 @@ export function TournamentHub() {
             </div>
 
             {/* Championship Bracket Visualization Layout */}
-            <div className="bg-background/25 border border-border/50 rounded-3xl p-4 md:p-8 overflow-x-auto">
+            <div
+              className="bg-background/25 border border-border/50 rounded-3xl p-4 md:p-8 overflow-x-auto"
+              id="tournament-hub-tour"
+            >
               <div className="min-w-[900px] flex justify-between items-center gap-6 py-6 relative">
                 {/* QUARTER FINALS */}
                 <div className="flex-1 space-y-8">

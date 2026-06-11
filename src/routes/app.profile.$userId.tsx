@@ -9,6 +9,8 @@ import {
   Users,
   UserPlus,
   UserMinus,
+  Star,
+  ShieldAlert,
 } from "lucide-react";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { apiClient } from "@/shared/api/apiClient";
@@ -20,6 +22,9 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, User } from "@/entities/types";
 import { BadgeEngine } from "@/components/BadgeEngine";
+import { ReviewModal } from "@/features/matchmaking/ui/ReviewModal";
+import { ReportModal } from "@/components/ReportModal";
+import { usePublicMatchStore } from "@/features/matchmaking/usePublicMatchStore";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/profile/$userId")({
@@ -69,6 +74,11 @@ function UserProfile() {
   const [profile, setProfile] = useState<User | null>(null);
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+
+  const getAverageRating = usePublicMatchStore((s) => s.getAverageRating);
+  const averageRating = getAverageRating(userId);
 
   const relationships = useSocialStore((state) => state.relationships);
   const follow = useSocialStore((state) => state.follow);
@@ -228,7 +238,7 @@ function UserProfile() {
             </div>
           </div>
           {!isMe && (
-            <div className="shrink-0 flex gap-2">
+            <div className="shrink-0 flex gap-2 flex-wrap">
               <button
                 onClick={handleFollowToggle}
                 className={`px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all hover:shadow-glow cursor-pointer ${
@@ -247,6 +257,27 @@ function UserProfile() {
                     <UserPlus className="h-4 w-4" /> {t("profile.follow")}
                   </>
                 )}
+              </button>
+
+              {/* Review button */}
+              <button
+                onClick={() => setReviewOpen(true)}
+                className="px-3 py-2 rounded-xl glass border border-border flex items-center gap-1.5 text-sm font-semibold hover:bg-accent transition-colors cursor-pointer"
+                id="profile-review-btn"
+                title="Valorar jugador"
+              >
+                <Star className="h-4 w-4 text-warning" />
+                {averageRating > 0 ? `${averageRating}★` : "Valorar"}
+              </button>
+
+              {/* Report button */}
+              <button
+                onClick={() => setReportOpen(true)}
+                className="px-3 py-2 rounded-xl glass border border-border flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
+                id="profile-report-btn"
+                title="Reportar usuario"
+              >
+                <ShieldAlert className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -273,6 +304,13 @@ function UserProfile() {
             label={t("profile.trust_score")}
             value={`${profile.trust_score}%`}
           />
+          {averageRating > 0 && (
+            <Stat
+              icon={<Star className="h-4 w-4 text-warning fill-warning" />}
+              label="Valoración"
+              value={`${averageRating}★`}
+            />
+          )}
           <Stat
             icon={<Users className="h-4 w-4 text-neon" />}
             label={t("profile.followers")}
@@ -417,6 +455,28 @@ function UserProfile() {
           </div>
         </div>
       </div>
+
+      {/* Review Modal */}
+      {profile && !isMe && (
+        <ReviewModal
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          targetUserId={userId}
+          targetUserName={profile.name}
+          targetUserAvatar={profile.avatar_url}
+        />
+      )}
+
+      {/* Report Modal */}
+      {profile && !isMe && (
+        <ReportModal
+          isOpen={reportOpen}
+          onClose={() => setReportOpen(false)}
+          reportedUserId={userId}
+          reportedUserName={profile.name}
+          reportedUserAvatar={profile.avatar_url}
+        />
+      )}
     </div>
   );
 }

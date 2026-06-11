@@ -359,7 +359,7 @@ export function SquadBuilder() {
     <div className="bg-gradient-card border border-border rounded-3xl p-5 md:p-6 shadow-card">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-border/40">
         <div>
-          <h3 className="font-heading text-2xl tracking-wide text-white flex items-center gap-2">
+          <h3 className="font-heading text-2xl tracking-wide text-foreground flex items-center gap-2">
             <Users className="h-5 w-5 text-neon" />
             Constructor de Escuadras
           </h3>
@@ -392,7 +392,9 @@ export function SquadBuilder() {
           <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
             Alineación
           </span>
-          <span className="text-lg font-black text-white mt-1">{totalSlotsCount} Jugadores</span>
+          <span className="text-lg font-black text-foreground mt-1">
+            {totalSlotsCount} Jugadores
+          </span>
         </div>
         <div className="bg-background/45 border border-border/60 rounded-2xl p-3 flex flex-col items-center justify-center text-center">
           <span className="text-[10px] text-[#39FF14] uppercase font-bold tracking-wider">
@@ -412,7 +414,7 @@ export function SquadBuilder() {
           <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
             Posiciones
           </span>
-          <span className="text-xs font-bold text-white truncate max-w-[150px] mt-1.5">
+          <span className="text-xs font-bold text-foreground truncate max-w-[150px] mt-1.5">
             {pendingSlotsCount === 0 ? "¡Formación Cubierta!" : `Falta: ${missingPositionsSummary}`}
           </span>
         </div>

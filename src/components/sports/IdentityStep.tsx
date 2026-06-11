@@ -4,6 +4,7 @@ import { Camera, Award } from "lucide-react";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { compressToWebP } from "@/shared/lib/imageUtils";
+import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 
 interface IdentityStepProps {
   userId: string;
@@ -40,6 +41,10 @@ export function IdentityStep({
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
+
+  // AI Moderation Hook and States
+  const { analyzeImage } = useNSFWJS();
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
   // 1. Silent Geolocation Fetch on Mount
   useEffect(() => {
@@ -78,15 +83,50 @@ export function IdentityStep({
     syncGoogleAvatar();
   }, [isDemoMode]);
 
-  // 3. Image Upload
+  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change
+  useEffect(() => {
+    return () => {
+      if (avatarUrl && avatarUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarUrl);
+      }
+    };
+  }, [avatarUrl]);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (isAnalyzingImage || isUploading) return;
 
     // Check size limit: 5MB
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));
       return;
+    }
+
+    setIsAnalyzingImage(true);
+    const scanToastId = toast.loading("🛡️ Analizando imagen con IA...");
+
+    try {
+      const isSafe = await analyzeImage(file);
+      toast.dismiss(scanToastId);
+      if (!isSafe) {
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
+        if (e.target) e.target.value = "";
+        setIsAnalyzingImage(false);
+        return;
+      }
+    } catch (err) {
+      console.error("AI Moderation error:", err);
+      toast.dismiss(scanToastId);
+      // Fallback gracefully: treat as safe
+    } finally {
+      setIsAnalyzingImage(false);
     }
 
     setIsUploading(true);
@@ -215,7 +255,7 @@ export function IdentityStep({
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-white">
+        <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground">
           {t("onboarding.step2_title", "Completa tu perfil")}
         </h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
@@ -229,25 +269,44 @@ export function IdentityStep({
       {/* Circular Glassmorphism Avatar Uploader */}
       <div className="flex flex-col items-center gap-3">
         <div
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => !isUploading && !isAnalyzingImage && fileInputRef.current?.click()}
           className={`h-32 w-32 rounded-full border-4 cursor-pointer relative overflow-hidden bg-background/30 flex items-center justify-center transition-all duration-300 ${getGenderGlowClass()}`}
         >
-          {avatarUrl ? (
+          {isAnalyzingImage ? (
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 z-10 p-2 text-center border-2 rounded-full"
+              style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+            >
+              <style>{`
+                @keyframes pulseBorder {
+                  0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                  50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
+                  100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                }
+              `}</style>
+              <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+              <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                🛡️ Escaneando...
+              </span>
+            </div>
+          ) : avatarUrl ? (
             <img src={avatarUrl} alt="Avatar Preview" className="h-full w-full object-cover" />
           ) : (
             renderFallbackAvatar()
           )}
 
-          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold transition-opacity">
-            {isUploading ? (
-              <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            ) : (
-              <>
-                <Camera className="h-5 w-5 mb-1" />
-                <span>{t("profile.change_photo", "Subir Foto")}</span>
-              </>
-            )}
-          </div>
+          {!isAnalyzingImage && (
+            <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold transition-opacity">
+              {isUploading ? (
+                <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <>
+                  <Camera className="h-5 w-5 mb-1" />
+                  <span>{t("profile.change_photo", "Subir Foto")}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <input
           type="file"
@@ -255,7 +314,7 @@ export function IdentityStep({
           onChange={handleFileChange}
           accept="image/*"
           className="hidden"
-          disabled={isUploading}
+          disabled={isUploading || isAnalyzingImage}
         />
         <span className="text-[10px] text-muted-foreground">
           {avatarUrl
@@ -294,7 +353,7 @@ export function IdentityStep({
               className={`py-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 gender === item.value
                   ? item.activeClass
-                  : "bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white"
+                  : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
               }`}
             >
               {item.label}
@@ -325,7 +384,7 @@ export function IdentityStep({
           rows={3}
           maxLength={150}
           id="onboarding-bio-input"
-          className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+          className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
         />
         <p className="text-[10px] text-muted-foreground leading-normal">
           {t(
@@ -384,7 +443,7 @@ export function IdentityStep({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving || isUploading}
+          disabled={isSaving || isUploading || isAnalyzingImage}
           className="flex-1 py-3.5 bg-gradient-primary text-primary-foreground font-bold rounded-xl shadow-glow transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer text-sm"
           id="onboarding-finish-btn"
         >
