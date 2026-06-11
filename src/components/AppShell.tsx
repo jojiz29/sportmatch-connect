@@ -163,7 +163,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow group-hover:scale-110 active:scale-95 transition-all duration-300">
                 <Zap className="h-6 w-6 text-white" />
               </div>
-              <span className="font-heading text-xl tracking-wide text-white">SportMatch</span>
+              <span className="font-heading text-xl tracking-wide text-foreground">SportMatch</span>
             </Link>
             <div className="flex items-center gap-1">
               <ThemeToggle />

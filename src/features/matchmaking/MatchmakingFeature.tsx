@@ -135,7 +135,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                 isFilterActive
                   ? "bg-[#39FF14] text-black border-transparent shadow-[0_0_10px_rgba(57,255,20,0.3)]"
-                  : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10"
+                  : "bg-muted border border-border text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
             >
               {sport}
@@ -200,7 +200,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           {Math.round(70 + (p.trust_score || 0) * 0.28)}% MATCH
                         </span>
                         {/* Top-Right: Grey Trust Score badge */}
-                        <span className="px-2.5 py-1 rounded-full bg-white/8 border border-white/12 text-white/80 text-[10px] font-semibold backdrop-blur-sm">
+                        <span className="px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground text-[10px] font-semibold backdrop-blur-sm">
                           {p.trust_score || 0}% Trust Score
                         </span>
                       </div>
@@ -217,7 +217,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           }}
                         >
                           {/* Inner avatar */}
-                          <div className="h-full w-full rounded-full overflow-hidden border-2 border-[#0D152D] bg-[#1A2544]">
+                          <div className="h-full w-full rounded-full overflow-hidden border-2 border-background bg-muted">
                             <Link
                               to="/app/profile/$userId"
                               params={{ userId: p.id }}

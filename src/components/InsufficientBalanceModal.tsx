@@ -30,7 +30,7 @@ export function InsufficientBalanceModal({
           <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 text-red-500 shadow-glow">
             <AlertCircle className="h-8 w-8" />
           </div>
-          <DialogTitle className="text-2xl font-extrabold text-white">
+          <DialogTitle className="text-2xl font-extrabold text-foreground">
             Saldo Insuficiente
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground mt-2">
@@ -41,7 +41,7 @@ export function InsufficientBalanceModal({
         <div className="my-6 p-4 rounded-2xl bg-muted/30 border border-border/50 space-y-3">
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Costo de la transacción:</span>
-            <span className="font-bold text-white flex items-center gap-1">
+            <span className="font-bold text-foreground flex items-center gap-1">
               {cost} <Coins className="h-4 w-4 text-neon" />
             </span>
           </div>

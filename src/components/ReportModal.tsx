@@ -85,7 +85,7 @@ export function ReportModal({ isOpen, onClose, targetId, targetType }: ReportMod
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none"
+              className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:border-red-500 focus:outline-none"
             >
               <option value="Spam">Spam o publicidad no deseada</option>
               <option value="Inapropiado">Contenido inapropiado / Sensible</option>
@@ -103,7 +103,7 @@ export function ReportModal({ isOpen, onClose, targetId, targetType }: ReportMod
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               placeholder="Explica brevemente por qué reportas este contenido..."
-              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:border-red-500 focus:outline-none resize-none h-24 placeholder:text-muted-foreground/60"
+              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:border-red-500 focus:outline-none resize-none h-24 placeholder:text-muted-foreground/60"
             />
           </div>
 

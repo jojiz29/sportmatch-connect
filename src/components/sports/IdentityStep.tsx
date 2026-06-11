@@ -255,7 +255,7 @@ export function IdentityStep({
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-white">
+        <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground">
           {t("onboarding.step2_title", "Completa tu perfil")}
         </h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
@@ -353,7 +353,7 @@ export function IdentityStep({
               className={`py-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 gender === item.value
                   ? item.activeClass
-                  : "bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white"
+                  : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
               }`}
             >
               {item.label}
@@ -384,7 +384,7 @@ export function IdentityStep({
           rows={3}
           maxLength={150}
           id="onboarding-bio-input"
-          className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+          className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
         />
         <p className="text-[10px] text-muted-foreground leading-normal">
           {t(

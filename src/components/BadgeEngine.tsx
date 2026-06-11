@@ -146,25 +146,27 @@ export function BadgeEngine({ sports_matrix, size = "md" }: BadgeEngineProps) {
 
         if (isAM) {
           // Bronze UI - Warm coppers, subtle bronze border
-          containerClass += "bg-[#CD7F32]/10 border-[#CD7F32]/40 text-[#df9a65]";
-          levelTagClass = "bg-[#CD7F32]/20 text-[#CD7F32]";
+          containerClass +=
+            "bg-[#CD7F32]/10 border-[#CD7F32]/40 text-[#8C521F] dark:text-[#df9a65]";
+          levelTagClass = "bg-[#CD7F32]/20 text-[#8C521F] dark:text-[#CD7F32]";
           badgeLevelText = "BRONCE";
         } else if (isINT) {
           // Silver/Steel UI - Metallic greys, clean steel border
-          containerClass += "bg-slate-400/10 border-slate-400/40 text-slate-300";
-          levelTagClass = "bg-slate-400/20 text-slate-300";
+          containerClass +=
+            "bg-slate-400/10 border-slate-400/40 text-slate-700 dark:text-slate-300";
+          levelTagClass = "bg-slate-400/20 text-slate-800 dark:text-slate-300";
           badgeLevelText = "PLATA";
         } else if (isADV) {
           // Gold UI - Glowing golds, drop shadow
           containerClass +=
-            "bg-[#D4AF37]/15 border-[#D4AF37]/50 text-[#F3E5AB] shadow-[0_0_12px_rgba(212,175,55,0.25)]";
-          levelTagClass = "bg-[#D4AF37]/25 text-[#D4AF37]";
+            "bg-[#D4AF37]/15 border-[#D4AF37]/50 text-[#856404] dark:text-[#F3E5AB] shadow-[0_0_12px_rgba(212,175,55,0.25)]";
+          levelTagClass = "bg-[#D4AF37]/25 text-[#856404] dark:text-[#D4AF37]";
           badgeLevelText = "ORO";
         } else if (isPRO) {
           // Pro UI - Electric animated borders
           containerClass +=
-            "bg-emerald-500/15 border-emerald-400/50 text-emerald-400 relative overflow-hidden animate-pulse-ring";
-          levelTagClass = "bg-emerald-400/30 text-emerald-300 animate-pulse";
+            "bg-emerald-500/15 border-emerald-400/50 text-emerald-700 dark:text-emerald-400 relative overflow-hidden animate-pulse-ring";
+          levelTagClass = "bg-emerald-400/30 text-emerald-800 dark:text-emerald-300 animate-pulse";
           badgeLevelText = "PRO";
           style = {
             animation: "border-pulse-neon 2s infinite alternate",

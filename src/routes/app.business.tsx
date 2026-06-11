@@ -281,7 +281,7 @@ function BusinessPage() {
         <div className="h-16 w-16 rounded-2xl bg-warning/10 border border-warning/30 grid place-items-center mb-6 animate-pulse">
           <ShieldAlert className="h-8 w-8 text-warning" />
         </div>
-        <h1 className="text-3xl font-extrabold text-white mb-2">Acceso Exclusivo B2B</h1>
+        <h1 className="text-3xl font-extrabold text-foreground mb-2">Acceso Exclusivo B2B</h1>
         <p className="text-muted-foreground max-w-md mb-8 text-sm">
           Esta sección está reservada para cuentas comerciales y patrocinadores de SportMatch.
         </p>

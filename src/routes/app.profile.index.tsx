@@ -556,7 +556,7 @@ function Profile() {
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-background/95 border-border shadow-2xl rounded-3xl p-6">
                     <DialogHeader>
-                      <DialogTitle className="text-xl font-black text-white">
+                      <DialogTitle className="text-xl font-black text-foreground">
                         {t("onboarding.step1_title", "Elige tus disciplinas")}
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">
