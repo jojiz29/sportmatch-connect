@@ -5,6 +5,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { MOCK_USERS } from "@/shared/api/apiClient";
 import { Match } from "@/entities/types";
+import { withTimeout } from "@/shared/api/timeoutHelper";
 
 export interface ChatMessage {
   id: string;
@@ -28,6 +29,7 @@ interface ChatState {
   chats: Chat[];
   activeConversationId: string | null;
   typingUsers: Record<string, boolean>;
+  lastDiagnostic: string;
   setActiveConversation: (id: string | null) => void;
   sendMessage: (
     chatId: string,
@@ -39,9 +41,11 @@ interface ChatState {
   createGroupChat: (name: string, targetUserIds: string[]) => Promise<string>;
   createMatchGroupChat: (match: Match) => void;
   initChat: () => void;
+  loadPersistentChats: () => Promise<void>;
   loadChatHistory: (chatId: string) => Promise<void>;
   sendTypingStatus: (isTyping: boolean) => void;
   markMessagesAsSeen: (chatId: string) => Promise<void>;
+  subscribeToAllChats: () => () => void;
 
   /**
    * Activates a Supabase Realtime subscription for the given chatId.
@@ -55,6 +59,12 @@ interface ChatState {
 // up when subscribeToChat is called again or on component unmount.
 let _activeChatChannel: ReturnType<typeof supabase.channel> | null = null;
 let _subscribedChatId: string | null = null;
+let _globalChatChannel: ReturnType<typeof supabase.channel> | null = null;
+
+function chatLog(event: string, context: Record<string, unknown> = {}) {
+  // Los logs de chat incluyen identificadores y etapas, nunca el contenido privado.
+  console.log(`[chat] ${event}`, context);
+}
 
 export const useChatStore = create<ChatState>()(
   persist(
@@ -62,9 +72,14 @@ export const useChatStore = create<ChatState>()(
       chats: [],
       activeConversationId: null,
       typingUsers: {},
+      lastDiagnostic: "Chat todavía no inicializado.",
 
       setActiveConversation: (id) => {
-        set({ activeConversationId: id, typingUsers: {} });
+        set({
+          activeConversationId: id,
+          typingUsers: {},
+          lastDiagnostic: id ? `Conversación activa: ${id}` : "Sin conversación activa.",
+        });
         if (id) {
           get().markMessagesAsSeen(id);
         }
@@ -116,26 +131,37 @@ export const useChatStore = create<ChatState>()(
           if (!currentActive || !userChats.some((c) => c.id === currentActive)) {
             set({ activeConversationId: userChats[0]?.id || null });
           }
+          if (!isDemo) {
+            void get().loadPersistentChats();
+          }
         } else {
           set({ activeConversationId: null });
         }
       },
 
       sendMessage: async (chatId, text, mediaUrl, metadata) => {
+        const normalizedText = text.trim();
+        // Esta validación protege todos los puntos de entrada, no solo el formulario del chat.
+        if (!chatId || (!normalizedText && !mediaUrl)) return;
+
         const user = useAuthStore.getState().user;
         const sender_id = user ? user.id : "unknown";
         const newMessageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         const isDemo =
           useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
+        const sendingMetadata = { ...metadata, delivery_status: "sending" };
+        const sentMetadata = { ...metadata, delivery_status: "sent" };
 
         const newMessage: ChatMessage = {
           id: newMessageId,
           sender_id,
-          text,
+          text: normalizedText,
           created_at: new Date().toISOString(),
           media_url: mediaUrl,
-          metadata,
+          metadata: sendingMetadata,
         };
+        chatLog("send:start", { chatId, messageId: newMessageId, hasMedia: Boolean(mediaUrl) });
+        set({ lastDiagnostic: `Enviando mensaje en ${chatId}...` });
 
         set((state) => {
           const updatedChats = state.chats.map((chat) => {
@@ -148,17 +174,80 @@ export const useChatStore = create<ChatState>()(
         });
 
         if (!isDemo) {
-          try {
-            await supabase.from("messages").insert({
+          const sendResult = await withTimeout(
+            chatId.startsWith("direct_")
+              ? supabase.rpc("send_direct_message", {
+                  target_conversation_id: chatId,
+                  client_message_id: newMessageId,
+                  message_text: normalizedText,
+                  message_media_url: mediaUrl || null,
+                  message_metadata: sentMetadata,
+                })
+              : supabase.from("messages").insert({
+                  id: newMessageId,
+                  chat_id: chatId,
+                  sender_id,
+                  text: normalizedText,
+                  media_url: mediaUrl || null,
+                  metadata: sentMetadata,
+                }),
+          );
+          let { error } = sendResult;
+
+          // Permite probar el chat aunque el RPC nuevo todavía no haya sido desplegado.
+          if (error && chatId.startsWith("direct_") && error.code === "PGRST202") {
+            console.warn("[chat] send:rpc-missing, intentando inserción directa", { chatId });
+            const fallback = await supabase.from("messages").insert({
               id: newMessageId,
               chat_id: chatId,
               sender_id,
-              text,
+              text: normalizedText,
               media_url: mediaUrl || null,
-              metadata: metadata || null,
+              metadata: sentMetadata,
             });
-          } catch (err) {
-            console.error("Failed to insert message in Supabase:", err);
+            error = fallback.error;
+          }
+
+          if (error) {
+            // Si Supabase rechaza el mensaje, retiramos la copia optimista local.
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === chatId
+                  ? {
+                      ...chat,
+                      messages: chat.messages.filter((message) => message.id !== newMessageId),
+                    }
+                  : chat,
+              ),
+              lastDiagnostic: `Error enviando en ${chatId}: ${error.message}`,
+            }));
+            console.error("[chat] send:error", { chatId, messageId: newMessageId, error });
+            throw error;
+          }
+          chatLog("send:confirmed", { chatId, messageId: newMessageId });
+          const confirmedMessage = { ...newMessage, metadata: sentMetadata };
+          set((state) => ({
+            chats: state.chats.map((chat) =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.map((message) =>
+                      message.id === newMessageId ? confirmedMessage : message,
+                    ),
+                  }
+                : chat,
+            ),
+            lastDiagnostic: `Mensaje confirmado en ${chatId}.`,
+          }));
+
+          // Broadcast entrega el mensaje inmediatamente al chat abierto del receptor.
+          // PostgreSQL Realtime continúa siendo la fuente persistente y evita pérdidas.
+          if (_subscribedChatId === chatId && _activeChatChannel) {
+            await _activeChatChannel.send({
+              type: "broadcast",
+              event: "new-message",
+              payload: { ...confirmedMessage, chat_id: chatId },
+            });
           }
         } else {
           // Simulate target reads the message after 2 seconds in Demo mode
@@ -187,23 +276,30 @@ export const useChatStore = create<ChatState>()(
       createChat: async (targetUserId) => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return "";
+        const isDemo = useAuthStore.getState().isDemoMode;
 
         const existingChat = get().chats.find(
           (c) =>
             c.current_players.length === 2 &&
             c.current_players.includes(currentUser.id) &&
-            c.current_players.includes(targetUserId),
+            c.current_players.includes(targetUserId) &&
+            (isDemo || c.id.startsWith("direct_")),
         );
 
         if (existingChat) {
-          set({ activeConversationId: existingChat.id });
+          chatLog("conversation:reuse", { chatId: existingChat.id, targetUserId });
+          set({
+            activeConversationId: existingChat.id,
+            lastDiagnostic: `Conversación persistente reutilizada: ${existingChat.id}`,
+          });
           return existingChat.id;
         }
 
         // Fetch target user profile dynamically from Supabase profiles
         let name = "Deportista";
         let avatar = "";
-        if (useAuthStore.getState().isDemoMode) {
+        let chatId = `chat_${Date.now()}`;
+        if (isDemo) {
           const targetUser = MOCK_USERS.find((u) => u.id === targetUserId);
           if (targetUser) {
             name = targetUser.name;
@@ -211,6 +307,15 @@ export const useChatStore = create<ChatState>()(
           }
         } else {
           try {
+            // Supabase devuelve siempre el mismo ID para una pareja con match mutuo.
+            const { data: persistentChatId, error: conversationError } = await supabase.rpc(
+              "create_direct_conversation",
+              { other_user_id: targetUserId },
+            );
+            if (conversationError) throw conversationError;
+            chatId = persistentChatId as string;
+            chatLog("conversation:created", { chatId, targetUserId });
+
             const { data } = await supabase
               .from("profiles")
               .select("name, avatar_url")
@@ -221,12 +326,13 @@ export const useChatStore = create<ChatState>()(
               avatar = data.avatar_url || "";
             }
           } catch (e) {
-            console.warn("Failed to fetch target user profile for chat:", e);
+            console.error("[chat] conversation:error", { targetUserId, error: e });
+            return "";
           }
         }
 
         const newChat: Chat = {
-          id: `chat_${Date.now()}`,
+          id: chatId,
           name,
           avatar,
           current_players: [currentUser.id, targetUserId],
@@ -237,9 +343,105 @@ export const useChatStore = create<ChatState>()(
         set((state) => ({
           chats: [...state.chats, newChat],
           activeConversationId: newChat.id,
+          lastDiagnostic: `Conversación persistente creada: ${newChat.id}`,
         }));
 
         return newChat.id;
+      },
+
+      loadPersistentChats: async () => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser || useAuthStore.getState().isDemoMode) return;
+
+        try {
+          const { data: ownRows, error: ownError } = await supabase
+            .from("conversation_participants")
+            .select("conversation_id")
+            .eq("user_id", currentUser.id);
+          if (ownError) throw ownError;
+
+          const conversationIds = (ownRows || []).map((row) => row.conversation_id);
+          chatLog("conversations:loaded", { count: conversationIds.length });
+          if (conversationIds.length === 0) {
+            set({
+              chats: [],
+              activeConversationId: null,
+              lastDiagnostic: "Supabase no devolvió conversaciones persistentes para este usuario.",
+            });
+            return;
+          }
+
+          const { data: participantRows, error: participantsError } = await supabase
+            .from("conversation_participants")
+            .select(
+              "conversation_id, user_id, profile:profiles!conversation_participants_user_id_fkey(name, avatar_url)",
+            )
+            .in("conversation_id", conversationIds)
+            .neq("user_id", currentUser.id);
+          if (participantsError) throw participantsError;
+
+          const persistentChats: Chat[] = (participantRows || []).map((row) => {
+            const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+            return {
+              id: row.conversation_id,
+              name: profile?.name || "Deportista",
+              avatar: profile?.avatar_url || "",
+              current_players: [currentUser.id, row.user_id],
+              messages: [],
+              unread: 0,
+            };
+          });
+
+          const { data: messageRows, error: messagesError } = await supabase
+            .from("messages")
+            .select("*")
+            .in("chat_id", conversationIds)
+            .order("created_at", { ascending: true });
+          if (messagesError) throw messagesError;
+
+          // Cargamos todos los historiales al entrar para que la lista se comporte
+          // como una bandeja de mensajería y no dependa de abrir cada conversación.
+          for (const chat of persistentChats) {
+            chat.messages = (messageRows || [])
+              .filter((row) => row.chat_id === chat.id)
+              .map((row) => ({
+                id: row.id,
+                sender_id: row.sender_id,
+                text: row.text,
+                created_at: row.created_at,
+                media_url: row.media_url || undefined,
+                metadata: row.metadata || undefined,
+              }));
+          }
+
+          set((state) => {
+            // Descartamos chats directos heredados con ID local porque cada navegador
+            // generaba uno diferente y nunca podían compartir mensajes.
+            const compatibleLocalChats = state.chats.filter(
+              (chat) =>
+                (chat.id.startsWith("chat_squad_") || chat.id.startsWith("chat_match_")) &&
+                !persistentChats.some((persistent) => persistent.id === chat.id),
+            );
+            const nextChats = [...persistentChats, ...compatibleLocalChats];
+            const activeStillExists = nextChats.some(
+              (chat) => chat.id === state.activeConversationId,
+            );
+            return {
+              chats: nextChats,
+              activeConversationId: activeStillExists
+                ? state.activeConversationId
+                : persistentChats[0]?.id || null,
+              lastDiagnostic: `${persistentChats.length} conversación(es) persistente(s) cargada(s).`,
+            };
+          });
+        } catch (error) {
+          console.error("[chat] conversations:error", { error });
+          set({
+            lastDiagnostic: `Error cargando conversaciones: ${
+              error instanceof Error ? error.message : "respuesta desconocida"
+            }`,
+          });
+        }
       },
 
       createGroupChat: async (name, targetUserIds) => {
@@ -329,6 +531,7 @@ export const useChatStore = create<ChatState>()(
             .order("created_at", { ascending: true });
 
           if (error) throw error;
+          chatLog("history:loaded", { chatId, count: data?.length || 0 });
 
           if (data) {
             const mappedMessages: ChatMessage[] = data.map(
@@ -356,7 +559,7 @@ export const useChatStore = create<ChatState>()(
             }));
           }
         } catch (e) {
-          console.warn("Failed to load chat history from database:", e);
+          console.error("[chat] history:error", { chatId, error: e });
         }
       },
 
@@ -415,6 +618,24 @@ export const useChatStore = create<ChatState>()(
 
             await Promise.all(updates);
           }
+
+          // Reflejamos la lectura de inmediato para el receptor. El evento UPDATE de
+          // Realtime actualizará los dobles checks en la sesión del remitente.
+          set((state) => ({
+            chats: state.chats.map((chat) =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    unread: 0,
+                    messages: chat.messages.map((message) =>
+                      message.sender_id !== user.id
+                        ? { ...message, metadata: { ...message.metadata, seen: true } }
+                        : message,
+                    ),
+                  }
+                : chat,
+            ),
+          }));
         } catch (e) {
           console.warn("Failed to mark messages as seen:", e);
         }
@@ -447,102 +668,22 @@ export const useChatStore = create<ChatState>()(
           _subscribedChatId = null;
         }
 
-        const currentUser = useAuthStore.getState().user;
-
-        // The channel name is keyed on chatId to avoid duplicates across remounts
+        // La conversación activa conserva un canal separado para eventos efímeros,
+        // como el indicador "escribiendo".
         const channel = supabase
           .channel(`chat-messages-${chatId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "INSERT",
-              schema: "public",
-              table: "messages",
-              filter: `chat_id=eq.${chatId}`,
-            },
-            (payload) => {
-              const row = payload.new as {
-                id: string;
-                chat_id: string;
-                sender_id: string;
-                text: string;
-                created_at: string;
-                media_url?: string;
-                metadata?: Record<string, unknown>;
-              };
+          .on("broadcast", { event: "new-message" }, ({ payload }) => {
+            const row = payload as ChatMessage & { chat_id: string };
+            if (row.sender_id === useAuthStore.getState().user?.id) return;
 
-              // Skip messages we sent ourselves — already added optimistically
-              if (row.sender_id === currentUser?.id) return;
-
-              const incomingMsg: ChatMessage = {
-                id: row.id,
-                sender_id: row.sender_id,
-                text: row.text,
-                created_at: row.created_at,
-                media_url: row.media_url || undefined,
-                metadata: row.metadata || undefined,
-              };
-
-              set((state) => ({
-                chats: state.chats.map((chat) => {
-                  if (chat.id !== chatId) return chat;
-                  // Deduplicate by ID
-                  if (chat.messages.some((m) => m.id === incomingMsg.id)) return chat;
-                  return {
-                    ...chat,
-                    messages: [...chat.messages, incomingMsg],
-                    // Increment unread only when this isn't the active conversation
-                    unread:
-                      useChatStore.getState().activeConversationId !== chatId ? chat.unread + 1 : 0,
-                  };
-                }),
-              }));
-
-              // If active conversation, mark as seen
-              if (useChatStore.getState().activeConversationId === chatId) {
-                get().markMessagesAsSeen(chatId);
-              }
-            },
-          )
-          .on(
-            "postgres_changes",
-            {
-              event: "UPDATE",
-              schema: "public",
-              table: "messages",
-              filter: `chat_id=eq.${chatId}`,
-            },
-            (payload) => {
-              const row = payload.new as {
-                id: string;
-                chat_id: string;
-                sender_id: string;
-                text: string;
-                created_at: string;
-                media_url?: string;
-                metadata?: Record<string, unknown>;
-              };
-
-              const updatedMsg: ChatMessage = {
-                id: row.id,
-                sender_id: row.sender_id,
-                text: row.text,
-                created_at: row.created_at,
-                media_url: row.media_url || undefined,
-                metadata: row.metadata || undefined,
-              };
-
-              set((state) => ({
-                chats: state.chats.map((chat) => {
-                  if (chat.id !== chatId) return chat;
-                  return {
-                    ...chat,
-                    messages: chat.messages.map((m) => (m.id === updatedMsg.id ? updatedMsg : m)),
-                  };
-                }),
-              }));
-            },
-          )
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === row.chat_id && !chat.messages.some((message) => message.id === row.id)
+                  ? { ...chat, messages: [...chat.messages, row] }
+                  : chat,
+              ),
+            }));
+          })
           .on("broadcast", { event: "typing" }, ({ payload }) => {
             const { userId, isTyping } = payload;
             set((state) => {
@@ -555,7 +696,15 @@ export const useChatStore = create<ChatState>()(
               return { typingUsers: updated };
             });
           })
-          .subscribe();
+          .subscribe((status, error) => {
+            if (status === "SUBSCRIBED") {
+              chatLog("realtime:subscribed", { chatId });
+              set({ lastDiagnostic: `Realtime conectado a ${chatId}.` });
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.error("[chat] realtime:error", { chatId, status, error });
+              set({ lastDiagnostic: `Realtime ${status.toLowerCase()} en ${chatId}.` });
+            }
+          });
 
         _activeChatChannel = channel;
         _subscribedChatId = chatId;
@@ -566,6 +715,98 @@ export const useChatStore = create<ChatState>()(
           _activeChatChannel = null;
           _subscribedChatId = null;
           set({ typingUsers: {} });
+        };
+      },
+
+      subscribeToAllChats: () => {
+        if (useAuthStore.getState().isDemoMode) return () => {};
+        if (_globalChatChannel) return () => {};
+
+        const currentUser = useAuthStore.getState().user;
+        const channel = supabase
+          .channel(`user-chat-inbox-${currentUser?.id || "anonymous"}`)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "messages" },
+            (payload) => {
+              const row = payload.new as {
+                id: string;
+                chat_id: string;
+                sender_id: string;
+                text: string;
+                created_at: string;
+                media_url?: string;
+                metadata?: Record<string, unknown>;
+              };
+              const incomingMessage: ChatMessage = {
+                id: row.id,
+                sender_id: row.sender_id,
+                text: row.text,
+                created_at: row.created_at,
+                media_url: row.media_url || undefined,
+                metadata: row.metadata || undefined,
+              };
+
+              chatLog("realtime:message-received", {
+                chatId: row.chat_id,
+                messageId: row.id,
+              });
+              set((state) => ({
+                chats: state.chats.map((chat) => {
+                  if (chat.id !== row.chat_id || chat.messages.some((m) => m.id === row.id)) {
+                    return chat;
+                  }
+                  return {
+                    ...chat,
+                    messages: [...chat.messages, incomingMessage],
+                    unread:
+                      row.sender_id !== currentUser?.id &&
+                      state.activeConversationId !== row.chat_id
+                        ? chat.unread + 1
+                        : chat.unread,
+                  };
+                }),
+                lastDiagnostic: `Mensaje recibido en vivo en ${row.chat_id}.`,
+              }));
+
+              if (row.sender_id !== currentUser?.id && get().activeConversationId === row.chat_id) {
+                void get().markMessagesAsSeen(row.chat_id);
+              }
+            },
+          )
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "messages" },
+            (payload) => {
+              const row = payload.new as ChatMessage & { chat_id: string };
+              set((state) => ({
+                chats: state.chats.map((chat) =>
+                  chat.id === row.chat_id
+                    ? {
+                        ...chat,
+                        messages: chat.messages.map((message) =>
+                          message.id === row.id ? { ...message, ...row } : message,
+                        ),
+                      }
+                    : chat,
+                ),
+              }));
+            },
+          )
+          .subscribe((status, error) => {
+            if (status === "SUBSCRIBED") {
+              chatLog("realtime:inbox-subscribed", { userId: currentUser?.id });
+              set({ lastDiagnostic: "Bandeja conectada en tiempo real." });
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.error("[chat] realtime:inbox-error", { status, error });
+              set({ lastDiagnostic: `Bandeja Realtime: ${status.toLowerCase()}.` });
+            }
+          });
+
+        _globalChatChannel = channel;
+        return () => {
+          supabase.removeChannel(channel);
+          if (_globalChatChannel === channel) _globalChatChannel = null;
         };
       },
     }),
@@ -593,6 +834,10 @@ useAuthStore.subscribe((state) => {
       supabase.removeChannel(_activeChatChannel);
       _activeChatChannel = null;
       _subscribedChatId = null;
+    }
+    if (_globalChatChannel) {
+      supabase.removeChannel(_globalChatChannel);
+      _globalChatChannel = null;
     }
 
     useChatStore.getState().initChat();
