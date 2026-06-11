@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Star, MapPin, Activity, Award, Users } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -10,6 +10,7 @@ import { supabase } from "@/shared/api/supabase";
 
 import { useAuthStore } from "@/entities/user/useAuth";
 import { MOCK_USERS } from "@/shared/api/apiClient";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/match/$userId")({
   head: ({ loaderData }: { loaderData?: User }) => {
@@ -97,8 +98,9 @@ function UserProfileDetail() {
                 alt={user.name}
                 className="h-32 w-32 rounded-full mx-auto border-4 border-card shadow-lg mb-4 bg-muted"
               />
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-2xl font-bold flex items-center justify-center gap-1.5">
                 {user.name}, {user.age}
+                {user.dni_verificado && <VerifiedBadge />}
               </h1>
               <p className="text-muted-foreground text-sm mb-1 flex items-center justify-center gap-1">
                 <MapPin className="h-4 w-4" /> {user.city} ({user.distance_km || 0} km)

@@ -81,17 +81,39 @@ export interface User {
   following_count?: number;
   user_role?: "PLAYER" | "BUSINESS";
   company_name?: string;
-  business_category?: "Canchas" | "Gym" | "Tienda" | "Bebidas";
+  business_category?:
+    | "Canchas"
+    | "Gym"
+    | "Tienda"
+    | "Bebidas"
+    | "Academia"
+    | "Nutricionista"
+    | "Fisioterapia"
+    | "Torneos"
+    | "Marcas"
+    | "Patrocinador";
   is_sponsored?: boolean;
   is_admin?: boolean;
   sport_preferences?: SportPreferences;
+  // B2B commercial fields
+  images?: string[];
+  address?: string;
+  district?: string;
+  operating_hours?: string[];
+  whatsapp?: string;
+  instagram?: string;
+  website?: string;
   user_sports?: { sport_id: string; level: 1 | 2 | 3 }[];
   onboarding_completed?: boolean;
   push_token?: string | null;
   gender?: "Masculino" | "Femenino" | "Mixto";
+  dni_verificado?: boolean;
+  dni_hash?: string | null;
+  dni_intentos?: number;
+  fecha_verificacion?: string | null;
 }
 
-export interface Court {
+export interface Venue {
   id: string; // UUID
   created_at: string;
   name: string;
@@ -112,7 +134,11 @@ export interface Court {
   max_players?: number; // Added for dynamic cost calculation
   operating_hours?: string[]; // Added for unique court schedules
   district?: string;
+  description?: string;
 }
+
+// Backward compatibility alias for parts of the app outside the BUSINESS flow
+export type Court = Venue;
 
 export interface Match {
   id: string; // UUID
@@ -235,5 +261,34 @@ export interface CommentReaction {
   comment_id: string;
   user_id: string;
   reaction_type: ReactionType;
+  created_at: string;
+}
+
+export interface Ad {
+  id: string;
+  business_id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  category:
+    | "Canchas"
+    | "Gym"
+    | "Academia"
+    | "Tienda"
+    | "Nutricionista"
+    | "Fisioterapia"
+    | "Torneos"
+    | "Marcas"
+    | "Patrocinador"
+    | "Bebidas";
+  location: string;
+  district?: string;
+  valid_until: string; // ISO 8601 string
+  contact_phone: string; // WhatsApp link or phone
+  views: number;
+  clicks: number;
+  contacts: number;
+  is_featured: boolean; // placeholder for monetization
+  is_premium: boolean; // placeholder for monetization
   created_at: string;
 }

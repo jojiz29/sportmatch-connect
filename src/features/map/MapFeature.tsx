@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
-import { Court, Match, User } from "@/entities/types";
+import { Venue, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useTranslation } from "react-i18next";
+// useTranslation removed as it is not used
 
 // Cache for Leaflet court icons to prevent memory leaks and GC overhead
 const courtIconCache = new Map<string, L.DivIcon>();
@@ -71,28 +71,7 @@ const createCourtIcon = (sport: string, isSponsored?: boolean) => {
   return icon;
 };
 
-const playerIcon = L.divIcon({
-  html: `
-    <div style="
-      display: flex;
-      width: 32px;
-      height: 32px;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #00f2fe, #4facfe);
-      border: 2px solid #ffffff;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0, 242, 254, 0.7);
-      font-size: 14px;
-    ">
-      👤
-    </div>
-  `,
-  className: "custom-player-marker-wrapper",
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-  popupAnchor: [0, -16],
-});
+// playerIcon removed as it is not used
 
 const businessIconCache = new Map<string, L.DivIcon>();
 
@@ -102,8 +81,16 @@ const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
     return businessIconCache.get(key)!;
   }
 
-  const emoji =
-    category === "Canchas" ? "🏟️" : category === "Gym" ? "🏋️" : category === "Tienda" ? "🛍️" : "🥤";
+  let emoji = "🥤";
+  if (category === "Canchas") emoji = "🏟️";
+  else if (category === "Gym") emoji = "🏋️";
+  else if (category === "Tienda") emoji = "🛍️";
+  else if (category === "Academia") emoji = "🎓";
+  else if (category === "Nutricionista") emoji = "🍎";
+  else if (category === "Fisioterapia") emoji = "💆";
+  else if (category === "Torneos") emoji = "🏆";
+  else if (category === "Marcas") emoji = "🏷️";
+  else if (category === "Patrocinador") emoji = "⭐";
 
   const border = isSponsored ? "2.5px solid #fbbf24" : "2px solid #ffffff";
   const shadow = isSponsored
@@ -141,14 +128,20 @@ const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
 };
 
 interface PopupContentProps {
-  court: Court;
-  activeMatches: number;
-  onBookCourt?: (court: Court) => void;
-  onViewCourt: (courtId: string) => void;
-  t: (key: string, fallback: string) => string;
+  venue: Venue;
+  onBookCourt?: (venue: Venue) => void;
+  onViewCourt: (venueId: string) => void;
+  owner?: User;
+  onViewCommercialSheet?: (business: User) => void;
 }
 
-function PopupContent({ court, activeMatches, onBookCourt, onViewCourt, t }: PopupContentProps) {
+function PopupContent({
+  venue,
+  onBookCourt,
+  onViewCourt,
+  owner,
+  onViewCommercialSheet,
+}: PopupContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -168,11 +161,15 @@ function PopupContent({ court, activeMatches, onBookCourt, onViewCourt, t }: Pop
       if (action === "book") {
         e.preventDefault();
         e.stopPropagation();
-        onBookCourt?.(court);
+        onBookCourt?.(venue);
       } else if (action === "view") {
         e.preventDefault();
         e.stopPropagation();
-        onViewCourt(court.id);
+        onViewCourt(venue.id);
+      } else if (action === "profile") {
+        e.preventDefault();
+        e.stopPropagation();
+        if (owner) onViewCommercialSheet?.(owner);
       }
     };
 
@@ -180,45 +177,88 @@ function PopupContent({ court, activeMatches, onBookCourt, onViewCourt, t }: Pop
     return () => {
       el.removeEventListener("click", handleNativeClick);
     };
-  }, [court, onBookCourt, onViewCourt]);
+  }, [venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet]);
 
   return (
-    <div ref={containerRef} className="p-1 min-w-[150px] font-sans">
-      {court.is_sponsored && (
-        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-1.5">
-          ⭐ Cancha Patrocinada
+    <div ref={containerRef} className="p-1 min-w-[200px] max-w-[240px] font-sans text-left">
+      {venue.image_url && (
+        <div className="h-24 w-full rounded-lg overflow-hidden mb-2 bg-muted border border-border/30">
+          <img src={venue.image_url} alt={venue.name} className="w-full h-full object-cover" />
+        </div>
+      )}
+      {venue.is_sponsored && (
+        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-1.5">
+          ⭐ Sede Premium
         </span>
       )}
-      <div className="font-bold text-sm text-foreground mb-0.5">{court.name}</div>
-      <div className="text-xs text-muted-foreground mb-1.5">
-        {court.sport} · S/{court.price_per_hour}/h
+      <div className="font-extrabold text-sm text-foreground mb-0.5">{venue.name}</div>
+      {venue.description && (
+        <p className="text-[11px] text-muted-foreground line-clamp-2 mb-1.5 leading-snug">
+          {venue.description}
+        </p>
+      )}
+      <div className="text-[11px] text-muted-foreground mb-2 leading-tight">
+        📍 {venue.address || "Dirección no especificada"}
+        {venue.district && ` · ${venue.district}`}
       </div>
-      <div className="text-xs font-semibold text-neon flex items-center gap-1 mb-3">
-        🔥 {activeMatches} {activeMatches === 1 ? "partido activo" : "partidos activos"}
-      </div>
-      <button
-        type="button"
-        data-action="book"
-        className="block w-full text-center px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-glow mb-2 cursor-pointer border-0"
-      >
-        RESERVAR AHORA
-      </button>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          data-action="view"
-          className="block text-center px-2 py-1.5 rounded-xl bg-accent hover:bg-accent/80 text-foreground text-[10px] font-bold transition-all border-0 cursor-pointer"
-        >
-          {t("map.view_court", "Ver Cancha")}
-        </button>
+      {venue.operating_hours && venue.operating_hours.length > 0 && (
+        <div className="text-[10px] text-neon font-semibold mb-2 flex items-center gap-1">
+          <span>🕒</span> Horario: {venue.operating_hours[0]}
+        </div>
+      )}
+
+      {owner && (
+        <div className="border-t border-border/40 pt-2 mt-2 mb-2">
+          <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mb-1.5">
+            Administrado por:
+          </div>
+          <div className="flex items-center gap-2 mb-2.5">
+            {owner.avatar_url && (
+              <img
+                src={owner.avatar_url}
+                alt={owner.company_name || owner.name}
+                className="h-6 w-6 rounded-full object-cover shrink-0 border border-border/40"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold truncate text-foreground">
+                {owner.company_name || owner.name}
+              </div>
+              <div className="text-[9px] text-muted-foreground">{owner.business_category}</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            data-action="profile"
+            className="w-full text-center py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-[10px] font-bold hover:scale-[1.02] transition-transform cursor-pointer border-0 mb-1.5 shadow-glow"
+          >
+            🏢 VER FICHA COMERCIAL
+          </button>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {owner?.whatsapp && (
+          <a
+            href={`https://wa.me/${owner.whatsapp.replace(/\D/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 text-center py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-all decoration-none"
+            style={{ textDecoration: "none" }}
+          >
+            💬 WhatsApp
+          </a>
+        )}
         <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${court.lat},${court.lng}`}
+          href={`https://www.google.com/maps/dir/?api=1&destination=${venue.lat},${venue.lng}`}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="block text-center px-2 py-1.5 rounded-xl bg-gradient-neon text-neon-foreground text-[10px] font-bold hover:scale-[1.02] transition-all shadow-neon"
+          className="flex-1 text-center py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-[10px] font-bold transition-all decoration-none"
+          style={{ textDecoration: "none" }}
         >
-          Cómo llegar
+          📍 Cómo llegar
         </a>
       </div>
     </div>
@@ -227,10 +267,10 @@ function PopupContent({ court, activeMatches, onBookCourt, onViewCourt, t }: Pop
 
 interface BusinessPopupProps {
   player: User;
-  onNavigateWallet: () => void;
+  onViewCommercialSheet?: (business: User) => void;
 }
 
-function BusinessPopup({ player, onNavigateWallet }: BusinessPopupProps) {
+function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
   const isBusiness = player.user_role === "BUSINESS";
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -243,14 +283,14 @@ function BusinessPopup({ player, onNavigateWallet }: BusinessPopupProps) {
 
     const handleNativeClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const clickable = target.closest("[data-action]");
-      if (!clickable) return;
+      const btn = target.closest("button");
+      if (!btn) return;
 
-      const action = clickable.getAttribute("data-action");
-      if (action === "catalog") {
+      const action = btn.getAttribute("data-action");
+      if (action === "profile") {
         e.preventDefault();
         e.stopPropagation();
-        onNavigateWallet();
+        onViewCommercialSheet?.(player);
       }
     };
 
@@ -258,10 +298,10 @@ function BusinessPopup({ player, onNavigateWallet }: BusinessPopupProps) {
     return () => {
       el.removeEventListener("click", handleNativeClick);
     };
-  }, [onNavigateWallet]);
+  }, [player, onViewCommercialSheet]);
 
   return (
-    <div ref={containerRef} className="p-1 font-sans min-w-[150px]">
+    <div ref={containerRef} className="p-1 font-sans min-w-[150px] text-left">
       {isBusiness && player.is_sponsored && (
         <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-1.5 animate-pulse">
           ⭐ Sponsor Premium
@@ -270,16 +310,18 @@ function BusinessPopup({ player, onNavigateWallet }: BusinessPopupProps) {
       <div className="font-bold text-sm text-foreground">{player.company_name || player.name}</div>
       <div className="text-xs text-muted-foreground mt-0.5">
         {isBusiness ? `${player.business_category} · ` : ""}
-        {player.distance_km !== undefined ? `${player.distance_km} km de distancia` : "Cerca de ti"}
+        {player.distance_km !== undefined ? `${player.distance_km.toFixed(1)} km` : "Cerca de ti"}
       </div>
       {isBusiness && (
-        <button
-          type="button"
-          data-action="catalog"
-          className="block w-full text-center px-2 py-1.5 mt-3 rounded-xl bg-gradient-primary text-primary-foreground text-[10px] font-bold hover:scale-[1.02] transition-transform cursor-pointer border-0"
-        >
-          Ver Catálogo
-        </button>
+        <div className="flex flex-col gap-1.5 mt-3">
+          <button
+            type="button"
+            data-action="profile"
+            className="block w-full text-center px-2 py-1.5 rounded-xl bg-gradient-primary text-primary-foreground text-[10px] font-bold hover:scale-[1.02] transition-transform cursor-pointer border-0"
+          >
+            Ver Ficha Comercial
+          </button>
+        </div>
       )}
     </div>
   );
@@ -299,19 +341,18 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 }
 
 export function MapFeature({
-  courts,
+  venues,
   players,
-  matches,
   onBookCourt,
   selectedDistrictCenter,
+  onViewCommercialSheet,
 }: {
-  courts: Court[];
+  venues: Venue[];
   players: User[];
-  matches: Match[];
-  onBookCourt?: (court: Court) => void;
+  onBookCourt?: (venue: Venue) => void;
   selectedDistrictCenter?: [number, number] | null;
+  onViewCommercialSheet?: (business: User) => void;
 }) {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
 
@@ -339,13 +380,9 @@ export function MapFeature({
     [navigate],
   );
 
-  const onNavigateWallet = useCallback(() => {
-    navigate({ to: "/app/wallet", search: { buyItem: undefined } });
-  }, [navigate]);
-
-  const courtMarkers = useMemo(() => {
-    return courts.map((c) => {
-      const activeMatches = matches.filter((m) => m.court_id === c.id).length;
+  const venueMarkers = useMemo(() => {
+    return venues.map((c) => {
+      const owner = players.find((p) => p.id === c.owner_id);
       return (
         <Marker
           key={`${c.id}-${c.name}-${c.district}`}
@@ -354,36 +391,36 @@ export function MapFeature({
         >
           <Popup>
             <PopupContent
-              court={c}
-              activeMatches={activeMatches}
+              venue={c}
               onBookCourt={onBookCourt}
               onViewCourt={onViewCourt}
-              t={t}
+              owner={owner}
+              onViewCommercialSheet={onViewCommercialSheet}
             />
           </Popup>
         </Marker>
       );
     });
-  }, [courts, matches, t, onBookCourt, onViewCourt]);
+  }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet]);
 
   const matchMarkers = useMemo(() => {
     return players.map((m) => {
       if (!m.last_location_lat || !m.last_location_lng) return null;
 
       const isBusiness = m.user_role === "BUSINESS";
-      const icon = isBusiness
-        ? createBusinessIcon(m.is_sponsored, m.business_category)
-        : playerIcon;
+      if (!isBusiness) return null;
+
+      const icon = createBusinessIcon(m.is_sponsored, m.business_category);
 
       return (
         <Marker key={m.id} position={[m.last_location_lat, m.last_location_lng]} icon={icon}>
           <Popup>
-            <BusinessPopup player={m} onNavigateWallet={onNavigateWallet} />
+            <BusinessPopup player={m} onViewCommercialSheet={onViewCommercialSheet} />
           </Popup>
         </Marker>
       );
     });
-  }, [players, onNavigateWallet]);
+  }, [players, onViewCommercialSheet]);
 
   if (!mounted || typeof window === "undefined") {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;
@@ -422,8 +459,8 @@ export function MapFeature({
           />
         )}
 
-        {courtMarkers}
         {matchMarkers}
+        {venueMarkers}
       </MapContainer>
     </div>
   );

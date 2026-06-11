@@ -116,7 +116,17 @@ function RegisterPage() {
     initialValues: {
       fullName: "",
       companyName: "",
-      category: "Tienda" as "Canchas" | "Gym" | "Tienda" | "Bebidas",
+      category: "Tienda" as
+        | "Canchas"
+        | "Gym"
+        | "Academia"
+        | "Tienda"
+        | "Nutricionista"
+        | "Fisioterapia"
+        | "Torneos"
+        | "Marcas"
+        | "Patrocinador"
+        | "Bebidas",
       email: "",
       password: "",
     },
@@ -298,10 +308,16 @@ function RegisterPage() {
                   className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
                   id="register-business-category"
                 >
-                  <option value="Tienda">{t("register.cat_shop")}</option>
                   <option value="Canchas">{t("register.cat_courts")}</option>
                   <option value="Gym">{t("register.cat_gym")}</option>
+                  <option value="Academia">{t("register.cat_academy")}</option>
+                  <option value="Fisioterapia">{t("register.cat_physio")}</option>
+                  <option value="Nutricionista">{t("register.cat_nutrition")}</option>
+                  <option value="Tienda">{t("register.cat_shop")}</option>
                   <option value="Bebidas">{t("register.cat_beverages")}</option>
+                  <option value="Torneos">{t("register.cat_events")}</option>
+                  <option value="Marcas">{t("register.cat_brands")}</option>
+                  <option value="Patrocinador">{t("register.cat_sponsor")}</option>
                 </select>
               </div>
 

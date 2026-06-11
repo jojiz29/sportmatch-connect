@@ -6,52 +6,50 @@ import { backendApi } from "@/shared/api/backendApi";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { searchNearbyCourts, calculateDistance } from "@/shared/api/geoService";
-import { Court, Match } from "@/entities/types";
-import { CourtCard } from "@/components/CourtCard";
-import { BookingModal } from "@/components/BookingModal";
+import { calculateDistance } from "@/shared/api/geoService";
+import { Match, User } from "@/entities/types";
+import { CommercialSheetModal } from "@/features/business/ui/CommercialSheetModal";
 import { useTranslation } from "react-i18next";
+import { MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/app/map")({
   head: () => ({
     meta: [
-      { title: "Mapa en vivo — SportMatch" },
-      { name: "description", content: "Encuentra jugadores y canchas activas cerca tuyo." },
-      { property: "og:title", content: "SportMatch - Mapa en vivo" },
+      { title: "Mapa Comercial — SportMatch" },
+      {
+        name: "description",
+        content: "Encuentra establecimientos y centros deportivos cerca de ti.",
+      },
+      { property: "og:title", content: "SportMatch - Mapa Comercial" },
       {
         property: "og:description",
-        content: "Descubre quién está jugando cerca tuyo ahora mismo.",
+        content: "Descubre gimnasios, academias, centros de nutrición y fisioterapia cerca de ti.",
       },
       { property: "og:image", content: "https://sportmatch.app/og-map.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   loader: async () => {
-    // If in demo mode, bypass backend fetch immediately for zero-lag (Task 2.4 / 2.5)
+    // If in demo mode, bypass backend fetch immediately for zero-lag
     if (useAuthStore.getState().isDemoMode) {
-      const [courts, players, matches] = await Promise.all([
-        apiClient.courts.getAll().catch(() => []),
-        apiClient.users.getMatches().catch(() => []),
+      const [matches, businesses, venues] = await Promise.all([
         apiClient.matches.getAll().catch(() => []),
+        apiClient.users.getBusinesses().catch(() => []),
+        apiClient.venues.getAll().catch(() => []),
       ]);
-      return { courts, players, matches };
+      return { matches, businesses, venues };
     }
 
-    const [backendCourts, backendMatches] = await Promise.all([
-      backendApi.courts.getAll().catch(() => null),
-      backendApi.matches.getAll().catch(() => null),
-    ]);
+    const [backendMatches] = await Promise.all([backendApi.matches.getAll().catch(() => null)]);
 
-    const [courts, players, matches] = await Promise.all([
-      backendCourts && backendCourts.data
-        ? Promise.resolve(backendCourts.data as Court[])
-        : apiClient.courts.getAll().catch(() => []),
-      apiClient.users.getMatches().catch(() => []),
+    const [matches, businesses, venues] = await Promise.all([
       backendMatches && backendMatches.data
         ? Promise.resolve(backendMatches.data as Match[])
         : apiClient.matches.getAll().catch(() => []),
+      apiClient.users.getBusinesses().catch(() => []),
+      apiClient.venues.getAll().catch(() => []),
     ]);
-    return { courts, players, matches };
+    return { matches, businesses, venues };
   },
   pendingComponent: MapPendingComponent,
   component: MapPage,
@@ -94,35 +92,77 @@ const DISTRICT_CENTROIDS: Record<string, [number, number]> = {
   Magdalena: [-12.0911, -77.0694],
 };
 
+function BusinessListCard({
+  business,
+  onClick,
+  distance,
+}: {
+  business: User;
+  onClick: () => void;
+  distance?: number;
+}) {
+  let emoji = "🥤";
+  const cat = business.business_category;
+  if (cat === "Canchas") emoji = "🏟️";
+  else if (cat === "Gym") emoji = "🏋️";
+  else if (cat === "Tienda") emoji = "🛍️";
+  else if (cat === "Academia") emoji = "🎓";
+  else if (cat === "Nutricionista") emoji = "🍎";
+  else if (cat === "Fisioterapia") emoji = "💆";
+  else if (cat === "Torneos") emoji = "🏆";
+  else if (cat === "Marcas") emoji = "🏷️";
+  else if (cat === "Patrocinador") emoji = "⭐";
+
+  return (
+    <div
+      onClick={onClick}
+      className={`flex gap-3 items-center p-3 rounded-2xl cursor-pointer transition-all hover:bg-accent/40 bg-card border ${
+        business.is_sponsored ? "border-amber-500/50 shadow-neon-gold" : "border-border/50"
+      }`}
+    >
+      <div className="h-12 w-12 rounded-xl bg-accent/40 flex items-center justify-center text-xl shrink-0 border border-border/30 overflow-hidden">
+        {business.avatar_url ? (
+          <img
+            src={business.avatar_url}
+            alt={business.company_name || business.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span>{emoji}</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <div className="text-sm font-semibold truncate text-foreground flex items-center gap-1.5">
+          {business.company_name || business.name}
+          {business.is_sponsored && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold">
+              PRO
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {business.business_category} · {business.district || "Surco"}
+        </div>
+        <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-1">
+          <span className="flex items-center gap-0.5">
+            <MapPin className="h-3 w-3 text-neon" />
+            {distance !== undefined ? `${distance.toFixed(1)} km` : "Cerca de ti"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MapPage() {
   const { t } = useTranslation();
   const data = Route.useLoaderData();
   const user = useAuthStore((state) => state.user);
-  const [courts, setCourts] = useState<Court[]>(data.courts);
-  const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
+  const [selectedBusinessForSheet, setSelectedBusinessForSheet] = useState<User | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     let active = true;
-    let baseLat = -12.14; // Default Surco lat
-    let baseLng = -76.995; // Default Surco lng
-
-    if (user && user.last_location_lat && user.last_location_lng) {
-      baseLat = user.last_location_lat;
-      baseLng = user.last_location_lng;
-    }
-
-    const loadCourts = async (latitude: number, longitude: number) => {
-      try {
-        const fetched = await searchNearbyCourts(latitude, longitude);
-        if (active) {
-          setCourts(fetched);
-        }
-      } catch (err) {
-        if (import.meta.env.DEV)
-          console.error("Error loading nearby courts from spatial search:", err);
-      }
-    };
 
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -132,29 +172,19 @@ function MapPage() {
               lat: position.coords.latitude,
               lng: position.coords.longitude,
             });
-            loadCourts(position.coords.latitude, position.coords.longitude);
           }
         },
         (error) => {
-          if (import.meta.env.DEV)
-            console.warn(
-              "Geolocation API unavailable or permission denied. Using profile location.",
-              error.message,
-            );
-          if (active) {
-            loadCourts(baseLat, baseLng);
-          }
+          if (import.meta.env.DEV) console.warn("Geolocation API unavailable:", error.message);
         },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
-    } else {
-      loadCourts(baseLat, baseLng);
     }
 
     return () => {
       active = false;
     };
-  }, [user, user?.last_location_lat, user?.last_location_lng]);
+  }, []);
 
   const baseLocation = useMemo(() => {
     if (userCoords) return userCoords;
@@ -171,40 +201,49 @@ function MapPage() {
     return DISTRICT_CENTROIDS[selectedDistrict] || null;
   }, [selectedDistrict]);
 
-  const sortedCourts = useMemo(() => {
-    if (!baseLocation) return courts;
-    const res = [...courts]
-      .map((c) => ({
-        ...c,
-        distance_km: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
+  const sortedBusinesses = useMemo(() => {
+    const list = data.businesses || [];
+    if (!baseLocation) return list;
+    return [...list]
+      .map((b) => ({
+        ...b,
+        distance_km: calculateDistance(
+          baseLocation.lat,
+          baseLocation.lng,
+          b.last_location_lat ?? -12.14,
+          b.last_location_lng ?? -76.995,
+        ),
       }))
       .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
-    console.log(
-      "SORTED COURTS DEBUG:",
-      baseLocation,
-      res.slice(0, 3).map((c) => `${c.name} (${c.distance_km?.toFixed(2)} km)`),
-    );
-    return res;
-  }, [courts, baseLocation]);
+  }, [data.businesses, baseLocation]);
 
-  const filteredCourts = useMemo(() => {
-    if (!selectedDistrict) return sortedCourts;
-    return sortedCourts.filter((c) =>
-      c.district?.toLowerCase().includes(selectedDistrict.toLowerCase()),
+  const filteredBusinesses = useMemo(() => {
+    if (!selectedDistrict) return sortedBusinesses;
+    return sortedBusinesses.filter((b) =>
+      (b.district || "").toLowerCase().includes(selectedDistrict.toLowerCase()),
     );
-  }, [sortedCourts, selectedDistrict]);
+  }, [sortedBusinesses, selectedDistrict]);
 
-  if (!data || !data.courts || !data.matches) {
+  const filteredVenues = useMemo(() => {
+    const list = data.venues || [];
+    if (!selectedDistrict) return list;
+    return list.filter((c) =>
+      (c.district || "").toLowerCase().includes(selectedDistrict.toLowerCase()),
+    );
+  }, [data.venues, selectedDistrict]);
+
+  if (!data || !data.businesses) {
     return (
       <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
     );
   }
 
-  const { players, matches } = data;
-
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
-      <PageHeader title="Mapa en vivo" subtitle="Canchas, partidos y jugadores cerca tuyo" />
+      <PageHeader
+        title="Mapa Comercial"
+        subtitle="Descubre centros deportivos y especialistas cerca tuyo"
+      />
 
       {/* District Selector Filter */}
       <div className="bg-gradient-card border border-border/40 rounded-2xl p-4 mb-6 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 shadow-card">
@@ -230,38 +269,40 @@ function MapPage() {
         <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card animate-fade-in">
           <ErrorBoundary>
             <MapFeature
-              courts={filteredCourts}
-              players={players}
-              matches={matches}
-              onBookCourt={(c) => setSelectedCourtForBooking(c)}
+              venues={filteredVenues}
+              players={filteredBusinesses}
               selectedDistrictCenter={selectedDistrictCenter}
+              onViewCommercialSheet={(b) => setSelectedBusinessForSheet(b)}
             />
           </ErrorBoundary>
         </div>
 
         <div className="space-y-4">
           <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card max-h-[560px] overflow-y-auto">
-            <h3 className="font-semibold mb-3">Cerca tuyo (Ordenado por distancia)</h3>
+            <h3 className="font-semibold mb-3 text-left">Cerca tuyo (Ordenado por distancia)</h3>
             <div className="space-y-3">
-              {filteredCourts.map((c) => (
-                <CourtCard
-                  key={`${c.id}-${c.name}-${c.district}`}
-                  court={c}
-                  onClick={() => setSelectedCourtForBooking(c)}
-                  baseLocation={baseLocation}
-                  variant="list"
+              {filteredBusinesses.map((b) => (
+                <BusinessListCard
+                  key={b.id}
+                  business={b}
+                  onClick={() => setSelectedBusinessForSheet(b)}
+                  distance={b.distance_km}
                 />
               ))}
+              {filteredBusinesses.length === 0 && (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  No hay centros deportivos en este distrito.
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <BookingModal
-        court={selectedCourtForBooking}
-        isOpen={selectedCourtForBooking !== null}
-        onOpenChange={(open) => !open && setSelectedCourtForBooking(null)}
-        baseLocation={baseLocation}
+      <CommercialSheetModal
+        business={selectedBusinessForSheet}
+        isOpen={selectedBusinessForSheet !== null}
+        onOpenChange={(open) => !open && setSelectedBusinessForSheet(null)}
       />
     </div>
   );

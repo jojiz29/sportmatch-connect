@@ -1,11 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Star,
   MapPin,
   Calendar as CalendarIcon,
   Clock,
-  Users,
   Loader2,
   Check,
   QrCode,
@@ -19,10 +18,20 @@ import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
-import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
+import {
+  usePaymentGatewayStore,
+  PaymentPayload,
+  PaymentResult,
+} from "@/features/wallet/usePaymentGatewayStore";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
+import { logPaymentAttempt } from "@/services/paymentService";
+import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
 
 export const Route = createFileRoute("/app/courts/$courtId")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   validateSearch: (search: Record<string, unknown>): { book?: boolean } => {
     return {
       book: search.book === "true" || search.book === true || undefined,
@@ -79,6 +88,10 @@ function CourtDetail() {
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [paymentSelection, setPaymentSelection] = useState<PaymentSelection | null>(null);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const [holdExpiry, setHoldExpiry] = useState<number | null>(null);
+  const [holdCountdown, setHoldCountdown] = useState("05:00");
 
   const { book } = Route.useSearch();
   const { isProcessing, transactionId, processPayment, resetPayment } = usePaymentGatewayStore();
@@ -98,6 +111,34 @@ function CourtDetail() {
   useEffect(() => {
     resetPayment();
   }, [slot, court.id, resetPayment]);
+
+  useEffect(() => {
+    if (!slot) {
+      setHoldExpiry(null);
+      return;
+    }
+    setHoldExpiry(Date.now() + 5 * 60 * 1000);
+  }, [slot]);
+
+  useEffect(() => {
+    if (!holdExpiry) return;
+    const interval = window.setInterval(() => {
+      const diff = holdExpiry - Date.now();
+      if (diff <= 0) {
+        setSlot(null);
+        setHoldExpiry(null);
+        setHoldCountdown("00:00");
+        toast.error("El tiempo de retención del horario venció. Selecciona otro horario.");
+        return;
+      }
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setHoldCountdown(
+        `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+      );
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [holdExpiry]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -190,7 +231,18 @@ function CourtDetail() {
     );
   }
 
-  const handleBook = async () => {
+  const maxPlayers = court.max_players || 4;
+  const baseCourtPrice = court.price_per_hour / maxPlayers;
+  const commissionPercentage = 10;
+  const commissionAmount = baseCourtPrice * 0.1;
+  const totalCost = baseCourtPrice + commissionAmount;
+  const pricePerPerson = totalCost;
+
+  const handlePaymentConfirm = async (
+    selection: PaymentSelection,
+    stripe?: Stripe | null,
+    elements?: StripeElements | null,
+  ) => {
     if (!slot) {
       toast.error("Por favor selecciona un horario.");
       return;
@@ -200,67 +252,58 @@ function CourtDetail() {
       return;
     }
 
-    const cost = Math.ceil(pricePerPerson);
-    if (user.fitcoins_balance < cost) {
-      setIsBalanceModalOpen(true);
-      return;
-    }
+    setPaymentSelection(selection);
+    setIsBooking(true);
+    let currentPaymentResult: PaymentResult | null = null;
 
     try {
-      setIsBooking(true);
       const todayStr = new Date().toISOString().split("T")[0];
 
-      // 1. Double Booking Prevention: Check availability in database
-      let booked: string[] = [];
-      try {
-        const backendResult = await backendApi.bookings.getByCourtAndDate(court.id, todayStr);
-        booked = (backendResult.data as string[]) || [];
-      } catch {
-        booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
-      }
+      const booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
       if (booked.includes(slot)) {
         toast.error("Este horario ya ha sido reservado. Por favor elige otro.");
-        setBookedSlots(booked); // Sync state
+        setBookedSlots(booked);
         setIsBooking(false);
         return;
       }
 
-      // 2. Process Simulated Payment
-      const paymentSuccess = await processPayment(cost, court.name);
-      if (!paymentSuccess) {
+      const paymentPayload: PaymentPayload = {
+        ...selection,
+        amount: Math.max(0, Math.ceil(pricePerPerson) - selection.fitcoinsToUse),
+      };
+
+      currentPaymentResult = await processPayment(paymentPayload, court.name, stripe, elements);
+      setPaymentResult(currentPaymentResult);
+
+      if (!currentPaymentResult.success) {
         const currentError = usePaymentGatewayStore.getState().error;
         toast.error(currentError || "El pago no pudo ser procesado.");
         setIsBooking(false);
         return;
       }
 
-      // 3. Perform INSERT
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (token) {
-        await backendApi.bookings
-          .create(token, {
-            court_id: court.id,
-            user_id: user.id,
-            date: todayStr,
-            time: slot,
-          })
-          .catch(() =>
-            apiClient.bookings.create({
-              court_id: court.id,
-              user_id: user.id,
-              date: todayStr,
-              time_slot: slot,
-              operating_hours: court.operating_hours,
-            }),
-          );
-      } else {
-        await apiClient.bookings.create({
+      await apiClient.bookings.create({
+        court_id: court.id,
+        user_id: user.id,
+        date: todayStr,
+        time_slot: slot,
+        operating_hours: court.operating_hours,
+        precio_cancha: baseCourtPrice,
+        porcentaje_comision: commissionPercentage,
+        monto_comision: commissionAmount,
+        total_cobrado: totalCost,
+      });
+
+      if (useAuthStore.getState().isDemoMode) {
+        await apiClient.matches.create({
+          title: `Partido en ${court.name}`,
+          sport: court.sport,
           court_id: court.id,
-          user_id: user.id,
+          creator_id: user.id,
           date: todayStr,
-          time_slot: slot,
-          operating_hours: court.operating_hours,
+          time: slot,
+          max_players: maxPlayers,
+          required_level: user.level || "Intermedio",
         });
       }
 
@@ -299,6 +342,19 @@ function CourtDetail() {
       });
     } catch (err: unknown) {
       console.error("Booking error:", err);
+      if (currentPaymentResult?.success) {
+        logPaymentAttempt({
+          id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: new Date().toISOString(),
+          courtName: court.name,
+          method: selection.method,
+          amount: Math.max(0, Math.ceil(pricePerPerson) - selection.fitcoinsToUse),
+          fitcoinsUsed: selection.fitcoinsToUse,
+          status: "partial_failure",
+          errorCode: "BOOKING_PARTIAL_FAILURE",
+        });
+      }
+
       const pgErr = err as { code?: string };
       if (pgErr?.code === "23505") {
         toast.error("Este horario ya ha sido reservado por otro usuario.");
@@ -324,8 +380,11 @@ function CourtDetail() {
   ];
 
   // Dynamic players limit based on court metadata
-  const maxPlayers = court.max_players || 4;
-  const pricePerPerson = (court.price_per_hour + 3) / maxPlayers;
+  // Variables (maxPlayers, pricePerPerson) defined above handlePaymentConfirm for closure scope correctness
+
+  const holdPaymentDiscount = paymentSelection?.fitcoinsToUse ?? 0;
+  const chargeAmount =
+    paymentResult?.amountCharged ?? Math.max(0, Math.ceil(pricePerPerson) - holdPaymentDiscount);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -451,119 +510,124 @@ function CourtDetail() {
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-border">
-                <div className="flex items-center gap-3 mb-6 bg-accent/50 p-4 rounded-xl text-sm">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    Podrás dividir el pago de{" "}
-                    <strong className="text-foreground">${court.price_per_hour}</strong> con tus
-                    amigos después de reservar. Dividido entre {maxPlayers} jugadores, tu parte es
-                    de <strong className="text-neon">${pricePerPerson.toFixed(2)}</strong>.
-                  </span>
+              {slot && holdExpiry && (
+                <div className="rounded-2xl border border-warning/30 bg-warning/10 p-3 text-[12px] text-warning-foreground mb-4">
+                  <strong>Horario pendiente:</strong> el horario seleccionado se mantiene bloqueado
+                  por {holdCountdown} mientras completas el pago.
                 </div>
-                <button
-                  disabled={!slot || isBooking || confirmed}
-                  onClick={handleBook}
-                  className="w-full py-4 rounded-xl bg-gradient-primary text-primary-foreground font-bold shadow-glow disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                >
-                  {isBooking ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Procesando reserva...</span>
-                    </>
-                  ) : confirmed ? (
-                    "Reserva confirmada ✓"
-                  ) : slot ? (
-                    `Confirmar reserva para las ${slot}`
-                  ) : (
-                    "Selecciona un horario"
-                  )}
-                </button>
-              </div>
+              )}
+
+              <PaymentCheckout
+                cost={Math.ceil(pricePerPerson)}
+                userBalance={user.fitcoins_balance}
+                onConfirm={handlePaymentConfirm}
+                isProcessing={isProcessing}
+                disabled={isBooking || confirmed}
+              />
             </div>
           </div>
+        </div>
 
-          {confirmed && (
-            <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-6 relative overflow-hidden font-sans">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
+        {confirmed && (
+          <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-6 relative overflow-hidden font-sans">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
 
-              <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
-                <Check className="h-6 w-6 text-neon" />
+            <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
+              <Check className="h-6 w-6 text-neon" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
+            <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
+
+            {/* Ticket separator dashed line */}
+            <div className="my-5 border-t-2 border-dashed border-border/60 relative">
+              <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
+              <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
+            </div>
+
+            <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
+              <div className="flex justify-between items-center pb-2 border-b border-border/30">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Transacción
+                </span>
+                <span className="font-mono text-xs font-bold text-neon">
+                  {transactionId || "TXN-DEMO123"}
+                </span>
               </div>
-              <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
-              <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
 
-              {/* Ticket separator dashed line */}
-              <div className="my-5 border-t-2 border-dashed border-border/60 relative">
-                <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
-                <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
+              <div className="space-y-1">
+                <div className="font-bold text-foreground text-sm">{court.name}</div>
+                <div className="text-[11px] text-muted-foreground leading-normal">
+                  {court.address}
+                </div>
               </div>
 
-              <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
-                <div className="flex justify-between items-center pb-2 border-b border-border/30">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    Transacción
-                  </span>
-                  <span className="font-mono text-xs font-bold text-neon">
-                    {transactionId || "TXN-DEMO123"}
-                  </span>
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                <div>
+                  <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
+                  <div className="text-xs font-bold text-foreground">{court.sport}</div>
                 </div>
-
-                <div className="space-y-1">
-                  <div className="font-bold text-foreground text-sm">{court.name}</div>
-                  <div className="text-[11px] text-muted-foreground leading-normal">
-                    {court.address}
+                <div>
+                  <div className="text-[10px] text-muted-foreground font-semibold">
+                    Fecha y Hora
                   </div>
+                  <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-1">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
-                    <div className="text-xs font-bold text-foreground">{court.sport}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground font-semibold">
-                      Fecha y Hora
-                    </div>
-                    <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
-                  </div>
+              <div className="pt-3 border-t border-border/30 space-y-1.5">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Detalle del Pago
                 </div>
-
-                <div className="pt-3 border-t border-border/30 space-y-1.5">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                    Detalle del Pago
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Precio Cancha / Hora</span>
-                    <span>S/ {court.price_per_hour.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Comisión de Servicio</span>
-                    <span>S/ 3.00</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Precio Cancha / Hora</span>
+                  <span>S/ {court.price_per_hour.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Comisión de Servicio</span>
+                  <span>S/ 3.00</span>
+                </div>
+                {holdPaymentDiscount > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-500">
                     <span>Descuento (FitCoins gastados)</span>
-                    <span className="text-neon">-S/ {Math.ceil(pricePerPerson).toFixed(2)}</span>
+                    <span className="font-semibold">-S/ {holdPaymentDiscount.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
-                    <span>Total Pagado</span>
-                    <span>S/ 0.00</span>
-                  </div>
+                )}
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Método de pago</span>
+                  <span>
+                    {paymentSelection?.method === "fitcoins"
+                      ? "FitCoins"
+                      : paymentSelection?.method === "card"
+                        ? "Tarjeta"
+                        : paymentSelection?.method === "yape"
+                          ? "Yape"
+                          : "Plin"}
+                  </span>
                 </div>
-              </div>
-
-              {/* QR Code section */}
-              <div className="mt-5 space-y-2">
-                <p className="text-[10px] text-muted-foreground">
-                  Mostrá este QR de check-in al ingresar al club
-                </p>
-                <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
-                  <QrCode className="h-28 w-28 text-black" />
+                <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
+                  <span>Total Pagado</span>
+                  <span>S/ {chargeAmount.toFixed(2)}</span>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* QR Code section */}
+            <div className="mt-5 space-y-3">
+              <p className="text-[10px] text-muted-foreground">
+                Mostrá este QR de check-in al ingresar al club
+              </p>
+              <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
+                <QrCode className="h-28 w-28 text-black" />
+              </div>
+              <Link
+                to="/app/profile"
+                className="mx-auto inline-flex items-center justify-center rounded-2xl bg-neon px-5 py-3 text-sm font-semibold text-background shadow-glow hover:scale-[1.01] transition-all"
+              >
+                Ver mi reserva
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {isProcessing && (

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Activity,
@@ -18,6 +18,9 @@ import { supabase } from "@/shared/api/supabase";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/app/iot")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   head: () => ({ meta: [{ title: "Telemetría — SportMatch" }] }),
   component: IoT,
 });

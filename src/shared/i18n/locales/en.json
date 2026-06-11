@@ -1,6 +1,6 @@
 {
   "nav": {
-    "inicio": "Dashboard",
+    "inicio": "Home",
     "matchmaking": "Matchmaking",
     "map_and_courts": "Bookings & Map",
     "comunidad": "Community (Feed)",
@@ -55,6 +55,12 @@
     "cat_courts": "Court Rental",
     "cat_gym": "Gym",
     "cat_beverages": "Drinks & Nutrition",
+    "cat_academy": "Sports Academy",
+    "cat_physio": "Physiotherapy & Recovery",
+    "cat_nutrition": "Sports Nutrition",
+    "cat_events": "Tournaments & Events",
+    "cat_brands": "Sports Brands",
+    "cat_sponsor": "Sponsor",
     "gps_location": "GPS Location (Coordinates)",
     "latitude": "Latitude",
     "longitude": "Longitude",

@@ -34,6 +34,7 @@ import { useChatStore } from "@/features/chat/useChatStore";
 import { useTranslation } from "react-i18next";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
@@ -598,19 +599,13 @@ function Dashboard() {
               >
                 <Sparkles className="h-4 w-4" /> Encontrar partido
               </Link>
-              <Link
-                to="/app/courts"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass text-sm font-semibold hover:bg-white/10 transition-all duration-200"
-              >
-                <Calendar className="h-4 w-4" /> Reservar cancha
-              </Link>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3 min-w-[260px]">
             <Stat
               icon={<Trophy className="h-4 w-4 text-neon" />}
-              label="FitCoins"
-              value={user.fitcoins_balance}
+              label="Nivel"
+              value={user.level}
             />
             <Stat
               icon={<Flame className="h-4 w-4 text-warning" />}
@@ -883,8 +878,9 @@ function Dashboard() {
                       <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-neon border-2 border-background" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">
+                      <div className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors flex items-center gap-1">
                         {p.name}
+                        {p.dni_verificado && <VerifiedBadge />}
                         {isMe && (
                           <span className="text-[9px] text-muted-foreground ml-1">(tú)</span>
                         )}

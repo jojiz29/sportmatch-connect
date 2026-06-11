@@ -1,11 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useAuth } from "@/entities/user/useAuth";
+import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MapPin, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { MapPin, Lock, Mail, Eye, EyeOff, User as UserIcon, Store } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { signInWithGoogle } from "@/services/authService";
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -75,7 +82,12 @@ function Login() {
     },
     onSubmit: async (vals) => {
       await signIn(vals.email, vals.password);
-      navigate({ to: "/app" });
+      const user = useAuthStore.getState().user;
+      if (user && user.user_role === "BUSINESS") {
+        navigate({ to: "/app/business" });
+      } else {
+        navigate({ to: "/app" });
+      }
     },
     successMessage: t("login.success_toast"),
   });
@@ -90,11 +102,21 @@ function Login() {
     emailError === null &&
     passwordError === null;
 
-  const handleGuestLogin = async () => {
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+
+  const handleDemoLogin = async (role: "PLAYER" | "BUSINESS") => {
     try {
-      await signIn();
+      setIsDemoModalOpen(false);
+      const targetEmail =
+        role === "BUSINESS" ? "megatlon@sportmatch.app" : "ejuniorfloress@gmail.com";
+      await signIn(targetEmail);
       toast.success(t("login.success_toast"));
-      navigate({ to: "/app" });
+      const user = useAuthStore.getState().user;
+      if (user && user.user_role === "BUSINESS") {
+        navigate({ to: "/app/business" });
+      } else {
+        navigate({ to: "/app" });
+      }
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error en demo login:", err);
       const errorMessage = err instanceof Error ? err.message : t("login.error_toast");
@@ -194,7 +216,7 @@ function Login() {
 
             <button
               type="button"
-              onClick={handleGuestLogin}
+              onClick={() => setIsDemoModalOpen(true)}
               className="w-full py-3.5 glass text-white font-bold rounded-xl cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all duration-300 text-sm border border-white/5"
             >
               {t("login.btn_demo")}
@@ -250,6 +272,53 @@ function Login() {
           SportMatch &mdash; Juega más, esperá menos
         </p>
       </div>
+
+      <Dialog open={isDemoModalOpen} onOpenChange={setIsDemoModalOpen}>
+        <DialogContent className="sm:max-w-md bg-gradient-card border border-border/60 rounded-3xl p-6 backdrop-blur-md text-foreground">
+          <DialogHeader className="text-center">
+            <DialogTitle className="font-heading text-2xl tracking-wide text-white">
+              Modo Demo: Selecciona tu Rol
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground mt-1 text-sm">
+              Elige cómo deseas experimentar SportMatch Connect hoy.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            <button
+              type="button"
+              onClick={() => handleDemoLogin("PLAYER")}
+              className="flex flex-col items-center justify-center p-5 rounded-2xl border border-border/40 bg-card hover:bg-accent/30 hover:border-primary/50 cursor-pointer transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] group"
+            >
+              <div className="h-12 w-12 rounded-xl bg-gradient-primary grid place-items-center mb-3 shadow-glow group-hover:scale-110 transition-transform">
+                <UserIcon className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">
+                Jugador
+              </span>
+              <span className="text-[10px] text-muted-foreground text-center mt-1 leading-normal">
+                Ver matchmaking, mapa de comercios y feeds sociales.
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDemoLogin("BUSINESS")}
+              className="flex flex-col items-center justify-center p-5 rounded-2xl border border-border/40 bg-card hover:bg-accent/30 hover:border-primary/50 cursor-pointer transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] group"
+            >
+              <div className="h-12 w-12 rounded-xl bg-gradient-neon grid place-items-center mb-3 shadow-glow-neon group-hover:scale-110 transition-transform">
+                <Store className="h-6 w-6 text-black" />
+              </div>
+              <span className="font-bold text-sm text-white group-hover:text-neon transition-colors">
+                Empresa
+              </span>
+              <span className="text-[10px] text-muted-foreground text-center mt-1 leading-normal">
+                Administrar anuncios comerciales, métricas y analíticas.
+              </span>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
