@@ -110,7 +110,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const filteredStack = useMemo(() => {
     // Cuando el usuario ya envió una acción de conexión, retiramos ese candidato
     // del carrusel para continuar con la siguiente recomendación.
-    const availableStack = stack.filter((candidate) => !contactedUserIds.includes(candidate.id));
+    const availableStack = (stack || []).filter(
+      (candidate) => !contactedUserIds.includes(candidate.id),
+    );
     if (activeSport === "Todos") return availableStack;
 
     return availableStack.filter((p) => {
@@ -118,7 +120,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
       if (matrix) {
         return !!matrix[activeSport];
       }
-      return p.preferred_sports?.includes(activeSport as Sport);
+      return (p.preferred_sports || []).includes(activeSport as Sport);
     });
   }, [stack, activeSport, contactedUserIds]);
 
@@ -180,7 +182,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
       .then((challenges: PlayerChallenge[]) => {
         if (active) {
           setPendingChallengeUserIds(
-            challenges
+            (challenges || [])
               .filter(
                 (challenge: PlayerChallenge) =>
                   activeSport === "Todos" || challenge.sport === activeSport,
@@ -191,7 +193,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             Array.from(
               new Set([
                 ...current,
-                ...challenges.map((challenge: PlayerChallenge) => challenge.challenged_id),
+                ...(challenges || []).map((challenge: PlayerChallenge) => challenge.challenged_id),
               ]),
             ),
           );
@@ -213,7 +215,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     // La bandeja muestra únicamente solicitudes que todavía requieren respuesta.
     getPendingChallengesReceived(currentUser.id)
       .then((challenges: PlayerChallenge[]) => {
-        if (active) setReceivedChallenges(challenges);
+        if (active) setReceivedChallenges(challenges || []);
       })
       .catch((error: Error) => console.error("Error al cargar desafíos recibidos:", error));
 
@@ -277,7 +279,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             Array.from(
               new Set([
                 ...current,
-                ...connections.map((connection: PlayerConnection) => connection.connected_user_id),
+                ...(connections || []).map(
+                  (connection: PlayerConnection) => connection.connected_user_id,
+                ),
               ]),
             ),
           );
@@ -438,7 +442,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             </div>
           ) : (
             <AnimatePresence>
-              {rankedStack
+              {(rankedStack || [])
                 .slice(0, 3)
                 .reverse()
                 .map((p, i, arr) => {
@@ -666,7 +670,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             </div>
 
             <div className="mt-4 space-y-3">
-              {receivedChallenges.map((challenge) => {
+              {(receivedChallenges || []).map((challenge) => {
                 const challenger =
                   challenge.challenger ||
                   stack.find((candidate) => candidate.id === challenge.challenger_id);
@@ -1079,8 +1083,8 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
                         <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
                       </div>
-                    ) : inspectedUserMatches.length > 0 ? (
-                      inspectedUserMatches.map((m) => (
+                    ) : (inspectedUserMatches || []).length > 0 ? (
+                      (inspectedUserMatches || []).map((m) => (
                         <div
                           key={m.id}
                           className="flex items-center gap-3 text-xs p-2 rounded-xl hover:bg-accent/50 transition-colors border border-border/20"
