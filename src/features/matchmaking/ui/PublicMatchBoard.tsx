@@ -132,7 +132,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
         <div className="flex items-center gap-2">
           {/* Avatar stack */}
           <div className="flex -space-x-2">
-            {match.participants.slice(0, 5).map((p) => (
+            {(match.participants || []).slice(0, 5).map((p) => (
               <div key={p.userId} className="relative group">
                 <img
                   src={p.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.userId}`}
@@ -245,7 +245,7 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
 
 export function PublicMatchBoard() {
   const currentUser = useAuthStore((s) => s.user);
-  const matches = usePublicMatchStore((s) => s.publicMatches);
+  const matches = usePublicMatchStore((s) => s.publicMatches) || [];
 
   const [activeFilter, setActiveFilter] = useState<FilterKey>("TODAS");
   const [createOpen, setCreateOpen] = useState(false);

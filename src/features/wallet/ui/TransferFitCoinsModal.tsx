@@ -145,7 +145,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
     });
 
   // ── Filtered list ──────────────────────────────────────────────────────────
-  const filteredPlayers = players.filter((p) =>
+  const filteredPlayers = (players || []).filter((p) =>
     p.name?.toLowerCase().includes(values.recipientSearch.toLowerCase()),
   );
 
@@ -314,7 +314,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                               No se encontraron jugadores.
                             </div>
                           ) : (
-                            filteredPlayers.map((p) => (
+                            (filteredPlayers || []).map((p) => (
                               <button
                                 key={p.id}
                                 type="button"

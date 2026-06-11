@@ -44,7 +44,7 @@ export function CommercialSheetModal({
       // Track general view action for all ads of this business on sheet open
       // This increases the "views" metric dynamically
       setTimeout(() => {
-        const businessAds = ads.filter((ad) => ad.business_id === business.id);
+        const businessAds = (ads || []).filter((ad) => ad.business_id === business.id);
         businessAds.forEach((ad) => {
           trackAdAction(ad.id, "views");
         });
@@ -55,7 +55,7 @@ export function CommercialSheetModal({
 
   if (!business) return null;
 
-  const businessAds = ads.filter((ad) => ad.business_id === business.id);
+  const businessAds = (ads || []).filter((ad) => ad.business_id === business.id);
 
   // Generate WhatsApp link with custom message based on matchmaking
   const cleanPhone = business.whatsapp ? business.whatsapp.replace(/\D/g, "") : "";
@@ -250,7 +250,7 @@ export function CommercialSheetModal({
 
               {businessAds.length > 0 ? (
                 <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
-                  {businessAds.map((ad) => (
+                  {(businessAds || []).map((ad) => (
                     <div
                       key={ad.id}
                       className="glass border border-border/60 rounded-xl p-3 flex gap-3 items-start hover:ring-glow transition-all relative group"

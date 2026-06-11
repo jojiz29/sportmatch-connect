@@ -23,10 +23,10 @@ export const useAdsStore = create<AdsState>((set) => ({
     try {
       set({ isLoading: true });
       const data = await adsService.getAds(businessId);
-      set({ ads: data, isLoading: false });
+      set({ ads: data || [], isLoading: false });
     } catch (err) {
       console.error("Error fetching ads in store:", err);
-      set({ isLoading: false });
+      set({ ads: [], isLoading: false });
     }
   },
 
