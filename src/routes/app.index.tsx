@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { toast } from "sonner";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
@@ -110,6 +111,11 @@ function Dashboard() {
   const { t } = useTranslation();
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
+  const { balance: walletBalance, initWallet } = useWalletStore();
+
+  useEffect(() => {
+    initWallet();
+  }, [initWallet]);
 
   const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
   const [attendanceDays, setAttendanceDays] = useState<string[]>([]);
@@ -747,6 +753,30 @@ function Dashboard() {
 
         {/* Side */}
         <div className="space-y-6">
+          {/* Billetera Quick Access Card */}
+          <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card relative overflow-hidden card-lift group">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-primary opacity-10 blur-xl group-hover:opacity-20 transition-opacity" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="h-12 w-12 rounded-xl bg-gradient-primary shrink-0 grid place-items-center shadow-glow">
+                <Trophy className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-muted-foreground font-medium">Billetera Digital</div>
+                <div className="text-2xl font-bold font-heading text-foreground mt-0.5 tracking-wide flex items-baseline gap-1">
+                  <span>{walletBalance}</span>
+                  <span className="text-xs text-neon font-semibold font-sans">FC</span>
+                </div>
+              </div>
+              <Link
+                to="/app/wallet"
+                search={{ buyItem: undefined }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-neon text-neon-foreground font-bold text-xs shadow-neon hover:scale-105 active:scale-95 transition-all duration-200"
+              >
+                Ver mi Billetera
+              </Link>
+            </div>
+          </div>
+
           {/* Weekly Streak & Contribution Graph Widget */}
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <div className="flex items-center justify-between mb-4">

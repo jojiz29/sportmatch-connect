@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { Trophy, Gift, Zap, Crown, X, ShoppingBag, Loader2 } from "lucide-react";
+import {
+  Trophy,
+  Gift,
+  Zap,
+  Crown,
+  X,
+  ShoppingBag,
+  Loader2,
+  Send,
+  History,
+  Award,
+} from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -12,6 +23,7 @@ import { CatalogItem, User } from "@/entities/types";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { Reward } from "@/services/walletService";
+import { TransferFitCoinsModal } from "@/features/wallet/ui/TransferFitCoinsModal";
 
 export const Route = createFileRoute("/app/wallet/")({
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
@@ -36,6 +48,7 @@ function Wallet() {
   const { balance, redeem, initWallet, challenges, progressChallenge, claimChallenge } =
     useWalletStore();
 
+  const [transferOpen, setTransferOpen] = useState(false);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
@@ -228,33 +241,67 @@ function Wallet() {
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title={t("wallet.title")} subtitle={t("wallet.subtitle")} />
 
-      {/* Balance Banner */}
+      {/* Balance Banner + Action Hub */}
       <div className="bg-gradient-primary rounded-3xl p-8 shadow-glow relative overflow-hidden mb-8">
         <div className="absolute -right-10 -top-10 h-60 w-60 rounded-full bg-neon opacity-20 blur-3xl" />
-        <div className="relative flex flex-wrap items-center justify-between gap-6">
-          <div>
-            <div className="text-sm text-white/80">{t("wallet.balance")}</div>
-            <div className="text-6xl font-extrabold text-white flex items-center gap-3">
-              {balance}
-              <Trophy className="h-10 w-10 text-neon" />
+        <div className="absolute -left-6 -bottom-6 h-40 w-40 rounded-full bg-electric opacity-10 blur-2xl" />
+        <div className="relative">
+          {/* Balance display */}
+          <div className="mb-6">
+            <div className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-1">
+              {t("wallet.balance")}
             </div>
-            <div className="text-sm text-white/80 mt-2">
+            <motion.div
+              key={balance}
+              initial={{ scale: 1.06, opacity: 0.6 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.35 }}
+              className="text-6xl font-extrabold text-white flex items-end gap-3 leading-none"
+            >
+              <span>{balance.toLocaleString()}</span>
+              <span className="text-2xl font-bold text-neon mb-1">FC</span>
+              <Trophy className="h-9 w-9 text-neon mb-0.5" />
+            </motion.div>
+            <div className="text-sm text-white/70 mt-2">
               {t("wallet.this_week_gain", { amount: 185 })}
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
+
+          {/* Action Hub */}
+          <div className="flex flex-wrap gap-2">
+            {/* Transferir */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setTransferOpen(true)}
+              id="wallet-transfer-btn"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/20 backdrop-blur-sm text-white text-sm font-semibold hover:bg-white/30 transition-colors border border-white/20 cursor-pointer"
+            >
+              <Send className="h-4 w-4" />
+              Transferir
+            </motion.button>
+
+            {/* Canjear */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() =>
                 document.getElementById("rewards-section")?.scrollIntoView({ behavior: "smooth" })
               }
-              className="px-4 py-2 rounded-xl bg-white text-black font-semibold text-sm hover:scale-105 transition-transform cursor-pointer animate-fade-in"
+              id="wallet-redeem-btn"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neon text-neon-foreground text-sm font-semibold hover:shadow-neon transition-all border border-neon/30 cursor-pointer"
             >
+              <Award className="h-4 w-4" />
               {t("wallet.redeem")}
-            </button>
+            </motion.button>
+
+            {/* Historial */}
             <Link
               to="/app/wallet/history"
-              className="px-4 py-2 rounded-xl glass text-sm inline-block hover:scale-105 transition-transform"
+              id="wallet-history-btn"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass text-white text-sm font-semibold hover:bg-white/10 transition-colors border border-white/10"
             >
+              <History className="h-4 w-4" />
               {t("wallet.history")}
             </Link>
           </div>
@@ -579,6 +626,9 @@ function Wallet() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Transfer Modal */}
+      <TransferFitCoinsModal open={transferOpen} onClose={() => setTransferOpen(false)} />
     </div>
   );
 }

@@ -40,12 +40,6 @@ const GROUPS = [
       { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
       { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
       { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
-    ],
-  },
-  {
-    titleKey: "nav.groups.analytics",
-    items: [
-      { to: "/app/wallet", labelKey: "nav.wallet", icon: Trophy },
       { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
     ],
   },
@@ -170,10 +164,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <NotificationBell />
             </div>
           </div>
-          <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-3 overflow-y-auto">
             {GROUPS.map((group) => (
               <div key={group.titleKey} className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-1.5">
                   {t(group.titleKey)}
                 </div>
                 {group.items.map((item) => {
@@ -203,7 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {filteredAccountItems.length > 0 && (
               <div className="space-y-1 pt-4 border-t border-border/10">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-1.5">
                   {t("nav.groups.account")}
                 </div>
                 {filteredAccountItems.map((item) => {
@@ -244,9 +238,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="text-sm font-semibold truncate leading-tight text-foreground/90">
                   {currentUser.name}
                 </div>
-                <div className="text-xs text-neon/80 flex items-center gap-1 mt-0.5 font-medium">
+                <Link
+                  to="/app/wallet"
+                  search={{ buyItem: undefined }}
+                  className="text-xs text-neon/80 hover:text-neon hover:bg-muted/50 cursor-pointer transition-colors rounded px-1.5 py-0.5 -ml-1.5 w-fit flex items-center gap-1 mt-0.5 font-medium"
+                >
                   <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
-                </div>
+                </Link>
               </div>
               <button
                 onClick={handleLogout}
@@ -269,9 +267,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="font-bold text-sm tracking-tight text-gradient">SportMatch</span>
             </Link>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-neon font-semibold flex items-center gap-1">
+              <Link
+                to="/app/wallet"
+                search={{ buyItem: undefined }}
+                className="text-xs text-neon font-semibold flex items-center gap-1 hover:text-neon/80 transition-colors"
+              >
                 <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
-              </span>
+              </Link>
               <NotificationBell />
             </div>
           </div>
