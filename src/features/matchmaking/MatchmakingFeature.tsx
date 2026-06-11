@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  Heart,
   X,
   Info,
   MapPin,
@@ -9,6 +8,9 @@ import {
   Shield,
   TrendingUp,
   Users,
+  Swords,
+  Clock3,
+  Check,
 } from "lucide-react";
 import { useMatchmaking } from "./useMatchmaking";
 import { User, Match, Sport } from "@/entities/types";
@@ -17,8 +19,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useTranslation } from "react-i18next";
-import { calculateDistance } from "@/shared/api/geoService";
 import { apiClient } from "@/shared/api/apiClient";
+import { supabase } from "@/shared/api/supabase";
 import { backendApi } from "@/shared/api/backendApi";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
@@ -27,9 +29,18 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
+  const [matchMessage, setMatchMessage] = useState("");
   const [inspectedUser, setInspectedUser] = useState<User | null>(null);
   const [inspectedUserMatches, setInspectedUserMatches] = useState<Match[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  const [challengeTarget, setChallengeTarget] = useState<User | null>(null);
+  const [challengeMessage, setChallengeMessage] = useState("");
+  const [, setPendingChallengeUserIds] = useState<string[]>([]);
+  const [isSavingConnection, setIsSavingConnection] = useState(false);
+  const [isSendingChallenge, setIsSendingChallenge] = useState(false);
+  const [receivedChallenges, setReceivedChallenges] = useState<PlayerChallenge[]>([]);
+  const [resolvingChallengeId, setResolvingChallengeId] = useState<string | null>(null);
+  const [contactedUserIds, setContactedUserIds] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -79,19 +90,22 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   });
 
   const preferredSports = currentUser?.preferred_sports || ["Fútbol"];
-  const [activeSport, setActiveSport] = useState<string>(preferredSports[0] || "Fútbol");
+  const [activeSport, setActiveSport] = useState<string>("Todos");
 
   const filteredStack = useMemo(() => {
-    return stack.filter((p) => {
+    // Cuando el usuario ya envió una acción de conexión, retiramos ese candidato
+    // del carrusel para continuar con la siguiente recomendación.
+    const availableStack = stack.filter((candidate) => !contactedUserIds.includes(candidate.id));
+    if (activeSport === "Todos") return availableStack;
+
+    return availableStack.filter((p) => {
       const matrix = p.sport_preferences?.sports_matrix;
       if (matrix) {
         return !!matrix[activeSport];
       }
       return p.preferred_sports?.includes(activeSport as Sport);
     });
-  }, [stack, activeSport]);
-
-  const top = filteredStack[0];
+  }, [stack, activeSport, contactedUserIds]);
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -123,11 +137,253 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     return null;
   }, [userCoords, currentUser]);
 
+  // Recalculate after the sport or location changes so the visible order always reflects
+  // the same compatibility values shown in the card and detail panel.
+  const rankedStack = useMemo(
+    () =>
+      currentUser
+        ? rankMatchCandidates(currentUser, filteredStack, {
+            activeSport: activeSport === "Todos" ? undefined : activeSport,
+            currentLocation: baseLocation,
+          })
+        : [],
+    [activeSport, baseLocation, currentUser, filteredStack],
+  );
+
+  const topRecommendation = rankedStack[0];
+  const challengeSport =
+    rankedStack.find((recommendation) => recommendation.user.id === challengeTarget?.id)
+      ?.matchedSport ??
+    (activeSport === "Todos" ? challengeTarget?.preferred_sports?.[0] : activeSport);
+  useEffect(() => {
+    if (!currentUser) return;
+    let active = true;
+
+    // Restauramos pendientes del deporte activo para mantener el estado entre recargas.
+    getPendingChallengesSent(currentUser.id)
+      .then((challenges) => {
+        if (active) {
+          setPendingChallengeUserIds(
+            challenges
+              .filter((challenge) => activeSport === "Todos" || challenge.sport === activeSport)
+              .map((challenge) => challenge.challenged_id),
+          );
+          setContactedUserIds((current) =>
+            Array.from(
+              new Set([...current, ...challenges.map((challenge) => challenge.challenged_id)]),
+            ),
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("Error al cargar desafíos pendientes:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeSport, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let active = true;
+
+    // La bandeja muestra únicamente solicitudes que todavía requieren respuesta.
+    getPendingChallengesReceived(currentUser.id)
+      .then((challenges) => {
+        if (active) setReceivedChallenges(challenges);
+      })
+      .catch((error) => console.error("Error al cargar desafíos recibidos:", error));
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || useAuthStore.getState().isDemoMode) return;
+
+    // El primer usuario también recibe el modal cuando la otra persona completa el match.
+    const channel = supabase
+      .channel(`mutual-matches-${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "player_connections",
+          filter: `connected_user_id=eq.${currentUser.id}`,
+        },
+        async (payload) => {
+          const incomingUserId = (payload.new as { user_id: string }).user_id;
+          const { data: ownConnection } = await supabase
+            .from("player_connections")
+            .select("id")
+            .eq("user_id", currentUser.id)
+            .eq("connected_user_id", incomingUserId)
+            .maybeSingle();
+          if (!ownConnection) return;
+
+          await supabase.rpc("create_direct_conversation", { other_user_id: incomingUserId });
+          const matched =
+            stack.find((candidate) => candidate.id === incomingUserId) ||
+            (await apiClient.users.getMatches()).find(
+              (candidate) => candidate.id === incomingUserId,
+            );
+          if (matched) {
+            setMatchedUser(matched);
+            setMatchMessage("");
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, stack]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let active = true;
+
+    // Las conexiones guardadas no vuelven a mostrarse en el carrusel después de recargar.
+    getPlayerConnections(currentUser.id)
+      .then((connections) => {
+        if (active) {
+          setContactedUserIds((current) =>
+            Array.from(
+              new Set([
+                ...current,
+                ...connections.map((connection) => connection.connected_user_id),
+              ]),
+            ),
+          );
+        }
+      })
+      .catch((error) => console.error("Error al cargar conexiones deportivas:", error));
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+
+  const handleConnect = async (target: User) => {
+    if (!currentUser || isSavingConnection) return;
+    const recommendation = rankedStack.find((item) => item.user.id === target.id);
+
+    try {
+      setIsSavingConnection(true);
+      const result = await createPlayerConnection({
+        userId: currentUser.id,
+        connectedUserId: target.id,
+        sport:
+          recommendation?.matchedSport ??
+          (activeSport === "Todos" ? target.preferred_sports?.[0] : activeSport),
+        compatibilityScore: recommendation?.score ?? null,
+      });
+
+      // Retirar la tarjeta produce el avance inmediato al siguiente recomendado.
+      setContactedUserIds((current) =>
+        current.includes(target.id) ? current : [...current, target.id],
+      );
+      if (result.isMutualMatch) {
+        setMatchedUser(target);
+        setMatchMessage("");
+        toast.success("Nueva conexión deportiva", {
+          description: `${target.name} también quiere conectar contigo.`,
+        });
+      } else {
+        toast.success("Solicitud de conexión enviada", {
+          description: `Te avisaremos cuando ${target.name} también quiera conectar.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error al guardar conexión deportiva:", error);
+      const description =
+        error instanceof Error && error.message.includes("límite")
+          ? "Supabase no respondió a tiempo. Recarga la página e inténtalo nuevamente."
+          : "No se pudo guardar la conexión con tu sesión actual.";
+      toast.error("No se pudo guardar la conexión", {
+        description,
+      });
+    } finally {
+      setIsSavingConnection(false);
+    }
+  };
+
+  const handleSendChallenge = async () => {
+    if (!challengeTarget || !currentUser || !challengeSport) return;
+
+    try {
+      setIsSendingChallenge(true);
+      await createPlayerChallenge({
+        challengerId: currentUser.id,
+        challengedId: challengeTarget.id,
+        sport: challengeSport,
+        message: challengeMessage,
+      });
+      setPendingChallengeUserIds((current) =>
+        current.includes(challengeTarget.id) ? current : [...current, challengeTarget.id],
+      );
+      setContactedUserIds((current) =>
+        current.includes(challengeTarget.id) ? current : [...current, challengeTarget.id],
+      );
+      toast.success("Desafío enviado", {
+        description: `${challengeTarget.name} recibió tu desafío de ${challengeSport}.`,
+      });
+      setChallengeTarget(null);
+      setChallengeMessage("");
+    } catch (error) {
+      console.error("Error al enviar desafío:", error);
+      toast.error("No se pudo enviar el desafío", {
+        description: "Verifica que la migración de desafíos esté aplicada en Supabase.",
+      });
+    } finally {
+      setIsSendingChallenge(false);
+    }
+  };
+
+  const handleChallengeResponse = async (
+    challenge: PlayerChallenge,
+    decision: "accepted" | "rejected",
+  ) => {
+    if (!currentUser) return;
+
+    try {
+      setResolvingChallengeId(challenge.id);
+      await respondToPlayerChallenge(challenge.id, currentUser.id, decision);
+      setReceivedChallenges((current) => current.filter((item) => item.id !== challenge.id));
+
+      if (decision === "accepted") {
+        // Aceptar conecta a ambos jugadores inmediatamente para que puedan coordinar.
+        const chatStore = useChatStore.getState();
+        const chatId = await chatStore.createChat(challenge.challenger_id);
+        await chatStore.sendMessage(
+          chatId,
+          `Acepté tu desafío de ${challenge.sport}. Coordinemos el partido.`,
+        );
+        chatStore.setActiveConversation(chatId);
+        toast.success("Desafío aceptado", {
+          description: "Abrimos el chat para coordinar el partido.",
+        });
+        navigate({ to: "/app/chat" });
+      } else {
+        toast.info("Desafío rechazado");
+      }
+    } catch (error) {
+      console.error("Error al responder desafío:", error);
+      toast.error("No se pudo responder el desafío");
+    } finally {
+      setResolvingChallengeId(null);
+    }
+  };
+
   return (
     <div className="grid lg:grid-cols-3 gap-8">
       {/* Sport Selector Tabs */}
       <div className="lg:col-span-3 flex flex-wrap gap-2 mb-2 p-1.5 bg-background/40 border border-border/60 rounded-2xl animate-fade-in">
-        {preferredSports.map((sport) => {
+        {Array.from(new Set(["Todos", ...preferredSports])).map((sport) => {
           const isFilterActive = activeSport === sport;
           return (
             <button
@@ -149,7 +405,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         <div className="relative w-full max-w-md h-[560px]">
           {isLoading ? (
             <div className="absolute inset-0 bg-muted animate-pulse rounded-3xl" />
-          ) : filteredStack.length === 0 ? (
+          ) : rankedStack.length === 0 ? (
             <div className="absolute inset-0 grid place-items-center bg-gradient-card border border-border rounded-3xl">
               <div className="text-center">
                 <Sparkles className="h-10 w-10 mx-auto text-neon mb-3" />
@@ -158,21 +414,14 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             </div>
           ) : (
             <AnimatePresence>
-              {filteredStack
+              {rankedStack
                 .slice(0, 3)
                 .reverse()
-                .map((p, i, arr) => {
+                .map((recommendation, i, arr) => {
+                  const p = recommendation.user;
                   const idx = arr.length - 1 - i;
                   const isTop = idx === 0;
-                  const dist =
-                    baseLocation && p.last_location_lat && p.last_location_lng
-                      ? calculateDistance(
-                          baseLocation.lat,
-                          baseLocation.lng,
-                          p.last_location_lat,
-                          p.last_location_lng,
-                        )
-                      : p.distance_km || 0;
+                  const dist = recommendation.distanceKm ?? p.distance_km ?? null;
 
                   return (
                     <motion.div
@@ -181,7 +430,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                       dragConstraints={{ left: 0, right: 0 }}
                       dragElastic={1}
                       onDragEnd={(e, info) => {
-                        if (info.offset.x > 100) swipe(p.id, "like");
+                        if (info.offset.x > 100) void handleConnect(p);
                         else if (info.offset.x < -100) swipe(p.id, "pass");
                       }}
                       className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
@@ -196,9 +445,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     >
                       {/* ── HEADER BADGES ── */}
                       <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
-                        {/* Top-Left: Green glassmorphic MATCH badge */}
+                        {/* La compatibilidad representa recomendación, no un match confirmado. */}
                         <span className="px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black uppercase tracking-widest font-mono shadow-[0_0_8px_rgba(57,255,20,0.25)]">
-                          {Math.round(70 + (p.trust_score || 0) * 0.28)}% MATCH
+                          {recommendation.score}% COMPATIBLE
                         </span>
                         {/* Top-Right: Grey Trust Score badge */}
                         <span className="px-2.5 py-1 rounded-full bg-white/8 border border-white/12 text-white/80 text-[10px] font-semibold backdrop-blur-sm">
@@ -273,14 +522,14 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           return (
                             <div className="flex flex-wrap justify-center gap-1.5">
                               <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
-                                {activeSport}
+                                {recommendation.matchedSport || activeSport}
                               </span>
                               <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
                                 {displayLevel}
                               </span>
                               <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5 text-[#39FF14]" /> {dist.toFixed(1)}{" "}
-                                km
+                                <MapPin className="h-2.5 w-2.5 text-[#39FF14]" />{" "}
+                                {dist == null ? p.city || "Sin ubicación" : `${dist.toFixed(1)} km`}
                               </span>
                             </div>
                           );
@@ -330,13 +579,14 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           >
                             <Info className="h-5 w-5" />
                           </button>
-                          {/* Like / Heart */}
                           <button
-                            onClick={() => swipe(p.id, "like")}
-                            className="h-14 w-14 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
-                            aria-label={t("matchmaking.like_toast")}
+                            onClick={() => void handleConnect(p)}
+                            disabled={isSavingConnection}
+                            className="h-14 px-5 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
+                            aria-label={`Conectar con ${p.name}`}
                           >
-                            <Heart className="h-6 w-6 fill-current" />
+                            <Users className="h-5 w-5" />
+                            <span className="text-xs font-bold">Conectar</span>
                           </button>
                         </div>
                       )}
@@ -353,31 +603,196 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
           <h3 className="font-semibold flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-neon" /> {t("matchmaking.compatibility")}
           </h3>
-          {top && (
+          {topRecommendation && (
             <div className="mt-4 space-y-3">
-              <Bar label={t("matchmaking.level")} value={88} />
-              <Bar label={t("matchmaking.schedule")} value={94} />
               <Bar
-                label={t("matchmaking.distance")}
-                value={Math.max(
-                  40,
-                  100 -
-                    (baseLocation && top.last_location_lat && top.last_location_lng
-                      ? calculateDistance(
-                          baseLocation.lat,
-                          baseLocation.lng,
-                          top.last_location_lat,
-                          top.last_location_lng,
-                        )
-                      : top.distance_km || 0) *
-                      20,
-                )}
+                label={topRecommendation.matchedSport || activeSport}
+                value={topRecommendation.breakdown.sport}
               />
-              <Bar label={t("matchmaking.reputation")} value={top.trust_score} />
+              <Bar label={t("matchmaking.level")} value={topRecommendation.breakdown.level} />
+              <Bar
+                label={t("matchmaking.schedule")}
+                value={topRecommendation.breakdown.availability}
+              />
+              <Bar label={t("matchmaking.distance")} value={topRecommendation.breakdown.location} />
+              <Bar label={t("matchmaking.reputation")} value={topRecommendation.breakdown.trust} />
             </div>
           )}
         </div>
+
+        {/* La bandeja solo ocupa espacio cuando existe una solicitud que responder. */}
+        {receivedChallenges.length > 0 && (
+          <div className="bg-gradient-card border border-border rounded-2xl p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Swords className="h-4 w-4 text-primary" /> Desafíos recibidos
+              </h3>
+              <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold grid place-items-center">
+                {receivedChallenges.length}
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {receivedChallenges.map((challenge) => {
+                const challenger =
+                  challenge.challenger ||
+                  stack.find((candidate) => candidate.id === challenge.challenger_id);
+                const isResolving = resolvingChallengeId === challenge.id;
+
+                return (
+                  <div
+                    key={challenge.id}
+                    className="rounded-2xl border border-border/70 bg-background/50 p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={challenger?.avatar_url || ""}
+                        alt={challenger?.name || "Jugador"}
+                        className="h-10 w-10 rounded-full bg-muted object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">
+                          {challenger?.name || "Jugador"}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          Te desafió a jugar {challenge.sport}
+                        </div>
+                      </div>
+                    </div>
+
+                    {challenge.message && (
+                      <p className="mt-3 text-xs text-muted-foreground italic leading-relaxed">
+                        “{challenge.message}”
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <button
+                        onClick={() => handleChallengeResponse(challenge, "rejected")}
+                        disabled={isResolving}
+                        className="py-2 rounded-xl border border-red-500/25 bg-red-500/5 text-red-400 text-xs font-semibold hover:bg-red-500/10 cursor-pointer disabled:opacity-50"
+                      >
+                        Rechazar
+                      </button>
+                      <button
+                        onClick={() => handleChallengeResponse(challenge, "accepted")}
+                        disabled={isResolving}
+                        className="py-2 rounded-xl bg-neon text-neon-foreground text-xs font-bold flex items-center justify-center gap-1.5 hover:shadow-neon cursor-pointer disabled:opacity-50"
+                      >
+                        {isResolving ? (
+                          <Clock3 className="h-3.5 w-3.5 animate-pulse" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                        Aceptar
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Vista previa del desafío. La persistencia real se agregará en la siguiente etapa. */}
+      <AnimatePresence>
+        {challengeTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/90 backdrop-blur-md"
+              onClick={() => setChallengeTarget(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 24 }}
+              className="relative z-10 w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card"
+            >
+              <button
+                onClick={() => setChallengeTarget(null)}
+                className="absolute top-4 right-4 h-8 w-8 rounded-full bg-muted hover:bg-accent grid place-items-center cursor-pointer"
+                aria-label="Cerrar desafío"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-3 pr-10">
+                <div className="h-12 w-12 rounded-2xl bg-primary/15 border border-primary/30 grid place-items-center">
+                  <Swords className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-primary font-bold uppercase tracking-wider">
+                    Nuevo desafío
+                  </div>
+                  <h2 className="text-xl font-bold">Desafiar a {challengeTarget.name}</h2>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-border bg-background/50 p-4 flex items-center gap-3">
+                <img
+                  src={challengeTarget.avatar_url}
+                  alt={challengeTarget.name}
+                  className="h-12 w-12 rounded-full bg-muted object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold truncate">{challengeTarget.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {challengeSport} · Nivel {challengeTarget.level}
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-neon/10 border border-neon/20 text-neon text-xs font-bold">
+                  {topRecommendation?.user.id === challengeTarget.id
+                    ? `${topRecommendation.score}% match`
+                    : challengeSport}
+                </span>
+              </div>
+
+              <label className="block mt-5">
+                <span className="text-xs font-semibold">Mensaje opcional</span>
+                <textarea
+                  value={challengeMessage}
+                  onChange={(event) => setChallengeMessage(event.target.value)}
+                  maxLength={240}
+                  rows={3}
+                  placeholder={`Hola ${challengeTarget.name}, ¿jugamos ${challengeSport}?`}
+                  className="mt-2 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                />
+                <span className="block text-right text-[10px] text-muted-foreground mt-1">
+                  {challengeMessage.length}/240
+                </span>
+              </label>
+
+              <div className="grid grid-cols-2 gap-3 mt-5">
+                <button
+                  onClick={() => setChallengeTarget(null)}
+                  className="py-3 rounded-xl border border-border bg-muted/60 text-sm font-semibold hover:bg-muted cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendChallenge}
+                  disabled={isSendingChallenge}
+                  className="py-3 rounded-xl bg-gradient-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 shadow-glow hover:scale-[1.01] cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {isSendingChallenge ? (
+                    <>
+                      <Clock3 className="h-4 w-4 animate-pulse" /> Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Swords className="h-4 w-4" /> Enviar desafío
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Match Overlay Modal */}
       <AnimatePresence>
@@ -420,9 +835,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   </span>
                 </div>
 
-                {/* Heart Icon */}
+                {/* Las espadas representan una conexión para competir o jugar juntos. */}
                 <div className="relative z-10 h-12 w-12 rounded-full bg-gradient-neon flex items-center justify-center shadow-neon animate-pulse">
-                  <Heart className="h-6 w-6 text-neon-foreground fill-neon-foreground" />
+                  <Swords className="h-6 w-6 text-neon-foreground" />
                 </div>
 
                 {/* Matched User Avatar */}
@@ -445,21 +860,57 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                 })}
               </p>
 
+              <textarea
+                value={matchMessage}
+                onChange={(event) => setMatchMessage(event.target.value)}
+                maxLength={240}
+                rows={3}
+                placeholder={`Hola ${matchedUser.name}, ¿coordinamos para jugar?`}
+                className="relative z-10 mb-3 w-full resize-none rounded-xl border border-border bg-background/70 px-3 py-2 text-sm text-left focus:outline-none focus:border-neon"
+              />
+
               <div className="flex flex-col gap-2">
                 <button
                   onClick={async () => {
-                    // Create (or open existing) chat and immediately activate it
-                    const chatStore = useChatStore.getState();
-                    const chatId = await chatStore.createChat(matchedUser.id);
-                    if (chatId) {
+                    // El match mutuo comparte una única conversación persistente.
+                    try {
+                      const chatStore = useChatStore.getState();
+                      const chatId = await chatStore.createChat(matchedUser.id);
+                      if (!chatId) throw new Error("No se obtuvo un chatId persistente.");
+                      await chatStore.sendMessage(
+                        chatId,
+                        matchMessage.trim() || `Hola ${matchedUser.name}, ¿coordinamos para jugar?`,
+                      );
                       chatStore.setActiveConversation(chatId);
+                      setMatchedUser(null);
+                      navigate({ to: "/app/chat" });
+                    } catch (error) {
+                      console.error("[chat] match-greeting:error", {
+                        targetUserId: matchedUser.id,
+                        error,
+                      });
+                      toast.error("No se pudo abrir el chat del match");
                     }
-                    setMatchedUser(null);
-                    navigate({ to: "/app/chat" });
                   }}
                   className="w-full py-3 rounded-xl bg-gradient-primary text-primary-foreground font-bold hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-glow flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <MessageSquare className="h-4 w-4" /> {t("matchmaking.send_message")}
+                  <MessageSquare className="h-4 w-4" /> Enviar saludo y abrir chat
+                </button>
+                <button
+                  onClick={async () => {
+                    const chatStore = useChatStore.getState();
+                    const chatId = await chatStore.createChat(matchedUser.id);
+                    if (!chatId) {
+                      toast.error("No se pudo abrir el chat del match");
+                      return;
+                    }
+                    chatStore.setActiveConversation(chatId);
+                    setMatchedUser(null);
+                    navigate({ to: "/app/chat" });
+                  }}
+                  className="w-full py-3 rounded-xl border border-neon/30 bg-neon/10 text-neon text-sm font-semibold hover:bg-neon/15 cursor-pointer"
+                >
+                  Abrir chat sin enviar mensaje
                 </button>
                 <button
                   onClick={() => setMatchedUser(null)}

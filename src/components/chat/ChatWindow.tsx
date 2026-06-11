@@ -109,6 +109,7 @@ interface ChatWindowProps {
   activeChat: any;
   currentUser: User | null;
   registeredUsers: User[];
+  areProfilesLoading: boolean;
   text: string;
   setText: (t: string) => void;
   handleSend: () => void;
@@ -135,6 +136,7 @@ export function ChatWindow({
   activeChat,
   currentUser,
   registeredUsers,
+  areProfilesLoading,
   text,
   setText,
   handleSend,
@@ -282,11 +284,17 @@ export function ChatWindow({
                   {t("chat.me", "YO")}
                 </div>
               ) : (
-                <img
-                  src={sender.avatar_url}
-                  alt=""
-                  className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
-                />
+                <>
+                  {sender?.avatar_url ? (
+                    <img
+                      src={sender.avatar_url}
+                      alt=""
+                      className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
+                  )}
+                </>
               )}
               <div>
                 {!isMe && (
@@ -335,12 +343,19 @@ export function ChatWindow({
                 >
                   <span>{time}</span>
                   {isMe &&
-                    (msg.metadata?.seen ? (
+                    (msg.metadata?.delivery_status === "sending" ? (
+                      <span className="text-primary-foreground/45 text-xs" title="Enviando mensaje">
+                        ·
+                      </span>
+                    ) : msg.metadata?.seen ? (
                       <span className="text-neon font-bold text-xs" title="Visto">
                         ✓✓
                       </span>
                     ) : (
-                      <span className="text-primary-foreground/60 text-xs" title="Enviado">
+                      <span
+                        className="text-primary-foreground/60 text-xs"
+                        title="Enviado, todavía no visto"
+                      >
                         ✓
                       </span>
                     ))}
@@ -502,7 +517,8 @@ export function ChatWindow({
 
           <button
             onClick={onSend}
-            className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer border-0"
+            disabled={!text.trim() && !selectedImageBase64}
+            className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer border-0 disabled:opacity-40 disabled:shadow-none disabled:pointer-events-none"
           >
             <Send className="h-4 w-4 ml-0.5" />
           </button>
