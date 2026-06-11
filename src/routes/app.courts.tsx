@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -11,6 +11,9 @@ import { calculateDistance } from "@/shared/api/geoService";
 import { Search, MapPin, SlidersHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/app/courts")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
   loader: async () => {
     const backendCourts = await backendApi.courts.getAll().catch(() => null);
