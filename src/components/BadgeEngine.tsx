@@ -119,7 +119,7 @@ export function BadgeEngine({ sports_matrix, size = "md" }: BadgeEngineProps) {
   const currentSize = sizeClasses[size];
 
   return (
-    <div className="flex flex-wrap gap-2 animate-scale-in">
+    <div className="flex flex-wrap gap-2 animate-scale-in" id="badge-engine-tour">
       {badges.map((badge, idx) => {
         const rawLvl = badge.level.toUpperCase();
 

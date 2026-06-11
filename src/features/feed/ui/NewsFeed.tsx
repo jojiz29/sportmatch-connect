@@ -89,6 +89,14 @@ export function NewsFeed() {
   const { analyzeImage } = useNSFWJS();
   const [isAnalyzingImage, setIsAnalyzingImage] = useState<boolean>(false);
 
+  // Open image dropzone automatically if we are running the Capstone Jury Tour
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tour") === "true") {
+      setShowImageDropzone(true);
+    }
+  }, []);
+
   // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change (Task 2.4)
   useEffect(() => {
     return () => {
@@ -372,7 +380,7 @@ export function NewsFeed() {
 
             {/* Collapsible Drag-and-Drop Dropzone */}
             {(showImageDropzone || mediaUrl) && (
-              <div className="w-full animate-slide-up">
+              <div className="w-full animate-slide-up" id="news-feed-dropzone-tour">
                 <input
                   type="file"
                   ref={fileInputRef}

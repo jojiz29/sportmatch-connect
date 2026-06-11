@@ -8,6 +8,7 @@
       name="description"
       content="Matchmaking deportivo inteligente, reservas de canchas y comunidad amateur."
     />
+    <meta name="theme-color" content="#0f172a" />
     <meta property="og:title" content="SportMatch" />
     <meta
       property="og:description"
@@ -24,6 +25,11 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   </head>
   <body>
+    <noscript>
+      <div style="padding: 24px; text-align: center; background-color: #0f172a; color: #ffffff; font-family: sans-serif; border-bottom: 3px solid #ff5722;">
+        <strong>🛡️ SportMatch Security Alert:</strong> Se requiere activar JavaScript para ejecutar el motor de emparejamiento y moderación de contenido de SportMatch.
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

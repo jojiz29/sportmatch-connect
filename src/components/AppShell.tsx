@@ -15,12 +15,15 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
 import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
+import { JuryTour } from "@/components/JuryTour";
+import { useTourStore } from "@/shared/hooks/useTourStore";
 
 const GROUPS = [
   {
@@ -180,6 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.to}
                       to={item.to}
+                      id={item.to === "/app/tournaments" ? "tournaments-nav-tour" : undefined}
                       className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
@@ -283,6 +287,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.to}
                   to={item.to}
+                  id={item.to === "/app/tournaments" ? "tournaments-nav-mobile-tour" : undefined}
                   className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all duration-200 active:scale-90 rounded-xl ${
                     active
                       ? "text-neon bg-neon/5"
@@ -305,6 +310,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
+      <JuryTour />
+      <TourTriggerButton />
     </div>
+  );
+}
+
+function TourTriggerButton() {
+  const { startTour, run } = useTourStore();
+  const [showTrigger, setShowTrigger] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tour") === "true") {
+      setShowTrigger(true);
+    }
+  }, []);
+
+  if (!showTrigger) return null;
+
+  return (
+    <button
+      onClick={() => startTour()}
+      className="fixed bottom-20 lg:bottom-6 right-4 z-[49] px-4 py-2.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(255,87,34,0.6)] border border-orange-400 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+    >
+      <Zap className="h-4 w-4 animate-pulse" />
+      <span>{run ? "Tour Activo 🛡️" : "Iniciar Tour Jurado"}</span>
+    </button>
   );
 }
