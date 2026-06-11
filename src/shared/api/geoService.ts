@@ -27,7 +27,7 @@ function getCacheKey(lat: number, lng: number, dist: number) {
 }
 
 import { useAuthStore } from "@/entities/user/useAuth";
-import { MOCK_COURTS } from "./apiClient";
+import { apiClient } from "./apiClient";
 
 export async function searchNearbyCourts(
   latitude: number,
@@ -35,7 +35,8 @@ export async function searchNearbyCourts(
   maxDistanceMeters: number = 50_000,
 ): Promise<Court[]> {
   if (useAuthStore.getState().isDemoMode) {
-    const courts = MOCK_COURTS.map((c) => ({
+    const list = await apiClient.venues.getAll();
+    const courts = list.map((c) => ({
       ...c,
       distance_km: parseFloat(calculateDistance(latitude, longitude, c.lat, c.lng).toFixed(2)),
     }));

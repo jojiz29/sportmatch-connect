@@ -87,7 +87,18 @@ const getDemoUsers = (): User[] => {
     localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
     return MOCK_USERS;
   }
-  return JSON.parse(stored);
+  try {
+    const parsed = JSON.parse(stored);
+    // Force refresh cache if the new B2B business profiles are missing
+    if (!parsed || !Array.isArray(parsed) || !parsed.some((u: User) => u.id === "business-gym-1")) {
+      localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
+      return MOCK_USERS;
+    }
+    return parsed;
+  } catch {
+    localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
+    return MOCK_USERS;
+  }
 };
 
 const saveDemoUsers = (users: User[]) => {
@@ -101,7 +112,8 @@ export function useAuth() {
 
   const signIn = async (email?: string, password?: string) => {
     // E2E / Mock login bypass
-    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
+    const isMockAttempt = !!(email && !password);
+    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true" || isMockAttempt) {
       store.setDemoMode(true);
       const users = getDemoUsers();
       let mockUser: User = users[0];

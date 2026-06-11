@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Trophy,
@@ -26,6 +26,9 @@ import { Reward } from "@/services/walletService";
 import { TransferFitCoinsModal } from "@/features/wallet/ui/TransferFitCoinsModal";
 
 export const Route = createFileRoute("/app/wallet/")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     buyItem: (search.buyItem as string) || undefined,

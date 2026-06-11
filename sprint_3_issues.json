@@ -1,0 +1,763 @@
+[
+  {
+    "key": "SCRUM-43",
+    "summary": "Gestión de invitaciones deportivas",
+    "status": "Tareas por hacer",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-37",
+    "summary": "Lógica de coordinación de actividades",
+    "status": "Tareas por hacer",
+    "assigneeName": "Alejandro Andrade",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-20",
+    "summary": "Backend actividades deportivas",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-38",
+    "summary": "Disponibilidad de horarios",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-23",
+    "summary": "Gestión de participantes",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-22",
+    "summary": "Confirmación de asistencia",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-40",
+    "summary": "Conversación entre usuarios compatibles",
+    "status": "Tareas por hacer",
+    "assigneeName": "Alejandro Andrade",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-42",
+    "summary": "Notificaciones de confirmación y asistencia",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-129",
+    "summary": "Confirmación Individual de Asistencia de Usuarios",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": 3
+  },
+  {
+    "key": "SCRUM-133",
+    "summary": "Validación Mutua de Asistencia entre Jugadores",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": 5
+  },
+  {
+    "key": "SCRUM-137",
+    "summary": "Estadísticas e Historial de Cumplimiento en Perfil",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": 3
+  },
+  {
+    "key": "SCRUM-141",
+    "summary": "Calendario Deportivo: Vista Mensual",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-146",
+    "summary": "Calendario Deportivo: Vista Semanal",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-151",
+    "summary": "Calendario Deportivo: Próximos Partidos",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-155",
+    "summary": "Integración de Calendario con Matches",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-160",
+    "summary": "Navegación y UX del Calendario",
+    "status": "Finalizada",
+    "assignee": "matiasgastelu1@gmail.com",
+    "assigneeName": "Matias Gastelu",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-178",
+    "summary": "Onboarding: Registro guiado de 2 pasos",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-179",
+    "summary": "Profiles: Gestión de información",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-180",
+    "summary": "UI: Indicador de progreso de Onboarding",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-181",
+    "summary": "Profiles: Selección de nivel multideporte",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-182",
+    "summary": "Matchmaking: Sugerencias por nivel y geolocalización",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-183",
+    "summary": "Matchmaking: Tarjetas de perfil compatibles",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-184",
+    "summary": "Matchmaking: Filtro de jugadores por deporte",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-185",
+    "summary": "Matchmaking: Score de compatibilidad numérico",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-186",
+    "summary": "Reservas: Calendario interactivo de reservas",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-187",
+    "summary": "Reservas: Estado de horarios ocupados en tiempo real",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-188",
+    "summary": "Reservas: Cancelación con reembolso de FitCoins",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-189",
+    "summary": "Notificaciones: Recordatorio de reserva por push",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-190",
+    "summary": "Wallet: Visualización de saldo de FitCoins",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-191",
+    "summary": "Wallet: Historial de transacciones de FitCoins",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-192",
+    "summary": "Wallet: Recompensas en FitCoins por asistencia",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-193",
+    "summary": "Admin: Ajuste de precios de canchas en FitCoins",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-194",
+    "summary": "Notificaciones: Alertas en tiempo real por solicitud",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-195",
+    "summary": "Notificaciones: Marcar todas como leídas",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-196",
+    "summary": "Notificaciones: Agrupación de alertas por tipo",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-197",
+    "summary": "Chat: Mensajería de Squads en tiempo real",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-198",
+    "summary": "Chat: Indicador de escritura activa",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-199",
+    "summary": "Chat: Check de lectura (doble palomita)",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-200",
+    "summary": "Chat: Lista de conversaciones ordenadas por fecha",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-201",
+    "summary": "Partidos: Creación de partidos públicos",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-202",
+    "summary": "Partidos: Unión rápida a partidos",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-203",
+    "summary": "Partidos: Mapa interactivo de partidos cercanos",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-204",
+    "summary": "Partidos: Expulsión de participantes",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-205",
+    "summary": "Reviews: Valoración de compañeros con estrellas",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-206",
+    "summary": "Reviews: Visualización de promedio de valoración",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-207",
+    "summary": "Reviews: Comentarios adjuntos a valoraciones",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-208",
+    "summary": "Moderación: Reporte de usuarios inapropiados",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-209",
+    "summary": "Admin: Panel de moderación de reportes",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-210",
+    "summary": "Canchas: Mapa interactivo de canchas con filtros",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-211",
+    "summary": "Canchas: Vista detallada de fotos y tarifas",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-212",
+    "summary": "Canchas: Registro de canchas favoritas",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-213",
+    "summary": "Admin: Adición de canchas con PostGIS y precio",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-214",
+    "summary": "Profiles: Edición de información de perfil",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-215",
+    "summary": "Profiles: Vista de perfil público y valoraciones",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-216",
+    "summary": "Gamificación: Gráfico de racha e historial de asistencia",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-217",
+    "summary": "Social: Seguimiento de jugadores comunitarios",
+    "status": "Tareas por hacer",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-258",
+    "summary": "Integración de Pasarela de Pagos para Alquiler de Canchas",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-259",
+    "summary": "Módulo de Canjes de Productos y Cupones",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-273",
+    "summary": "[SportMatch] Implementar endpoints públicos y protegidos en backend",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-274",
+    "summary": "[SportMatch] Implementar validación de tokens de Supabase en backend NestJS",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-275",
+    "summary": "[SportMatch] Corregir CORS multi-origen en backend NestJS",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-276",
+    "summary": "[SportMatch] Corregir problema de dependencias de módulos en NestJS",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-277",
+    "summary": "[SportMatch] Mejorar loader del dashboard con timeouts y manejo de errores",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-278",
+    "summary": "[SportMatch] Fix: agregar prefijo /api/v1 a backendApi calls",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-279",
+    "summary": "[SportMatch] Fix: validación opcional en preferred_sports",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-280",
+    "summary": "[SportMatch] Merge rama Juan → Main",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-281",
+    "summary": "[SportMatch] Configurar cron job para evitar cold start en Render",
+    "status": "Tareas por hacer",
+    "assigneeName": "Juan Alonso Salvatierra Ramirez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-292",
+    "summary": "US-PAY-001: Formulario de Pago con Tarjeta mediante Stripe Elements",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": 5
+  },
+  {
+    "key": "SCRUM-293",
+    "summary": "US-PAY-002: Creación de PaymentIntent en el Servidor (NestJS + Stripe SDK)",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-294",
+    "summary": "US-PAY-003: Pago Total con FitCoins sin Tarjeta",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-295",
+    "summary": "US-PAY-004: Pago Mixto — Descuento con FitCoins + Cobro Restante por Stripe",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-296",
+    "summary": "US-PAY-005: Pantalla de Comprobante y Confirmación de Reserva Exitosa",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-297",
+    "summary": "US-PAY-006: Manejo de Errores de Pago y Flujo de Reintentos",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-298",
+    "summary": "US-COM-001: Lógica de Comisión por Reserva (10%) en el Servidor",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-299",
+    "summary": "US-TRUST-001: Validación de Identidad por DNI con Consulta a API RENIEC",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-300",
+    "summary": "US-TRUST-002: Insignia de Cuenta Verificada e Impacto en Trust Score",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-302",
+    "summary": "Tarea: Integrar Stripe Elements en el frontend React (CardElement)",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-304",
+    "summary": "Tarea: Migración de base de datos — campos de verificación DNI en tabla users",
+    "status": "Finalizada",
+    "assigneeName": "Erick Jair Espinoza Mayta",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-305",
+    "summary": "Selección de Temas de Interfaz (Tri-state Theme)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-306",
+    "summary": "Adaptabilidad de Contraste en Modo Claro (Contrast Overhaul)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-307",
+    "summary": "Visualización Dinámica de Insignias Deportivas (Badge Engine)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-308",
+    "summary": "Validación de Entradas con Limpieza de Espacios (useStrictForm)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-309",
+    "summary": "Publicación en Feed con Soporte Multimedia (NewsFeed Dropzone)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-310",
+    "summary": "Moderación Local de Imágenes de Publicaciones (NSFWJS Feed)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-311",
+    "summary": "Moderación Local de Foto de Perfil en el Onboarding (NSFWJS Onboarding)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-312",
+    "summary": "Moderación Local al Actualizar Avatar de Perfil (NSFWJS Profile Settings)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-313",
+    "summary": "Sistema de Comentarios en Cascada para Publicaciones (CommentTree)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-314",
+    "summary": "Configuración de Escuadra Táctica (Squad Builder)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-315",
+    "summary": "Visualización Animada de Llaves y Enfrentamientos (Versus Lineups)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-316",
+    "summary": "Visualización de Skeletons durante Carga (Skeleton Loaders)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-317",
+    "summary": "Instalación de la Aplicación en Pantalla de Inicio (PWA Integration)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-318",
+    "summary": "Recorrido Guiado Interactivo de la Aplicación (Jury Tour)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-319",
+    "summary": "Purga Automática de Sesión Expirada (Axios Auth Interceptor)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  },
+  {
+    "key": "SCRUM-320",
+    "summary": "Aislamiento de Fallos mediante Límites de Error (Error Boundaries)",
+    "status": "Finalizada",
+    "assigneeName": "Edwin Flores Sanchez",
+    "priority": "Medium",
+    "storyPoints": null
+  }
+]

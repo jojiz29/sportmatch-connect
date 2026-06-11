@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
+import { ImageUploadField } from "@/components/ImageUploadField";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -7,18 +8,30 @@ import {
   createCatalogItem,
   deleteCatalogItem,
 } from "@/shared/api/businessService";
-import { CatalogItem, Court, SportCatalog } from "@/entities/types";
+import { CatalogItem, Venue, SportCatalog, Transaction, Ad, User } from "@/entities/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
+import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
+import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
 import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
+import { useProfileStore } from "@/features/profile/useProfileStore";
+import { useAdsStore } from "@/features/business/model/useAdsStore";
 import { toast } from "sonner";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
-import { apiClient, MOCK_COURTS } from "@/shared/api/apiClient";
+import { apiClient, MOCK_VENUES } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import {
-  LayoutGrid,
   Plus,
   Trash2,
+  Edit3,
   TrendingUp,
   Users,
   DollarSign,
@@ -27,6 +40,9 @@ import {
   Eye,
   BarChart3,
   Target,
+  Megaphone,
+  MousePointer,
+  MapPin,
 } from "lucide-react";
 import {
   AreaChart,
@@ -41,57 +57,109 @@ import {
   Cell,
 } from "recharts";
 
+interface BusinessSearch {
+  tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings";
+}
+
 export const Route = createFileRoute("/app/business")({
+  validateSearch: (search: Record<string, unknown>): BusinessSearch => {
+    return {
+      tab: (search.tab as BusinessSearch["tab"]) || "profile",
+    };
+  },
   head: () => ({ meta: [{ title: "Mi Negocio — SportMatch" }] }),
   component: BusinessPage,
 });
 
-// Generate mock analytics data for the charts
-function generateSalesData() {
-  const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-  return days.map((day) => ({
-    day,
-    ventas: Math.floor(Math.random() * 400) + 50,
-    impresiones: Math.floor(Math.random() * 1200) + 200,
-  }));
-}
-
-function generateReachData() {
-  return [
-    { name: "< 1km", value: 35, color: "hsl(var(--neon))" },
-    { name: "1-3km", value: 40, color: "hsl(var(--electric))" },
-    { name: "3-5km", value: 20, color: "hsl(var(--warning))" },
-    { name: "> 5km", value: 5, color: "hsl(var(--muted-foreground))" },
-  ];
-}
-
+// Mock data generators removed to satisfy eslint unused-vars
 function BusinessPage() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/app/business" });
   const sales = useBusinessStore((s) => s.sales);
+  const { ads, fetchAds, createAd, updateAd, deleteAd, isLoading: loadingAds } = useAdsStore();
+
+  // Metrics Calculation (moved up to satisfy Hook rules)
+  const businessAds = useMemo(() => {
+    if (!user) return [];
+    return ads.filter((ad) => ad.business_id === user.id);
+  }, [ads, user]);
+
+  const totalAdsCount = businessAds.length;
+  const totalViews = useMemo(
+    () => businessAds.reduce((acc, ad) => acc + (ad.views || 0), 0),
+    [businessAds],
+  );
+  const totalClicks = useMemo(
+    () => businessAds.reduce((acc, ad) => acc + (ad.clicks || 0), 0),
+    [businessAds],
+  );
+  const totalContacts = useMemo(
+    () => businessAds.reduce((acc, ad) => acc + (ad.contacts || 0), 0),
+    [businessAds],
+  );
+
+  // Followers from social store
+  const followersCount = useMemo(() => {
+    if (!user) return 0;
+    return useSocialStore.getState().getFollowStats(user.id).followersCount;
+  }, [user]);
+
+  // Chart data distributed
+  const salesData = useMemo(() => {
+    const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+    const baseViews = totalViews || 350;
+    const baseClicks = totalClicks || 85;
+    const baseContacts = totalContacts || 18;
+
+    return days.map((day, idx) => {
+      const mult = (idx + 1) / 7;
+      return {
+        day,
+        impresiones: Math.round((baseViews / 7) * (0.6 + mult * Math.random())),
+        clics: Math.round((baseClicks / 7) * (0.5 + mult * Math.random())),
+        contactos: Math.round((baseContacts / 7) * (0.4 + mult * Math.random())),
+      };
+    });
+  }, [totalViews, totalClicks, totalContacts]);
+
+  const reachData = useMemo(
+    () => [
+      { name: "< 1km", value: 35, color: "#39FF14" },
+      { name: "1-3km", value: 40, color: "#00E5FF" },
+      { name: "3-5km", value: 20, color: "#E040FB" },
+      { name: "> 5km", value: 5, color: "#475569" },
+    ],
+    [],
+  );
 
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"catalog" | "analytics" | "courts">("catalog");
 
-  // Tab canchas
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [loadingCourts, setLoadingCourts] = useState(true);
+  const search = Route.useSearch();
+  const activeTab = search.tab || "profile";
+
+  // Tab venues (Sedes)
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(true);
   const [sportsList, setSportsList] = useState<SportCatalog[]>([]);
+  const [venueFormOpen, setVenueFormOpen] = useState(false);
 
-  // Form states for new court
-  const [courtName, setCourtName] = useState("");
-  const [courtAddress, setCourtAddress] = useState("");
-  const [courtLat, setCourtLat] = useState<number | "">("");
-  const [courtLng, setCourtLng] = useState<number | "">("");
-  const [courtPrice, setCourtPrice] = useState<number | "">("");
-  const [courtSport, setCourtSport] = useState("");
-  const [courtMaxPlayers, setCourtMaxPlayers] = useState<number | "">("");
-  const [courtAmenities, setCourtAmenities] = useState("");
-  const [courtImage, setCourtImage] = useState("");
-  const [registeringCourt, setRegisteringCourt] = useState(false);
+  // Form states for new venue (Sede)
+  const [venueName, setVenueName] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [venueDistrict, setVenueDistrict] = useState("");
+  const [venueLat, setVenueLat] = useState<number | "">("");
+  const [venueLng, setVenueLng] = useState<number | "">("");
+  const [venuePrice, setVenuePrice] = useState<number | "">("");
+  const [venueSport, setVenueSport] = useState("");
+  const [venueMaxPlayers, setVenueMaxPlayers] = useState<number | "">("");
+  const [venueAmenities, setVenueAmenities] = useState("");
+  const [venueImage, setVenueImage] = useState("");
+  const [venueDescription, setVenueDescription] = useState("");
+  const [venueHours, setVenueHours] = useState("");
+  const [registeringVenue, setRegisteringVenue] = useState(false);
 
-  // Form states
+  // Form states Catalog
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number | "">("");
@@ -99,12 +167,67 @@ function BusinessPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Form states B2B Commercial Profile
+  const [compName, setCompName] = useState("");
+  const [compCategory, setCompCategory] = useState("");
+  const [compBio, setCompBio] = useState("");
+  const [compLogo, setCompLogo] = useState("");
+  const [compAddress, setCompAddress] = useState("");
+  const [compDistrict, setCompDistrict] = useState("");
+  const [compHours, setCompHours] = useState("");
+  const [compWhatsapp, setCompWhatsapp] = useState("");
+  const [compInstagram, setCompInstagram] = useState("");
+  const [compWebsite, setCompWebsite] = useState("");
+  const [compImages, setCompImages] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Form states Ad Campaigns
+  const [adTitle, setAdTitle] = useState("");
+  const [adDesc, setAdDesc] = useState("");
+  const [adCategory, setAdCategory] = useState("");
+  const [adLocation, setAdLocation] = useState("");
+  const [adDistrict, setAdDistrict] = useState("");
+  const [adValidUntil, setAdValidUntil] = useState("");
+  const [adPhone, setAdPhone] = useState("");
+  const [adImage, setAdImage] = useState("");
+  const [adFeatured, setAdFeatured] = useState(false);
+  const [adPremium, setAdPremium] = useState(false);
+  const [publishingAd, setPublishingAd] = useState(false);
+  const [editingAdId, setEditingAdId] = useState<string | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [adCashCost, setAdCashCost] = useState(0);
+  const { isProcessing: isAdPaying, processPayment: processAdPayment } = usePaymentGatewayStore();
+
+  // Load profile states when user is available
+  useEffect(() => {
+    if (user) {
+      setCompName(user.company_name || "");
+      setCompCategory(user.business_category || "");
+      setCompBio(user.bio || "");
+      setCompLogo(user.avatar_url || "");
+      setCompAddress(user.address || "");
+      setCompDistrict(user.district || "");
+      setCompHours(user.operating_hours?.[0] || "");
+      setCompWhatsapp(user.whatsapp || "");
+      setCompInstagram(user.instagram || "");
+      setCompWebsite(user.website || "");
+      setCompImages(user.images ? user.images.join(", ") : "");
+    }
+  }, [user]);
+
+  // Load ads
+  useEffect(() => {
+    if (user) {
+      fetchAds(user.id);
+    }
+  }, [user, fetchAds]);
+
   const handleAutofillLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setCourtLat(pos.coords.latitude);
-          setCourtLng(pos.coords.longitude);
+          setVenueLat(pos.coords.latitude);
+          setVenueLng(pos.coords.longitude);
           toast.success("Ubicación actual obtenida con éxito.");
         },
         (err) => {
@@ -117,111 +240,154 @@ function BusinessPage() {
     }
   };
 
-  const handleCreateCourt = async (e: React.FormEvent) => {
+  const handleCreateVenue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error("Debes iniciar sesión.");
       return;
     }
-    if (
-      !courtName ||
-      !courtSport ||
-      courtPrice === "" ||
-      !courtAddress ||
-      courtLat === "" ||
-      courtLng === ""
-    ) {
+    if (!venueName || !venueAddress || venueLat === "" || venueLng === "") {
       toast.error("Por favor completa los campos obligatorios.");
       return;
     }
 
     try {
-      setRegisteringCourt(true);
-      const latVal = Number(courtLat);
-      const lngVal = Number(courtLng);
-      const priceVal = Number(courtPrice);
-      const maxPlayersVal = courtMaxPlayers !== "" ? Number(courtMaxPlayers) : 4;
+      setRegisteringVenue(true);
+      const latVal = Number(venueLat);
+      const lngVal = Number(venueLng);
+      const priceVal = venuePrice !== "" ? Number(venuePrice) : 0;
+      const maxPlayersVal = venueMaxPlayers !== "" ? Number(venueMaxPlayers) : 4;
+      const hoursVal = venueHours ? [venueHours] : ["08:00 - 22:00"];
 
-      const { data: newCourt, error: insertErr } = await withTimeout(
-        supabase
-          .from("courts")
-          .insert({
-            name: courtName,
-            sport: courtSport,
-            price_per_hour: priceVal,
-            lat: latVal,
-            lng: lngVal,
-            location: `POINT(${lngVal} ${latVal})`, // WKT point for PostGIS geography (lng first, lat second)
-            address: courtAddress,
-            max_players: maxPlayersVal,
-            operating_hours: [
-              "08:00",
-              "10:00",
-              "12:00",
-              "14:00",
-              "16:00",
-              "18:00",
-              "19:00",
-              "20:00",
-              "21:00",
-            ], // default slots
-            image_url: courtImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
-            amenities: courtAmenities
-              ? courtAmenities
-                  .split(",")
-                  .map((a) => a.trim())
-                  .filter(Boolean)
-              : ["Iluminación", "Estacionamiento"],
-            owner_id: user.id,
-            is_available: true,
-            rating: 5.0,
-            reviews_count: 0,
-          })
-          .select()
-          .single(),
-      );
+      const newVenue: Venue = {
+        id: `venue-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        name: venueName,
+        sport: venueSport || "Deporte General",
+        price_per_hour: priceVal,
+        lat: latVal,
+        lng: lngVal,
+        address: venueAddress,
+        district: venueDistrict || compDistrict || "Surco",
+        max_players: maxPlayersVal,
+        operating_hours: hoursVal,
+        image_url: venueImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+        amenities: venueAmenities
+          ? venueAmenities
+              .split(",")
+              .map((a) => a.trim())
+              .filter(Boolean)
+          : ["Seguridad", "Estacionamiento"],
+        owner_id: user.id,
+        is_available: true,
+        rating: 5.0,
+        reviews_count: 0,
+        description: venueDescription,
+      };
 
-      if (insertErr) {
-        throw insertErr;
+      if (useAuthStore.getState().isDemoMode) {
+        const stored = localStorage.getItem("sportmatch_demo_venues");
+        let list: Venue[] = [];
+        if (stored) {
+          try {
+            list = JSON.parse(stored);
+          } catch {
+            list = [...MOCK_VENUES];
+          }
+        } else {
+          list = [...MOCK_VENUES];
+        }
+        list.push(newVenue);
+        localStorage.setItem("sportmatch_demo_venues", JSON.stringify(list));
+        setVenues((prev) => [...prev, newVenue]);
+        toast.success("¡Sede registrada con éxito en modo Demo!");
+      } else {
+        const { data: createdVenue, error: insertErr } = await withTimeout(
+          supabase
+            .from("courts")
+            .insert({
+              name: venueName,
+              sport: venueSport || "Deporte General",
+              price_per_hour: priceVal,
+              lat: latVal,
+              lng: lngVal,
+              location: `POINT(${lngVal} ${latVal})`,
+              address: venueAddress,
+              max_players: maxPlayersVal,
+              operating_hours: hoursVal,
+              image_url: venueImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+              amenities: newVenue.amenities,
+              owner_id: user.id,
+              is_available: true,
+              rating: 5.0,
+              reviews_count: 0,
+              district: venueDistrict || compDistrict || "Surco",
+              description: venueDescription,
+            })
+            .select()
+            .single(),
+        );
+
+        if (insertErr) {
+          throw insertErr;
+        }
+
+        setVenues((prev) => [...prev, createdVenue as Venue]);
+        toast.success("¡Sede registrada con éxito!");
       }
 
-      setCourts((prev) => [...prev, newCourt as Court]);
-      setCourtName("");
-      setCourtAddress("");
-      setCourtLat("");
-      setCourtLng("");
-      setCourtPrice("");
-      setCourtSport("");
-      setCourtMaxPlayers("");
-      setCourtAmenities("");
-      setCourtImage("");
-
-      toast.success("¡Cancha registrada con éxito!");
+      setVenueName("");
+      setVenueAddress("");
+      setVenueLat("");
+      setVenueLng("");
+      setVenuePrice("");
+      setVenueSport("");
+      setVenueMaxPlayers("");
+      setVenueAmenities("");
+      setVenueImage("");
+      setVenueDistrict("");
+      setVenueDescription("");
+      setVenueHours("");
+      setVenueFormOpen(false);
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error("Error al registrar cancha: " + msg);
+      toast.error("Error al registrar sede: " + msg);
     } finally {
-      setRegisteringCourt(false);
+      setRegisteringVenue(false);
     }
   };
 
-  const handleDeleteCourt = async (id: string) => {
+  const handleDeleteVenue = async (id: string) => {
     try {
-      const { error } = await supabase.from("courts").delete().eq("id", id);
-      if (error) throw error;
-      setCourts((prev) => prev.filter((c) => c.id !== id));
-      toast.success("Cancha eliminada con éxito");
+      if (useAuthStore.getState().isDemoMode) {
+        const stored = localStorage.getItem("sportmatch_demo_venues");
+        let list: Venue[] = [];
+        if (stored) {
+          try {
+            list = JSON.parse(stored);
+          } catch {
+            list = [...MOCK_VENUES];
+          }
+        } else {
+          list = [...MOCK_VENUES];
+        }
+        const updatedList = list.filter((c) => c.id !== id);
+        localStorage.setItem("sportmatch_demo_venues", JSON.stringify(updatedList));
+        setVenues((prev) => prev.filter((c) => c.id !== id));
+        toast.success("Sede eliminada con éxito en modo Demo");
+      } else {
+        const { error } = await supabase.from("courts").delete().eq("id", id);
+        if (error) throw error;
+        setVenues((prev) => prev.filter((c) => c.id !== id));
+        toast.success("Sede eliminada con éxito");
+      }
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error("Error al eliminar la cancha: " + msg);
+      toast.error("Error al eliminar la sede: " + msg);
     }
   };
-
-  // Analytics data
-  const salesData = useMemo(() => generateSalesData(), []);
-  const reachData = useMemo(() => generateReachData(), []);
 
   useEffect(() => {
     if (!user) return;
@@ -232,20 +398,31 @@ function BusinessPage() {
     async function loadBusinessData() {
       try {
         setLoading(true);
-        setLoadingCourts(true);
+        setLoadingVenues(true);
         // Load catalog
         const catalogData = await getCatalogItems(businessId);
         setItems(catalogData);
 
         if (useAuthStore.getState().isDemoMode) {
-          const courtsData = MOCK_COURTS.filter((c) => c.owner_id === businessId);
-          setCourts(courtsData);
+          const allVenues = await apiClient.venues.getAll();
+          let venuesData = allVenues.filter((c) => c.owner_id === businessId);
+          if (venuesData.length === 0) {
+            const updatedVenues = allVenues.map((c, idx) => {
+              if (idx < 3) {
+                return { ...c, owner_id: businessId };
+              }
+              return c;
+            });
+            localStorage.setItem("sportmatch_demo_venues", JSON.stringify(updatedVenues));
+            venuesData = updatedVenues.filter((c) => c.owner_id === businessId);
+          }
+          setVenues(venuesData);
           // Try backend first for sports, fallback to Supabase
           const backendSports = await backendApi.sports.getAll().catch(() => null);
           const sportsData = backendSports || (await apiClient.sports.getAll());
           setSportsList(sportsData as SportCatalog[]);
           setLoading(false);
-          setLoadingCourts(false);
+          setLoadingVenues(false);
           return;
         }
 
@@ -255,7 +432,7 @@ function BusinessPage() {
           .select("*")
           .eq("owner_id", businessId);
         if (courtsErr) throw courtsErr;
-        setCourts((courtsData || []) as Court[]);
+        setVenues((courtsData || []) as Venue[]);
 
         // Load sports catalog - try backend first, fallback to Supabase
         const backendSports = await backendApi.sports.getAll().catch(() => null);
@@ -266,7 +443,7 @@ function BusinessPage() {
         toast.error("Error al cargar datos del negocio");
       } finally {
         setLoading(false);
-        setLoadingCourts(false);
+        setLoadingVenues(false);
       }
     }
     loadBusinessData();
@@ -336,95 +513,860 @@ function BusinessPage() {
     }
   };
 
-  // Metrics
-  const mySales = sales.filter((s) => items.some((i) => i.id === s.catalog_item_id));
-  const totalEarned = mySales.reduce((acc, curr) => acc + curr.price, 0);
-  const totalSalesCount = mySales.length;
+  // Profile update handler
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSavingProfile(true);
+      const imgArray = compImages
+        ? compImages
+            .split(",")
+            .map((img) => img.trim())
+            .filter(Boolean)
+        : [];
 
-  // Followers from social store
-  const followersCount = useSocialStore.getState().getFollowStats(user.id).followersCount;
+      await useProfileStore.getState().updateProfile({
+        company_name: compName,
+        business_category: compCategory as User["business_category"],
+        bio: compBio,
+        avatar_url: compLogo,
+        address: compAddress,
+        district: compDistrict,
+        operating_hours: compHours ? [compHours] : [],
+        whatsapp: compWhatsapp,
+        instagram: compInstagram,
+        website: compWebsite,
+        images: imgArray,
+      });
+      toast.success("¡Perfil comercial guardado con éxito!");
+    } catch (err) {
+      console.error("Error saving profile:", err);
+      const message = err instanceof Error ? err.message : "Error al actualizar perfil comercial.";
+      toast.error(message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
-  // Simulated reach
-  const simulatedReach = user.is_sponsored ? 8430 : items.length * 120 + 350;
+  const resetAdForm = () => {
+    setAdTitle("");
+    setAdDesc("");
+    setAdCategory("");
+    setAdLocation("");
+    setAdDistrict("");
+    setAdValidUntil("");
+    setAdPhone("");
+    setAdImage("");
+    setAdFeatured(false);
+    setAdPremium(false);
+    setEditingAdId(null);
+  };
+
+  const handleStartEditAd = (ad: Ad) => {
+    setEditingAdId(ad.id);
+    setAdTitle(ad.title);
+    setAdDesc(ad.description);
+    setAdCategory(ad.category);
+    setAdLocation(ad.location || "");
+    setAdDistrict(ad.district || "");
+    setAdValidUntil(ad.valid_until ? ad.valid_until.split("T")[0] : "");
+    setAdPhone(ad.contact_phone || "");
+    setAdImage(ad.image_url || "");
+    setAdFeatured(ad.is_featured || false);
+    setAdPremium(ad.is_premium || false);
+  };
+
+  // Ads creation/update handler
+  const handleCreateAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adTitle || !adDesc || !adCategory || !adValidUntil) {
+      toast.error("Por favor completa los campos obligatorios.");
+      return;
+    }
+
+    if (editingAdId) {
+      try {
+        setPublishingAd(true);
+        await updateAd(editingAdId, {
+          title: adTitle,
+          description: adDesc,
+          image_url: adImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+          category: adCategory as Ad["category"],
+          location: adLocation || compAddress || "",
+          district: adDistrict || compDistrict || "",
+          valid_until: new Date(adValidUntil).toISOString(),
+          contact_phone: adPhone || compWhatsapp || "",
+          is_featured: adFeatured,
+          is_premium: adPremium,
+        });
+        toast.success("¡Anuncio actualizado con éxito!");
+        resetAdForm();
+      } catch (err) {
+        console.error(err);
+        const message = err instanceof Error ? err.message : "Error al actualizar el anuncio";
+        toast.error(message);
+      } finally {
+        setPublishingAd(false);
+      }
+      return;
+    }
+
+    const cost = (adFeatured ? 10 : 0) + (adPremium ? 20 : 0);
+    if (cost > 0) {
+      setAdCashCost(cost);
+      setPaymentDialogOpen(true);
+      return;
+    }
+
+    try {
+      setPublishingAd(true);
+      await createAd({
+        business_id: user.id,
+        title: adTitle,
+        description: adDesc,
+        image_url: adImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+        category: adCategory as Ad["category"],
+        location: adLocation || compAddress || "",
+        district: adDistrict || compDistrict || "",
+        valid_until: new Date(adValidUntil).toISOString(),
+        contact_phone: adPhone || compWhatsapp || "",
+        is_featured: false,
+        is_premium: false,
+      });
+
+      toast.success("¡Anuncio deportivo publicado con éxito!");
+      resetAdForm();
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : "Error al crear anuncio";
+      toast.error(message);
+    } finally {
+      setPublishingAd(false);
+    }
+  };
+
+  // Callback after successful payment of ads highlight
+  const handleAdPaymentConfirm = async (
+    selection: PaymentSelection,
+    stripe?: Stripe | null,
+    elements?: StripeElements | null,
+  ) => {
+    try {
+      setPublishingAd(true);
+
+      const netAmount = Math.max(
+        0,
+        adCashCost - (selection.useFitcoins ? selection.fitcoinsToUse : 0),
+      );
+      const paymentPayload = {
+        method: selection.method,
+        amount: netAmount,
+        useFitcoins: selection.useFitcoins,
+        fitcoinsToUse: selection.fitcoinsToUse,
+      };
+
+      const result = await processAdPayment(
+        paymentPayload,
+        `Destacar Campaña: ${adTitle}`,
+        stripe,
+        elements,
+      );
+      if (!result.success) {
+        const currentError = usePaymentGatewayStore.getState().error;
+        toast.error(currentError || "El pago no pudo ser completado.");
+        return;
+      }
+
+      // Create the sponsored ad in database
+      await createAd({
+        business_id: user.id,
+        title: adTitle,
+        description: adDesc,
+        image_url: adImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
+        category: adCategory as Ad["category"],
+        location: adLocation || compAddress || "",
+        district: adDistrict || compDistrict || "",
+        valid_until: new Date(adValidUntil).toISOString(),
+        contact_phone: adPhone || compWhatsapp || "",
+        is_featured: adFeatured,
+        is_premium: adPremium,
+      });
+
+      // Ledger deduction for FitCoins if applied
+      if (selection.useFitcoins && selection.fitcoinsToUse > 0) {
+        const newBalance = (user.fitcoins_balance || 0) - selection.fitcoinsToUse;
+        apiClient.wallet.updateBalance(user.id, newBalance);
+
+        const tx: Transaction = {
+          id: `tx-ad-${Date.now()}`,
+          user_id: user.id,
+          amount: -selection.fitcoinsToUse,
+          description: `Descuento en destaque: ${adTitle}`,
+          type: "SPEND",
+          created_at: new Date().toISOString(),
+        };
+        apiClient.wallet.saveTransaction(user.id, tx);
+      }
+
+      toast.success("¡Pago recibido y anuncio promocionado publicado!");
+      setPaymentDialogOpen(false);
+      resetAdForm();
+    } catch (err) {
+      console.error("Ad creation after payment failed:", err);
+      const message = err instanceof Error ? err.message : "Error al guardar el anuncio.";
+      toast.error(message);
+    } finally {
+      setPublishingAd(false);
+    }
+  };
+
+  // Duplicate metrics calculation deleted, moved to top of component
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader
-        title="Panel de Negocios"
-        subtitle={`Gestiona tu marketplace y analíticas comerciales para ${user.company_name || user.name}`}
+        title="Portal de Empresas y Patrocinadores"
+        subtitle={`Ecosistema deportivo conectado para ${user.company_name || user.name}`}
       />
 
       {/* Metrics Banner */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         <MetricCard
-          label="FitCoins Recaudados"
-          value={`${user.fitcoins_balance} FC`}
+          label="Saldo FitCoins"
+          value={`${user.fitcoins_balance ?? 0} FC`}
           icon={<DollarSign className="h-5 w-5" />}
           accentClass="text-neon bg-neon/10 border-neon/20"
-          id="business-balance-display"
         />
         <MetricCard
-          label="Ventas Totales"
-          value={String(totalSalesCount)}
-          icon={<LayoutGrid className="h-5 w-5" />}
+          label="Anuncios Activos"
+          value={String(totalAdsCount)}
+          icon={<Megaphone className="h-5 w-5" />}
           accentClass="text-electric bg-electric/10 border-electric/20"
-          id="business-sales-display"
         />
         <MetricCard
-          label="Seguidores"
-          value={String(followersCount)}
-          icon={<Users className="h-5 w-5" />}
-          accentClass="text-violet-foreground bg-violet/10 border-violet/30"
-          id="business-followers-display"
-        />
-        <MetricCard
-          label="Alcance Geográfico"
-          value={`${simulatedReach}`}
+          label="Impresiones Anuncio"
+          value={String(totalViews)}
           icon={<Eye className="h-5 w-5" />}
           accentClass="text-warning bg-warning/10 border-warning/20"
-          extra={user.is_sponsored ? "🔥 Premium" : undefined}
+        />
+        <MetricCard
+          label="Clics Totales"
+          value={String(totalClicks)}
+          icon={<MousePointer className="h-5 w-5" />}
+          accentClass="text-violet-foreground bg-violet/10 border-violet/30"
+        />
+        <MetricCard
+          label="Contactos Match"
+          value={String(totalContacts)}
+          icon={<Users className="h-5 w-5" />}
+          accentClass="text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+        />
+        <MetricCard
+          label="Conversión"
+          value={totalViews > 0 ? `${((totalClicks / totalViews) * 100).toFixed(1)}%` : "0%"}
+          icon={<TrendingUp className="h-5 w-5" />}
+          accentClass="text-primary bg-primary/10 border-primary/20"
         />
       </div>
 
-      {/* Tab Switch */}
-      <div className="flex gap-4 border-b border-border/50 pb-2 mb-6">
-        <button
-          onClick={() => setActiveTab("catalog")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "catalog"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="business-tab-catalog"
-        >
-          📦 Catálogo & Ventas
-        </button>
-        <button
-          onClick={() => setActiveTab("analytics")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "analytics"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="business-tab-analytics"
-        >
-          📊 Business Intelligence
-        </button>
-        <button
-          onClick={() => setActiveTab("courts")}
-          className={`pb-2 text-sm font-bold border-b-2 transition-all px-1 cursor-pointer ${
-            activeTab === "courts"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          id="business-tab-courts"
-        >
-          🎾 Mis Canchas
-        </button>
-      </div>
+      {activeTab === "profile" && (
+        <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card text-left">
+          <div className="max-w-3xl">
+            <h3 className="font-extrabold text-xl mb-2 flex items-center gap-2 text-foreground">
+              🏢 Administrar Perfil Comercial
+            </h3>
+            <p className="text-xs text-muted-foreground mb-6">
+              Este perfil se mostrará de forma exclusiva en el mapa en vivo para conectar
+              deportistas locales con tu establecimiento o servicios.
+            </p>
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Nombre Comercial</label>
+                  <input
+                    type="text"
+                    required
+                    value={compName}
+                    onChange={(e) => setCompName(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="Ej. Megatlon Club"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Categoría Comercial</label>
+                  <select
+                    required
+                    value={compCategory}
+                    onChange={(e) => setCompCategory(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                  >
+                    <option value="">Selecciona...</option>
+                    <option value="Canchas">🏟️ Canchas / Espacios Deportivos</option>
+                    <option value="Gym">🏋️ Gimnasio</option>
+                    <option value="Academia">🎓 Academia Deportiva</option>
+                    <option value="Fisioterapia">💆 Fisioterapia y Descarga</option>
+                    <option value="Nutricionista">🍎 Nutrición Deportiva</option>
+                    <option value="Tienda">🛍️ Tienda y Equipamiento</option>
+                    <option value="Bebidas">🥤 Bebidas y Suplementos</option>
+                    <option value="Torneos">🏆 Torneos y Eventos</option>
+                    <option value="Marcas">🏷️ Marcas Deportivas</option>
+                    <option value="Patrocinador">⭐ Patrocinador</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold mb-1 block">
+                  Descripción Comercial (Bio)
+                </label>
+                <textarea
+                  value={compBio}
+                  onChange={(e) => setCompBio(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none"
+                  placeholder="Describe qué ofrece tu negocio deportivo (clases, preparación, horarios especiales para deportistas de la app)..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <ImageUploadField
+                    label="Logo del Perfil"
+                    value={compLogo}
+                    onChange={(val) => setCompLogo(val)}
+                    placeholder="https://images.unsplash.com/..."
+                    id="compLogo"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Dirección Física</label>
+                  <input
+                    type="text"
+                    value={compAddress}
+                    onChange={(e) => setCompAddress(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="Av. Primavera 123, Oficina 201"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">
+                    Distrito / Hub de Cobertura
+                  </label>
+                  <select
+                    value={compDistrict}
+                    onChange={(e) => setCompDistrict(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                  >
+                    <option value="">Selecciona...</option>
+                    <option value="Santiago de Surco">Santiago de Surco</option>
+                    <option value="San Borja">San Borja</option>
+                    <option value="Miraflores">Miraflores</option>
+                    <option value="Lince">Lince</option>
+                    <option value="Magdalena">Magdalena del Mar</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Horario de Atención</label>
+                  <input
+                    type="text"
+                    value={compHours}
+                    onChange={(e) => setCompHours(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="Lunes a Viernes 6am - 11pm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Teléfono WhatsApp</label>
+                  <input
+                    type="text"
+                    value={compWhatsapp}
+                    onChange={(e) => setCompWhatsapp(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="+51999888777"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Instagram Usuario</label>
+                  <input
+                    type="text"
+                    value={compInstagram}
+                    onChange={(e) => setCompInstagram(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="@megatlon.pe"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Sitio Web</label>
+                  <input
+                    type="text"
+                    value={compWebsite}
+                    onChange={(e) => setCompWebsite(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="https://megatlon.com"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold mb-1 block">
+                  Galería de Fotos (URLs separadas por comas)
+                </label>
+                <input
+                  type="text"
+                  value={compImages}
+                  onChange={(e) => setCompImages(e.target.value)}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                  placeholder="https://unsplash.com/..., https://unsplash.com/..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="py-3 px-6 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
+              >
+                {savingProfile ? "Guardando..." : "Guardar Perfil Comercial"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "ads" && (
+        <div className="grid lg:grid-cols-3 gap-8 text-left">
+          {/* Active ads list */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
+              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                📢 Campañas Deportivas Publicadas
+              </h3>
+              {loadingAds ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-neon" />
+                  <span>Cargando anuncios...</span>
+                </div>
+              ) : businessAds.length > 0 ? (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {businessAds.map((ad) => (
+                    <div
+                      key={ad.id}
+                      className="glass border border-border rounded-2xl p-4 flex gap-4 items-center hover:ring-glow transition-all relative group"
+                    >
+                      <img
+                        src={
+                          ad.image_url ||
+                          "https://images.unsplash.com/photo-1540575467063-178a50c2df87"
+                        }
+                        alt={ad.title}
+                        className="h-16 w-16 rounded-xl object-cover bg-muted shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex gap-1.5 items-center">
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary-foreground font-semibold">
+                            {ad.category}
+                          </span>
+                          {ad.is_premium && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-500 font-bold">
+                              Premium
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-sm text-foreground mt-1.5 truncate">
+                          {ad.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {ad.description}
+                        </p>
+                        <div className="flex gap-3 text-[10px] text-muted-foreground mt-2 border-t border-border/20 pt-1">
+                          <span>👁️ {ad.views || 0}</span>
+                          <span>🖱️ {ad.clicks || 0}</span>
+                          <span>📞 {ad.contacts || 0}</span>
+                        </div>
+                      </div>
+                      <div className="absolute right-2 top-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditAd(ad)}
+                          className="h-7 w-7 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary grid place-items-center border-0 cursor-pointer"
+                          title="Editar campaña"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteAd(ad.id)}
+                          className="h-7 w-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 grid place-items-center border-0 cursor-pointer"
+                          title="Eliminar campaña"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-12 text-center text-muted-foreground border border-dashed border-border rounded-2xl text-xs">
+                  No has publicado ningún anuncio deportivo todavía. Conecta atletas ofreciendo
+                  promociones relevantes.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ad publisher Form */}
+          <div>
+            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card sticky top-8">
+              <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
+                <Plus className="h-5 w-5 text-primary" />{" "}
+                {editingAdId ? "Editar Anuncio / Campaña" : "Crear Campaña"}
+              </h3>
+              <p className="text-[10px] text-muted-foreground mb-4">
+                Publica ofertas deportivas vinculadas a la preparación, torneos, rehabilitación o
+                indumentaria.
+              </p>
+              <form onSubmit={handleCreateAd} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Título del Anuncio</label>
+                  <input
+                    type="text"
+                    required
+                    value={adTitle}
+                    onChange={(e) => setAdTitle(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    placeholder="Ej. Torneo de Pádel Intermedio"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">
+                    Descripción / Llamado a la Acción
+                  </label>
+                  <textarea
+                    required
+                    value={adDesc}
+                    onChange={(e) => setAdDesc(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none h-16"
+                    placeholder="Ej. Inscríbete hoy y te emparejamos con otros jugadores de tu categoría..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Categoría</label>
+                    <select
+                      required
+                      value={adCategory}
+                      onChange={(e) => setAdCategory(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    >
+                      <option value="">Selecciona...</option>
+                      <option value="Canchas">🏟️ Canchas / Espacios Deportivos</option>
+                      <option value="Gym">🏋️ Gimnasio</option>
+                      <option value="Academia">🎓 Academia Deportiva</option>
+                      <option value="Fisioterapia">💆 Fisioterapia y Descarga</option>
+                      <option value="Nutricionista">🍎 Nutrición Deportiva</option>
+                      <option value="Tienda">🛍️ Tienda y Equipamiento</option>
+                      <option value="Bebidas">🥤 Bebidas y Suplementos</option>
+                      <option value="Torneos">🏆 Torneos y Eventos</option>
+                      <option value="Marcas">🏷️ Marcas Deportivas</option>
+                      <option value="Patrocinador">⭐ Patrocinador</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Vence el</label>
+                    <input
+                      type="date"
+                      required
+                      value={adValidUntil}
+                      onChange={(e) => setAdValidUntil(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">Distrito</label>
+                    <input
+                      type="text"
+                      value={adDistrict}
+                      onChange={(e) => setAdDistrict(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                      placeholder="Surco"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold mb-1 block">WhatsApp</label>
+                    <input
+                      type="text"
+                      value={adPhone}
+                      onChange={(e) => setAdPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                      placeholder="+51999..."
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <ImageUploadField
+                    label="Imagen de Campaña"
+                    value={adImage}
+                    onChange={(val) => setAdImage(val)}
+                    placeholder="https://images.unsplash.com/..."
+                    id="adImage"
+                  />
+                </div>
+
+                <div className="border border-border/60 rounded-xl p-3 bg-background/50 space-y-2.5">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    ⭐ Opciones de Monetización
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="adFeatured"
+                      checked={adFeatured}
+                      onChange={(e) => setAdFeatured(e.target.checked)}
+                      className="rounded border-border focus:ring-primary h-4 w-4 bg-background text-primary"
+                    />
+                    <label
+                      htmlFor="adFeatured"
+                      className="text-xs text-foreground font-semibold cursor-pointer select-none"
+                    >
+                      Destacar Anuncio (+100 FC)
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="adPremium"
+                      checked={adPremium}
+                      onChange={(e) => setAdPremium(e.target.checked)}
+                      className="rounded border-border focus:ring-primary h-4 w-4 bg-background text-primary"
+                    />
+                    <label
+                      htmlFor="adPremium"
+                      className="text-xs text-foreground font-semibold cursor-pointer select-none"
+                    >
+                      Campaña Premium (+200 FC)
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={publishingAd}
+                    className="flex-1 py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
+                  >
+                    {publishingAd
+                      ? "Guardando..."
+                      : editingAdId
+                        ? "Guardar Cambios"
+                        : "Publicar Campaña"}
+                  </button>
+                  {editingAdId && (
+                    <button
+                      type="button"
+                      onClick={resetAdForm}
+                      className="px-4 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl transition-all text-xs border border-border/50 cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6 text-left">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-xl font-bold text-foreground">
+                  Pago de Destaque de Anuncio
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Completa tu pago seguro para activar las opciones promocionales de tu anuncio.
+                </DialogDescription>
+              </DialogHeader>
+              <PaymentCheckout
+                cost={adCashCost}
+                userBalance={user.fitcoins_balance || 0}
+                onConfirm={handleAdPaymentConfirm}
+                isProcessing={isAdPaying}
+                disabled={publishingAd}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+
+      {activeTab === "analytics" && (
+        <div className="space-y-6" id="bi-analytics-section">
+          {/* Sales & Impressions Chart */}
+          <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card text-left">
+            <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-neon" /> Tráfico e Interacciones de Campaña
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Rendimiento semanal de visualizaciones y clics para tus promociones deportivas.
+            </p>
+            <div className="h-[280px] w-full" id="bi-sales-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FF6B35" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#FF6B35" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="impressionsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00E5FF" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#00E5FF" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="impresiones"
+                    stroke="#00E5FF"
+                    fill="url(#impressionsGrad)"
+                    strokeWidth={2}
+                    name="Visualizaciones"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="clics"
+                    stroke="#FF6B35"
+                    fill="url(#salesGrad)"
+                    strokeWidth={2}
+                    name="Clics"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 text-left">
+            {/* Geographic Reach Donut */}
+            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
+              <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
+                <Target className="h-5 w-5 text-warning" /> Alcance Geográfico B2B
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Ubicación de los deportistas que interactúan con tu ficha comercial.
+              </p>
+              <div
+                className="h-[220px] w-full flex items-center justify-center"
+                id="bi-reach-chart"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={reachData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {reachData.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: 12,
+                        fontSize: 12,
+                      }}
+                      formatter={(value: number) => [`${value}%`, "Deportistas"]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap gap-3 justify-center mt-2">
+                {reachData.map((d) => (
+                  <div
+                    key={d.name}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />
+                    {d.name} ({d.value}%)
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Engagement KPIs */}
+            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
+              <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-electric" /> KPIs de Conversión Deportiva
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Métricas de contacto y conversión sobre matchmaking.
+              </p>
+              <div className="space-y-4">
+                <KpiRow
+                  label="Tasa de Clics (CTR)"
+                  value={
+                    totalViews > 0 ? `${((totalClicks / totalViews) * 100).toFixed(1)}%` : "0%"
+                  }
+                  barWidth={
+                    totalViews > 0 ? Math.min((totalClicks / totalViews) * 100 * 5, 100) : 2
+                  }
+                  color="neon"
+                />
+                <KpiRow
+                  label="Contactos Generados"
+                  value={`${totalContacts} atletas`}
+                  barWidth={Math.min(totalContacts * 10, 100)}
+                  color="electric"
+                />
+                <KpiRow
+                  label="Seguidores Deportivos"
+                  value={`${followersCount} activos`}
+                  barWidth={Math.min(followersCount * 20, 100)}
+                  color="warning"
+                />
+                <KpiRow
+                  label="Anuncios de Matchmaking"
+                  value={`${totalAdsCount}`}
+                  barWidth={Math.min(totalAdsCount * 15, 100)}
+                  color="primary"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === "catalog" && (
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-8 text-left">
           {/* Catalog List */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
@@ -449,7 +1391,7 @@ function BusinessPage() {
                           "https://images.unsplash.com/photo-1546429070-1fc422f1d77a"
                         }
                         alt={item.name}
-                        className="h-16 w-16 rounded-xl object-cover bg-muted"
+                        className="h-16 w-16 rounded-xl object-cover bg-muted shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary-foreground font-semibold">
@@ -467,7 +1409,7 @@ function BusinessPage() {
                       </div>
                       <button
                         onClick={() => handleDeleteItem(item.id)}
-                        className="h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2"
+                        className="h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 border-0 cursor-pointer"
                         title="Eliminar del catálogo"
                         id={`delete-item-${item.id}`}
                       >
@@ -486,27 +1428,30 @@ function BusinessPage() {
             {/* Sales History */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-4">📈 Registro de Ventas Recientes</h3>
-              {mySales.length > 0 ? (
+              {sales &&
+              sales.filter((s) => items.some((i) => i.id === s.catalog_item_id)).length > 0 ? (
                 <div className="space-y-3">
-                  {mySales.map((sale) => (
-                    <div
-                      key={sale.id}
-                      className="flex justify-between items-center py-2 border-b border-border/50 text-sm"
-                    >
-                      <div>
-                        <div className="font-semibold">{sale.item_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Comprador: {sale.buyer_name}
+                  {sales
+                    .filter((s) => items.some((i) => i.id === s.catalog_item_id))
+                    .map((sale) => (
+                      <div
+                        key={sale.id}
+                        className="flex justify-between items-center py-2 border-b border-border/50 text-sm"
+                      >
+                        <div>
+                          <div className="font-semibold">{sale.item_name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Comprador: {sale.buyer_name}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-neon">+{sale.price} FC</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {new Date(sale.created_at).toLocaleDateString()}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-neon">+{sale.price} FC</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {new Date(sale.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground text-xs">
@@ -580,12 +1525,10 @@ function BusinessPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold mb-1 block">Imagen URL</label>
-                  <input
-                    type="text"
+                  <ImageUploadField
+                    label="Imagen del Item"
                     value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                    onChange={(val) => setImageUrl(val)}
                     placeholder="https://images.unsplash.com/..."
                     id="catalog-item-image"
                   />
@@ -594,7 +1537,7 @@ function BusinessPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer"
+                  className="w-full py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
                   id="catalog-item-submit"
                 >
                   {submitting ? "Publicando..." : "Publicar en Marketplace"}
@@ -605,150 +1548,244 @@ function BusinessPage() {
         </div>
       )}
 
-      {activeTab === "courts" && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Courts List */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                🎾 Mis Canchas Registradas
+      {activeTab === "venues" && (
+        <div className="space-y-6 text-left">
+          {/* Header Portal Section */}
+          <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="font-extrabold text-xl mb-1 flex items-center gap-2 text-foreground">
+                📍 Mis Sedes / Ubicaciones Registradas
               </h3>
-              {loadingCourts ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                  <Loader2 className="h-6 w-6 animate-spin text-neon" />
-                  <span>Cargando canchas...</span>
-                </div>
-              ) : courts.length > 0 ? (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {courts.map((court) => (
-                    <div
-                      key={court.id}
-                      className="glass border border-border rounded-2xl p-4 flex gap-4 items-center hover:ring-glow transition-all relative group"
-                    >
-                      <img
-                        src={
-                          court.image_url ||
-                          "https://images.unsplash.com/photo-1554068865-24cecd4e34b8"
-                        }
-                        alt={court.name}
-                        className="h-16 w-16 rounded-xl object-cover bg-muted"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary-foreground font-semibold">
-                          {court.sport}
-                        </span>
-                        <h4 className="font-bold text-sm text-foreground mt-1 truncate">
-                          {court.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {court.address}
-                        </p>
-                        <span className="text-xs font-bold text-neon block mt-1">
-                          {court.price_per_hour} FC/h · {court.max_players} jugadores
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCourt(court.id)}
-                        className="h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2"
-                        title="Eliminar cancha"
-                        id={`delete-court-${court.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-12 text-center text-muted-foreground border border-dashed border-border rounded-2xl text-sm">
-                  No has registrado ninguna cancha todavía.
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Gestiona las ubicaciones físicas de tu negocio deportivo. Se mostrarán
+                georreferenciadas en el mapa en vivo de los jugadores.
+              </p>
             </div>
+            <button
+              onClick={() => setVenueFormOpen(true)}
+              className="px-5 py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0 flex items-center gap-2"
+              id="open-venue-register-dialog"
+            >
+              <Plus className="h-4 w-4" /> Registrar Nueva Sede
+            </button>
           </div>
 
-          {/* Add Court Form */}
-          <div>
-            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card sticky top-8">
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <Plus className="h-5 w-5 text-primary" /> Registrar Cancha
-              </h3>
-              <form onSubmit={handleCreateCourt} className="space-y-4">
+          {/* Sedes Grid Portal */}
+          {loadingVenues ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 bg-gradient-card border border-border rounded-3xl shadow-card">
+              <Loader2 className="h-8 w-8 animate-spin text-neon" />
+              <span className="text-sm font-semibold">Cargando sedes...</span>
+            </div>
+          ) : venues.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {venues.map((venue) => (
+                <div
+                  key={venue.id}
+                  className="premium-card overflow-hidden hover:ring-glow transition-all relative group flex flex-col h-full"
+                >
+                  {/* Venue Image */}
+                  <div className="relative aspect-[16/10] overflow-hidden bg-muted border-b border-border/40 shrink-0">
+                    <img
+                      src={
+                        venue.image_url ||
+                        "https://images.unsplash.com/photo-1554068865-24cecd4e34b8"
+                      }
+                      alt={venue.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-bold shadow-md">
+                      {venue.sport}
+                    </span>
+
+                    <button
+                      onClick={() => handleDeleteVenue(venue.id)}
+                      className="h-8 w-8 rounded-lg bg-red-500/20 hover:bg-red-500/80 text-red-400 hover:text-white grid place-items-center opacity-0 group-hover:opacity-100 transition-all absolute right-3 top-3 border-0 cursor-pointer shadow-md"
+                      title="Eliminar sede"
+                      id={`delete-venue-${venue.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Venue Info */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="font-extrabold text-base text-foreground line-clamp-1">
+                        {venue.name}
+                      </h4>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="truncate">
+                          {venue.address} {venue.district ? `(${venue.district})` : ""}
+                        </span>
+                      </p>
+                      {venue.description && (
+                        <p className="text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed italic">
+                          "{venue.description}"
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-border/20 flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-xs font-bold text-neon">
+                        {(venue.price_per_hour ?? 0) > 0
+                          ? `${venue.price_per_hour} FC/h`
+                          : "Acceso Libre"}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-muted text-muted-foreground font-semibold">
+                        {venue.operating_hours && venue.operating_hours[0]
+                          ? venue.operating_hours[0]
+                          : "Horario n/e"}
+                      </span>
+                    </div>
+
+                    {/* GPS Tag */}
+                    <div className="text-[9px] font-mono text-muted-foreground/60 flex items-center gap-1">
+                      <span>GPS:</span>
+                      <span>
+                        {typeof venue.lat === "number" && !isNaN(venue.lat)
+                          ? venue.lat.toFixed(4)
+                          : "n/e"}
+                        ,{" "}
+                        {typeof venue.lng === "number" && !isNaN(venue.lng)
+                          ? venue.lng.toFixed(4)
+                          : "n/e"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-20 text-center text-muted-foreground bg-gradient-card border border-dashed border-border rounded-3xl shadow-card flex flex-col items-center justify-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-muted/10 border border-border/40 grid place-items-center mb-2 text-muted-foreground/60">
+                <MapPin className="h-6 w-6" />
+              </div>
+              <p className="text-sm max-w-sm">
+                No has registrado ninguna sede comercial todavía. Haz clic en el botón superior para
+                agregar tu primer establecimiento deportivo.
+              </p>
+            </div>
+          )}
+
+          {/* Dialog Modal for adding new Sede */}
+          <Dialog open={venueFormOpen} onOpenChange={setVenueFormOpen}>
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-3xl p-6 text-left">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-xl font-bold text-foreground">
+                  Registrar Nueva Sede
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Completa el formulario para mostrar este establecimiento en el mapa en vivo de los
+                  jugadores.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleCreateVenue} className="space-y-4">
                 <div>
-                  <label className="text-xs font-semibold mb-1 block">Nombre de la Cancha</label>
+                  <label className="text-xs font-semibold mb-1 block">Nombre de la Sede</label>
                   <input
                     type="text"
                     required
-                    value={courtName}
-                    onChange={(e) => setCourtName(e.target.value)}
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                    placeholder="Ej. Cancha de Pádel Pro #1"
-                    id="court-register-name"
+                    placeholder="Ej. Megatlon Magdalena"
+                    id="venue-register-name"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold mb-1 block">Deporte</label>
+                    <label className="text-xs font-semibold mb-1 block">Especialidad / Rubro</label>
                     <select
                       required
-                      value={courtSport}
-                      onChange={(e) => setCourtSport(e.target.value)}
+                      value={venueSport}
+                      onChange={(e) => setVenueSport(e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      id="court-register-sport"
+                      id="venue-register-sport"
                     >
                       <option value="">Selecciona...</option>
-                      {sportsList.map((sport) => (
-                        <option key={sport.id} value={sport.name}>
-                          {sport.name}
-                        </option>
-                      ))}
+                      <optgroup label="Categorías Principales">
+                        <option value="Canchas">🏟️ Canchas / Espacios Deportivos</option>
+                        <option value="Gym">🏋️ Gimnasio</option>
+                        <option value="Academia">🎓 Academia Deportiva</option>
+                        <option value="Fisioterapia">💆 Fisioterapia y Descarga</option>
+                        <option value="Nutricionista">🍎 Nutrición Deportiva</option>
+                        <option value="Tienda">🛍️ Tienda y Equipamiento</option>
+                        <option value="Bebidas">🥤 Bebidas y Suplementos</option>
+                        <option value="Torneos">🏆 Torneos y Eventos</option>
+                        <option value="Marcas">🏷️ Marcas Deportivas</option>
+                        <option value="Patrocinador">⭐ Patrocinador</option>
+                      </optgroup>
+                      <optgroup label="Disciplinas Deportivas">
+                        {sportsList.map((sport) => (
+                          <option key={sport.id} value={sport.name}>
+                            {sport.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold mb-1 block">Precio por hora (FC)</label>
+                    <label className="text-xs font-semibold mb-1 block">
+                      Costo estimado/hora (FC)
+                    </label>
                     <input
                       type="number"
-                      required
                       min="0"
-                      value={courtPrice}
+                      value={venuePrice}
                       onChange={(e) =>
-                        setCourtPrice(e.target.value === "" ? "" : Number(e.target.value))
+                        setVenuePrice(e.target.value === "" ? "" : Number(e.target.value))
                       }
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      placeholder="80"
-                      id="court-register-price"
+                      placeholder="0 (Libre)"
+                      id="venue-register-price"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold mb-1 block">Max Jugadores</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={courtMaxPlayers}
-                      onChange={(e) =>
-                        setCourtMaxPlayers(e.target.value === "" ? "" : Number(e.target.value))
-                      }
+                    <label className="text-xs font-semibold mb-1 block">Distrito</label>
+                    <select
+                      required
+                      value={venueDistrict}
+                      onChange={(e) => setVenueDistrict(e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      placeholder="4"
-                      id="court-register-max-players"
-                    />
+                      id="venue-register-district"
+                    >
+                      <option value="">Selecciona...</option>
+                      <option value="Santiago de Surco">Surco</option>
+                      <option value="San Borja">San Borja</option>
+                      <option value="Miraflores">Miraflores</option>
+                      <option value="Lince">Lince</option>
+                      <option value="Magdalena">Magdalena del Mar</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold mb-1 block">
-                      Amenities (Separados por coma)
-                    </label>
+                    <label className="text-xs font-semibold mb-1 block">Horario de Atención</label>
                     <input
                       type="text"
-                      value={courtAmenities}
-                      onChange={(e) => setCourtAmenities(e.target.value)}
+                      value={venueHours}
+                      onChange={(e) => setVenueHours(e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      placeholder="Luz, Vestuarios"
-                      id="court-register-amenities"
+                      placeholder="Ej. Lun-Vie 6am - 10pm"
+                      id="venue-register-hours"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold mb-1 block">Descripción de la Sede</label>
+                  <textarea
+                    value={venueDescription}
+                    onChange={(e) => setVenueDescription(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none"
+                    placeholder="Describe los servicios disponibles en esta sede (ej. zona de spinning, duchas, etc.)"
+                    id="venue-register-desc"
+                  />
                 </div>
 
                 <div>
@@ -756,38 +1793,38 @@ function BusinessPage() {
                   <input
                     type="text"
                     required
-                    value={courtAddress}
-                    onChange={(e) => setCourtAddress(e.target.value)}
+                    value={venueAddress}
+                    onChange={(e) => setVenueAddress(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                    placeholder="Av. Principal 123, Ciudad"
-                    id="court-register-address"
+                    placeholder="Av. Brasil 3450"
+                    id="venue-register-address"
                   />
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs font-semibold">Coordenadas de Ubicación</label>
+                    <label className="text-xs font-semibold">Coordenadas GPS</label>
                     <button
                       type="button"
                       onClick={handleAutofillLocation}
-                      className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1"
+                      className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1.5 cursor-pointer border-0 bg-transparent"
                     >
                       📍 Usar GPS actual
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <input
                         type="number"
                         step="any"
                         required
                         placeholder="Latitud"
-                        value={courtLat}
+                        value={venueLat}
                         onChange={(e) =>
-                          setCourtLat(e.target.value === "" ? "" : Number(e.target.value))
+                          setVenueLat(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                        id="court-register-lat"
+                        id="venue-register-lat"
                       />
                     </div>
                     <div>
@@ -796,205 +1833,151 @@ function BusinessPage() {
                         step="any"
                         required
                         placeholder="Longitud"
-                        value={courtLng}
+                        value={venueLng}
                         onChange={(e) =>
-                          setCourtLng(e.target.value === "" ? "" : Number(e.target.value))
+                          setVenueLng(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                        id="court-register-lng"
+                        id="venue-register-lng"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold mb-1 block">Imagen URL</label>
-                  <input
-                    type="text"
-                    value={courtImage}
-                    onChange={(e) => setCourtImage(e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
+                  <ImageUploadField
+                    label="Imagen de la Sede"
+                    value={venueImage}
+                    onChange={(val) => setVenueImage(val)}
                     placeholder="https://images.unsplash.com/..."
-                    id="court-register-image"
+                    id="venue-register-image"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={registeringCourt}
-                  className="w-full py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer"
-                  id="court-register-submit"
-                >
-                  {registeringCourt ? "Registrando..." : "Registrar Cancha"}
-                </button>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setVenueFormOpen(false)}
+                    className="px-4 py-3 bg-muted hover:bg-muted/80 text-foreground font-semibold rounded-xl transition-all text-xs border border-border/50 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={registeringVenue}
+                    className="flex-1 py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
+                    id="venue-register-submit"
+                  >
+                    {registeringVenue ? "Registrando..." : "Registrar Nueva Sede"}
+                  </button>
+                </div>
               </form>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
-      {activeTab === "analytics" && (
-        <div className="space-y-6" id="bi-analytics-section">
-          {/* Sales & Impressions Chart */}
-          <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
-            <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-neon" /> Ventas e Impresiones Semanales
-            </h3>
-            <p className="text-xs text-muted-foreground mb-4">
-              Rendimiento de los últimos 7 días en FitCoins y alcance visual.
-            </p>
-            <div className="h-[280px] w-full" id="bi-sales-chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--neon))" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(var(--neon))" stopOpacity={0.02} />
-                    </linearGradient>
-                    <linearGradient id="impressionsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--electric))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--electric))" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="ventas"
-                    stroke="hsl(var(--neon))"
-                    fill="url(#salesGrad)"
-                    strokeWidth={2}
-                    name="Ventas (FC)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="impresiones"
-                    stroke="hsl(var(--electric))"
-                    fill="url(#impressionsGrad)"
-                    strokeWidth={2}
-                    name="Impresiones"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+      {activeTab === "settings" && (
+        <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card text-left max-w-3xl">
+          <h3 className="font-extrabold text-xl mb-2 flex items-center gap-2 text-foreground">
+            ⚙️ Configuración del Portal Comercial
+          </h3>
+          <p className="text-xs text-muted-foreground mb-6">
+            Administra las preferencias de tu cuenta comercial, notificaciones y herramientas de
+            simulación.
+          </p>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Geographic Reach Donut */}
-            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
-              <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
-                <Target className="h-5 w-5 text-warning" /> Alcance Geográfico
-              </h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Distribución de usuarios que vieron tu local en el mapa por distancia.
-              </p>
-              <div
-                className="h-[220px] w-full flex items-center justify-center"
-                id="bi-reach-chart"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={reachData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={85}
-                      paddingAngle={4}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {reachData.map((entry, idx) => (
-                        <Cell key={`cell-${idx}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 12,
-                        fontSize: 12,
-                      }}
-                      formatter={(value: number) => [`${value}%`, "Usuarios"]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap gap-3 justify-center mt-2">
-                {reachData.map((d) => (
-                  <div
-                    key={d.name}
-                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
-                  >
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />
-                    {d.name} ({d.value}%)
+          <div className="space-y-6">
+            {/* Notifications Section */}
+            <div className="border-b border-border/40 pb-6">
+              <h4 className="font-bold text-sm text-foreground mb-3">
+                Preferencias de Notificaciones
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">
+                      Alertas de Matchmaking
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      Recibir notificaciones cuando un jugador interactúe con tus anuncios.
+                    </div>
                   </div>
-                ))}
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="rounded border-border focus:ring-primary h-4 w-4 bg-background text-primary"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-foreground">Reportes de Tráfico</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      Enviar resúmenes semanales de analíticas de visualizaciones y clics.
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="rounded border-border focus:ring-primary h-4 w-4 bg-background text-primary"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Engagement KPIs */}
-            <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
-              <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-electric" /> KPIs de Engagement
-              </h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Indicadores clave de rendimiento para tu marca.
-              </p>
-              <div className="space-y-4">
-                <KpiRow
-                  label="Tasa de Conversión"
-                  value={
-                    totalSalesCount > 0
-                      ? `${((totalSalesCount / simulatedReach) * 100).toFixed(1)}%`
-                      : "0%"
-                  }
-                  barWidth={
-                    totalSalesCount > 0
-                      ? Math.min((totalSalesCount / simulatedReach) * 100 * 20, 100)
-                      : 2
-                  }
-                  color="neon"
-                />
-                <KpiRow
-                  label="Revenue per Impression"
-                  value={
-                    simulatedReach > 0 ? `${(totalEarned / simulatedReach).toFixed(1)} FC` : "0 FC"
-                  }
-                  barWidth={Math.min((totalEarned / Math.max(simulatedReach, 1)) * 100, 100)}
-                  color="electric"
-                />
-                <KpiRow
-                  label="Retención de Seguidores"
-                  value={`${followersCount} activos`}
-                  barWidth={Math.min(followersCount * 20, 100)}
-                  color="warning"
-                />
-                <KpiRow
-                  label="Productos en Catálogo"
-                  value={`${items.length}`}
-                  barWidth={Math.min(items.length * 15, 100)}
-                  color="primary"
-                />
+            {/* B2B Platform Info */}
+            <div className="border-b border-border/40 pb-6">
+              <h4 className="font-bold text-sm text-foreground mb-2">Información del Sistema</h4>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                    Rol de Cuenta
+                  </span>
+                  <span className="text-foreground font-semibold">🏢 BUSINESS (Empresa)</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
+                    Identificador de Negocio
+                  </span>
+                  <span className="text-foreground font-semibold font-mono truncate block">
+                    {user.id}
+                  </span>
+                </div>
               </div>
+            </div>
+
+            {/* Demo Reset Section */}
+            <div>
+              <h4 className="font-bold text-sm text-foreground mb-2 text-warning">
+                Herramientas de Demostración
+              </h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                Si estás utilizando la aplicación en modo demostración local, puedes limpiar todos
+                los datos dinámicos guardados en tu navegador (sedes registradas, catálogo de venta
+                modificado, transacciones, etc.) para restablecer el estado inicial.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem("sportmatch_demo_venues");
+                  localStorage.removeItem("sportmatch_demo_courts");
+                  localStorage.removeItem("sportmatch_demo_balances");
+                  // Clear transaction keys
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith("sportmatch_demo_transactions_")) {
+                      localStorage.removeItem(key);
+                    }
+                  }
+                  toast.success("¡Datos de demo reiniciados correctamente!");
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                }}
+                className="py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer border-0 flex items-center gap-2"
+              >
+                🔄 Reiniciar Datos de la Demo
+              </button>
             </div>
           </div>
         </div>
