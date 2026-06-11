@@ -3,13 +3,22 @@ import { useAuthStore } from "@/entities/user/useAuth";
 
 const DEMO_STORAGE_KEY = "sportmatch_demo_player_challenges";
 
-export type ChallengeStatus = "pending" | "accepted" | "rejected" | "cancelled";
+export type ChallengeStatus =
+  | "pending"
+  | "counter_proposed"
+  | "accepted"
+  | "rejected"
+  | "cancelled";
 
 export interface PlayerChallenge {
   id: string;
   challenger_id: string;
   challenged_id: string;
   sport: string;
+  modality: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  location: string | null;
   message: string | null;
   status: ChallengeStatus;
   created_at: string;
@@ -22,11 +31,23 @@ export interface PlayerChallenge {
   } | null;
 }
 
-interface CreateChallengeInput {
+export interface CreateChallengeInput {
   challengerId: string;
   challengedId: string;
   sport: string;
+  modality?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  location?: string;
   message?: string;
+}
+
+export interface CounterProposalInput {
+  challengeId: string;
+  challengedId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  location?: string;
 }
 
 function getDemoChallenges(): PlayerChallenge[] {
@@ -72,6 +93,10 @@ export async function createPlayerChallenge(input: CreateChallengeInput): Promis
       challenger_id: input.challengerId,
       challenged_id: input.challengedId,
       sport: input.sport,
+      modality: input.modality || "amistoso",
+      scheduled_date: input.scheduledDate || null,
+      scheduled_time: input.scheduledTime || null,
+      location: input.location?.trim() || null,
       message: input.message?.trim() || null,
       status: "pending",
       created_at: now,
@@ -87,6 +112,10 @@ export async function createPlayerChallenge(input: CreateChallengeInput): Promis
       challenger_id: input.challengerId,
       challenged_id: input.challengedId,
       sport: input.sport,
+      modality: input.modality || "amistoso",
+      scheduled_date: input.scheduledDate || null,
+      scheduled_time: input.scheduledTime || null,
+      location: input.location?.trim() || null,
       message: input.message?.trim() || null,
     })
     .select("*")
@@ -186,6 +215,82 @@ export async function respondToPlayerChallenge(
     .eq("status", "pending")
     .select("*")
     .single();
+
+  if (error) throw error;
+  return data as PlayerChallenge;
+}
+
+/**
+ * Permite al receptor proponer otra fecha, hora o lugar sin aceptar todavía.
+ * En Supabase se usa una función controlada para evitar modificar desafíos ajenos.
+ */
+export async function proposeChallengeChanges(
+  input: CounterProposalInput,
+): Promise<PlayerChallenge> {
+  if (useAuthStore.getState().isDemoMode) {
+    const challenges = getDemoChallenges();
+    const challenge = challenges.find(
+      (item) =>
+        item.id === input.challengeId &&
+        item.challenged_id === input.challengedId &&
+        item.status === "pending",
+    );
+    if (!challenge) throw new Error("El desafío ya no está disponible.");
+
+    const updated: PlayerChallenge = {
+      ...challenge,
+      scheduled_date: input.scheduledDate,
+      scheduled_time: input.scheduledTime,
+      location: input.location?.trim() || null,
+      status: "counter_proposed",
+      updated_at: new Date().toISOString(),
+    };
+    saveDemoChallenges(challenges.map((item) => (item.id === input.challengeId ? updated : item)));
+    return updated;
+  }
+
+  const { data, error } = await supabase.rpc("propose_challenge_changes", {
+    target_challenge_id: input.challengeId,
+    proposed_date: input.scheduledDate,
+    proposed_time: input.scheduledTime,
+    proposed_location: input.location?.trim() || null,
+  });
+
+  if (error) throw error;
+  return data as PlayerChallenge;
+}
+
+/**
+ * El creador original decide sobre la contrapropuesta recibida.
+ */
+export async function respondToChallengeCounterProposal(
+  challengeId: string,
+  challengerId: string,
+  decision: "accepted" | "rejected",
+): Promise<PlayerChallenge> {
+  if (useAuthStore.getState().isDemoMode) {
+    const challenges = getDemoChallenges();
+    const challenge = challenges.find(
+      (item) =>
+        item.id === challengeId &&
+        item.challenger_id === challengerId &&
+        item.status === "counter_proposed",
+    );
+    if (!challenge) throw new Error("La contrapropuesta ya no está disponible.");
+
+    const updated: PlayerChallenge = {
+      ...challenge,
+      status: decision,
+      updated_at: new Date().toISOString(),
+    };
+    saveDemoChallenges(challenges.map((item) => (item.id === challengeId ? updated : item)));
+    return updated;
+  }
+
+  const { data, error } = await supabase.rpc("respond_to_challenge_counter_proposal", {
+    target_challenge_id: challengeId,
+    decision,
+  });
 
   if (error) throw error;
   return data as PlayerChallenge;

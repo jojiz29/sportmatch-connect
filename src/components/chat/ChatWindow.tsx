@@ -8,6 +8,9 @@ import {
   Plus,
   Loader2,
   Check,
+  Swords,
+  CalendarDays,
+  MapPin,
 } from "lucide-react";
 import { User, Match, Squad } from "@/entities/types";
 import { useChatStore } from "@/features/chat/useChatStore";
@@ -104,6 +107,117 @@ export function MatchProposalCard({
   );
 }
 
+interface ChallengeProposalCardProps {
+  challengeId: string;
+  sport: string;
+  modality: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  location?: string;
+  isReceiver: boolean;
+  isCounterProposal?: boolean;
+  response?: "accepted" | "rejected" | "counter_proposed";
+  onRespond: (challengeId: string, decision: "accepted" | "rejected") => Promise<void>;
+  onProposeChanges?: () => void;
+}
+
+function ChallengeProposalCard({
+  challengeId,
+  sport,
+  modality,
+  scheduledDate,
+  scheduledTime,
+  location,
+  isReceiver,
+  isCounterProposal,
+  response,
+  onRespond,
+  onProposeChanges,
+}: ChallengeProposalCardProps) {
+  const [isResponding, setIsResponding] = React.useState(false);
+
+  const respond = async (decision: "accepted" | "rejected") => {
+    setIsResponding(true);
+    try {
+      await onRespond(challengeId, decision);
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 p-4 bg-background border border-primary/30 rounded-2xl flex flex-col gap-3 shadow-md max-w-xs text-foreground">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 bg-primary/15 rounded-xl flex items-center justify-center">
+          <Swords className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <div className="text-[10px] text-primary uppercase font-bold tracking-wider">
+            {isCounterProposal ? "Contrapropuesta" : "Desafío deportivo"}
+          </div>
+          <div className="font-bold text-sm">{sport}</div>
+          <div className="text-[10px] text-muted-foreground capitalize">{modality}</div>
+        </div>
+      </div>
+      <div className="space-y-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-3.5 w-3.5" />
+          {scheduledDate} · {scheduledTime}
+        </div>
+        {location && (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-3.5 w-3.5" />
+            {location}
+          </div>
+        )}
+      </div>
+      {response === "accepted" || response === "rejected" ? (
+        <div
+          className={`rounded-xl px-3 py-2 text-center text-xs font-bold ${
+            response === "accepted" ? "bg-neon/15 text-neon" : "bg-destructive/10 text-destructive"
+          }`}
+        >
+          {response === "accepted" ? "Desafío aceptado" : "Desafío rechazado"}
+        </div>
+      ) : response === "counter_proposed" && !isCounterProposal ? (
+        <div className="rounded-xl bg-electric/10 px-3 py-2 text-center text-xs font-bold text-electric">
+          Se propusieron cambios
+        </div>
+      ) : isReceiver ? (
+        <div className={`grid gap-2 ${onProposeChanges ? "grid-cols-3" : "grid-cols-2"}`}>
+          <button
+            disabled={isResponding}
+            onClick={() => respond("rejected")}
+            className="rounded-xl border border-border px-3 py-2 text-xs font-semibold cursor-pointer disabled:opacity-50"
+          >
+            Rechazar
+          </button>
+          {onProposeChanges && (
+            <button
+              disabled={isResponding}
+              onClick={onProposeChanges}
+              className="rounded-xl border border-electric/30 bg-electric/10 px-2 py-2 text-[10px] font-bold text-electric cursor-pointer disabled:opacity-50"
+            >
+              Proponer cambios
+            </button>
+          )}
+          <button
+            disabled={isResponding}
+            onClick={() => respond("accepted")}
+            className="rounded-xl bg-gradient-primary text-primary-foreground px-3 py-2 text-xs font-bold cursor-pointer disabled:opacity-50"
+          >
+            Aceptar
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-muted/60 px-3 py-2 text-center text-xs text-muted-foreground">
+          Esperando respuesta
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ChatWindowProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   activeChat: any;
@@ -123,6 +237,18 @@ interface ChatWindowProps {
   sendSquadInviteCard: (squad: Squad) => void;
   sendMatchProposalCard: (match: Match) => void;
   handlePlayCheckout: (courtId: string) => void;
+  openChallengeComposer: () => void;
+  challengeResponses: Record<string, "accepted" | "rejected" | "counter_proposed">;
+  onRespondChallenge: (challengeId: string, decision: "accepted" | "rejected") => Promise<void>;
+  onOpenCounterProposal: (challenge: {
+    id: string;
+    sport: string;
+    modality: string;
+    scheduledDate: string;
+    scheduledTime: string;
+    location?: string;
+    challengerId: string;
+  }) => void;
   onJoinSquad: (squadId: string, squadName: string) => Promise<void>;
   isJoiningMap: Record<string, boolean>;
   joinedMap: Record<string, boolean>;
@@ -149,6 +275,10 @@ export function ChatWindow({
   sendSquadInviteCard,
   sendMatchProposalCard,
   handlePlayCheckout,
+  openChallengeComposer,
+  challengeResponses,
+  onRespondChallenge,
+  onOpenCounterProposal,
   onJoinSquad,
   isJoiningMap,
   joinedMap,
@@ -237,6 +367,13 @@ export function ChatWindow({
           </div>
         </div>
         <div className="flex items-center gap-4 text-muted-foreground">
+          <button
+            onClick={openChallengeComposer}
+            className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/15 cursor-pointer"
+          >
+            <Swords className="h-4 w-4" />
+            Proponer desafío
+          </button>
           <button className="hover:text-foreground cursor-pointer">
             <Phone className="h-5 w-5" />
           </button>
@@ -336,6 +473,46 @@ export function ChatWindow({
                       price={msg.metadata.price}
                       courtId={msg.metadata.court_id}
                       onPlay={handlePlayCheckout}
+                    />
+                  )}
+
+                  {msg.metadata?.type === "challenge_proposal" && (
+                    <ChallengeProposalCard
+                      challengeId={msg.metadata.challenge_id}
+                      sport={msg.metadata.sport}
+                      modality={msg.metadata.modality}
+                      scheduledDate={msg.metadata.scheduled_date}
+                      scheduledTime={msg.metadata.scheduled_time}
+                      location={msg.metadata.location}
+                      isReceiver={msg.metadata.challenged_id === currentUser?.id}
+                      response={challengeResponses[msg.metadata.challenge_id]}
+                      onRespond={onRespondChallenge}
+                      onProposeChanges={() =>
+                        onOpenCounterProposal({
+                          id: msg.metadata.challenge_id,
+                          sport: msg.metadata.sport,
+                          modality: msg.metadata.modality,
+                          scheduledDate: msg.metadata.scheduled_date,
+                          scheduledTime: msg.metadata.scheduled_time,
+                          location: msg.metadata.location,
+                          challengerId: msg.metadata.challenger_id,
+                        })
+                      }
+                    />
+                  )}
+
+                  {msg.metadata?.type === "challenge_counter_proposal" && (
+                    <ChallengeProposalCard
+                      challengeId={msg.metadata.challenge_id}
+                      sport={msg.metadata.sport}
+                      modality={msg.metadata.modality}
+                      scheduledDate={msg.metadata.scheduled_date}
+                      scheduledTime={msg.metadata.scheduled_time}
+                      location={msg.metadata.location}
+                      isReceiver={msg.metadata.action_user_id === currentUser?.id}
+                      isCounterProposal
+                      response={challengeResponses[msg.metadata.challenge_id]}
+                      onRespond={onRespondChallenge}
                     />
                   )}
                 </div>
