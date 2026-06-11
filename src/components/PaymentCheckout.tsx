@@ -120,8 +120,9 @@ function PaymentCheckoutForm({
                 )
               }
               onBlur={() => setCardHolderTouched(true)}
-              placeholder="Nombre como en la tarjeta"
+              placeholder="Nombre como en la tarjeta (mín. 3 letras)"
               className={`mt-2 w-full rounded-2xl border px-3 py-3 text-sm outline-none focus:border-primary ${!cardHolderValid && cardHolder ? "border-rose-500" : "border-border/60"}`}
+              minLength={3}
               maxLength={CARD_HOLDER_MAX_LENGTH}
             />
             <div className="mt-2 flex items-center justify-between text-xs">

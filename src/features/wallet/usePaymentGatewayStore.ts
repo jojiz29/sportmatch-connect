@@ -119,9 +119,13 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
           mode: "cors",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ amount: payload.amount }),
+          body: JSON.stringify({
+            amount: payload.amount,
+            monto_cancha: payload.amount / 1.1,
+          }),
         });
 
         if (!response.ok) {

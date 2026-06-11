@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
 
-const API_URL = (import.meta.env.VITE_API_URL || "") + "/api/v1";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/api/v1";
 
 interface ApiResponse<T> {
   data?: T;
@@ -265,6 +265,16 @@ export const backendApi = {
     async getByUserId(userId: string) {
       return fetchApi(`/profiles/user/${userId}`);
     },
+
+    async verifyDni(token: string, dni: string) {
+      return fetchApi("/profiles/verify-dni", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ dni }),
+      });
+    },
   },
 
   posts: {
@@ -412,6 +422,10 @@ export const backendApi = {
         date: string;
         time: string;
         user_id: string;
+        precio_cancha?: number;
+        porcentaje_comision?: number;
+        monto_comision?: number;
+        total_cobrado?: number;
       },
     ) {
       return fetchApi("/bookings", {

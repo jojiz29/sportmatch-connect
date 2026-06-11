@@ -231,6 +231,13 @@ function CourtDetail() {
     );
   }
 
+  const maxPlayers = court.max_players || 4;
+  const baseCourtPrice = court.price_per_hour / maxPlayers;
+  const commissionPercentage = 10;
+  const commissionAmount = baseCourtPrice * 0.1;
+  const totalCost = baseCourtPrice + commissionAmount;
+  const pricePerPerson = totalCost;
+
   const handlePaymentConfirm = async (
     selection: PaymentSelection,
     stripe?: Stripe | null,
@@ -281,6 +288,10 @@ function CourtDetail() {
         date: todayStr,
         time_slot: slot,
         operating_hours: court.operating_hours,
+        precio_cancha: baseCourtPrice,
+        porcentaje_comision: commissionPercentage,
+        monto_comision: commissionAmount,
+        total_cobrado: totalCost,
       });
 
       if (useAuthStore.getState().isDemoMode) {
@@ -288,10 +299,11 @@ function CourtDetail() {
           title: `Partido en ${court.name}`,
           sport: court.sport,
           court_id: court.id,
-          user_id: user.id,
+          creator_id: user.id,
           date: todayStr,
-          time_slot: slot,
-          operating_hours: court.operating_hours,
+          time: slot,
+          max_players: maxPlayers,
+          required_level: user.level || "Intermedio",
         });
       }
 
@@ -368,8 +380,7 @@ function CourtDetail() {
   ];
 
   // Dynamic players limit based on court metadata
-  const maxPlayers = court.max_players || 4;
-  const pricePerPerson = (court.price_per_hour + 3) / maxPlayers;
+  // Variables (maxPlayers, pricePerPerson) defined above handlePaymentConfirm for closure scope correctness
 
   const holdPaymentDiscount = paymentSelection?.fitcoinsToUse ?? 0;
   const chargeAmount =

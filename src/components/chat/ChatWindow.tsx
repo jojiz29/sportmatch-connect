@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { User, Match, Squad } from "@/entities/types";
 import { useChatStore } from "@/features/chat/useChatStore";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 interface SquadInviteCardProps {
   squadId: string;
@@ -108,6 +109,7 @@ interface ChatWindowProps {
   activeChat: any;
   currentUser: User | null;
   registeredUsers: User[];
+  areProfilesLoading: boolean;
   text: string;
   setText: (t: string) => void;
   handleSend: () => void;
@@ -219,7 +221,16 @@ export function ChatWindow({
             )}
           </div>
           <div>
-            <div className="font-semibold">{activeChat.name}</div>
+            <div className="font-semibold flex items-center gap-1">
+              {activeChat.name}
+              {(() => {
+                const otherPlayerId = activeChat.current_players?.find(
+                  (id: string) => id !== currentUser?.id,
+                );
+                const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
+                return otherPlayer?.dni_verificado ? <VerifiedBadge /> : null;
+              })()}
+            </div>
             <div className="text-xs text-neon">
               {activeChat.current_players.length} {t("chat.online", "participantes en línea")}
             </div>
@@ -257,6 +268,7 @@ export function ChatWindow({
             name: activeChat.name,
             avatar_url: activeChat.avatar,
             id: msg.sender_id,
+            dni_verificado: false,
           };
           const time = new Date(msg.created_at).toLocaleTimeString([], {
             hour: "2-digit",
@@ -273,15 +285,24 @@ export function ChatWindow({
                   {t("chat.me", "YO")}
                 </div>
               ) : (
-                <img
-                  src={sender.avatar_url}
-                  alt=""
-                  className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
-                />
+                <>
+                  {sender?.avatar_url ? (
+                    <img
+                      src={sender.avatar_url}
+                      alt=""
+                      className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
+                  )}
+                </>
               )}
               <div>
                 {!isMe && (
-                  <div className="text-xs text-muted-foreground mb-1 ml-1">{sender.name}</div>
+                  <div className="text-xs text-muted-foreground mb-1 ml-1 flex items-center gap-1">
+                    {sender.name}
+                    {sender.dni_verificado && <VerifiedBadge />}
+                  </div>
                 )}
                 <div
                   className={`p-3 text-sm flex flex-col ${isMe ? "bg-gradient-primary text-primary-foreground rounded-2xl rounded-tr-none shadow-glow" : "bg-accent rounded-2xl rounded-tl-none"}`}
@@ -323,12 +344,19 @@ export function ChatWindow({
                 >
                   <span>{time}</span>
                   {isMe &&
-                    (msg.metadata?.seen ? (
+                    (msg.metadata?.delivery_status === "sending" ? (
+                      <span className="text-primary-foreground/45 text-xs" title="Enviando mensaje">
+                        ·
+                      </span>
+                    ) : msg.metadata?.seen ? (
                       <span className="text-neon font-bold text-xs" title="Visto">
                         ✓✓
                       </span>
                     ) : (
-                      <span className="text-primary-foreground/60 text-xs" title="Enviado">
+                      <span
+                        className="text-primary-foreground/60 text-xs"
+                        title="Enviado, todavía no visto"
+                      >
                         ✓
                       </span>
                     ))}
@@ -344,6 +372,7 @@ export function ChatWindow({
           const typingUser = registeredUsers.find((u) => u.id === userId) || {
             name: "Alguien",
             avatar_url: "/placeholder.png",
+            dni_verificado: false,
           };
           return (
             <div key={userId} className="flex gap-3 max-w-[80%] items-center animate-pulse">
@@ -359,7 +388,11 @@ export function ChatWindow({
                 </div>
               )}
               <div className="bg-accent rounded-2xl rounded-tl-none p-3 text-xs text-muted-foreground flex items-center gap-1.5">
-                <span>{typingUser.name} está escribiendo</span>
+                <span className="flex items-center gap-1">
+                  {typingUser.name}
+                  {typingUser.dni_verificado && <VerifiedBadge />}
+                </span>
+                <span>está escribiendo</span>
                 <span className="flex gap-0.5">
                   <span
                     className="h-1.5 w-1.5 bg-muted-foreground rounded-full animate-bounce"
@@ -485,7 +518,8 @@ export function ChatWindow({
 
           <button
             onClick={onSend}
-            className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer border-0"
+            disabled={!text.trim() && !selectedImageBase64}
+            className="h-8 w-8 rounded-full bg-neon text-neon-foreground grid place-items-center shadow-neon ml-2 cursor-pointer border-0 disabled:opacity-40 disabled:shadow-none disabled:pointer-events-none"
           >
             <Send className="h-4 w-4 ml-0.5" />
           </button>

@@ -890,6 +890,10 @@ export const apiClient = {
       time_slot: string;
       user_id: string;
       operating_hours?: string[];
+      precio_cancha?: number;
+      porcentaje_comision?: number;
+      monto_comision?: number;
+      total_cobrado?: number;
     }): Promise<void> {
       if (useAuthStore.getState().isDemoMode) {
         const key = `${booking.court_id}_${booking.date}`;
@@ -912,9 +916,27 @@ export const apiClient = {
         }
       }
 
-      const { time_slot, court_id, date, user_id } = booking;
+      const {
+        time_slot,
+        court_id,
+        date,
+        user_id,
+        precio_cancha,
+        porcentaje_comision,
+        monto_comision,
+        total_cobrado,
+      } = booking;
       const { error } = await withTimeout(
-        supabase.from("bookings").insert({ court_id, date, time_slot, user_id }),
+        supabase.from("bookings").insert({
+          court_id,
+          date,
+          time_slot,
+          user_id,
+          precio_cancha,
+          porcentaje_comision,
+          monto_comision,
+          total_cobrado,
+        }),
       );
       if (error) {
         if (import.meta.env.DEV) console.error("Error creating booking:", error);

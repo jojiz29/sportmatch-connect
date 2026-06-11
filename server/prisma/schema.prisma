@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model profiles {
@@ -32,7 +33,10 @@ model profiles {
   user_sports          Json?     @map("user_sports")
   onboarding_completed Boolean?  @default(false) @map("onboarding_completed")
   sport_preferences    Json?     @map("sport_preferences")
-  user_id              String?   @unique @map("user_id")
+  dni_verificado       Boolean?  @default(false) @map("dni_verificado")
+  dni_hash             String?   @map("dni_hash")
+  dni_intentos         Int?      @default(0) @map("dni_intentos")
+  fecha_verificacion   DateTime? @map("fecha_verificacion")
 
   posts                posts[]
   created_matches      matches[] @relation("match_creator")
@@ -174,19 +178,21 @@ model reviews {
 }
 
 model bookings {
-  id          String   @id @default(uuid())
-  court_id    String   @map("court_id")
-  user_id     String   @map("user_id")
-  date        String
-  time        String
-  hours       Int
-  total_price Int      @map("total_price")
-  status      String   @default("PENDING")
-  created_at  DateTime @default(now()) @map("created_at")
+  id                  String   @id @default(uuid())
+  court_id            String   @map("court_id")
+  user_id             String   @map("user_id")
+  date                String
+  time_slot           String   @map("time_slot")
+  precio_cancha       Float?   @map("precio_cancha")
+  porcentaje_comision Float?   @map("porcentaje_comision")
+  monto_comision      Float?   @map("monto_comision")
+  total_cobrado       Float?   @map("total_cobrado")
+  created_at          DateTime @default(now()) @map("created_at")
 
-  court       courts   @relation(fields: [court_id], references: [id])
-  user        profiles @relation(fields: [user_id], references: [id])
+  court               courts   @relation(fields: [court_id], references: [id])
+  user                profiles @relation(fields: [user_id], references: [id])
 
+  @@unique([court_id, date, time_slot])
   @@map("bookings")
 }
 

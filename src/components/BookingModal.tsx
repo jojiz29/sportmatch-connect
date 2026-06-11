@@ -24,7 +24,11 @@ import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { calculateDistance } from "@/shared/api/geoService";
-import { usePaymentGatewayStore, PaymentPayload, PaymentResult } from "@/features/wallet/usePaymentGatewayStore";
+import {
+  usePaymentGatewayStore,
+  PaymentPayload,
+  PaymentResult,
+} from "@/features/wallet/usePaymentGatewayStore";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 import { logPaymentAttempt } from "@/services/paymentService";
 import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
@@ -144,7 +148,9 @@ export function BookingModal({
       }
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
-      setHoldCountdown(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+      setHoldCountdown(
+        `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+      );
     }, 1000);
     return () => window.clearInterval(interval);
   }, [holdExpiry]);
@@ -229,17 +235,22 @@ export function BookingModal({
       ? actualSquadMembersCount
       : squadForGroupBooking.members_count || 1
     : maxPlayers;
-  const pricePerPerson = (court.price_per_hour + 3) / bookingMembersCount;
+  const baseCourtPrice = court.price_per_hour / bookingMembersCount;
+  const commissionPercentage = 10;
+  const commissionAmount = baseCourtPrice * 0.1;
+  const totalCost = baseCourtPrice + commissionAmount;
+  const pricePerPerson = totalCost;
   const cost = Math.ceil(pricePerPerson);
   const selectedDiscount = paymentSelection?.fitcoinsToUse ?? 0;
   const totalPaid = paymentResult?.amountCharged ?? Math.max(0, cost - selectedDiscount);
-  const paymentMethodLabel = paymentSelection?.method === "fitcoins"
-    ? "FitCoins"
-    : paymentSelection?.method === "card"
-      ? "Tarjeta"
-      : paymentSelection?.method === "yape"
-        ? "Yape"
-        : "Plin";
+  const paymentMethodLabel =
+    paymentSelection?.method === "fitcoins"
+      ? "FitCoins"
+      : paymentSelection?.method === "card"
+        ? "Tarjeta"
+        : paymentSelection?.method === "yape"
+          ? "Yape"
+          : "Plin";
 
   const handlePaymentConfirm = async (
     selection: PaymentSelection,
@@ -252,7 +263,6 @@ export function BookingModal({
     }
 
     setPaymentSelection(selection);
-    setPaymentDialogOpen(false);
     setIsBooking(true);
     let currentPaymentResult: PaymentResult | null = null;
 
@@ -282,12 +292,18 @@ export function BookingModal({
         return;
       }
 
+      setPaymentDialogOpen(false);
+
       await apiClient.bookings.create({
         court_id: court.id,
         user_id: user.id,
         date: todayStr,
         time_slot: slot,
         operating_hours: court.operating_hours,
+        precio_cancha: baseCourtPrice,
+        porcentaje_comision: commissionPercentage,
+        monto_comision: commissionAmount,
+        total_cobrado: totalCost,
       });
 
       if (useAuthStore.getState().isDemoMode) {
@@ -297,10 +313,11 @@ export function BookingModal({
             : `Partido en ${court.name}`,
           sport: court.sport,
           court_id: court.id,
-          user_id: user.id,
+          creator_id: user.id,
           date: todayStr,
-          time_slot: slot,
-          operating_hours: court.operating_hours,
+          time: slot,
+          max_players: bookingMembersCount,
+          required_level: user.level || "Intermedio",
         });
       }
 
@@ -406,172 +423,184 @@ export function BookingModal({
         {!confirmed ? (
           <>
             <div className="grid md:grid-cols-2 gap-6 pt-2">
-            {/* Court Detail Preview & Info */}
-            <div className="space-y-4">
-              <div className="relative h-44 rounded-2xl overflow-hidden border border-border/50 shadow-md">
-                <img
-                  src={court.image_url || getSportFallbackImage(court.sport)}
-                  alt={court.name}
-                  onError={(e) => {
-                    e.currentTarget.src = getSportFallbackImage(court.sport);
-                  }}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 text-white text-xs font-medium">
-                  {court.address}
+              {/* Court Detail Preview & Info */}
+              <div className="space-y-4">
+                <div className="relative h-44 rounded-2xl overflow-hidden border border-border/50 shadow-md">
+                  <img
+                    src={court.image_url || getSportFallbackImage(court.sport)}
+                    alt={court.name}
+                    onError={(e) => {
+                      e.currentTarget.src = getSportFallbackImage(court.sport);
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 text-white text-xs font-medium">
+                    {court.address}
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-gradient-card border border-border/60 rounded-xl p-4 space-y-2.5 text-xs">
-                <div className="font-semibold text-foreground border-b border-border/40 pb-1.5 mb-1 text-sm">
-                  Detalles de División
+                <div className="bg-gradient-card border border-border/60 rounded-xl p-4 space-y-2.5 text-xs">
+                  <div className="font-semibold text-foreground border-b border-border/40 pb-1.5 mb-1 text-sm">
+                    Detalles de División
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Costo de Cancha / hora</span>
+                    <span className="text-foreground">S/ {court.price_per_hour.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Comisión de servicio (10%)</span>
+                    <span className="text-foreground">
+                      S/ {(court.price_per_hour * 0.1).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Dividido entre</span>
+                    <span className="text-foreground font-semibold">
+                      {squadForGroupBooking
+                        ? `${bookingMembersCount} miembros (Squad)`
+                        : `${maxPlayers} jugadores`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-border/30 pt-2 text-sm font-bold">
+                    <span>Tu parte (FitCoins)</span>
+                    <span className="text-neon">S/ {pricePerPerson.toFixed(2)} FC</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Costo de Cancha / hora</span>
-                  <span className="text-foreground">S/ {court.price_per_hour.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Comisión de Servicio</span>
-                  <span className="text-foreground">S/ 3.00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Dividido entre</span>
-                  <span className="text-foreground font-semibold">
+
+                <div className="flex items-start gap-2 bg-accent/40 p-3.5 rounded-xl border border-border/50">
+                  <Users className="h-4.5 w-4.5 text-electric mt-0.5" />
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <strong>Efecto Cascada Social:</strong> Al reservar esta cancha, se creará
+                    automáticamente un partido{" "}
+                    <strong>{squadForGroupBooking ? "DE SQUAD" : "ABIERTO"}</strong>.
                     {squadForGroupBooking
-                      ? `${bookingMembersCount} miembros (Squad)`
-                      : `${maxPlayers} jugadores`}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t border-border/30 pt-2 text-sm font-bold">
-                  <span>Tu parte (FitCoins)</span>
-                  <span className="text-neon">S/ {pricePerPerson.toFixed(2)} FC</span>
+                      ? " Solo los miembros del squad formarán parte de la división de costo."
+                      : " Otros jugadores compatibles en el área podrán unirse de inmediato para completar los equipos."}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2 bg-accent/40 p-3.5 rounded-xl border border-border/50">
-                <Users className="h-4.5 w-4.5 text-electric mt-0.5" />
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  <strong>Efecto Cascada Social:</strong> Al reservar esta cancha, se creará
-                  automáticamente un partido{" "}
-                  <strong>{squadForGroupBooking ? "DE SQUAD" : "ABIERTO"}</strong>.
-                  {squadForGroupBooking
-                    ? " Solo los miembros del squad formarán parte de la división de costo."
-                    : " Otros jugadores compatibles en el área podrán unirse de inmediato para completar los equipos."}
-                </p>
-              </div>
-            </div>
+              {/* Slots Selector & Actions */}
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" /> Fecha
+                  </label>
+                  <div className="p-3 rounded-xl border border-border bg-background/50 text-xs font-semibold flex justify-between items-center cursor-not-allowed opacity-80">
+                    <span>
+                      Hoy,{" "}
+                      {new Date().toLocaleDateString("es-AR", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                    <span className="text-neon text-[10px] uppercase font-bold tracking-wider">
+                      Hoy
+                    </span>
+                  </div>
+                </div>
 
-            {/* Slots Selector & Actions */}
-            <div className="space-y-5">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <CalendarIcon className="h-3.5 w-3.5 text-primary" /> Fecha
-                </label>
-                <div className="p-3 rounded-xl border border-border bg-background/50 text-xs font-semibold flex justify-between items-center cursor-not-allowed opacity-80">
-                  <span>
-                    Hoy, {new Date().toLocaleDateString("es-AR", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-electric" /> Horas Disponibles
+                    {loadingBookings && (
+                      <Loader2 className="h-3 w-3 animate-spin text-primary ml-2" />
+                    )}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto pr-1">
+                    {slots.map((s) => {
+                      const taken = bookedSlots.includes(s) || !court.is_available;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          disabled={taken}
+                          onClick={() => setSlot(s)}
+                          className={`py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            taken
+                              ? "bg-muted/30 text-muted-foreground/30 line-through cursor-not-allowed border-transparent"
+                              : slot === s
+                                ? "bg-gradient-primary text-primary-foreground shadow-glow border-primary scale-[1.03]"
+                                : "glass border-border hover:border-primary/40"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      );
                     })}
-                  </span>
-                  <span className="text-neon text-[10px] uppercase font-bold tracking-wider">Hoy</span>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-electric" /> Horas Disponibles
-                  {loadingBookings && (
-                    <Loader2 className="h-3 w-3 animate-spin text-primary ml-2" />
-                  )}
-                </label>
-                <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto pr-1">
-                  {slots.map((s) => {
-                    const taken = bookedSlots.includes(s) || !court.is_available;
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        disabled={taken}
-                        onClick={() => setSlot(s)}
-                        className={`py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          taken
-                            ? "bg-muted/30 text-muted-foreground/30 line-through cursor-not-allowed border-transparent"
-                            : slot === s
-                              ? "bg-gradient-primary text-primary-foreground shadow-glow border-primary scale-[1.03]"
-                              : "glass border-border hover:border-primary/40"
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                {slot && holdExpiry && (
+                  <div className="rounded-2xl border border-warning/30 bg-warning/10 p-3 text-[12px] text-warning-foreground">
+                    <strong>Reserva pendiente:</strong> Este horario se mantiene reservado por{" "}
+                    <span className="font-semibold">{holdCountdown}</span> mientras completas el
+                    pago.
+                  </div>
+                )}
 
-              {slot && holdExpiry && (
-                <div className="rounded-2xl border border-warning/30 bg-warning/10 p-3 text-[12px] text-warning-foreground">
-                  <strong>Reserva pendiente:</strong> Este horario se mantiene reservado por <span className="font-semibold">{holdCountdown}</span> mientras completas el pago.
+                <div className="rounded-3xl border border-border/70 bg-background/80 p-4 space-y-4 text-xs">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">Resumen de la reserva</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed break-words">
+                        Selecciona un horario y luego elige la forma de pago en una ventana
+                        separada.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-muted px-3 py-1 text-[11px] uppercase tracking-[0.2em] font-semibold">
+                      {slot ? "Horario listo" : "Selecciona horario"}
+                    </span>
+                  </div>
+                  <div className="grid gap-3">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Horario elegido</span>
+                      <span className="font-semibold text-foreground">{slot ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Costo total</span>
+                      <span className="font-semibold text-foreground">S/ {cost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Método actual</span>
+                      <span className="font-semibold text-foreground">
+                        {paymentSelection ? paymentMethodLabel : "Sin seleccionar"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!slot || isBooking}
+                    onClick={() => setPaymentDialogOpen(true)}
+                    className="w-full rounded-2xl bg-gradient-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {paymentSelection ? "Cambiar método de pago" : "Elegir método de pago"}
+                  </button>
                 </div>
-              )}
-
-              <div className="rounded-3xl border border-border/70 bg-background/80 p-4 space-y-4 text-xs">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Resumen de la reserva</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed break-words">
-                      Selecciona un horario y luego elige la forma de pago en una ventana separada.
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-muted px-3 py-1 text-[11px] uppercase tracking-[0.2em] font-semibold">
-                    {slot ? "Horario listo" : "Selecciona horario"}
-                  </span>
-                </div>
-                <div className="grid gap-3">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Horario elegido</span>
-                    <span className="font-semibold text-foreground">{slot ?? "—"}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Costo total</span>
-                    <span className="font-semibold text-foreground">S/ {cost.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Método actual</span>
-                    <span className="font-semibold text-foreground">{paymentSelection ? paymentMethodLabel : "Sin seleccionar"}</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={!slot || isBooking}
-                  onClick={() => setPaymentDialogOpen(true)}
-                  className="w-full rounded-2xl bg-gradient-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  {paymentSelection ? "Cambiar método de pago" : "Elegir método de pago"}
-                </button>
               </div>
             </div>
-          </div>
 
-          <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-            <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6">
-              <DialogHeader className="mb-4">
-                <DialogTitle className="text-xl font-bold">Selecciona tu forma de pago</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground">
-                  Elige el método que prefieras y completa los datos en esta ventana segura.
-                </DialogDescription>
-              </DialogHeader>
-              <PaymentCheckout
-                cost={cost}
-                userBalance={user.fitcoins_balance}
-                onConfirm={handlePaymentConfirm}
-                isProcessing={isProcessing}
-                disabled={isBooking}
-              />
-            </DialogContent>
-          </Dialog>
+            <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+              <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6">
+                <DialogHeader className="mb-4">
+                  <DialogTitle className="text-xl font-bold">
+                    Selecciona tu forma de pago
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Elige el método que prefieras y completa los datos en esta ventana segura.
+                  </DialogDescription>
+                </DialogHeader>
+                <PaymentCheckout
+                  cost={cost}
+                  userBalance={user.fitcoins_balance}
+                  onConfirm={handlePaymentConfirm}
+                  isProcessing={isProcessing}
+                  disabled={isBooking}
+                />
+              </DialogContent>
+            </Dialog>
           </>
         ) : (
           /* Confirmation Ticket */
@@ -631,8 +660,8 @@ export function BookingModal({
                   <span>S/ {court.price_per_hour.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Comisión de Servicio</span>
-                  <span>S/ 3.00</span>
+                  <span>Comisión de servicio (10%)</span>
+                  <span>S/ {(court.price_per_hour * 0.1).toFixed(2)}</span>
                 </div>
                 {selectedDiscount > 0 && (
                   <div className="flex justify-between text-xs text-emerald-500">

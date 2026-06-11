@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { Search, Plus, Users } from "lucide-react";
+import { Search, Plus, Users, MessageSquare } from "lucide-react";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,8 @@ import { joinSquad, getSquads } from "@/shared/api/squadService";
 import { BookingModal } from "@/components/BookingModal";
 import { toast } from "sonner";
 import { ChatWindow } from "@/components/chat/ChatWindow";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
+import { PlayerConnection, getMutualPlayerConnections } from "@/shared/api/connectionService";
 
 export const Route = createFileRoute("/app/chat")({
   head: () => ({ meta: [{ title: "Chat — SportMatch" }] }),
@@ -30,6 +32,7 @@ function Chat() {
     createChat,
     initChat,
     subscribeToChat,
+    subscribeToAllChats,
   } = useChatStore();
   const [text, setText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,6 +44,9 @@ function Chat() {
   const endRef = useRef<HTMLDivElement>(null);
   const currentUser = useAuthStore((s) => s.user);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+  const [areProfilesLoading, setAreProfilesLoading] = useState(true);
+  const [sidebarView, setSidebarView] = useState<"chats" | "connections">("chats");
+  const [playerConnections, setPlayerConnections] = useState<PlayerConnection[]>([]);
 
   // Media attachments & interactive cards state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,20 +140,48 @@ function Chat() {
 
   useEffect(() => {
     let active = true;
+    setAreProfilesLoading(true);
     apiClient.users
       .getMatches()
       .then((users) => {
         if (active) setRegisteredUsers(users);
       })
-      .catch((err) => console.error("Error fetching registered users:", err));
+      .catch((err) => console.error("Error fetching registered users:", err))
+      .finally(() => {
+        if (active) setAreProfilesLoading(false);
+      });
     return () => {
       active = false;
     };
   }, []);
 
   useEffect(() => {
+    if (!currentUser) return;
+    let active = true;
+
+    // Las conexiones se administran desde Mensajes para poder iniciar varias
+    // conversaciones, desafíos o invitaciones con el mismo jugador.
+    getMutualPlayerConnections(currentUser.id)
+      .then((connections) => {
+        if (active) setPlayerConnections(connections);
+      })
+      .catch((error) => console.error("Error al cargar conexiones deportivas:", error));
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
     initChat();
   }, [initChat]);
+
+  useEffect(() => {
+    // La bandeja global recibe mensajes de todas las conversaciones en tiempo real,
+    // incluso cuando el usuario está leyendo otro chat.
+    const unsubscribe = subscribeToAllChats();
+    return unsubscribe;
+  }, [subscribeToAllChats]);
 
   const userChats = chats.filter((c) => currentUser && c.current_players.includes(currentUser.id));
   const activeChat = userChats.find((c) => c.id === activeConversationId);
@@ -175,12 +209,38 @@ function Chat() {
     }
   };
 
-  const handleSend = () => {
-    if (!text.trim() && !selectedImageBase64 && !activeConversationId) return;
-    sendMessage(activeConversationId!, text, selectedImageBase64 || undefined);
+  const handleSend = async () => {
+    console.log("[chat] ui:send-click", {
+      activeConversationId,
+      hasText: Boolean(text.trim()),
+      hasImage: Boolean(selectedImageBase64),
+    });
+    // Un mensaje necesita conversación activa y contenido real o un adjunto.
+    if (!activeConversationId) {
+      toast.error("No hay una conversación activa");
+      return;
+    }
+    if (!text.trim() && !selectedImageBase64) return;
+
+    const pendingText = text.trim();
+    const pendingImage = selectedImageBase64;
+
+    // Limpiamos el compositor inmediatamente para que el chat responda como una
+    // aplicación de mensajería. Si Supabase falla, recuperamos el borrador.
     setText("");
     setSelectedImageBase64(null);
     setIsAttachmentMenuOpen(false);
+
+    try {
+      await sendMessage(activeConversationId, pendingText, pendingImage || undefined);
+    } catch (error) {
+      setText((currentText) => currentText || pendingText);
+      setSelectedImageBase64((currentImage) => currentImage || pendingImage);
+      console.error("[chat] ui:send-error", { chatId: activeConversationId, error });
+      toast.error("No se pudo enviar el mensaje", {
+        description: "Revisa los logs [chat] de la consola para identificar la causa.",
+      });
+    }
   };
 
   // Helper callbacks to send Actionable Cards
@@ -230,6 +290,12 @@ function Chat() {
   const filteredUserChats = userChats.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+  const filteredConnections = playerConnections.filter((connection) => {
+    const profile =
+      connection.connected_user ||
+      registeredUsers.find((user) => user.id === connection.connected_user_id);
+    return profile?.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8 h-[calc(100vh-80px)] lg:h-[calc(100vh-40px)] flex flex-col">
@@ -272,61 +338,147 @@ function Chat() {
               <Plus className="h-4 w-4" />
             </button>
           </div>
+          <div className="grid grid-cols-2 gap-1 p-2 border-b border-border bg-background/30">
+            <button
+              onClick={() => setSidebarView("chats")}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                sidebarView === "chats" ? "bg-accent text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Conversaciones
+            </button>
+            <button
+              onClick={() => setSidebarView("connections")}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                sidebarView === "connections" ? "bg-neon/15 text-neon" : "text-muted-foreground"
+              }`}
+            >
+              Conexiones ({playerConnections.length})
+            </button>
+          </div>
           <div className="flex-1 overflow-y-auto">
-            {filteredUserChats.map((c) => {
-              const lastMessage = c.messages[c.messages.length - 1];
-              const isActive = c.id === activeConversationId;
+            {sidebarView === "chats" &&
+              filteredUserChats.map((c) => {
+                const lastMessage = c.messages[c.messages.length - 1];
+                const isActive = c.id === activeConversationId;
+                const otherPlayerId = c.current_players.find((id) => id !== currentUser.id);
+                const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
+                const isVerified = otherPlayer?.dni_verificado;
 
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveConversation(c.id)}
-                  className={`w-full p-4 flex items-center gap-3 transition-colors text-left border-b border-border/50 ${isActive ? "bg-accent/50" : "hover:bg-accent/30"}`}
-                >
-                  <div className="relative">
-                    {c.avatar.startsWith("http") ? (
-                      <img
-                        src={c.avatar}
-                        alt=""
-                        className="h-12 w-12 rounded-full bg-muted object-cover"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center text-xl">
-                        🎾
-                      </div>
-                    )}
-                    {c.unread > 0 && (
-                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-neon border-2 border-background" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold truncate">{c.name}</span>
-                      <span
-                        className={`text-[10px] ${c.unread ? "text-neon font-semibold" : "text-muted-foreground"}`}
-                      >
-                        {lastMessage
-                          ? new Date(lastMessage.created_at).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : ""}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground truncate">
-                        {lastMessage ? lastMessage.text : t("chat.no_messages")}
-                      </span>
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setActiveConversation(c.id)}
+                    className={`w-full p-4 flex items-center gap-3 transition-colors text-left border-b border-border/50 ${isActive ? "bg-accent/50" : "hover:bg-accent/30"}`}
+                  >
+                    <div className="relative border border-border rounded-full p-0.5 bg-background shrink-0">
+                      {c.avatar && c.avatar.startsWith("http") ? (
+                        <img
+                          src={c.avatar}
+                          alt=""
+                          className="h-12 w-12 rounded-full bg-muted object-cover"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center text-xl">
+                          🎾
+                        </div>
+                      )}
                       {c.unread > 0 && (
-                        <span className="h-5 w-5 rounded-full bg-neon text-neon-foreground text-[10px] font-bold grid place-items-center ml-2 shrink-0">
-                          {c.unread}
-                        </span>
+                        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-neon border-2 border-background" />
                       )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-semibold truncate flex items-center gap-1">
+                          {c.name}
+                          {isVerified && <VerifiedBadge />}
+                        </span>
+                        <span
+                          className={`text-[10px] ${c.unread ? "text-neon font-semibold" : "text-muted-foreground"}`}
+                        >
+                          {lastMessage
+                            ? new Date(lastMessage.created_at).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : ""}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground truncate">
+                          {lastMessage ? lastMessage.text : t("chat.no_messages")}
+                        </span>
+                        {c.unread > 0 && (
+                          <span className="h-5 w-5 rounded-full bg-neon text-neon-foreground text-[10px] font-bold grid place-items-center ml-2 shrink-0">
+                            {c.unread}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+            {sidebarView === "connections" &&
+              filteredConnections.map((connection) => {
+                const profile =
+                  connection.connected_user ||
+                  registeredUsers.find((user) => user.id === connection.connected_user_id);
+                if (!profile) return null;
+
+                return (
+                  <div
+                    key={connection.id}
+                    className="w-full p-4 flex items-start gap-3 border-b border-border/50 bg-background/20"
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={profile.avatar_url}
+                        alt={profile.name}
+                        className="h-11 w-11 rounded-full bg-muted object-cover border border-border"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm truncate flex items-center gap-1">
+                        {profile.name}
+                        {profile.dni_verificado && <VerifiedBadge />}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground truncate">
+                        {connection.sport || profile.preferred_sports?.[0] || "Deportista"}
+                        {connection.compatibility_score
+                          ? ` · ${connection.compatibility_score}% compatible`
+                          : ""}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <button
+                          onClick={async () => {
+                            const chatId = await createChat(profile.id);
+                            setActiveConversation(chatId);
+                            setSidebarView("chats");
+                          }}
+                          className="rounded-lg bg-neon text-neon-foreground px-2 py-2 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Mensaje
+                        </button>
+                        <Link
+                          to="/app/profile/$userId"
+                          params={{ userId: profile.id }}
+                          className="rounded-lg border border-border bg-background px-2 py-2 text-xs font-semibold text-center hover:bg-accent/40"
+                        >
+                          Ver perfil
+                        </Link>
+                      </div>
+                    </div>
                   </div>
-                </button>
-              );
-            })}
+                );
+              })}
+
+            {sidebarView === "connections" && filteredConnections.length === 0 && (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                Conecta con jugadores desde Matchmaking para encontrarlos aquí.
+              </div>
+            )}
           </div>
         </div>
 
@@ -336,6 +488,7 @@ function Chat() {
             activeChat={activeChat}
             currentUser={currentUser}
             registeredUsers={registeredUsers}
+            areProfilesLoading={areProfilesLoading}
             text={text}
             setText={setText}
             handleSend={handleSend}
@@ -418,7 +571,10 @@ function Chat() {
                       className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate">{u.name}</div>
+                      <div className="font-semibold text-sm truncate flex items-center gap-1">
+                        {u.name}
+                        {u.dni_verificado && <VerifiedBadge />}
+                      </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {u.bio || t("register.role_player")}
                       </div>
@@ -512,7 +668,10 @@ function Chat() {
                           className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm truncate">{u.name}</div>
+                          <div className="font-semibold text-sm truncate flex items-center gap-1">
+                            {u.name}
+                            {u.dni_verificado && <VerifiedBadge />}
+                          </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {u.bio || t("register.role_player")}
                           </div>

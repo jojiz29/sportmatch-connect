@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, User } from "@/entities/types";
 import { BadgeEngine } from "@/components/BadgeEngine";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/profile/$userId")({
   head: () => ({ meta: [{ title: "Perfil de Jugador — SportMatch" }] }),
@@ -201,7 +202,10 @@ function UserProfile() {
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold">{profile.name}</h2>
+            <h2 className="text-2xl font-bold flex items-center">
+              {profile.name}
+              {profile.dni_verificado && <VerifiedBadge />}
+            </h2>
             <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
               <MapPin className="h-3 w-3" />
               {profile.city} · {t("profile.age_label", { age: profile.age })}
@@ -299,6 +303,27 @@ function UserProfile() {
             <Metric label={t("profile.attendance")} value={94} />
             <Metric label={t("profile.cancellations")} value={88} />
             <Metric label={t("profile.behavior")} value={92} />
+          </div>
+
+          {/* DNI Identity Verification Status Cue */}
+          <div className="mt-6 pt-4 border-t border-border/60">
+            {profile.dni_verificado ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5">
+                  🛡️ Identidad verificada
+                </span>
+              </div>
+            ) : (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center">
+                <span className="text-xs font-bold text-blue-400 block">
+                  Identidad no verificada
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-1.5 block leading-normal">
+                  Este jugador aún no ha verificado su cuenta. ¡Verifica la tuya en tu perfil para
+                  destacar!
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

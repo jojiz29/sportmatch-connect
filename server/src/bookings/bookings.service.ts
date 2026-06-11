@@ -8,9 +8,9 @@ export class BookingsService {
   async getByCourtAndDate(courtId: string, date: string) {
     const bookings = await this.prisma.bookings.findMany({
       where: { court_id: courtId, date },
-      select: { time: true },
+      select: { time_slot: true },
     });
-    return bookings.map((b) => b.time);
+    return bookings.map((b) => b.time_slot);
   }
 
   async create(data: {
@@ -18,17 +18,21 @@ export class BookingsService {
     date: string;
     time: string;
     user_id: string;
-    hours?: number;
-    total_price?: number;
+    precio_cancha?: number;
+    porcentaje_comision?: number;
+    monto_comision?: number;
+    total_cobrado?: number;
   }) {
     return this.prisma.bookings.create({
       data: {
         court_id: data.court_id,
         date: data.date,
-        time: data.time,
+        time_slot: data.time,
         user_id: data.user_id,
-        hours: data.hours || 1,
-        total_price: data.total_price || 0,
+        precio_cancha: data.precio_cancha,
+        porcentaje_comision: data.porcentaje_comision,
+        monto_comision: data.monto_comision,
+        total_cobrado: data.total_cobrado,
       },
     });
   }

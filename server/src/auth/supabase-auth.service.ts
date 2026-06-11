@@ -7,8 +7,11 @@ export class SupabaseAuthService {
   private readonly isConfigured: boolean;
 
   constructor() {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const serviceRoleKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY;
 
     if (supabaseUrl && serviceRoleKey) {
       this.supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -21,7 +24,7 @@ export class SupabaseAuthService {
     } else {
       this.isConfigured = false;
       console.warn(
-        "Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
+        "Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY/VITE_SUPABASE_ANON_KEY",
       );
     }
   }
