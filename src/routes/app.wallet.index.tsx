@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Trophy, Gift, Zap, Crown, X, ShoppingBag, Loader2 } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -14,6 +14,9 @@ import { backendApi } from "@/shared/api/backendApi";
 import { Reward } from "@/services/walletService";
 
 export const Route = createFileRoute("/app/wallet/")({
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     buyItem: (search.buyItem as string) || undefined,
