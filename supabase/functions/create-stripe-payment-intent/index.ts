@@ -37,17 +37,20 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const amount = Number(body?.amount);
+    const monto_cancha = Number(body?.monto_cancha || body?.amount);
 
-    if (!amount || amount <= 0) {
-      return new Response(JSON.stringify({ error: "El monto debe ser un número mayor que cero." }), {
+    if (!monto_cancha || monto_cancha <= 0) {
+      return new Response(JSON.stringify({ error: "El monto de la cancha debe ser un número mayor que cero." }), {
         status: 400,
         headers: CORS_HEADERS,
       });
     }
 
+    const comision_servicio = monto_cancha * 0.10;
+    const total_amount = monto_cancha + comision_servicio;
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(total_amount * 100),
       currency: "pen",
       payment_method_types: ["card"],
       description: "Reserva SportMatch Connect",

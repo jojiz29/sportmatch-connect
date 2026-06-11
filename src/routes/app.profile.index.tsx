@@ -11,7 +11,9 @@ import {
   X,
   Users,
   Camera,
+  Loader2,
 } from "lucide-react";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { apiClient } from "@/shared/api/apiClient";
@@ -83,6 +85,110 @@ function Profile() {
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
+
+  const [dni, setDni] = useState("");
+  const [isVerifyingDni, setIsVerifyingDni] = useState(false);
+  const [dniError, setDniError] = useState("");
+  const [isDniDialogOpen, setIsDniDialogOpen] = useState(false);
+
+  const handleVerifyDni = async () => {
+    if (!/^\d{8}$/.test(dni)) {
+      setDniError("El DNI debe tener exactamente 8 dígitos.");
+      return;
+    }
+
+    setIsVerifyingDni(true);
+    setDniError("");
+
+    const isDemo = useAuthStore.getState().isDemoMode;
+
+    if (isDemo) {
+      setTimeout(async () => {
+        setIsVerifyingDni(false);
+        if (dni === "99999999") {
+          const nextIntentos = (profile?.dni_intentos || 0) + 1;
+          const updatedUser = {
+            ...profile!,
+            dni_intentos: nextIntentos,
+          };
+          useAuthStore.setState({ user: updatedUser });
+          useProfileStore.setState({ profile: updatedUser });
+          const attemptsLeft = 3 - nextIntentos;
+          const suffix = attemptsLeft > 0 
+            ? ` Te quedan ${attemptsLeft} intentos.`
+            : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte.";
+          setDniError(`El nombre en tu cuenta no coincide con el DNI ingresado.${suffix}`);
+          toast.error("Error de verificación.");
+        } else {
+          const updatedUser = {
+            ...profile!,
+            dni_verificado: true,
+            dni_hash: "mock_hash_sha256",
+            dni_intentos: 0,
+            fecha_verificacion: new Date().toISOString(),
+            trust_score: Math.min(100, (profile?.trust_score || 0) + 15),
+          };
+          useAuthStore.setState({ user: updatedUser });
+          useProfileStore.setState({ profile: updatedUser });
+          toast.success("¡Identidad verificada exitosamente!");
+          setIsDniDialogOpen(false);
+          setDni("");
+        }
+      }, 1500);
+      return;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) {
+        throw new Error("No active session found.");
+      }
+
+      const res = await backendApi.profiles.verifyDni(token, dni);
+      if (res.error) {
+        throw new Error(res.error);
+      }
+
+      // Success! Fetch updated profile
+      const { data: updatedProfile, error: fetchErr } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", profile!.id)
+        .single();
+
+      if (!fetchErr && updatedProfile) {
+        useAuthStore.setState({ user: updatedProfile as User });
+        useProfileStore.setState({ profile: updatedProfile as User });
+      }
+
+      toast.success("¡Identidad verificada exitosamente!");
+      setIsDniDialogOpen(false);
+      setDni("");
+    } catch (err: any) {
+      console.error("DNI verification error:", err);
+      const msg = err.message || "Error al verificar el DNI.";
+      setDniError(msg);
+      toast.error("La verificación falló.");
+      
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("dni_intentos")
+        .eq("id", profile!.id)
+        .single();
+        
+      if (currentProfile) {
+        const updatedUser = {
+          ...profile!,
+          dni_intentos: currentProfile.dni_intentos,
+        };
+        useAuthStore.setState({ user: updatedUser });
+        useProfileStore.setState({ profile: updatedUser });
+      }
+    } finally {
+      setIsVerifyingDni(false);
+    }
+  };
 
   const {
     values: editForm,
@@ -534,7 +640,10 @@ function Profile() {
               </div>
             ) : (
               <>
-                <h2 className="text-2xl font-bold">{profile.name}</h2>
+                <h2 className="text-2xl font-bold flex items-center">
+                  {profile.name}
+                  {profile.dni_verificado && <VerifiedBadge />}
+                </h2>
                 <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                   <MapPin className="h-3 w-3" />
                   {profile.city} · {t("profile.age_label", { age: profile.age })}
@@ -632,6 +741,112 @@ function Profile() {
             <Metric label={t("profile.attendance")} value={94} />
             <Metric label={t("profile.cancellations")} value={88} />
             <Metric label={t("profile.behavior")} value={92} />
+          </div>
+
+          {/* DNI Identity Verification Status Card Block */}
+          <div className="mt-6 pt-4 border-t border-border/60">
+            {profile.dni_verificado ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1.5">
+                  🛡️ Identidad verificada
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-1 block">
+                  Verificado el {profile.fecha_verificacion ? new Date(profile.fecha_verificacion).toLocaleDateString() : ""}
+                </span>
+              </div>
+            ) : (profile.dni_intentos || 0) >= 3 ? (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-center">
+                <span className="text-xs font-bold text-destructive block">
+                  🚫 Verificación bloqueada
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-1.5 block leading-normal">
+                  Has superado los 3 intentos. Ponte en contacto con el soporte técnico en soporte@sportmatch.app.
+                </span>
+              </div>
+            ) : (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center">
+                <span className="text-xs font-bold text-blue-400 block">
+                  Identidad no verificada
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-1 block">
+                  Verifica tu DNI para aumentar +15 de Trust Score.
+                </span>
+                <Dialog open={isDniDialogOpen} onOpenChange={setIsDniDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="mt-3 w-full py-2 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-bold shadow-glow hover:scale-[1.02] transition-transform cursor-pointer border-0"
+                    >
+                      Verificar Identidad
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 text-foreground">
+                    <DialogHeader>
+                      <DialogTitle className="text-lg font-black text-white">
+                        Verificar mi identidad (DNI)
+                      </DialogTitle>
+                      <DialogDescription className="text-xs text-muted-foreground">
+                        Ingresa tu número de DNI peruano (8 dígitos) para validar tu identidad real contra RENIEC.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                      <div className="space-y-1.5 text-left">
+                        <label className="text-xs font-semibold text-muted-foreground block">
+                          Número de DNI
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={8}
+                          value={dni}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            setDni(val);
+                            setDniError("");
+                          }}
+                          placeholder="Ej: 70123456"
+                          className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm font-mono text-center focus:border-primary focus:outline-none"
+                        />
+                        {dniError && (
+                          <span className="text-[11px] text-destructive block mt-1 text-center font-medium">
+                            {dniError}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground block mt-1 text-center">
+                          Te quedan {3 - (profile.dni_intentos || 0)} intentos.
+                        </span>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="flex justify-end gap-2 pt-4 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => setIsDniDialogOpen(false)}
+                        className="px-4 py-2 rounded-xl glass text-xs cursor-pointer"
+                        disabled={isVerifyingDni}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleVerifyDni}
+                        className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5"
+                        disabled={isVerifyingDni || dni.length !== 8}
+                      >
+                        {isVerifyingDni ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Verificando...</span>
+                          </>
+                        ) : (
+                          "Confirmar y Verificar"
+                        )}
+                      </button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </div>
         </div>
 

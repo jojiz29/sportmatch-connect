@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { calculateDistance } from "@/shared/api/geoService";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const { t } = useTranslation();
@@ -244,8 +245,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                       <div className="px-5 pb-2 space-y-2 z-10 relative">
                         {/* Name + age */}
                         <div className="flex items-baseline justify-center gap-2 text-center">
-                          <h2 className="text-xl font-black text-foreground">
+                          <h2 className="text-xl font-black text-foreground flex items-center justify-center gap-1.5">
                             {p.company_name || p.name || t("matchmaking.user_default")}
+                            {p.dni_verificado && <VerifiedBadge />}
                           </h2>
                           {p.user_role !== "BUSINESS" && (
                             <span className="text-sm font-semibold text-muted-foreground">
@@ -511,7 +513,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold text-gradient">{inspectedUser.name}</h2>
+                  <h2 className="text-2xl font-bold text-gradient flex items-center gap-1.5">
+                    {inspectedUser.name}
+                    {inspectedUser.dni_verificado && <VerifiedBadge />}
+                  </h2>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <MapPin className="h-3 w-3" />
                     {inspectedUser.city} · {t("profile.age_label", { age: inspectedUser.age })}

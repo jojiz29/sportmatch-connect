@@ -14,6 +14,7 @@ import { joinSquad, getSquads } from "@/shared/api/squadService";
 import { BookingModal } from "@/components/BookingModal";
 import { toast } from "sonner";
 import { ChatWindow } from "@/components/chat/ChatWindow";
+import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
 export const Route = createFileRoute("/app/chat")({
   head: () => ({ meta: [{ title: "Chat — SportMatch" }] }),
@@ -276,6 +277,9 @@ function Chat() {
             {filteredUserChats.map((c) => {
               const lastMessage = c.messages[c.messages.length - 1];
               const isActive = c.id === activeConversationId;
+              const otherPlayerId = c.current_players.find((id) => id !== currentUser.id);
+              const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
+              const isVerified = otherPlayer?.dni_verificado;
 
               return (
                 <button
@@ -301,7 +305,10 @@ function Chat() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold truncate">{c.name}</span>
+                      <span className="font-semibold truncate flex items-center gap-1">
+                        {c.name}
+                        {isVerified && <VerifiedBadge />}
+                      </span>
                       <span
                         className={`text-[10px] ${c.unread ? "text-neon font-semibold" : "text-muted-foreground"}`}
                       >
@@ -418,7 +425,10 @@ function Chat() {
                       className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate">{u.name}</div>
+                      <div className="font-semibold text-sm truncate flex items-center gap-1">
+                        {u.name}
+                        {u.dni_verificado && <VerifiedBadge />}
+                      </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {u.bio || t("register.role_player")}
                       </div>
@@ -512,7 +522,10 @@ function Chat() {
                           className="h-10 w-10 rounded-full bg-muted object-cover border border-border"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm truncate">{u.name}</div>
+                          <div className="font-semibold text-sm truncate flex items-center gap-1">
+                            {u.name}
+                            {u.dni_verificado && <VerifiedBadge />}
+                          </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {u.bio || t("register.role_player")}
                           </div>

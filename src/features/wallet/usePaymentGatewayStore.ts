@@ -96,7 +96,10 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ amount: payload.amount }),
+          body: JSON.stringify({
+            amount: payload.amount,
+            monto_cancha: payload.amount / 1.10,
+          }),
         });
 
         if (!response.ok) {
