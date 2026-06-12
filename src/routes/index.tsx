@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias de la landing page ===
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Zap,
@@ -25,6 +26,7 @@ import { supabase } from "@/shared/api/supabase";
 import { buttonVariants } from "@/shared/ui/button-variants";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 
+// === BLOQUE: Tipos — Perfil mock para el emulador de swipe ===
 interface SwipeProfile {
   name: string;
   age: number;
@@ -40,6 +42,9 @@ interface SwipeProfile {
   avatarUrl: string;
 }
 
+// === BLOQUE: Ruta raíz / — createFileRoute con meta tags SEO ===
+// Incluye etiquetas head (title, description, Open Graph) para
+// mejorar el SEO y la preview en redes sociales.
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -60,6 +65,14 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+// === BLOQUE: Landing — Página principal con emulador de swipe interactivo ===
+// Landing page con:
+//   - Hero con emulador de swipe (Like/Dislike) y overlay de "It's a Match".
+//   - Sección de features (Matchmaking IA, Mapa, FitCoins, Telemetría).
+//   - Sección Squads con split billing interactivo y chat grupal mock.
+//   - Sección Mapa con selector de distritos y venues geolocalizados.
+//   - Sección Desafíos con retos gamificados y billetera FitCoins.
+//   - Estadísticas en vivo desde Supabase (profiles, courts, matches).
 function Landing() {
   const { t } = useTranslation();
   const [stats, setStats] = useState([
@@ -69,7 +82,7 @@ function Landing() {
     { k: "93%", l: "Match exitoso" },
   ]);
 
-  // Gamified states
+  // Estados del emulador de swipe gamificado
   const [fitcoins, setFitcoins] = useState(1450);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
@@ -77,7 +90,7 @@ function Landing() {
   const [showMatchOverlay, setShowMatchOverlay] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<SwipeProfile | null>(null);
 
-  // Split-billing states
+  // Estados del simulador de split billing
   const [totalBookingCost, setTotalBookingCost] = useState(60);
   const [squadMembers, setSquadMembers] = useState([
     { id: "edwin", name: "Edwin Flores (Tú)", initial: "E", checked: true },
@@ -86,11 +99,11 @@ function Landing() {
     { id: "juan", name: "Juan Mendoza", initial: "J", checked: true },
   ]);
 
-  // District selector / map states
+  // Estados del selector de distritos y mapa
   const [selectedDistrict, setSelectedDistrict] = useState("Surco");
   const [bookingSuccessVenue, setBookingSuccessVenue] = useState<string | null>(null);
 
-  // Challenges states
+  // === BLOQUE: challenges — Retos gamificados de la landing ===
   const [challenges, setChallenges] = useState([
     {
       id: "padel",
@@ -121,6 +134,7 @@ function Landing() {
     },
   ]);
 
+  // === BLOQUE: mockProfiles — Perfiles de ejemplo para el swipe emulator ===
   const mockProfiles = [
     {
       name: "Fabiola Rivas",
@@ -166,6 +180,9 @@ function Landing() {
     },
   ];
 
+  // === BLOQUE: districtMapData — Datos mock de sedes por distrito ===
+  // Cada distrito contiene venues con coordenadas relativas (x%, y%)
+  // para posicionar marcadores en el mapa visual.
   const districtMapData: Record<
     string,
     {
@@ -199,6 +216,7 @@ function Landing() {
     },
   };
 
+  // === BLOQUE: handleLike — Animación de swipe hacia la derecha (Like) ===
   const handleLike = () => {
     if (isTransitioning) return;
     setSwipeDirection("right");
@@ -212,6 +230,7 @@ function Landing() {
     }, 300);
   };
 
+  // === BLOQUE: handleDislike — Animación de swipe hacia la izquierda (Dislike) ===
   const handleDislike = () => {
     if (isTransitioning) return;
     setSwipeDirection("left");
@@ -223,6 +242,7 @@ function Landing() {
     }, 300);
   };
 
+  // === BLOQUE: handleAdvanceChallenge — Avanza el progreso de un reto ===
   const handleAdvanceChallenge = (id: string) => {
     setChallenges((prev) =>
       prev.map((c) => {
@@ -234,6 +254,8 @@ function Landing() {
     );
   };
 
+  // === BLOQUE: handleClaimChallenge — Reclama la recompensa de un reto completado ===
+  // Suma los puntos a la billetera FitCoins y marca el reto como reclamado.
   const handleClaimChallenge = (id: string, points: number) => {
     setChallenges((prev) =>
       prev.map((c) => {
@@ -246,9 +268,13 @@ function Landing() {
     );
   };
 
+  // Cálculo del split billing: monto por miembro activo.
   const activeBillingCount = squadMembers.filter((m) => m.checked).length;
   const calculatedSplitShare = activeBillingCount > 0 ? totalBookingCost / activeBillingCount : 0;
 
+  // === BLOQUE: useEffect — Fetch de estadísticas en vivo desde Supabase ===
+  // Consulta los conteos reales de profiles (PLAYER), courts y matches.
+  // Si falla o es null, mantiene los valores por defecto.
   useEffect(() => {
     async function fetchStats() {
       try {
@@ -289,11 +315,12 @@ function Landing() {
 
   const currentProfile = mockProfiles[activeCardIndex];
 
+  // === BLOQUE: Renderizado — UI completa de la landing page ===
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden relative transition-colors duration-300">
       <WorldCupBackground />
 
-      {/* Header */}
+      {/* === HEADER: Navegación principal === */}
       <header className="relative z-20 w-full bg-background/60 backdrop-blur-md border-b border-border/40 py-4 sm:py-6 px-4 md:px-8 xl:px-16">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -304,6 +331,7 @@ function Landing() {
               SportMatch
             </span>
           </div>
+          {/* Navegación de escritorio con enlaces a secciones */}
           <nav className="hidden lg:flex items-center gap-6 xl:gap-10 text-xs xl:text-sm font-medium text-muted-foreground">
             <a
               href="#matchmaking"
@@ -353,9 +381,10 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* === HERO: Emulador de swipe + CTA principal === */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16 pt-16 md:pt-24 lg:pt-32 pb-24 lg:pb-36 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
         <div className="lg:col-span-7 xl:col-span-6 flex flex-col justify-center">
+          {/* Badge de estado Beta */}
           <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-background/50 border border-border/40 text-xs text-[#00e676] mb-8 w-fit shadow-neon">
             <span className="h-2 w-2 rounded-full bg-[#00e676] animate-ping" />
             Beta · Lima 2026 Active Venues Mapped
@@ -371,8 +400,8 @@ function Landing() {
             Matchmaking inteligente para deportistas amateur. Encontrá gente compatible, reservá
             canchas y subí tu Trust Score con cada partido jugado en tu distrito.
           </p>
+          {/* Botones CTA */}
           <div className="mt-10 flex flex-wrap gap-4 items-center">
-            {/* Pulsing Electric Orange Action CTA Button */}
             <Link
               to="/demo"
               className="relative inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl bg-gradient-primary text-primary-foreground font-black text-base shadow-glow hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
@@ -389,6 +418,7 @@ function Landing() {
               {t("landing.crear_cuenta")}
             </Link>
           </div>
+          {/* Indicadores sociales */}
           <div className="mt-14 flex items-center gap-8 text-sm sm:text-base text-muted-foreground">
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 fill-[#FFD60A] text-[#FFD60A]" />
@@ -401,25 +431,25 @@ function Landing() {
           </div>
         </div>
 
-        {/* Matchmaking Swipe Emulator inside Hero */}
+        {/* === Emulador de swipe dentro del Hero === */}
         <div className="lg:col-span-5 xl:col-span-6 flex justify-center items-center w-full relative">
           <div className="absolute -inset-10 bg-gradient-primary opacity-15 blur-3xl rounded-full pointer-events-none" />
 
-          {/* Main Visual Frame representing a Phone Emulator */}
+          {/* Frame principal simulando un teléfono */}
           <div className="relative w-full max-w-[380px] sm:max-w-[400px] aspect-[3/4.2] rounded-[36px] bg-gradient-to-b from-[#121E3D]/90 to-[#090F22]/95 border-2 border-white/10 p-5 md:p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between overflow-hidden">
-            {/* Camera speaker mock notch */}
+            {/* Muesca simulada de cámara/speaker */}
             <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-4.5 rounded-full bg-[#0B132B] border border-white/5 flex items-center justify-center">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500/80 mr-2" />
               <span className="w-10 h-1 rounded-full bg-white/10" />
             </div>
 
-            {/* Profile Stack */}
+            {/* === Perfil swipable === */}
             <div className="relative flex-1 mt-3 flex flex-col justify-between">
-              {/* Back Card Decoration (Depth Factor) */}
+              {/* Tarjetas de fondo para efecto de profundidad */}
               <div className="absolute inset-x-2 bottom-0 top-3 rounded-2xl bg-white/5 border border-white/5 transform translate-y-2.5 scale-95 pointer-events-none -z-10" />
               <div className="absolute inset-x-4 bottom-0 top-6 rounded-2xl bg-white/5 border border-white/5 transform translate-y-5 scale-90 pointer-events-none -z-20" />
 
-              {/* Main Swipeable Card */}
+              {/* Tarjeta principal swipable con animación de transición */}
               <div
                 className={`w-full h-full rounded-2xl bg-gradient-to-b from-[#1A2544] to-[#0D152D] border border-white/10 p-5 flex flex-col justify-between transition-all duration-300 transform shadow-xl relative overflow-hidden ${
                   isTransitioning
@@ -429,7 +459,7 @@ function Landing() {
                     : "translate-x-0 rotate-0 opacity-100"
                 }`}
               >
-                {/* Visual Compatibility Tag */}
+                {/* Etiqueta de compatibilidad */}
                 <div className="flex justify-between items-center z-10">
                   <span className="px-3 py-1 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black uppercase tracking-wider font-mono">
                     {currentProfile.matchRate}
@@ -439,7 +469,7 @@ function Landing() {
                   </span>
                 </div>
 
-                {/* Avatar Visual Design */}
+                {/* Avatar con gradiente y borde neón */}
                 <div className="flex justify-center items-center my-4 relative">
                   <div
                     className={`h-32 w-32 rounded-full bg-gradient-to-br ${currentProfile.imageColor} border-4 border-[#39FF14]/20 p-1 flex items-center justify-center relative shadow-glow-neon`}
@@ -456,13 +486,13 @@ function Landing() {
                       </span>
                     )}
                   </div>
-                  {/* Small floating activity ring */}
+                  {/* Indicador de actividad */}
                   <span className="absolute bottom-1 right-[35%] h-5 w-5 rounded-full bg-[#39FF14] border-4 border-[#0B132B] flex items-center justify-center">
                     <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                   </span>
                 </div>
 
-                {/* Profile Information */}
+                {/* Información del perfil */}
                 <div className="space-y-2.5 z-10">
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-xl sm:text-2xl font-black text-white">
@@ -473,7 +503,7 @@ function Landing() {
                     </span>
                   </div>
 
-                  {/* Sports details badge */}
+                  {/* Badges de deporte, nivel y distrito */}
                   <div className="flex flex-wrap gap-1.5">
                     <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-xs font-extrabold uppercase">
                       {currentProfile.sport}
@@ -491,6 +521,7 @@ function Landing() {
                     "{currentProfile.bio}"
                   </p>
 
+                  {/* Tags del perfil */}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {currentProfile.tags.map((tag, idx) => (
                       <span
@@ -505,8 +536,9 @@ function Landing() {
               </div>
             </div>
 
-            {/* Interactive Control Buttons */}
+            {/* === Botones de control interactivos === */}
             <div className="flex items-center justify-center gap-5 mt-6 pt-4 border-t border-white/5">
+              {/* Botón Dislike (X) */}
               <button
                 onClick={handleDislike}
                 disabled={isTransitioning}
@@ -516,6 +548,7 @@ function Landing() {
                 <X className="h-6 w-6" />
               </button>
 
+              {/* Botón de información */}
               <Link
                 to="/demo"
                 className="h-10 w-10 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-[#B2B8C2] flex items-center justify-center transition-all duration-200"
@@ -524,6 +557,7 @@ function Landing() {
                 <Info className="h-5 w-5 text-white/80" />
               </Link>
 
+              {/* Botón Like (corazón) */}
               <button
                 onClick={handleLike}
                 disabled={isTransitioning}
@@ -537,7 +571,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Feature stats Grid */}
+      {/* === FEATURES: Grid de características principales === */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16 pb-24">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
@@ -581,7 +615,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Section 1 (IA Matchmaking) */}
+      {/* === SECCIÓN 1: Matchmaking IA === */}
       <section
         id="matchmaking"
         className="relative z-10 py-24 md:py-32 bg-[#090F22]/80 border-y border-white/5"
@@ -633,7 +667,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Section 2 (Squads & Community with Interactive Split Billing) */}
+      {/* === SECCIÓN 2: Squads & Pago Dividido Interactivo === */}
       <section id="squads" className="relative z-10 py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16">
           <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
@@ -650,7 +684,7 @@ function Landing() {
           </div>
 
           <div className="grid lg:grid-cols-12 gap-8 max-w-6xl mx-auto items-stretch">
-            {/* Card A: Interactive Split Billing Simulator */}
+            {/* Tarjeta A: Simulador interactivo de split billing */}
             <div className="lg:col-span-7 premium-card p-6 sm:p-8 flex flex-col justify-between border-2 border-white/5 hover:border-[#39FF14]/20 transition-all duration-300">
               <div>
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#FF6B35]/15 border border-[#FF6B35]/30 mb-6">
@@ -663,7 +697,7 @@ function Landing() {
                   {t("landing.split_billing_desc")}
                 </p>
 
-                {/* INTERACTIVE CONTROLS */}
+                {/* Controles interactivos del split billing */}
                 <div className="grid sm:grid-cols-2 gap-6 mb-6 pt-4 border-t border-white/5">
                   <div>
                     <label className="text-xs text-[#B2B8C2] font-bold uppercase tracking-wider block mb-2.5">
@@ -716,7 +750,7 @@ function Landing() {
                 </div>
               </div>
 
-              {/* Receipt Visualizer mockup */}
+              {/* Visualizador de recibo simulado */}
               <div className="bg-[#0B132B]/90 border border-white/10 rounded-2xl p-5 space-y-4 shadow-inner mt-4">
                 <div className="flex justify-between items-center text-xs text-[#B2B8C2] border-b border-white/5 pb-2">
                   <span className="font-semibold text-white">Alquiler de Cancha (Pádel Surco)</span>
@@ -763,7 +797,7 @@ function Landing() {
               </div>
             </div>
 
-            {/* Card B: Integrated Group Chat Mockup */}
+            {/* Tarjeta B: Mockup de chat grupal */}
             <div className="lg:col-span-5 premium-card p-6 sm:p-8 flex flex-col justify-between border-2 border-white/5 hover:border-[#39FF14]/20 transition-all duration-300">
               <div>
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 border border-white/10 mb-6">
@@ -777,7 +811,7 @@ function Landing() {
                 </p>
               </div>
 
-              {/* Chat bubble mockup container */}
+              {/* Burbujas de chat simuladas */}
               <div className="bg-[#0B132B]/80 border border-white/10 rounded-2xl p-5 space-y-3 font-sans mt-4">
                 <div className="flex gap-2">
                   <div className="h-7 w-7 rounded-full bg-orange-500 text-[11px] font-bold text-white flex items-center justify-center">
@@ -793,7 +827,7 @@ function Landing() {
                   </div>
                 </div>
 
-                {/* Match proposal card trigger */}
+                {/* Tarjeta de propuesta de partido */}
                 <div className="border border-[#FF6B35]/30 bg-[#FF6B35]/5 rounded-2xl p-4 flex flex-col items-center text-center space-y-2">
                   <span className="text-[10px] font-extrabold text-[#FF6B35] uppercase tracking-wider">
                     Propuesta de Partido
@@ -815,14 +849,14 @@ function Landing() {
         </div>
       </section>
 
-      {/* Section 3 (Map & Interactive Districts Coord Mock) */}
+      {/* === SECCIÓN 3: Mapa interactivo con distritos y venues === */}
       <section
         id="map"
         className="relative z-10 py-24 md:py-32 bg-[#090F22]/80 border-y border-y-white/5"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            {/* Title Column */}
+            {/* Columna de título y controles */}
             <div className="lg:col-span-5 flex flex-col justify-center">
               <span className="text-xs sm:text-sm font-extrabold text-[#39FF14] tracking-widest uppercase block mb-3">
                 Ubicación Deportiva
@@ -834,7 +868,7 @@ function Landing() {
                 {t("landing.map_desc")}
               </p>
 
-              {/* District indicators interactive pills */}
+              {/* Píldoras interactivas de selección de distrito */}
               <div className="mt-8">
                 <span className="text-xs text-white/50 uppercase tracking-widest font-black block mb-3">
                   Selecciona tu Hub Activo:
@@ -856,7 +890,7 @@ function Landing() {
                 </div>
               </div>
 
-              {/* List of active complexes in active district */}
+              {/* Lista de complejos en el distrito activo */}
               <div className="mt-8 space-y-3">
                 <span className="text-xs text-[#B2B8C2] font-semibold uppercase tracking-wider block border-b border-white/5 pb-2">
                   Complejos en{" "}
@@ -891,6 +925,7 @@ function Landing() {
                   ))}
                 </div>
 
+                {/* Feedback visual de reserva exitosa */}
                 {bookingSuccessVenue && (
                   <div className="p-3 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-xs font-bold flex items-center gap-2 animate-pulse mt-4">
                     <Check className="h-4 w-4" />
@@ -902,30 +937,31 @@ function Landing() {
               </div>
             </div>
 
-            {/* Map Preview Grid Column */}
+            {/* === Columna del mapa visual === */}
             <div className="lg:col-span-7 flex justify-center items-center w-full">
               <div className="w-full max-w-[550px] aspect-[4/3] relative border border-white/10 rounded-3xl p-3 bg-[#0B132B] shadow-card overflow-hidden">
+                {/* Indicador GPS activo */}
                 <div className="absolute top-4 right-4 z-10 bg-[#0B132B]/95 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] text-[#39FF14] font-black uppercase tracking-wider flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-[#39FF14] animate-ping" />
                   Visualizador GPS Activo
                 </div>
 
-                {/* Dark style mockup map */}
+                {/* Mapa simulado con cuadrícula y radial spotlight */}
                 <div className="w-full h-full rounded-2xl bg-[#090F22] relative flex items-center justify-center overflow-hidden border border-white/5">
-                  {/* Grid overlay lines */}
+                  {/* Cuadrícula de fondo */}
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-                  {/* Radial Spotlight around selected district */}
+                  {/* Radial spotlight del distrito seleccionado */}
                   <div className="absolute w-[350px] h-[350px] bg-[#39FF14]/5 rounded-full blur-3xl transition-all duration-700 pointer-events-none" />
 
-                  {/* Markers rendering according to selected district coordinates */}
+                  {/* Marcadores de venues posicionados según coordenadas del distrito */}
                   {districtMapData[selectedDistrict]?.venues.map((loc, idx) => (
                     <div
                       key={idx}
                       className="absolute flex flex-col items-center transition-all duration-700 ease-in-out"
                       style={{ left: loc.x, top: loc.y }}
                     >
-                      {/* Pulsing spot mark */}
+                      {/* Pin de marcador con pulso */}
                       <div className="h-4.5 w-4.5 rounded-full bg-[#39FF14] border-2 border-[#090F22] flex items-center justify-center relative shadow-glow-neon">
                         <span className="absolute -inset-2.5 rounded-full bg-[#39FF14]/35 animate-ping" />
                         <span className="h-1.5 w-1.5 rounded-full bg-white" />
@@ -936,7 +972,7 @@ function Landing() {
                     </div>
                   ))}
 
-                  {/* Centered locator info */}
+                  {/* Info del centro del distrito */}
                   <div className="absolute bottom-4 left-4 right-4 z-10 bg-[#0B132B]/90 border border-white/5 p-2 rounded-xl text-center">
                     <span className="text-[10px] text-[#B2B8C2] block uppercase tracking-widest font-bold">
                       {districtMapData[selectedDistrict]?.centerLabel}
@@ -949,7 +985,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Section 4 (FitCoins & Gamified Challenges) */}
+      {/* === SECCIÓN 4: FitCoins y Desafíos Gamificados === */}
       <section id="challenges" className="relative z-10 py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16">
           <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
@@ -964,7 +1000,7 @@ function Landing() {
             </p>
           </div>
 
-          {/* Interactive challenges panel */}
+          {/* Panel interactivo de retos */}
           <div className="bg-[#121E3D]/50 border border-white/10 rounded-3xl p-6 sm:p-8 md:p-10 max-w-4xl mx-auto shadow-card backdrop-blur-md">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-6 mb-6">
               <div>
@@ -975,6 +1011,7 @@ function Landing() {
                   Temporada Inicial 2026
                 </span>
               </div>
+              {/* Billetera FitCoins */}
               <div className="flex items-center gap-3">
                 <span className="text-sm text-[#B2B8C2]">Mi Billetera:</span>
                 <span className="text-2xl sm:text-3xl font-extrabold text-[#FF6B35] font-mono flex items-center gap-1.5 shadow-neon-amber/10">
@@ -984,7 +1021,7 @@ function Landing() {
               </div>
             </div>
 
-            {/* Challenges list */}
+            {/* Lista de retos */}
             <div className="space-y-4">
               {challenges.map((item) => {
                 const isCompleted = item.progress === item.total;
@@ -995,6 +1032,7 @@ function Landing() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
+                        {/* Badge de estado del reto */}
                         <span
                           className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
                             item.claimed
@@ -1015,7 +1053,7 @@ function Landing() {
                         </h4>
                       </div>
 
-                      {/* Custom styled progress bars */}
+                      {/* Barra de progreso personalizada */}
                       <div className="flex items-center gap-4">
                         <div className="flex-1 bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/5">
                           <div
@@ -1036,11 +1074,12 @@ function Landing() {
                     </div>
 
                     <div className="flex items-center justify-between md:justify-end gap-6 pt-3 md:pt-0 border-t md:border-t-0 border-white/5 md:border-none">
+                      {/* Puntos del reto */}
                       <span className="text-base font-mono font-black text-[#FF6B35]">
                         +{item.points} FC
                       </span>
 
-                      {/* Claim or Advance Buttons */}
+                      {/* Botones: Reclamar, Avanzar o Reclamado */}
                       {!item.claimed ? (
                         isCompleted ? (
                           <button
@@ -1073,7 +1112,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* === SECCIÓN DE ESTADÍSTICAS === */}
       <section id="stats" className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16 pb-24">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {stats.map((s) => (
@@ -1092,7 +1131,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* === FOOTER === */}
       <footer className="border-t border-white/5 py-12 text-center text-xs sm:text-sm text-[#B2B8C2] relative z-10">
         <div className="flex justify-center gap-2 mb-4">
           <div className="h-6 w-6 rounded bg-gradient-primary grid place-items-center shadow-glow">
@@ -1103,11 +1142,11 @@ function Landing() {
         © 2026 SportMatch-Connect · Made for high-performance athletes
       </footer>
 
-      {/* Match Notification Overlay Overlay Portal State */}
+      {/* === OVERLAY DE MATCH === */}
       {showMatchOverlay && matchedProfile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B132B]/85 backdrop-blur-md p-4 transition-all duration-300">
           <div className="relative max-w-md w-full p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-[#121E3D] to-[#090F22] border-2 border-[#39FF14]/50 shadow-neon-green text-center overflow-hidden">
-            {/* Dynamic visual neon lights */}
+            {/* Luces neón decorativas */}
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#39FF14]/15 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[#FF6B35]/15 rounded-full blur-3xl pointer-events-none" />
 
@@ -1124,7 +1163,7 @@ function Landing() {
                 chatear ahora!
               </p>
 
-              {/* Match Face Off Avatars */}
+              {/* Avatares enfrentados (Tú vs Match) */}
               <div className="flex items-center justify-center gap-4 sm:gap-6 my-8 relative">
                 <div className="relative">
                   <div className="h-16 sm:h-20 w-16 sm:w-20 rounded-full border-4 border-[#39FF14] overflow-hidden bg-gradient-to-br from-[#FF6B35] to-[#FF8C00] flex items-center justify-center shadow-lg">
@@ -1161,7 +1200,7 @@ function Landing() {
                 </div>
               </div>
 
-              {/* Form buttons */}
+              {/* Botones del overlay */}
               <div className="space-y-3">
                 <Link
                   to="/demo"

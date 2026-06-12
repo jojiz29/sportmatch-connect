@@ -1,8 +1,24 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/notificationService.ts
+ * PROPÓSITO: Servicio de notificaciones de la aplicación.
+ *            CRUD completo con soporte para Demo Mode (localStorage)
+ *            y modo real (Supabase).
+ * FLUJO: create() -> guarda en DB/localStorage -> sincroniza con
+ *        el store Zustand en tiempo real para actualizar la UI.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { AppNotification } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
 
+// ==============================================================
+// HELPERS DE DEMO MODE (persistencia en localStorage)
+// ==============================================================
+
+/** Lee todas las notificaciones demo desde localStorage */
 function getDemoNotifications(): AppNotification[] {
   if (typeof window === "undefined") return [];
   try {
@@ -14,6 +30,7 @@ function getDemoNotifications(): AppNotification[] {
   }
 }
 
+/** Guarda notificaciones demo en localStorage */
 function saveDemoNotifications(notifications: AppNotification[]): void {
   if (typeof window === "undefined") return;
   try {
@@ -23,6 +40,14 @@ function saveDemoNotifications(notifications: AppNotification[]): void {
   }
 }
 
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
+
+/**
+ * getNotifications(): Obtiene las notificaciones de un usuario
+ * Ordenadas por fecha descendente (más reciente primero).
+ */
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
   if (useAuthStore.getState().isDemoMode) {
     const all = getDemoNotifications();
@@ -54,6 +79,19 @@ export async function getNotifications(userId: string): Promise<AppNotification[
   })) as AppNotification[];
 }
 
+/**
+ * createNotification(): Crea una nueva notificación
+ * ------------------------------------------------------------------
+ * Después de guardar en DB/localStorage, sincroniza automáticamente
+ * con el store Zustand para que la UI reaccione sin necesidad de
+ * recargar notificaciones.
+ *
+ * @param userId  - ID del usuario destinatario
+ * @param type    - Tipo de notificación (FOLLOW, MATCH_INVITE, CHAT, etc.)
+ * @param title   - Título corto
+ * @param content - Contenido descriptivo
+ * @param link    - (Opcional) Enlace al que redirige al hacer click
+ */
 export async function createNotification(
   userId: string,
   type: AppNotification["type"],
@@ -110,7 +148,7 @@ export async function createNotification(
     };
   }
 
-  // Sync to local Zustand store if it matches the current user
+  // Sincroniza con el store Zustand si la notificación es para el usuario actual
   const currentUser = useAuthStore.getState().user;
   if (currentUser && currentUser.id === userId) {
     useNotificationStore.getState().addNotificationDirectly(newNotif);
@@ -119,6 +157,9 @@ export async function createNotification(
   return newNotif;
 }
 
+/**
+ * markNotificationRead(): Marca una notificación como leída
+ */
 export async function markNotificationRead(id: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     const all = getDemoNotifications();
@@ -135,6 +176,9 @@ export async function markNotificationRead(id: string): Promise<void> {
   }
 }
 
+/**
+ * markAllNotificationsRead(): Marca TODAS las notificaciones como leídas
+ */
 export async function markAllNotificationsRead(userId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     const all = getDemoNotifications();

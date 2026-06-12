@@ -1,3 +1,8 @@
+// ============================================================
+// core-flow.spec.ts — E2E: Flujo principal del usuario (Happy Path)
+// Verifica login, dashboard, matchmaking y perfil
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Core User Flow (Happy Path)", () => {

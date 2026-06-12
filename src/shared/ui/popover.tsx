@@ -1,3 +1,4 @@
+// shadcn/ui — Popover (panel flotante con Radix)
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 

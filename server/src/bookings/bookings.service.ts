@@ -1,3 +1,8 @@
+// ============================================================
+// bookings.service.ts — Servicio de reservas
+// Consulta slots ocupados por cancha/fecha y crea nuevas reservas
+// ============================================================
+
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 

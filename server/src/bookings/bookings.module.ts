@@ -1,3 +1,8 @@
+// ============================================================
+// bookings.module.ts — Módulo de reservas
+// Gestiona la creación y consulta de reservas de canchas
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { BookingsController } from "./bookings.controller";
 import { BookingsService } from "./bookings.service";

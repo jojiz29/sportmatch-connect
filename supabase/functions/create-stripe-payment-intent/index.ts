@@ -1,3 +1,9 @@
+// ============================================================
+// create-stripe-payment-intent — Edge Function de Supabase
+// Crea un PaymentIntent de Stripe para pagos de reserva de cancha
+// Calcula comisión del 10% y retorna client_secret al frontend
+// ============================================================
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.15.0";
 

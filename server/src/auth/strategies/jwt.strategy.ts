@@ -1,3 +1,8 @@
+// ============================================================
+// jwt.strategy.ts — Estrategia Passport JWT
+// Extrae y valida tokens JWT del header Authorization Bearer
+// ============================================================
+
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";

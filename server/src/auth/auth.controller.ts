@@ -1,3 +1,8 @@
+// ============================================================
+// auth.controller.ts — Controlador de autenticación
+// Endpoints: GET profile, PUT profile, GET verify (token)
+// ============================================================
+
 import {
   Controller,
   Get,

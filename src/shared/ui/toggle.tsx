@@ -1,3 +1,4 @@
+// shadcn/ui — Botón de Alternancia (toggle con Radix)
 import * as React from "react";
 import * as TogglePrimitive from "@radix-ui/react-toggle";
 import { type VariantProps } from "class-variance-authority";

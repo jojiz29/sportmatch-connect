@@ -1,3 +1,8 @@
+// ============================================================
+// inspect-db-schema.js — Script de inspección del esquema DB
+// Lista tablas, columnas y políticas RLS en Supabase
+// ============================================================
+
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";

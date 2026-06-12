@@ -1,3 +1,8 @@
+// ============================================================
+// health.controller.ts — Controlador de salud del servicio
+// Endpoint GET /health para verificar que la API responde
+// ============================================================
+
 import { Controller, Get } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 

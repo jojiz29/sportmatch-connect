@@ -1,3 +1,8 @@
+// ============================================================
+// sync-jira-sprint2-closure.mjs — Cierre del Sprint 2 en Jira
+// Marca issues como completados y genera reporte de cierre
+// ============================================================
+
 import path from "path";
 import fs from "fs";
 

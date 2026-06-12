@@ -1,3 +1,4 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Transaction } from "@/entities/types";
@@ -8,6 +9,8 @@ import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { createNotification } from "@/shared/api/notificationService";
 import { toast } from "sonner";
 
+// === BLOQUE: TIPO DE RETO ===
+// Representa un desafío semanal que el usuario puede completar para ganar FitCoins.
 export interface Challenge {
   id: string;
   name: string;
@@ -17,6 +20,7 @@ export interface Challenge {
   claimed: boolean;
 }
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface WalletState {
   balance: number;
   transactions: Transaction[];
@@ -28,11 +32,16 @@ interface WalletState {
   claimChallenge: (id: string) => Promise<void>;
 }
 
+// === BLOQUE: STORE DE MONEDERO ===
+// Gestiona el saldo de FitCoins, las transacciones y los retos semanales.
+// Persistido en localStorage bajo "sportmatch-wallet".
+// Escucha cambios en useAuthStore para inicializar el monedero al iniciar sesión.
 export const useWalletStore = create<WalletState>()(
   persist(
     (set, get) => ({
       balance: 0,
       transactions: [],
+      // Retos semanales predefinidos con progreso y recompensa
       challenges: [
         {
           id: "ch1",
@@ -60,11 +69,15 @@ export const useWalletStore = create<WalletState>()(
         },
       ],
 
+      // === INICIALIZACIÓN DEL MONEDERO ===
+      // Carga el saldo y las transacciones desde el backend o Supabase.
+      // Los retos se inicializan con datos dinámicos del perfil del usuario.
       initWallet: async () => {
         const user = useAuthStore.getState().user;
         if (user) {
           const state = get();
 
+          // Retos dinámicos: toman el progreso real del perfil del usuario
           const dynamicChallenges = [
             {
               id: "ch1",
@@ -92,6 +105,7 @@ export const useWalletStore = create<WalletState>()(
             },
           ];
 
+          // Preserva el estado "claimed" de los retos existentes
           const currentChallenges = dynamicChallenges.map((dc) => {
             const existing = state.challenges?.find((c) => c.id === dc.id);
             return {
@@ -127,6 +141,10 @@ export const useWalletStore = create<WalletState>()(
           });
         }
       },
+
+      // === CANJE DE FITCOINS ===
+      // Permite gastar FitCoins (redeem) para obtener recompensas.
+      // En modo demo opera contra localStorage; en modo real contra Supabase.
       redeem: async (cost, description, rewardId) => {
         const user = useAuthStore.getState().user;
         if (!user) return false;
@@ -134,6 +152,7 @@ export const useWalletStore = create<WalletState>()(
         const { balance } = get();
         if (balance < cost) return false;
 
+        // Modo demo: operación local contra localStorage
         if (useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
           const newBalance = balance - cost;
           set({
@@ -164,6 +183,7 @@ export const useWalletStore = create<WalletState>()(
           return true;
         }
 
+        // Modo real: operación contra backend + Supabase
         try {
           if (rewardId) {
             const { redeemReward } = await import("@/services/walletService");
@@ -232,11 +252,14 @@ export const useWalletStore = create<WalletState>()(
         }
       },
 
+      // === COMPRA DE ARTÍCULO ===
+      // Delegado a purchaseCatalogItem en businessService.ts.
       purchaseItem: async () => {
-        // Handled via purchaseCatalogItem in businessService.ts.
         return false;
       },
 
+      // === PROGRESO DE RETO ===
+      // Incrementa el progreso de un reto y lo reclama automáticamente si se completa.
       progressChallenge: async (id) => {
         set((state) => {
           const updated = state.challenges.map((c) => {
@@ -256,6 +279,10 @@ export const useWalletStore = create<WalletState>()(
         }
       },
 
+      // === RECLAMAR RECOMPENSA DE RETO ===
+      // Actualización optimista: acredita los FitCoins de inmediato.
+      // En modo real persiste la transacción en Supabase.
+      // Si falla, revierte el estado (rollback).
       claimChallenge: async (id) => {
         const { challenges, balance } = get();
         const challenge = challenges.find((c) => c.id === id);
@@ -266,7 +293,7 @@ export const useWalletStore = create<WalletState>()(
 
         const newBalance = balance + challenge.reward;
 
-        // Optimistic update
+        // Actualización optimista
         const updatedChallenges = challenges.map((c) => {
           if (c.id === id) {
             return { ...c, claimed: true };
@@ -280,6 +307,7 @@ export const useWalletStore = create<WalletState>()(
         });
         useAuthStore.setState({ user: { ...user, fitcoins_balance: newBalance } });
 
+        // Modo demo: operación local
         if (useAuthStore.getState().isDemoMode) {
           const newTransaction: Transaction = {
             id: `demo-tx-${Date.now()}`,
@@ -298,6 +326,7 @@ export const useWalletStore = create<WalletState>()(
           return;
         }
 
+        // Modo real: persiste en Supabase
         try {
           const newTransaction = {
             user_id: user.id,
@@ -325,7 +354,7 @@ export const useWalletStore = create<WalletState>()(
           console.error(`Error during claimChallenge (code: ${e?.code}):`, err);
           const code = e?.code ? ` (${e.code})` : "";
           toast.error(`Error al reclamar la recompensa: ${e?.message || String(err)}${code}`);
-          // Rollback
+          // Rollback: restaura el balance y los retos al estado anterior
           set({
             balance,
             challenges,
@@ -341,9 +370,9 @@ export const useWalletStore = create<WalletState>()(
   ),
 );
 
-// Subscribe to useAuthStore changes.
-// Only triggers initWallet when the user ID actually changes (login/logout),
-// preventing redundant fetches on unrelated auth state ticks.
+// === BLOQUE: SUSCRIPCIÓN A CAMBIOS DE AUTENTICACIÓN ===
+// Inicializa el monedero solo cuando cambia el ID del usuario (login/logout),
+// evitando recargas innecesarias en otros cambios de estado.
 let _prevWalletUserId: string | null = useAuthStore.getState().user?.id ?? null;
 useAuthStore.subscribe((state) => {
   const userId = state.user?.id ?? null;

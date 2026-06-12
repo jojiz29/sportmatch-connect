@@ -1,3 +1,8 @@
+// ============================================================
+// roles.guard.ts — Guard de control de roles
+// Verifica que el usuario autenticado tenga el rol requerido
+// ============================================================
+
 import { Injectable, CanActivate, ExecutionContext, SetMetadata } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 

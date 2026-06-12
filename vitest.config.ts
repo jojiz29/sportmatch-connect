@@ -1,3 +1,8 @@
+// ============================================================
+// vitest.config.ts — Configuración de Vitest
+// Entorno jsdom, alias @, setup global y patrón de tests
+// ============================================================
+
 import { defineConfig } from "vitest/config";
 import path from "path";
 

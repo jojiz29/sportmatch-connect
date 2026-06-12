@@ -1,3 +1,8 @@
+// ============================================================
+// test_candidates.js — Script de prueba de candidatos de matchmaking
+// Verifica la estructura de datos de usuarios de prueba por deporte
+// ============================================================
+
 // Using native global fetch in Node v22
 const candidates = [
   // Fútbol

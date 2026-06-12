@@ -1,3 +1,8 @@
+// ============================================================
+// posts.module.ts — Módulo de publicaciones
+// CRUD de posts con comentarios y reacciones emoji
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { PostsController } from "./posts.controller";
 import { PostsService } from "./posts.service";

@@ -1,18 +1,36 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// Hooks de React: useState para estado local, useEffect para efectos secundarios,
+// useRef para referencias mutables sin re-renderizado.
 import React, { useState, useEffect, useRef } from "react";
+// Servicios de API: getFeed obtiene el feed del usuario, createPost crea una nueva publicación.
 import { getFeed, createPost } from "@/shared/api/feedService";
+// Cliente de Supabase para suscripciones Realtime y consultas directas.
 import { supabase } from "@/shared/api/supabase";
+// Store de autenticación para identificar al usuario actual.
 import { useAuthStore } from "@/entities/user/useAuth";
+// Tipos compartidos: Post, Sport, SportCatalog (catálogo de deportes).
 import { Post, Sport, SportCatalog } from "@/entities/types";
+// Notificaciones toast para feedback visual al usuario.
 import { toast } from "sonner";
+// Cliente API unificado con soporte de mocks y failover.
 import { apiClient } from "@/shared/api/apiClient";
+// Cliente del backend NestJS para operaciones que requieren lógica de servidor.
 import { backendApi } from "@/shared/api/backendApi";
+// Iconos de Lucide para la interfaz del feed.
 import { Send, Loader2, Zap, MessageCircle, AlertTriangle, ShieldAlert, Image } from "lucide-react";
+// Framer Motion para animaciones de entrada/salida de posts y comentarios.
 import { motion, AnimatePresence } from "framer-motion";
+// Componente de comentarios anidados dentro de cada publicación.
 import { PostComments } from "./PostComments";
+// Modal de reporte para denunciar contenido inapropiado.
 import { ReportModal } from "@/components/ReportModal";
+// Skeleton loader para estado de carga del feed.
 import { SkeletonLoader } from "@/components/SkeletonLoader";
+// Hook de moderación AI para analizar imágenes NSFW en el cliente.
 import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 
+// === BLOQUE: MAPA DE EMOJIS POR DEPORTE ===
+// Asocia nombres de deportes a emojis para mostrar en los pills de selección.
 const SPORT_EMOJIS: Record<string, string> = {
   Pádel: "🏓",
   Fútbol: "⚽",
@@ -29,17 +47,21 @@ const SPORT_EMOJIS: Record<string, string> = {
   Golf: "⛳",
 };
 
-/**
- * NewsFeed component with post creation, dynamic listing, and real-time updates.
- * Subscribes to Supabase Realtime on the `posts` table to append new posts
- * from followed users without requiring a page refresh.
- */
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Componente de feed de noticias con creación de posts, listado dinámico
+// y actualizaciones en tiempo real vía Supabase Realtime.
 export function NewsFeed() {
+  // Usuario autenticado actualmente.
   const currentUser = useAuthStore((state) => state.user);
+  // Lista de publicaciones del feed.
   const [posts, setPosts] = useState<Post[]>([]);
+  // Indicador de carga inicial del feed.
   const [loading, setLoading] = useState<boolean>(true);
+  // Contenido del texto del nuevo post (textarea).
   const [content, setContent] = useState<string>(contentPreset || "");
+  // Deporte seleccionado para el nuevo post (filtro/etiqueta).
   const [sport, setSport] = useState<Sport | "">("");
+  // Lista de nombres de deportes obtenida del backend o Supabase.
   const [sportsList, setSportsList] = useState<string[]>([
     "Pádel",
     "Fútbol",
@@ -49,8 +71,9 @@ export function NewsFeed() {
     "Running",
   ]);
 
+  // === BLOQUE: CARGA DEL CATÁLOGO DE DEPORTES ===
+  // Intenta obtener la lista del backend NestJS primero; si falla, usa Supabase.
   useEffect(() => {
-    // Try backend first for sports, fallback to Supabase
     backendApi.sports
       .getAll()
       .then((res) => {
@@ -70,26 +93,37 @@ export function NewsFeed() {
           .catch((err) => console.error("Error loading sports in NewsFeed:", err));
       });
   }, []);
+  // Estado para mostrar/ocultar el área de subida de imágenes.
   const [showImageDropzone, setShowImageDropzone] = useState<boolean>(false);
+  // URL de la imagen previsualizada (puede ser blob: o URL remota).
   const [mediaUrl, setMediaUrl] = useState<string>("");
+  // Indicador de envío en curso (para deshabilitar el botón y mostrar spinner).
   const [submitting, setSubmitting] = useState<boolean>(false);
+  // ID del post expandido actualmente (para mostrar comentarios).
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
-  // States for Sprint 3.2 Drag-and-Drop + Moderation
+  // Estados para drag-and-drop de imágenes y moderación de contenido.
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  // Referencia al input file oculto para disparar el diálogo de selección.
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Archivo de imagen seleccionado (File) para subir al servidor.
   const [imageFile, setImageFile] = useState<File | null>(null);
+  // Registro de posts cuyo contenido sensible ha sido revelado por el usuario.
   const [revealedPosts, setRevealedPosts] = useState<Record<string, boolean>>({});
+  // Estado del modal de reporte.
   const [isReportOpen, setIsReportOpen] = useState(false);
+  // Objeto destino del reporte: puede ser un post o un comentario.
   const [reportTarget, setReportTarget] = useState<{ id: string; type: "post" | "comment" } | null>(
     null,
   );
 
-  // AI Moderation Engine States
+  // Hook de moderación AI para analizar imágenes antes de subirlas.
   const { analyzeImage } = useNSFWJS();
   const [isAnalyzingImage, setIsAnalyzingImage] = useState<boolean>(false);
 
-  // Open image dropzone automatically if we are running the Capstone Jury Tour
+  // === BLOQUE: EFECTO DEL TOUR DE DEMOSTRACIÓN ===
+  // Si la URL contiene ?tour=true, abre la zona de subida automáticamente
+  // para facilitar la demostración frente al jurado (Capstone Jury Tour).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("tour") === "true") {
@@ -97,7 +131,9 @@ export function NewsFeed() {
     }
   }, []);
 
-  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change (Task 2.4)
+  // === BLOQUE: LIMPIEZA DE MEMORIA (BLOB URLS) ===
+  // Revoca las URLs de tipo blob: al desmontar o cambiar la URL para evitar
+  // fugas de memoria (SEC-04, Task 2.4).
   useEffect(() => {
     return () => {
       if (mediaUrl && mediaUrl.startsWith("blob:")) {
@@ -106,6 +142,9 @@ export function NewsFeed() {
     };
   }, [mediaUrl]);
 
+  // === BLOQUE: MANEJADOR DE ARCHIVO DE IMAGEN ===
+  // Valida el archivo (tamaño, tipo), crea una vista previa local y
+  // ejecuta el análisis NSFWJS para moderación automática.
   const handleImageFile = async (file: File) => {
     if (isAnalyzingImage) {
       toast.error("Ya hay un análisis de imagen en curso. Por favor, espere.");
@@ -121,15 +160,17 @@ export function NewsFeed() {
       return;
     }
 
-    // Set preview URL and raw File in state immediately
+    // Crea una URL local temporal para la previsualización inmediata.
     const localUrl = URL.createObjectURL(file);
     setMediaUrl(localUrl);
     setImageFile(file);
     setIsAnalyzingImage(true);
 
     try {
+      // Ejecuta el modelo NSFWJS en el navegador para detectar contenido sensible.
       const isSafe = await analyzeImage(file);
       if (!isSafe) {
+        // Imagen bloqueada: revoca la URL y muestra error.
         setImageFile(null);
         setMediaUrl("");
         URL.revokeObjectURL(localUrl);
@@ -144,19 +185,19 @@ export function NewsFeed() {
       }
     } catch (error) {
       console.error("Error checking image safety:", error);
-      // Fallback gracefully: treat as safe
+      // Si el análisis falla (ej. modelo no cargado), se acepta la imagen como segura.
       toast.success("Imagen cargada correctamente");
     } finally {
       setIsAnalyzingImage(false);
     }
   };
 
-  // Track current user ID in a ref so the Realtime callback can reference it
-  // without being included in the subscription's dependency array.
+  // Ref mutable para el ID del usuario actual, usado dentro del callback Realtime
+  // sin depender del closure del estado (evita re-suscripciones).
   const currentUserIdRef = useRef<string | null>(null);
   currentUserIdRef.current = currentUser?.id ?? null;
 
-  // ── Initial feed load ───────────────────────────────────────────────────────
+  // ── Carga inicial del feed ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUser) return;
     const userId = currentUser.id;
@@ -184,11 +225,11 @@ export function NewsFeed() {
     };
   }, [currentUser]);
 
-  // ── Realtime subscription: append new posts as they are inserted ────────────
+  // ── Suscripción Realtime: agrega nuevos posts sin recargar ────────────────────
   useEffect(() => {
     if (!currentUser) return;
 
-    // Key the channel on user ID so re-renders don't create duplicates.
+    // El nombre del canal incluye el ID del usuario para evitar duplicados en re-renderizados.
     const channelName = `feed-realtime-${currentUser.id}`;
 
     const channel = supabase
@@ -208,10 +249,10 @@ export function NewsFeed() {
               sport: string | null;
             };
 
-            // Skip own posts — already added optimistically by handleSubmit
+            // Salta los posts propios porque ya se agregaron optimistamente en handleSubmit.
             if (newRow.user_id === currentUserIdRef.current) return;
 
-            // Fetch the author profile for display
+            // Obtiene el perfil del autor para mostrar nombre y avatar.
             const { data: profile, error } = await supabase
               .from("profiles")
               .select("name, avatar_url")
@@ -235,7 +276,7 @@ export function NewsFeed() {
             };
 
             setPosts((prev) => {
-              // Deduplicate: skip if this post is already in state
+              // Deduplicación: evita agregar un post que ya existe en el estado.
               if (prev.some((p) => p.id === post.id)) return prev;
               return [post, ...prev];
             });
@@ -249,11 +290,11 @@ export function NewsFeed() {
     return () => {
       supabase.removeChannel(channel);
     };
-    // Only re-subscribe when the user identity changes
+    // Solo se re-suscribe cuando cambia la identidad del usuario.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
-  // ── Post submission ─────────────────────────────────────────────────────────
+  // ── Envío de nueva publicación ───────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !content.trim() || isAnalyzingImage) return;
@@ -261,7 +302,7 @@ export function NewsFeed() {
     try {
       setSubmitting(true);
 
-      // Auto-detect post type based on attachments (Task 2.1)
+      // Detecta automáticamente el tipo de post según si hay imagen adjunta (Task 2.1).
       const inferredPostType = imageFile ? "PHOTO" : "TEXT";
 
       const newPost = await createPost(
@@ -273,7 +314,8 @@ export function NewsFeed() {
         imageFile || undefined,
       );
 
-      // Optimistic prepend — Realtime will skip it via the user_id guard above
+      // Inserta optimistamente el nuevo post al inicio del feed.
+      // Realtime lo omitirá gracias al guard de user_id.
       setPosts((prev) => {
         if (prev.some((p) => p.id === newPost.id)) return prev;
         return [newPost, ...prev];
@@ -292,11 +334,13 @@ export function NewsFeed() {
     }
   };
 
+  // Si no hay usuario autenticado, no renderiza nada.
   if (!currentUser) return null;
 
+  // === BLOQUE: RENDERIZADO PRINCIPAL ===
   return (
     <div className="space-y-6">
-      {/* Create Post Form */}
+      {/* ── Formulario de creación de post ── */}
       <div className="bg-gradient-card border border-border rounded-3xl p-5 shadow-card">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex gap-3">
@@ -317,7 +361,7 @@ export function NewsFeed() {
             </div>
           </div>
 
-          {/* Emojis Sport Selection Pills (Sprint 3.6 Overhaul) */}
+          {/* ── Pills de selección de deporte con emojis (Sprint 3.6) ── */}
           <div className="space-y-1.5 pt-2 border-t border-border/20">
             <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide block mb-1">
               ¿De qué deporte vas a postear?
@@ -346,7 +390,7 @@ export function NewsFeed() {
           </div>
 
           <div className="flex flex-col gap-3 pt-2 border-t border-border/30">
-            {/* Facebook-style "Foto/Video" button trigger (Sprint 3.6 Overhaul) */}
+            {/* ── Botón de Foto/Video y botón de Compartir ── */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex gap-2">
                 <button
@@ -378,7 +422,7 @@ export function NewsFeed() {
               </button>
             </div>
 
-            {/* Collapsible Drag-and-Drop Dropzone */}
+            {/* ── Zona de drag-and-drop colapsable ── */}
             {(showImageDropzone || mediaUrl) && (
               <div className="w-full animate-slide-up" id="news-feed-dropzone-tour">
                 <input
@@ -459,13 +503,13 @@ export function NewsFeed() {
         </form>
       </div>
 
-      {/* Live indicator */}
+      {/* Indicador de que el feed está en vivo con Realtime */}
       <div className="flex items-center gap-2 text-xs text-neon font-semibold">
         <Zap className="h-3 w-3 animate-pulse" />
         <span>En vivo — Los nuevos posts aparecen automáticamente</span>
       </div>
 
-      {/* Feed List */}
+      {/* ── Lista de publicaciones del feed ── */}
       {loading ? (
         <div className="space-y-4">
           <SkeletonLoader type="post-feed" count={2} />
@@ -519,7 +563,7 @@ export function NewsFeed() {
                           </span>
                         </div>
 
-                        {/* Sensitivity Filter Overlay (Task 2.2) */}
+                        {/* ── Filtro de contenido sensible (Task 2.2) ── */}
                         {!!(post.sensitive || post.flagged) && !revealedPosts[post.id] ? (
                           <div className="relative mt-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-scale-in">
                             <div className="flex items-start gap-2 text-xs md:text-sm text-red-500 font-semibold leading-normal">
@@ -559,6 +603,7 @@ export function NewsFeed() {
                           </>
                         )}
 
+                        {/* ── Acciones del post: comentar y reportar ── */}
                         <div className="flex gap-4 items-center mt-3">
                           <button
                             onClick={() =>
@@ -584,6 +629,7 @@ export function NewsFeed() {
                       </div>
                     </div>
 
+                    {/* ── Sección expandible de comentarios ── */}
                     <AnimatePresence>
                       {expandedPostId === post.id && (
                         <motion.div
@@ -609,6 +655,7 @@ export function NewsFeed() {
         </div>
       )}
 
+      {/* ── Modal de reporte ── */}
       {reportTarget && (
         <ReportModal
           isOpen={isReportOpen}
@@ -624,8 +671,9 @@ export function NewsFeed() {
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────────
 
+// Calcula el tiempo transcurrido desde una fecha ISO hasta ahora, en formato legible.
 function getTimeAgo(isoDate: string): string {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
@@ -638,6 +686,6 @@ function getTimeAgo(isoDate: string): string {
   return `Hace ${Math.floor(diffH / 24)} d`;
 }
 
-// Support preset content for Playwright E2E bindings
+// Contenido predeterminado vacío para enlaces de pruebas E2E con Playwright.
 const contentPreset = "";
 export default NewsFeed;

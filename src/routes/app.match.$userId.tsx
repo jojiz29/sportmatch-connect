@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del perfil de usuario en matchmaking ===
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Star, MapPin, Activity, Award, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +13,9 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { MOCK_USERS } from "@/shared/api/apiClient";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
+// === BLOQUE: Ruta /app/match/$userId — createFileRoute con loader ===
+// Carga el perfil completo del usuario desde Supabase (o MOCK_USERS en modo demo).
+// head: meta tags dinámicos con el nombre del usuario.
 export const Route = createFileRoute("/app/match/$userId")({
   head: ({ loaderData }: { loaderData?: User }) => {
     if (!loaderData) {
@@ -47,10 +51,17 @@ export const Route = createFileRoute("/app/match/$userId")({
   component: UserProfileDetail,
 });
 
+// === BLOQUE: UserProfileDetail — Vista detallada del perfil de otro usuario ===
+// Muestra:
+//   - Avatar, nombre, edad, ubicación, Trust Score.
+//   - Estadísticas de seguidores/seguidos (getFollowStats).
+//   - Botones: Invitar a jugar, Follow/Unfollow.
+//   - Biografía, deportes/nivel, historial reciente.
 function UserProfileDetail() {
   const user = Route.useLoaderData() as User;
   const [followStats, setFollowStats] = useState({ followersCount: 0, followingCount: 0 });
 
+  // Carga las estadísticas de follows al montar el componente.
   useEffect(() => {
     let active = true;
     async function loadStats() {
@@ -77,6 +88,7 @@ function UserProfileDetail() {
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
+      {/* Enlace de regreso al matchmaking */}
       <Link
         to="/app/match"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
@@ -85,6 +97,7 @@ function UserProfileDetail() {
       </Link>
 
       <div className="grid lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        {/* Columna izquierda: Tarjeta de perfil */}
         <div className="lg:col-span-1">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -135,7 +148,9 @@ function UserProfileDetail() {
           </motion.div>
         </div>
 
+        {/* Columna derecha: Biografía, deportes e historial */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Sección "Sobre mí" */}
           <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Activity className="h-5 w-5 text-neon" /> Sobre mí
@@ -144,6 +159,7 @@ function UserProfileDetail() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-6">
+            {/* Deportes y nivel */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Award className="h-5 w-5 text-electric" /> Deportes y Nivel
@@ -160,6 +176,7 @@ function UserProfileDetail() {
               </div>
             </div>
 
+            {/* Historial reciente */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Star className="h-5 w-5 text-warning" /> Historial Reciente

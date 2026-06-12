@@ -1,3 +1,17 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/apiClient.ts
+ * PROPÓSITO: Cliente de API central con datos mock y reales.
+ *            Sirve como capa de abstracción entre la UI y Supabase.
+ * FLUJO: Para cada operación, primero verifica si estamos en
+ *        "Demo Mode". Si es así, usa datos mock en memoria/localStorage.
+ *        Si no, consulta Supabase en tiempo real.
+ * ===================================================================
+ */
+
+// ------------------------------------------------------------------
+// IMPORTACIONES
+// ------------------------------------------------------------------
 import { supabase } from "./supabase";
 import {
   User,
@@ -12,16 +26,35 @@ import {
 import { useAuthStore } from "@/entities/user/useAuth";
 import { withTimeout } from "./timeoutHelper";
 
-// In-memory cache for bookings made during Demo Mode to allow realistic UX updates
+// ------------------------------------------------------------------
+// CACHÉS EN MEMORIA
+// ------------------------------------------------------------------
+
+// Cache de reservas para Demo Mode: evita que se pierdan al navegar
+// { "courtId_fecha": ["10:00", "12:00", ...] }
 const demoBookingsCache: Record<string, string[]> = {};
 
-// In-memory cache for sports catalog query to reduce DB roundtrips on initial load
+// Cache del catálogo de deportes: reduce viajes a la DB en carga inicial
 let cachedSportsCatalog: SportCatalog[] | null = null;
 
+// ------------------------------------------------------------------
+// DATOS MOCK: Canchas y sedes
+// Se importan desde mockCourtsData.ts (listado extenso de 300KB)
+// y se re-exportan como MOCK_VENUES y MOCK_COURTS (alias)
+// ------------------------------------------------------------------
 import { EXCEL_MOCK_COURTS } from "./mockCourtsData";
 export const MOCK_VENUES: Venue[] = EXCEL_MOCK_COURTS;
 export const MOCK_COURTS: Court[] = MOCK_VENUES;
 
+// ------------------------------------------------------------------
+// DATOS MOCK: Usuarios de demostración
+// Array con usuarios ficticios para probar la app sin backend real.
+// Incluye:
+//   - PLAYER (jugadores comunes)
+//   - BUSINESS (negocios: gimnasios, academias, tiendas)
+// Cada usuario tiene datos completos: perfil, ubicación, deportes,
+// nivel, saldo FitCoins, etc.
+// ------------------------------------------------------------------
 export const MOCK_USERS: User[] = [
   {
     id: "user-edwin-master",
@@ -327,6 +360,11 @@ export const MOCK_USERS: User[] = [
   },
 ];
 
+// ------------------------------------------------------------------
+// DATOS MOCK: Partidos de demostración
+// Cada partido tiene: fecha futura (+7 días), cancha asignada,
+// deporte, nivel requerido, y jugadores actuales.
+// ------------------------------------------------------------------
 export const MOCK_MATCHES: Match[] = [
   {
     id: "match-1",
@@ -368,6 +406,9 @@ export const MOCK_MATCHES: Match[] = [
   },
 ];
 
+// ------------------------------------------------------------------
+// DATOS MOCK: Transacciones de billetera (FitCoins)
+// ------------------------------------------------------------------
 export const MOCK_TRANSACTIONS: Transaction[] = [
   {
     id: "tx-1",
@@ -395,56 +436,29 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
   },
 ];
 
+// ------------------------------------------------------------------
+// DATOS MOCK: Catálogo de deportes disponibles en la plataforma
+// ------------------------------------------------------------------
 const MOCK_SPORTS: SportCatalog[] = [
-  {
-    id: "s1",
-    name: "Pádel",
-    icon_slug: "padel",
-    default_max_players: 4,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "s2",
-    name: "Fútbol",
-    icon_slug: "futbol",
-    default_max_players: 14,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "s3",
-    name: "Tenis",
-    icon_slug: "tenis",
-    default_max_players: 2,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "s4",
-    name: "Vóley",
-    icon_slug: "voley",
-    default_max_players: 12,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "s5",
-    name: "Básquet",
-    icon_slug: "basquet",
-    default_max_players: 10,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "s6",
-    name: "Running",
-    icon_slug: "running",
-    default_max_players: 20,
-    created_at: new Date().toISOString(),
-  },
+  { id: "s1", name: "Pádel", icon_slug: "padel", default_max_players: 4, created_at: new Date().toISOString() },
+  { id: "s2", name: "Fútbol", icon_slug: "futbol", default_max_players: 14, created_at: new Date().toISOString() },
+  { id: "s3", name: "Tenis", icon_slug: "tenis", default_max_players: 2, created_at: new Date().toISOString() },
+  { id: "s4", name: "Vóley", icon_slug: "voley", default_max_players: 12, created_at: new Date().toISOString() },
+  { id: "s5", name: "Básquet", icon_slug: "basquet", default_max_players: 10, created_at: new Date().toISOString() },
+  { id: "s6", name: "Running", icon_slug: "running", default_max_players: 20, created_at: new Date().toISOString() },
 ];
 
+// ------------------------------------------------------------------
+// INTERFACES AUXILIARES (no exportadas)
+// ------------------------------------------------------------------
+
+/** Representa un participante de un partido con su perfil expandido */
 interface MatchParticipantWithProfile {
   status: string;
   profile: User | null;
 }
 
+/** Estructura de un partido tal como lo devuelve Supabase (con relaciones) */
 interface DBResponseMatch {
   id: string;
   created_at: string;
@@ -461,8 +475,23 @@ interface DBResponseMatch {
   match_participants?: MatchParticipantWithProfile[];
 }
 
+// ==================================================================
+// API CLIENT: Objeto principal con todos los métodos de acceso a datos
+// ==================================================================
+// Cada método sigue el patrón:
+//   1. Si isDemoMode -> opera con datos mock (memoria/localStorage)
+//   2. Si no -> consulta Supabase y transforma la respuesta
+// ==================================================================
 export const apiClient = {
+
+  // ==============================================================
+  // SECCIÓN: USERS (Perfiles de usuario)
+  // ==============================================================
   users: {
+    /**
+     * getMatches(): Obtiene perfiles de jugadores (PLAYER) para emparejamiento
+     * @param excludeUserId - Opcional: excluir un usuario (ej: el actual)
+     */
     async getMatches(excludeUserId?: string): Promise<User[]> {
       if (useAuthStore.getState().isDemoMode) {
         const storedUsers = localStorage.getItem("sportmatch_demo_users");
@@ -483,6 +512,10 @@ export const apiClient = {
       return (data || []) as User[];
     },
 
+    /**
+     * getBusinesses(): Obtiene perfiles de negocios (BUSINESS)
+     * Útil para el marketplace B2B (gimnasios, academias, etc.)
+     */
     async getBusinesses(): Promise<User[]> {
       if (useAuthStore.getState().isDemoMode) {
         const storedUsers = localStorage.getItem("sportmatch_demo_users");
@@ -503,6 +536,10 @@ export const apiClient = {
       return (data || []) as User[];
     },
 
+    /**
+     * getLeaderboard(): Ranking de jugadores por saldo FitCoins
+     * Orden descendente, top 20.
+     */
     async getLeaderboard(): Promise<User[]> {
       if (useAuthStore.getState().isDemoMode) {
         return MOCK_USERS.sort((a, b) => b.fitcoins_balance - a.fitcoins_balance);
@@ -523,7 +560,15 @@ export const apiClient = {
     },
   },
 
+  // ==============================================================
+  // SECCIÓN: MATCHES (Partidos / Encuentros deportivos)
+  // ==============================================================
   matches: {
+    /**
+     * getAll(): Obtiene todos los partidos abiertos
+     * Incluye datos de la cancha (court) y participantes (match_participants)
+     * con sus perfiles expandidos.
+     */
     async getAll(): Promise<Match[]> {
       if (useAuthStore.getState().isDemoMode) {
         return MOCK_MATCHES;
@@ -541,6 +586,8 @@ export const apiClient = {
         if (import.meta.env.DEV) console.error("Error fetching matches:", error);
         throw error;
       }
+      // Transforma la respuesta: extrae los perfiles de current_players
+      // filtrando solo los que tienen status ACCEPTED o ATTENDED
       return ((data as unknown as DBResponseMatch[]) || []).map((m) => ({
         ...m,
         current_players:
@@ -551,6 +598,9 @@ export const apiClient = {
       })) as unknown as Match[];
     },
 
+    /**
+     * getUserMatches(): Partidos creados por un usuario específico
+     */
     async getUserMatches(userId: string): Promise<Match[]> {
       if (useAuthStore.getState().isDemoMode) {
         return MOCK_MATCHES.filter((m) => m.creator_id === userId);
@@ -584,6 +634,11 @@ export const apiClient = {
       })) as unknown as Match[];
     },
 
+    /**
+     * create(): Crea un nuevo partido
+     * Acepta múltiples naming conventions (creator_id/user_id, time/time_slot)
+     * para compatibilidad con diferentes formularios.
+     */
     async create(match: {
       title: string;
       sport: string;
@@ -651,7 +706,13 @@ export const apiClient = {
     },
   },
 
+  // ==============================================================
+  // SECCIÓN: WALLET (Billetera FitCoins)
+  // ==============================================================
   wallet: {
+    /**
+     * getBalance(): Obtiene el saldo actual de FitCoins de un usuario
+     */
     async getBalance(userId: string): Promise<number> {
       if (useAuthStore.getState().isDemoMode) {
         const storedBalances = localStorage.getItem("sportmatch_demo_balances");
@@ -678,11 +739,16 @@ export const apiClient = {
       return data?.fitcoins_balance || 0;
     },
 
+    /**
+     * getTransactions(): Historial de transacciones del usuario
+     * Ordenado por fecha descendente (más reciente primero)
+     */
     async getTransactions(userId: string): Promise<Transaction[]> {
       if (useAuthStore.getState().isDemoMode) {
         const key = `sportmatch_demo_transactions_${userId}`;
         const stored = localStorage.getItem(key);
         if (!stored) {
+          // Primera vez: seed con transacciones mock
           const seeded = MOCK_TRANSACTIONS.map((t) => ({
             ...t,
             user_id: userId,
@@ -710,6 +776,10 @@ export const apiClient = {
       return (data || []) as Transaction[];
     },
 
+    /**
+     * saveTransaction(): Guarda una transacción localmente (solo Demo Mode)
+     * Persiste en localStorage para mantener el historial entre recargas.
+     */
     saveTransaction(userId: string, tx: Transaction): void {
       if (useAuthStore.getState().isDemoMode) {
         const key = `sportmatch_demo_transactions_${userId}`;
@@ -727,6 +797,7 @@ export const apiClient = {
             user_id: userId,
           }));
         }
+        // Evita duplicados
         if (!transactions.some((t) => t.id === tx.id)) {
           transactions = [tx, ...transactions];
         }
@@ -734,6 +805,11 @@ export const apiClient = {
       }
     },
 
+    /**
+     * updateBalance(): Actualiza el saldo localmente (solo Demo Mode)
+     * Sincroniza: localStorage + MOCK_USERS + store de auth
+     * para que el cambio sea visible en toda la app inmediatamente.
+     */
     updateBalance(userId: string, newBalance: number): void {
       if (useAuthStore.getState().isDemoMode) {
         const storedBalances = localStorage.getItem("sportmatch_demo_balances");
@@ -756,6 +832,7 @@ export const apiClient = {
           }
         }
 
+        // Refleja el cambio en el store de autenticación (UI reactiva)
         const currentUser = useAuthStore.getState().user;
         if (currentUser && currentUser.id === userId) {
           useAuthStore.setState({ user: { ...currentUser, fitcoins_balance: newBalance } });
@@ -764,7 +841,13 @@ export const apiClient = {
     },
   },
 
+  // ==============================================================
+  // SECCIÓN: VENUES (Canchas / Sedes deportivas)
+  // ==============================================================
   venues: {
+    /**
+     * getAll(): Lista todas las canchas, opcionalmente filtradas por deporte
+     */
     async getAll(sport?: string): Promise<Venue[]> {
       if (useAuthStore.getState().isDemoMode) {
         const stored = localStorage.getItem("sportmatch_demo_venues");
@@ -797,6 +880,9 @@ export const apiClient = {
       return (data || []) as Venue[];
     },
 
+    /**
+     * getById(): Obtiene una cancha por su ID
+     */
     async getById(id: string): Promise<Venue> {
       if (useAuthStore.getState().isDemoMode) {
         const stored = localStorage.getItem("sportmatch_demo_venues");
@@ -821,11 +907,20 @@ export const apiClient = {
     },
   },
 
+  // Alias "courts" para compatibilidad con código existente
   get courts() {
     return this.venues;
   },
 
+  // ==============================================================
+  // SECCIÓN: SPORTS (Catálogo de deportes)
+  // ==============================================================
   sports: {
+    /**
+     * getAll(): Obtiene el catálogo completo de deportes
+     * Implementa un caché simple para evitar consultas repetitivas.
+     * Si la tabla "sports" no existe en Supabase, fallback a datos mock.
+     */
     async getAll(): Promise<SportCatalog[]> {
       if (useAuthStore.getState().isDemoMode) {
         return MOCK_SPORTS;
@@ -853,13 +948,20 @@ export const apiClient = {
     },
   },
 
+  // ==============================================================
+  // SECCIÓN: BOOKINGS (Reservas de canchas)
+  // ==============================================================
   bookings: {
+    /**
+     * getByCourtAndDate(): Obtiene los slots ocupados de una cancha en una fecha
+     * @returns string[] - Array de time slots ya reservados (ej: ["10:00", "16:00"])
+     */
     async getByCourtAndDate(courtId: string, date: string): Promise<string[]> {
       if (useAuthStore.getState().isDemoMode) {
         const key = `${courtId}_${date}`;
         if (!demoBookingsCache[key]) {
-          // BUG-03: Generate varied pre-occupied slots per court to make demo realistic.
-          // Each court has a different baseline of occupied slots so UX feels authentic.
+          // BUG-03: Cada cancha tiene slots pre-ocupados diferentes
+          // para que la demo se sienta realista (no todas vacías)
           const courtSlotMap: Record<string, string[]> = {
             "court-1": ["10:00", "16:00", "18:00"],
             "court-2": ["18:00", "20:00"],
@@ -884,6 +986,12 @@ export const apiClient = {
       return (data || []).map((b) => b.time_slot);
     },
 
+    /**
+     * create(): Reserva un slot horario en una cancha
+     * Incluye validación SEC-03: verifica que el slot pertenezca
+     * al horario de atención de la cancha (operating_hours).
+     * También guarda datos financieros (comisiones, precios).
+     */
     async create(booking: {
       court_id: string;
       date: string;
@@ -906,8 +1014,9 @@ export const apiClient = {
         return;
       }
 
-      // SEC-03: Validate that the requested time_slot belongs to the court's operating_hours.
-      // This prevents bookings at invalid times (e.g., 3 AM) even if RLS is misconfigured.
+      // SEC-03: Validación de horario vs operating_hours
+      // Evita reservas en horarios inválidos (ej: 3 AM) incluso si
+      // las políticas RLS estuvieran mal configuradas
       if (booking.operating_hours && booking.operating_hours.length > 0) {
         if (!booking.operating_hours.includes(booking.time_slot)) {
           throw new Error(

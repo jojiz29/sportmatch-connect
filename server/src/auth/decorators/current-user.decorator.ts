@@ -1,3 +1,8 @@
+// ============================================================
+// current-user.decorator.ts — Decorador de parámetro para obtener el usuario autenticado
+// Uso: @CurrentUser() user o @CurrentUser("email") email
+// ============================================================
+
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 
 export const CurrentUser = createParamDecorator(

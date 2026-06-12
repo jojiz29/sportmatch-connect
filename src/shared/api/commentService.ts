@@ -1,14 +1,59 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/commentService.ts
+ * PROPÓSITO: Servicio de comentarios y reacciones en posts.
+ *            CRUD completo: crear/eliminar comentarios, agregar/
+ *            eliminar reacciones (LIKE, ❤️, 🔥, etc.), y construir
+ *            resúmenes de reacciones.
+ * INCLUYE: Estructura jerárquica de comentarios (respuestas anidadas),
+ *          reacciones por comentario, y detección de reacción del usuario.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { PostComment, ReactionType, CommentReaction } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 
 const LOCAL_STORAGE_KEY_COMMENTS = "sportmatch_demo_comments";
 
+// ==============================================================
+// TIPOS
+// ==============================================================
+
+/** Comentario con respuestas anidadas y reacción del usuario actual */
 export interface CommentWithReplies extends PostComment {
   replies: CommentWithReplies[];
   userReaction?: ReactionType;
 }
 
+/** Estructura de comentario desde Supabase */
+interface SupabaseComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  parent_id: string | null;
+  profile: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
+/** Estructura de reacción desde Supabase */
+interface SupabaseReaction {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  reaction_type: ReactionType;
+}
+
+// ==============================================================
+// HELPERS DE DEMO MODE
+// ==============================================================
+
+/** Almacena comentarios mock: { postId: PostComment[] } */
 function getMockComments(): Record<string, PostComment[]> {
   if (typeof window === "undefined") return {};
   try {
@@ -28,27 +73,22 @@ function saveMockComments(comments: Record<string, PostComment[]>) {
   }
 }
 
-interface SupabaseComment {
-  id: string;
-  post_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  parent_id: string | null;
-  profile: {
-    id: string;
-    name: string;
-    avatar_url: string | null;
-  } | null;
-}
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
 
-interface SupabaseReaction {
-  id: string;
-  comment_id: string;
-  user_id: string;
-  reaction_type: ReactionType;
-}
-
+/**
+ * getCommentsByPostId(): Obtiene comentarios de un post con estructura jerárquica
+ * ------------------------------------------------------------------
+ * En modo real:
+ *   1. Obtiene comentarios del post ordenados por fecha
+ *   2. Obtiene reacciones de esos comentarios (batch)
+ *   3. Obtiene perfiles de los autores (batch)
+ *   4. Construye árbol de comentarios: padres -> hijos (replies)
+ *
+ * Los comentarios se organizan en estructura de árbol donde los
+ * comentarios raíz tienen su array "replies" con respuestas hijas.
+ */
 export async function getCommentsByPostId(postId: string): Promise<CommentWithReplies[]> {
   try {
     if (useAuthStore.getState().isDemoMode) {
@@ -60,6 +100,7 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
       return postComments;
     }
 
+    // 1. Obtiene comentarios del post
     const { data: comments, error } = await supabase
       .from("post_comments")
       .select("*")
@@ -76,6 +117,7 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
       ...new Set(((comments as unknown as SupabaseComment[]) || []).map((c) => c.user_id)),
     ];
 
+    // 2. Obtiene reacciones y perfiles en paralelo
     let reactions: SupabaseReaction[] = [];
     const profiles: Record<string, { name: string; avatar_url: string | null }> = {};
 
@@ -94,11 +136,13 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
       });
     }
 
+    // 3. Construye mapa de reacciones: "commentId_userId" -> ReactionType
     const reactionMap: Record<string, ReactionType> = {};
     (reactions || []).forEach((r: SupabaseReaction) => {
       reactionMap[`${r.comment_id}_${r.user_id}`] = r.reaction_type;
     });
 
+    // 4. Construye árbol de comentarios
     const commentMap: Record<string, CommentWithReplies> = {};
     const topLevel: CommentWithReplies[] = [];
 
@@ -117,6 +161,7 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
       commentMap[c.id] = comment;
     });
 
+    // Asigna hijos a padres o a topLevel
     Object.values(commentMap).forEach((comment) => {
       if (comment.parent_id && commentMap[comment.parent_id]) {
         commentMap[comment.parent_id].replies.push(comment);
@@ -132,6 +177,10 @@ export async function getCommentsByPostId(postId: string): Promise<CommentWithRe
   }
 }
 
+/**
+ * createComment(): Crea un nuevo comentario en un post
+ * Si parentId se especifica, es una respuesta a otro comentario.
+ */
 export async function createComment(
   postId: string,
   userId: string,
@@ -192,6 +241,9 @@ export async function createComment(
   };
 }
 
+/**
+ * deleteComment(): Elimina un comentario (solo el autor puede hacerlo)
+ */
 export async function deleteComment(commentId: string, userId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     const allComments = getMockComments();
@@ -214,20 +266,23 @@ export async function deleteComment(commentId: string, userId: string): Promise<
   }
 }
 
+/**
+ * addReaction(): Agrega una reacción a un comentario
+ * Las reacciones son tipo emoji: LIKE, ❤️, 🔥, 👏, 😂, 😢, 🎉
+ */
 export async function addReaction(
   commentId: string,
   userId: string,
   reactionType: ReactionType,
 ): Promise<CommentReaction> {
   if (useAuthStore.getState().isDemoMode) {
-    const newReaction: CommentReaction = {
+    return {
       id: `reaction-demo-${Date.now()}`,
       comment_id: commentId,
       user_id: userId,
       reaction_type: reactionType,
       created_at: new Date().toISOString(),
     };
-    return newReaction;
   }
 
   const { data: reaction, error } = await supabase
@@ -248,14 +303,15 @@ export async function addReaction(
   return reaction as unknown as CommentReaction;
 }
 
+/**
+ * removeReaction(): Elimina una reacción específica
+ */
 export async function removeReaction(
   commentId: string,
   userId: string,
   reactionType: ReactionType,
 ): Promise<void> {
-  if (useAuthStore.getState().isDemoMode) {
-    return;
-  }
+  if (useAuthStore.getState().isDemoMode) return;
 
   const { error } = await supabase
     .from("post_comment_reactions")
@@ -270,10 +326,11 @@ export async function removeReaction(
   }
 }
 
+/**
+ * getReactionsByCommentId(): Lista todas las reacciones de un comentario
+ */
 export async function getReactionsByCommentId(commentId: string): Promise<CommentReaction[]> {
-  if (useAuthStore.getState().isDemoMode) {
-    return [];
-  }
+  if (useAuthStore.getState().isDemoMode) return [];
 
   const { data, error } = await supabase
     .from("post_comment_reactions")
@@ -294,13 +351,15 @@ export async function getReactionsByCommentId(commentId: string): Promise<Commen
   }));
 }
 
+/**
+ * getUserReactionForComment(): Reacción del usuario actual en un comentario
+ * Útil para mostrar el botón de reacción "activo" en la UI.
+ */
 export async function getUserReactionForComment(
   commentId: string,
   userId: string,
 ): Promise<ReactionType | null> {
-  if (useAuthStore.getState().isDemoMode) {
-    return null;
-  }
+  if (useAuthStore.getState().isDemoMode) return null;
 
   const { data, error } = await supabase
     .from("post_comment_reactions")
@@ -313,6 +372,10 @@ export async function getUserReactionForComment(
   return (data as unknown as { reaction_type: ReactionType }).reaction_type;
 }
 
+/**
+ * buildReactionSummary(): Convierte array de reacciones en resumen
+ * count por tipo. Útil para mostrar "5 🔥" en la UI.
+ */
 export function buildReactionSummary(reactions: CommentReaction[]): Record<ReactionType, number> {
   const summary: Record<ReactionType, number> = {
     LIKE: 0,

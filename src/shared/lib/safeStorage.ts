@@ -1,8 +1,26 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/lib/safeStorage.ts
+ * PROPÓSITO: Wrapper seguro de localStorage para Zustand.
+ *            Protege contra corrupción de JSON, errores de cuota
+ *            y localStorage deshabilitado, con fallback a memoria.
+ * ===================================================================
+ */
+
 import { StateStorage } from "zustand/middleware";
 
 /**
- * A safe wrapper around localStorage that catches syntax errors (corrupted JSON),
- * security/quota errors, and falls back to in-memory storage if needed.
+ * createSafeStorage(): Crea un adaptador StateStorage para Zustand
+ * ------------------------------------------------------------------
+ * Características:
+ *   - getItem: Valida que el JSON sea sintácticamente correcto antes
+ *     de devolverlo. Si está corrupto, lo limpia y cae en default.
+ *   - setItem: Si localStorage falla (cuota excedida, privacidad),
+ *     usa un Map en memoria como fallback.
+ *   - removeItem: Similar con fallback a memoria.
+ *
+ * Esto evita que datos corruptos en localStorage (ej: schema antiguo)
+ * rompan la hidratación de Zustand al cargar la app.
  */
 export const createSafeStorage = (): StateStorage => {
   const memoryStore = new Map<string, string>();
@@ -12,8 +30,7 @@ export const createSafeStorage = (): StateStorage => {
       try {
         const value = typeof window !== "undefined" ? localStorage.getItem(name) : null;
         if (value) {
-          // Stress test hydration: validate that the value is syntactically valid JSON.
-          // If it isn't, JSON.parse will throw, and we fall back to default state.
+          // Valida que el JSON sea parseable (stress test de hidratación)
           JSON.parse(value);
         }
         return value;
@@ -22,7 +39,7 @@ export const createSafeStorage = (): StateStorage => {
           `SafeStorage: Failed to getItem/parse "${name}". LocalStorage may be corrupted or disabled. Falling back to default state.`,
           error,
         );
-        // Clear corrupted key if possible to restore healthy state
+        // Limpia la key corrupta si es posible
         try {
           if (typeof window !== "undefined") {
             localStorage.removeItem(name);
@@ -56,4 +73,5 @@ export const createSafeStorage = (): StateStorage => {
   };
 };
 
+/** Instancia por defecto del safe storage */
 export const safeLocalStorage = createSafeStorage();

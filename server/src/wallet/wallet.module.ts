@@ -1,3 +1,8 @@
+// ============================================================
+// wallet.module.ts — Módulo de billetera FitCoins
+// Gestión de saldo y transacciones de FitCoins
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { WalletController } from "./wallet.controller";
 import { WalletService } from "./wallet.service";

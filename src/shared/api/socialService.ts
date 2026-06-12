@@ -1,9 +1,31 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/socialService.ts
+ * PROPÓSITO: Servicio de funcionalidades sociales: seguir/dejar de
+ *            seguir usuarios, consultar estadísticas de seguidores
+ *            y verificar relaciones.
+ * FLUJO: followUser() -> notifica al seguido -> inserta relación ->
+ *        sincroniza con store social.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { createNotification } from "@/shared/api/notificationService";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { withTimeout } from "./timeoutHelper";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 
+/**
+ * followUser(): Crea una relación de seguimiento entre dos usuarios
+ * ------------------------------------------------------------------
+ * 1. Valida que no sea autoseguimiento
+ * 2. En modo real: obtiene el nombre del seguidor para la notificación
+ * 3. Envía notificación "FOLLOW" al usuario seguido
+ * 4. Inserta la relación en Supabase (ignora violación unique 23505)
+ *
+ * @param followerId  - Usuario que sigue
+ * @param followingId - Usuario que recibe el follow
+ */
 export async function followUser(followerId: string, followingId: string): Promise<void> {
   if (followerId === followingId) {
     throw new Error("Self-following is not allowed.");
@@ -14,7 +36,7 @@ export async function followUser(followerId: string, followingId: string): Promi
     return;
   }
 
-  // 1. Fetch follower's name for the notification
+  // 1. Obtiene el nombre del seguidor para la notificación
   let followerName = "Un usuario";
   try {
     const { data } = await supabase.from("profiles").select("name").eq("id", followerId).single();
@@ -25,7 +47,7 @@ export async function followUser(followerId: string, followingId: string): Promi
     if (import.meta.env.DEV) console.warn("Could not query follower name for notification:", e);
   }
 
-  // 2. Trigger FOLLOW notification
+  // 2. Dispara notificación de nuevo seguidor
   try {
     await createNotification(
       followingId,
@@ -38,7 +60,7 @@ export async function followUser(followerId: string, followingId: string): Promi
     if (import.meta.env.DEV) console.warn("Could not create follow notification:", error);
   }
 
-  // 3. Insert follower relation in Supabase
+  // 3. Inserta relación en Supabase
   const { error } = await withTimeout(
     supabase.from("followers").insert({
       follower_id: followerId,
@@ -46,13 +68,16 @@ export async function followUser(followerId: string, followingId: string): Promi
     }),
   );
 
+  // Ignora violación de unique constraint (duplicado = ya sigue)
   if (error && error.code !== "23505") {
-    // Ignore unique constraint violation (on conflict do nothing)
     if (import.meta.env.DEV) console.error("Error inserting follower relation:", error);
     throw error;
   }
 }
 
+/**
+ * unfollowUser(): Elimina una relación de seguimiento
+ */
 export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     useSocialStore.getState().unfollow(followerId, followingId);
@@ -71,6 +96,10 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
   }
 }
 
+/**
+ * getFollowStats(): Obtiene conteo de seguidores y seguidos
+ * Usa { count: "exact", head: true } para contar sin descargar datos.
+ */
 export async function getFollowStats(
   userId: string,
 ): Promise<{ followersCount: number; followingCount: number }> {
@@ -78,7 +107,7 @@ export async function getFollowStats(
     return useSocialStore.getState().getFollowStats(userId);
   }
 
-  // Count followers (where following_id = userId)
+  // Cuenta seguidores (where following_id = userId)
   const { count: followersCount, error: followersError } = await supabase
     .from("followers")
     .select("*", { count: "exact", head: true })
@@ -89,7 +118,7 @@ export async function getFollowStats(
     throw followersError;
   }
 
-  // Count following (where follower_id = userId)
+  // Cuenta seguidos (where follower_id = userId)
   const { count: followingCount, error: followingError } = await supabase
     .from("followers")
     .select("*", { count: "exact", head: true })
@@ -106,6 +135,9 @@ export async function getFollowStats(
   };
 }
 
+/**
+ * isFollowing(): Verifica si un usuario sigue a otro
+ */
 export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
   if (useAuthStore.getState().isDemoMode) {
     return useSocialStore.getState().isFollowing(followerId, followingId);

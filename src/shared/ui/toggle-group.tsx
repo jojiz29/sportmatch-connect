@@ -1,3 +1,4 @@
+// shadcn/ui — Grupo de Alternancia (grupo de toggles con Radix)
 "use client";
 
 import * as React from "react";

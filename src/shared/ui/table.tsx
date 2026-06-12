@@ -1,3 +1,4 @@
+// shadcn/ui — Tabla (contenedor de datos tabulares)
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

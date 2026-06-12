@@ -1,27 +1,47 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// Hooks de React: useState para estado local, useEffect para carga inicial.
 import React, { useState, useEffect } from "react";
+// Store de autenticación para identificar al usuario que comenta.
 import { useAuthStore } from "@/entities/user/useAuth";
+// Servicio de comentarios: obtener lista, crear comentario, tipos de datos.
 import {
   getCommentsByPostId,
   createComment,
   CommentWithReplies,
 } from "@/shared/api/commentService";
+// Icono de spinner para estados de carga.
 import { Loader2 } from "lucide-react";
+// Notificaciones toast para feedback visual.
 import { toast } from "sonner";
+// Componente recursivo de árbol de comentarios anidados.
 import { CommentTree } from "./CommentTree";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Propiedades que recibe el componente de comentarios de un post.
 interface PostCommentsProps {
   postId: string;
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Muestra y permite crear comentarios para una publicación específica.
 export function PostComments({ postId }: PostCommentsProps) {
+  // Usuario autenticado actualmente.
   const currentUser = useAuthStore((state) => state.user);
+  // Lista de comentarios del post, con sus respuestas anidadas.
   const [comments, setComments] = useState<CommentWithReplies[]>([]);
+  // Indicador de carga inicial de comentarios.
   const [loading, setLoading] = useState(true);
+  // Texto del nuevo comentario en el input.
   const [newComment, setNewComment] = useState("");
+  // Indicador de envío en curso.
   const [submitting, setSubmitting] = useState(false);
+  // ID del comentario al que se está respondiendo (null = respuesta al post).
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  // Control para mostrar todos los comentarios o solo los primeros 3.
   const [showAllComments, setShowAllComments] = useState(false);
 
+  // === BLOQUE: CARGA INICIAL DE COMENTARIOS ===
+  // Al montar o cambiar el postId, obtiene los comentarios desde el servidor.
   useEffect(() => {
     if (!postId) return;
     const loadComments = async () => {
@@ -38,6 +58,8 @@ export function PostComments({ postId }: PostCommentsProps) {
     loadComments();
   }, [postId]);
 
+  // === BLOQUE: MANEJADOR DE CREACIÓN DE COMENTARIO ===
+  // Envía un comentario nuevo (o respuesta) y refresca la lista.
   const handleCreateComment = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
     if (!currentUser || !newComment.trim()) return;
@@ -46,6 +68,7 @@ export function PostComments({ postId }: PostCommentsProps) {
       setSubmitting(true);
       await createComment(postId, currentUser.id, newComment.trim(), parentId);
 
+      // Recarga los comentarios para ver el nuevo incluido.
       const updatedComments = await getCommentsByPostId(postId);
       setComments(updatedComments);
       setNewComment("");
@@ -59,6 +82,8 @@ export function PostComments({ postId }: PostCommentsProps) {
     }
   };
 
+  // === BLOQUE: MANEJADOR DE ELIMINACIÓN ===
+  // Elimina un comentario del estado local por su ID (filtrado recursivo).
   const handleDeleteComment = (commentId: string) => {
     setComments((prev) => {
       const removeComment = (items: CommentWithReplies[]): CommentWithReplies[] => {
@@ -70,13 +95,17 @@ export function PostComments({ postId }: PostCommentsProps) {
     });
   };
 
+  // Limita la vista inicial a 3 comentarios, con opción de mostrar todos.
   const displayedComments = showAllComments ? comments : comments.slice(0, 3);
   const hasMoreComments = comments.length > 3;
 
+  // Si no hay usuario autenticado, no renderiza nada.
   if (!currentUser) return null;
 
+  // === BLOQUE: RENDERIZADO ===
   return (
     <div className="mt-4 pt-4 border-t border-border/30 space-y-4">
+      {/* Cabecera con título y contador */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-foreground">Comentarios</h4>
         {comments.length > 0 && (
@@ -84,6 +113,7 @@ export function PostComments({ postId }: PostCommentsProps) {
         )}
       </div>
 
+      {/* Formulario de nuevo comentario */}
       <form onSubmit={(e) => handleCreateComment(e)} className="flex gap-2">
         <img
           src={currentUser.avatar_url}
@@ -108,6 +138,7 @@ export function PostComments({ postId }: PostCommentsProps) {
         </div>
       </form>
 
+      {/* Lista de comentarios o estados vacío/carga */}
       {loading ? (
         <div className="flex items-center justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-neon" />
@@ -123,6 +154,7 @@ export function PostComments({ postId }: PostCommentsProps) {
             onDelete={handleDeleteComment}
           />
 
+          {/* Formulario de respuesta a un comentario específico */}
           {replyingTo && (
             <form
               onSubmit={(e) => handleCreateComment(e, replyingTo)}
@@ -156,6 +188,7 @@ export function PostComments({ postId }: PostCommentsProps) {
             </form>
           )}
 
+          {/* Botón para ver todos los comentarios si hay más de 3 */}
           {hasMoreComments && !showAllComments && (
             <button
               onClick={() => setShowAllComments(true)}

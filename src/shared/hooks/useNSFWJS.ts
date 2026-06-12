@@ -1,10 +1,23 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/hooks/useNSFWJS.ts
+ * PROPÓSITO: Hook personalizado para moderación de imágenes con NSFWJS.
+ *            Detecta contenido inapropiado (Porn, Hentai, Sexy) usando
+ *            TensorFlow.js + NSFWJS antes de permitir la subida.
+ * FLUJO: loadModel() -> analyzeImage(file) -> true si es segura, false si no
+ * FALLBACK: Si el modelo no carga, permite la subida (graceful degradation).
+ * ===================================================================
+ */
+
 import { useState, useCallback } from "react";
 
+// Clasificaciones que devuelve NSFWJS
 interface Prediction {
   className: "Porn" | "Hentai" | "Sexy" | "Neutral" | "Drawing";
   probability: number;
 }
 
+/** Carga una imagen desde URL y retorna elemento HTMLImageElement */
 const loadImage = (url: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -14,12 +27,26 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
   });
 };
 
+/**
+ * useNSFWJS(): Hook para moderación de imágenes con IA
+ * ------------------------------------------------------------------
+ * Uso: const { analyzeImage, loadingModel } = useNSFWJS()
+ *       const isSafe = await analyzeImage(file)
+ *
+ * El modelo NSFWJS se carga bajo demanda (lazy load) solo cuando
+ * se llama a analyzeImage(), para no impactar el tiempo de carga
+ * inicial de la aplicación.
+ */
 export const useNSFWJS = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [model, setModel] = useState<any>(null);
   const [loadingModel, setLoadingModel] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * loadModel(): Carga el modelo NSFWJS (lazy, solo si se necesita)
+   * Importa dinámicamente @tensorflow/tfjs y nsfwjs.
+   */
   const loadModel = useCallback(async () => {
     if (model) return model;
     setLoadingModel(true);
@@ -36,11 +63,19 @@ export const useNSFWJS = () => {
       console.error("Failed to load NSFWJS model:", err);
       setError("Failed to load AI moderation model");
       setLoadingModel(false);
-      // Fail gracefully: do not throw to allow fallback behavior
-      return null;
+      return null; // Falla gracefully: no bloquea la subida
     }
   }, [model]);
 
+  /**
+   * analyzeImage(): Analiza una imagen con NSFWJS
+   * ------------------------------------------------------------------
+   * Clasifica la imagen en 5 categorías. Si detecta Porn, Hentai o
+   * Sexy con probabilidad > 60%, retorna false (insegura).
+   *
+   * @param file - Archivo de imagen a analizar
+   * @returns true si la imagen es segura, false si es inapropiada
+   */
   const analyzeImage = useCallback(
     async (file: File): Promise<boolean> => {
       let objectUrl = "";
@@ -48,13 +83,14 @@ export const useNSFWJS = () => {
         const activeModel = model || (await loadModel());
         if (!activeModel) {
           console.warn("NSFWJS model is not loaded. Skipping moderation check (fallback to safe).");
-          return true; // Fallback gracefully: allow upload if model failed to load
+          return true; // Si el modelo falla, permite la subida
         }
 
         objectUrl = URL.createObjectURL(file);
         const img = await loadImage(objectUrl);
         const predictions = (await activeModel.classify(img)) as Prediction[];
 
+        // Clases consideradas inseguras
         const unsafeClasses = ["Porn", "Hentai", "Sexy"];
         let isUnsafe = false;
 
@@ -65,11 +101,10 @@ export const useNSFWJS = () => {
           }
         }
 
-        return !isUnsafe; // Return true if safe, false if unsafe
+        return !isUnsafe; // true = segura, false = inapropiada
       } catch (err) {
         console.error("Image analysis error:", err);
-        // Fallback gracefully on classification error
-        return true;
+        return true; // Fallback: permite subida si hay error de clasificación
       } finally {
         if (objectUrl) {
           URL.revokeObjectURL(objectUrl);

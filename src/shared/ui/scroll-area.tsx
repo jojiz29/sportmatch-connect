@@ -1,3 +1,4 @@
+// shadcn/ui — Área de Desplazamiento (scroll personalizado con Radix)
 import * as React from "react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 

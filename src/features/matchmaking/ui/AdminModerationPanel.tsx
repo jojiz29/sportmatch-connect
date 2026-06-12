@@ -1,11 +1,20 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// Hook de estado para controlar la pestaña activa del panel de moderación.
 import { useState } from "react";
+// Framer Motion para animaciones de las tarjetas de reporte.
 import { motion, AnimatePresence } from "framer-motion";
+// Iconos de Lucide: escudos para acciones de moderación.
 import { Shield, ShieldAlert, ShieldCheck, ShieldX, Ban, AlertTriangle, User } from "lucide-react";
+// Store de partidos públicos para acceder a los reportes y funciones de moderación.
 import { usePublicMatchStore, type UserReport } from "@/features/matchmaking/usePublicMatchStore";
+// Store de autenticación para verificar si el usuario es administrador.
 import { useAuthStore } from "@/entities/user/useAuth";
 
+// === BLOQUE: TIPOS Y CONSTANTES ===
+// Tipo de filtro para las pestañas del panel de moderación.
 type FilterKey = "TODAS" | "PENDING" | "SANCTIONED" | "IGNORED";
 
+// Configuración de las pestañas de filtro con iconos descriptivos.
 const STATUS_TABS: { key: FilterKey; label: string; icon: React.ReactNode }[] = [
   { key: "TODAS", label: "Todas", icon: <Shield className="h-3.5 w-3.5" /> },
   { key: "PENDING", label: "Pendiente", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
@@ -13,6 +22,7 @@ const STATUS_TABS: { key: FilterKey; label: string; icon: React.ReactNode }[] = 
   { key: "IGNORED", label: "Ignorados", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
 ];
 
+// Calcula el tiempo transcurrido desde una fecha ISO hasta ahora, en formato breve.
 function timeAgo(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -23,6 +33,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diffHours / 24)}d`;
 }
 
+// Configuración visual para cada estado de reporte (borde izquierdo, badge).
 const STATUS_CONFIG = {
   PENDING: {
     label: "⏳ Pendiente",
@@ -41,6 +52,7 @@ const STATUS_CONFIG = {
   },
 };
 
+// === BLOQUE: TARJETA DE REPORTE INDIVIDUAL ===
 function ReportCard({ report }: { report: UserReport }) {
   const ignoreReport = usePublicMatchStore((s) => s.ignoreReport);
   const sanctionUser = usePublicMatchStore((s) => s.sanctionUser);
@@ -54,7 +66,7 @@ function ReportCard({ report }: { report: UserReport }) {
       id={`report-card-${report.id}`}
     >
       <div className="flex items-start justify-between gap-3">
-        {/* Left: reporter info */}
+        {/* Información del reporte: reportero, reportado, motivo */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className="shrink-0 h-9 w-9 rounded-full bg-muted border border-border flex items-center justify-center">
             <User className="h-4 w-4 text-muted-foreground" />
@@ -66,9 +78,7 @@ function ReportCard({ report }: { report: UserReport }) {
               <span className="font-semibold text-foreground">{report.reportedUserName}</span>
             </p>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${cfg.badgeClass}`}
-              >
+              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${cfg.badgeClass}`}>
                 {cfg.label}
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-foreground border border-border font-medium">
@@ -83,13 +93,13 @@ function ReportCard({ report }: { report: UserReport }) {
           </div>
         </div>
 
-        {/* Right: timestamp */}
+        {/* Timestamp */}
         <span className="text-[10px] text-muted-foreground shrink-0">
           {timeAgo(report.createdAt)}
         </span>
       </div>
 
-      {/* Actions — only for PENDING */}
+      {/* Acciones de moderación — solo visibles para reportes pendientes */}
       {report.status === "PENDING" && (
         <div className="flex gap-2 mt-3 border-t border-border/40 pt-3">
           <button
@@ -114,6 +124,8 @@ function ReportCard({ report }: { report: UserReport }) {
   );
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL DEL PANEL DE MODERACIÓN ===
+// Panel visible solo para administradores, permite gestionar reportes de usuarios.
 export function AdminModerationPanel() {
   const user = useAuthStore((s) => s.user);
   const isAdmin =
@@ -122,6 +134,7 @@ export function AdminModerationPanel() {
   const [activeTab, setActiveTab] = useState<FilterKey>("TODAS");
   const reports = usePublicMatchStore((s) => s.reports);
 
+  // Si no es administrador, no renderiza nada.
   if (!isAdmin) return null;
 
   const pending = reports.filter((r) => r.status === "PENDING");
@@ -138,18 +151,15 @@ export function AdminModerationPanel() {
   const filtered = activeTab === "TODAS" ? reports : reports.filter((r) => r.status === activeTab);
 
   return (
-    <div
-      className="glass border border-destructive/30 rounded-3xl p-6 relative overflow-hidden"
-      id="admin-moderation-panel"
-    >
-      {/* Pulsing border overlay */}
+    <div className="glass border border-destructive/30 rounded-3xl p-6 relative overflow-hidden" id="admin-moderation-panel">
+      {/* Borde pulsante decorativo */}
       <div className="absolute inset-0 rounded-3xl border-2 border-destructive/20 pointer-events-none animate-pulse" />
 
-      {/* Background glow */}
+      {/* Brillo de fondo */}
       <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-destructive opacity-10 blur-3xl pointer-events-none" />
 
       <div className="relative">
-        {/* Header */}
+        {/* Cabecera del panel */}
         <div className="flex items-center gap-3 mb-5">
           <div className="h-10 w-10 rounded-xl bg-destructive/10 border border-destructive/30 grid place-items-center shadow-[0_0_12px_rgba(239,68,68,0.2)]">
             <ShieldAlert className="h-5 w-5 text-destructive" />
@@ -160,7 +170,7 @@ export function AdminModerationPanel() {
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* Estadísticas resumidas */}
         <div className="grid grid-cols-4 gap-2 mb-5">
           {[
             { label: "Total", value: reports.length, color: "text-foreground" },
@@ -175,7 +185,7 @@ export function AdminModerationPanel() {
           ))}
         </div>
 
-        {/* Filter tabs */}
+        {/* Pestañas de filtro */}
         <div className="flex border-b border-border/50 mb-4 gap-1">
           {STATUS_TABS.map(({ key, label, icon }) => (
             <button
@@ -191,13 +201,9 @@ export function AdminModerationPanel() {
               {icon}
               {label}
               {countByTab[key] > 0 && (
-                <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
-                    activeTab === key
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-accent text-muted-foreground"
-                  }`}
-                >
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === key ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"
+                }`}>
                   {countByTab[key]}
                 </span>
               )}
@@ -205,15 +211,11 @@ export function AdminModerationPanel() {
           ))}
         </div>
 
-        {/* Reports list */}
+        {/* Lista de reportes */}
         <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
           <AnimatePresence>
             {filtered.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-12 text-muted-foreground"
-              >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 text-muted-foreground">
                 <Shield className="h-10 w-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No hay reportes en esta categoría.</p>
               </motion.div>

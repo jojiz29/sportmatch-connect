@@ -1,3 +1,4 @@
+// shadcn/ui — Alerta (notificación contextual con variantes)
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 

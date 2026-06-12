@@ -1,3 +1,9 @@
+// ============================================================
+// eslint.config.js — Configuración de ESLint (flat config)
+// Reglas: TypeScript recomended, React Hooks, Prettier
+// Prohíbe importar "server-only" y uso de any explícito
+// ============================================================
+
 import js from "@eslint/js";
 import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
 import globals from "globals";

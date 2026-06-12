@@ -1,4 +1,4 @@
-// This file is intentionally empty.
-// PublicMatchBoard is rendered as a tab inside /app/match/ (app.match.index.tsx).
-// No separate route is needed for /app/match/public.
+// === BLOQUE: Archivo intencionalmente vacío ===
+// PublicMatchBoard se renderiza como una pestaña dentro de /app/match/
+// (app.match.index.tsx). No se necesita una ruta separada para /app/match/public.
 export {};

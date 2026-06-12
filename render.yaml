@@ -1,3 +1,8 @@
+# ============================================================
+# render.yaml — Configuración de despliegue en Render
+# Servicio web Node.js, región Oregon, build con NestJS
+# ============================================================
+
 services:
   - type: web
     name: sportmatch-connect

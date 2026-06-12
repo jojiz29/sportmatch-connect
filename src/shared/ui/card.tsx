@@ -1,3 +1,4 @@
+// shadcn/ui — Tarjeta (contenedor con variantes: header, content, footer, title, description)
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

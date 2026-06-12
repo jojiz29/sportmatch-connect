@@ -1,3 +1,4 @@
+// shadcn/ui — Tarjeta Flotante (popover informativo al hover)
 import * as React from "react";
 import * as HoverCardPrimitive from "@radix-ui/react-hover-card";
 

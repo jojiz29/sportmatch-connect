@@ -1,3 +1,8 @@
+// ============================================================
+// business-flow.spec.ts — E2E: Portal B2B y marketplace
+// Verifica catálogo de negocios, patrocinios y compras
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("B2B Portal and Marketplace E2E Flow", () => {

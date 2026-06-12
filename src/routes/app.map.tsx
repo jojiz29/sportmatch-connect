@@ -1,3 +1,8 @@
+// === BLOQUE: Ruta del Mapa Comercial ===
+// Página principal del mapa interactivo con Leaflet. Muestra canchas,
+// negocios y centros deportivos georreferenciados cerca del usuario.
+// Incluye filtro por distrito, lista ordenada por distancia y modal
+// de ficha comercial (CommercialSheetModal).
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { MapFeature } from "@/features/map/MapFeature";
@@ -29,8 +34,10 @@ export const Route = createFileRoute("/app/map")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  // === BLOQUE: Loader del mapa ===
+  // En modo demo carga datos desde apiClient; en producción intenta
+  // backendApi primero con fallback a apiClient.
   loader: async () => {
-    // If in demo mode, bypass backend fetch immediately for zero-lag
     if (useAuthStore.getState().isDemoMode) {
       const [matches, businesses, venues] = await Promise.all([
         apiClient.matches.getAll().catch(() => []),
@@ -55,6 +62,8 @@ export const Route = createFileRoute("/app/map")({
   component: MapPage,
 });
 
+// === BLOQUE: Esqueleto de carga ===
+// Muestra placeholders animados mientras el loader resuelve los datos.
 function MapPendingComponent() {
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -84,6 +93,9 @@ function MapPendingComponent() {
   );
 }
 
+// === BLOQUE: Centroides de distritos ===
+// Coordenadas aproximadas de los distritos de Lima para centrar el mapa
+// cuando el usuario selecciona un filtro de distrito.
 const DISTRICT_CENTROIDS: Record<string, [number, number]> = {
   "Santiago de Surco": [-12.1314, -76.9812],
   "San Borja": [-12.1067, -76.9989],
@@ -92,6 +104,9 @@ const DISTRICT_CENTROIDS: Record<string, [number, number]> = {
   Magdalena: [-12.0911, -77.0694],
 };
 
+// === BLOQUE: Tarjeta de negocio en la lista lateral ===
+// Muestra información resumida de cada negocio con emoji según categoría,
+// indicador de distancia y badge PRO para patrocinadores.
 function BusinessListCard({
   business,
   onClick,
@@ -154,6 +169,9 @@ function BusinessListCard({
   );
 }
 
+// === BLOQUE: Página del Mapa Comercial ===
+// Componente principal que renderiza el mapa Leaflet, el filtro de distritos
+// y la lista lateral de negocios ordenados por proximidad.
 function MapPage() {
   const { t } = useTranslation();
   const data = Route.useLoaderData();
@@ -161,6 +179,9 @@ function MapPage() {
   const [selectedBusinessForSheet, setSelectedBusinessForSheet] = useState<User | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
+  // === BLOQUE: Geolocalización del usuario ===
+  // Obtiene las coordenadas actuales del navegador para calcular
+  // distancias y centrar el mapa.
   useEffect(() => {
     let active = true;
 
@@ -186,6 +207,8 @@ function MapPage() {
     };
   }, []);
 
+  // === BLOQUE: Ubicación base ===
+  // Usa coordenadas del GPS o la última ubicación conocida del perfil.
   const baseLocation = useMemo(() => {
     if (userCoords) return userCoords;
     if (user && user.last_location_lat && user.last_location_lng) {
@@ -196,11 +219,13 @@ function MapPage() {
 
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
+  // === BLOQUE: Centro del distrito seleccionado ===
   const selectedDistrictCenter = useMemo(() => {
     if (!selectedDistrict) return null;
     return DISTRICT_CENTROIDS[selectedDistrict] || null;
   }, [selectedDistrict]);
 
+  // === BLOQUE: Negocios ordenados por distancia ===
   const sortedBusinesses = useMemo(() => {
     const list = data.businesses || [];
     if (!baseLocation) return list;
@@ -217,6 +242,7 @@ function MapPage() {
       .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
   }, [data.businesses, baseLocation]);
 
+  // === BLOQUE: Filtrado por distrito ===
   const filteredBusinesses = useMemo(() => {
     if (!selectedDistrict) return sortedBusinesses;
     return sortedBusinesses.filter((b) =>
@@ -245,7 +271,7 @@ function MapPage() {
         subtitle="Descubre centros deportivos y especialistas cerca tuyo"
       />
 
-      {/* District Selector Filter */}
+      {/* === BLOQUE: Filtro de distrito === */}
       <div className="bg-gradient-card border border-border/40 rounded-2xl p-4 mb-6 backdrop-blur-md flex flex-wrap items-center justify-between gap-4 shadow-card">
         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <span className="text-neon">📍</span>{" "}
@@ -266,6 +292,7 @@ function MapPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
+        {/* === BLOQUE: Mapa Leaflet === */}
         <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card animate-fade-in">
           <ErrorBoundary>
             <MapFeature
@@ -277,6 +304,7 @@ function MapPage() {
           </ErrorBoundary>
         </div>
 
+        {/* === BLOQUE: Lista lateral de negocios === */}
         <div className="space-y-4">
           <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card max-h-[560px] overflow-y-auto">
             <h3 className="font-semibold mb-3 text-left">Cerca tuyo (Ordenado por distancia)</h3>
@@ -299,6 +327,7 @@ function MapPage() {
         </div>
       </div>
 
+      {/* === BLOQUE: Modal de ficha comercial === */}
       <CommercialSheetModal
         business={selectedBusinessForSheet}
         isOpen={selectedBusinessForSheet !== null}

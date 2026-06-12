@@ -1,3 +1,8 @@
+// ============================================================
+// community-integration.spec.ts — E2E: Comunidad y Squads
+// Verifica creación de squads, invitaciones y chat grupal
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Community & Squads Integration Test", () => {

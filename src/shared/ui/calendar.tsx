@@ -1,3 +1,4 @@
+// shadcn/ui — Calendario (selector de fechas con DayPicker)
 "use client";
 
 import * as React from "react";

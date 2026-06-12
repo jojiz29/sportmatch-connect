@@ -1,3 +1,8 @@
+// ============================================================
+// businessStore.test.ts — Tests de la store de negocio B2B
+// Verifica catálogo, publicaciones y operaciones comerciales
+// ============================================================
+
 import { describe, it, expect, beforeEach } from "vitest";
 import { useBusinessStore } from "../model/useBusinessStore";
 import { CatalogItem } from "@/entities/types";

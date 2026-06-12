@@ -1,3 +1,8 @@
+// ============================================================
+// challengeService.test.ts — Tests de desafíos entre jugadores
+// Verifica crear, aceptar, rechazar y resolver challenges
+// ============================================================
+
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAuthStore } from "@/entities/user/useAuth";
 import {

@@ -1,3 +1,20 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/config/sports.ts
+ * PROPÓSITO: Catálogo completo de deportes disponibles en SportMatch.
+ *            Proporciona datos de configuración para las tarjetas
+ *            de selección de deportes con diseño visual categorizado.
+ *
+ * ESTRUCTURA:
+ *   - Deportes Tradicionales: 18 deportes (6 base + 12 extra)
+ *   - E-Sports & Gaming: 18 títulos (6 base + 12 extra)
+ *   Total: 36 opciones de deportes/juegos
+ *
+ * CADA ENTRADA INCLUYE:
+ *   id, nameKey, descKey (para i18n), emoji, categoría, estilo CSS
+ * ===================================================================
+ */
+
 export interface SportCardData {
   id: string;
   nameKey: string;
@@ -9,8 +26,12 @@ export interface SportCardData {
 }
 
 export const SPORTS_CATALOG: SportCardData[] = [
-  // === DEPORTES TRADICIONALES ===
-  // Baseline (6 cards for perfect 3x2 grid)
+  // ================================================================
+  // SECCIÓN: DEPORTES TRADICIONALES
+  // ================================================================
+  // Baseline: 6 tarjetas base (grid perfecto 3x2)
+  // ================================================================
+
   {
     id: "Fútbol",
     nameKey: "sports.futbol.name",
@@ -60,7 +81,8 @@ export const SPORTS_CATALOG: SportCardData[] = [
     category: "traditional",
     styleClass: "bg-gradient-to-br from-orange-700 via-red-800 to-amber-950 border-orange-500/30",
   },
-  // Long-Tail Extra (12 cards to complete exactly 18 Traditional Sports)
+
+  // Long-Tail: 12 deportes extra (completan 18 tradicionales)
   {
     id: "Rugby",
     nameKey: "sports.rugby.name",
@@ -172,8 +194,12 @@ export const SPORTS_CATALOG: SportCardData[] = [
     isExtra: true,
   },
 
-  // === E-SPORTS & GAMING ===
-  // Baseline (6 cards)
+  // ================================================================
+  // SECCIÓN: E-SPORTS & GAMING
+  // ================================================================
+  // Baseline: 6 tarjetas base
+  // ================================================================
+
   {
     id: "EA Sports FC",
     nameKey: "sports.ea_fc.name",
@@ -228,7 +254,8 @@ export const SPORTS_CATALOG: SportCardData[] = [
     styleClass:
       "bg-gradient-to-br from-yellow-600 via-amber-900 to-red-950 border-yellow-500/50 shadow-[inset_0_0_15px_rgba(234,179,8,0.25)]",
   },
-  // Long-Tail Extra (12 cards to complete exactly 18 E-Sports)
+
+  // Long-Tail: 12 juegos extra (completan 18 esports)
   {
     id: "Counter-Strike 2",
     nameKey: "sports.cs2.name",

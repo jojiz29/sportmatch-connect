@@ -1,8 +1,12 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { CatalogItem } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
+// === BLOQUE: TIPO DE VENTA ===
+// Registro individual de una venta realizada: qué producto/servicio se compró,
+// quién lo compró y a qué precio.
 interface SaleRecord {
   id: string;
   catalog_item_id: string;
@@ -13,6 +17,7 @@ interface SaleRecord {
   created_at: string;
 }
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface BusinessState {
   catalogItems: CatalogItem[];
   sales: SaleRecord[];
@@ -21,6 +26,8 @@ interface BusinessState {
   addSale: (sale: SaleRecord) => void;
 }
 
+// === BLOQUE: CATÁLOGO INICIAL ===
+// Productos y servicios de demostración para el negocio "Puka Power".
 const INITIAL_CATALOG: CatalogItem[] = [
   {
     id: "puka-power-bottle",
@@ -54,6 +61,9 @@ const INITIAL_CATALOG: CatalogItem[] = [
   },
 ];
 
+// === BLOQUE: STORE DE NEGOCIO ===
+// Gestiona el catálogo de productos/servicios y las ventas de un negocio.
+// Persistido en localStorage bajo "sportmatch-business".
 export const useBusinessStore = create<BusinessState>()(
   persist(
     (set) => ({

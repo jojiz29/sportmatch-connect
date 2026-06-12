@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del dashboard principal ===
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 
@@ -36,6 +37,10 @@ import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 
+// === BLOQUE: Ruta /app/ — createFileRoute con loader ===
+// Carga datos iniciales desde backendApi (con timeout de 8s por llamada):
+//   - matches, users, courts, sports.
+// Si alguna falla (timeout/error), retorna array vacío para esa categoría.
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
@@ -79,6 +84,7 @@ export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
 
+// === BLOQUE: getSportEmoji — Mapea nombre de deporte a emoji ===
 function getSportEmoji(name: string) {
   switch (name.toLowerCase()) {
     case "paddle":
@@ -107,6 +113,14 @@ function getSportEmoji(name: string) {
   }
 }
 
+// === BLOQUE: Dashboard — Componente principal del panel de inicio ===
+// Secciones:
+//   - Hero con saludo, nivel, Trust Score y partidos jugados.
+//   - Sport chips (filtro por deporte).
+//   - Próximo partido o prompt para encontrar/crear uno.
+//   - Lista de partidos recomendados con MatchCard.
+//   - Sidebar: billetera, racha semanal, jugadores cerca, canchas cercanas.
+//   - Dialog de creación de partido y PostMatchReviewForm.
 function Dashboard() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -118,12 +132,14 @@ function Dashboard() {
     initWallet();
   }, [initWallet]);
 
+  // === BLOQUE: Racha deportiva y días de asistencia ===
   const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
   const [attendanceDays, setAttendanceDays] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
     if (useAuthStore.getState().isDemoMode) {
+      // En modo demo, usa localStorage para persistir racha y asistencia.
       const storedStreak = localStorage.getItem(`sportmatch_demo_streak_${user.id}`);
       if (storedStreak) {
         setStreak(JSON.parse(storedStreak));
@@ -152,6 +168,7 @@ function Dashboard() {
         );
       }
     } else {
+      // En modo real, consulta user_stats y match_participants desde Supabase.
       const fetchStats = async () => {
         try {
           const { data: stats } = await supabase
@@ -192,6 +209,7 @@ function Dashboard() {
     }
   }, [user]);
 
+  // === BLOQUE: contributionGrid — Cuadrícula SVG de asistencia (35 días) ===
   const contributionGrid = useMemo(() => {
     const today = new Date();
     const currentDay = today.getDay();
@@ -212,6 +230,7 @@ function Dashboard() {
     return cells;
   }, []);
 
+  // === BLOQUE: Geolocalización del usuario ===
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [reviewMatch, setReviewMatch] = useState<Match | null>(null);
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
@@ -234,6 +253,7 @@ function Dashboard() {
     }
   }, []);
 
+  // Ubicación base: coordenadas en tiempo real o última ubicación conocida del perfil.
   const baseLocation = useMemo(() => {
     if (userCoords) return userCoords;
     if (user && user.last_location_lat && user.last_location_lng) {
@@ -242,6 +262,7 @@ function Dashboard() {
     return null;
   }, [userCoords, user]);
 
+  // === BLOQUE: Datos del loader ===
   const { matches, users, courts, sports } = Route.useLoaderData() as {
     matches: Match[];
     users: User[];
@@ -255,7 +276,7 @@ function Dashboard() {
     setLiveMatches(matches);
   }, [matches]);
 
-  // Find user's next upcoming match (declared safe after liveMatches initialization)
+  // === BLOQUE: nextMatch — Próximo partido del usuario ===
   const nextMatch = useMemo(() => {
     if (!user) return null;
     const userMatches = liveMatches.filter((m) => {
@@ -263,7 +284,6 @@ function Dashboard() {
       const isParticipant = m.current_players?.some((p) => p.id === user.id);
       if (!isCreator && !isParticipant) return false;
 
-      // Filter for future matches
       try {
         const matchStart = new Date(`${m.date}T${m.time}`);
         return matchStart.getTime() > Date.now();
@@ -274,7 +294,6 @@ function Dashboard() {
 
     if (userMatches.length === 0) return null;
 
-    // Sort by date and time ascending
     return userMatches.sort((a, b) => {
       const timeA = new Date(`${a.date}T${a.time}`).getTime();
       const timeB = new Date(`${b.date}T${b.time}`).getTime();
@@ -282,6 +301,7 @@ function Dashboard() {
     })[0];
   }, [liveMatches, user]);
 
+  // === BLOQUE: Realtime subscription a la tabla matches ===
   useEffect(() => {
     if (useAuthStore.getState().isDemoMode) return;
 
@@ -335,6 +355,10 @@ function Dashboard() {
     };
   }, []);
 
+  // === BLOQUE: Rating Loop — Solicita review post-partido ===
+  // Detecta partidos pasados en los que el usuario asistió (ATTENDED)
+  // y verifica geolocalización (dentro de 100m de la cancha) antes de
+  // mostrar el formulario de calificación.
   useEffect(() => {
     if (!user) return;
     const currentUser = user;
@@ -343,7 +367,6 @@ function Dashboard() {
     );
 
     async function checkRatingLoop() {
-      // 1. Filter candidate past/completed matches
       const candidates = matches.filter((m) => {
         const isPart =
           m.creator_id === currentUser.id ||
@@ -353,7 +376,6 @@ function Dashboard() {
         const matchStart = new Date(`${m.date}T${m.time}`);
         const isPast = matchStart.getTime() < Date.now();
 
-        // Match status must be finished/completed or past
         const isCompleted =
           (m.status as string) === "COMPLETED" || m.status === "Finished" || isPast;
         if (!isCompleted) return false;
@@ -363,12 +385,10 @@ function Dashboard() {
 
       if (candidates.length === 0) return;
 
-      // 2. Gate checking for 'ATTENDED' status and geolocation proximity
       for (const match of candidates) {
         let isAttended = false;
 
         if (useAuthStore.getState().isDemoMode) {
-          // Check demo storage flag
           isAttended = localStorage.getItem(`sportmatch_demo_checkin_${match.id}`) === "true";
         } else {
           try {
@@ -386,7 +406,6 @@ function Dashboard() {
 
         if (!isAttended) continue;
 
-        // Geolocation Liveness check (user within 100m of the court coordinates)
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -396,33 +415,35 @@ function Dashboard() {
               const courtLng = match.court?.lng || -77.0298;
 
               const distance = calculateDistance(userLat, userLng, courtLat, courtLng);
-              const threshold = 0.1; // 100m
+              const threshold = 0.1;
 
               if (distance <= threshold) {
                 setReviewMatch(match);
               } else {
                 console.warn(
-                  `Gated Rating Loop warning: User is too far (${(distance * 1000).toFixed(0)}m) to review match ${match.id}`,
+                  `Usuario demasiado lejos (${(distance * 1000).toFixed(0)}m) para calificar partido ${match.id}`,
                 );
               }
             },
             (err) => {
-              console.warn("Geolocation permission error during rating loop liveness check:", err);
+              console.warn("Error de geolocalización en rating loop:", err);
             },
             { enableHighAccuracy: true, timeout: 5000 },
           );
         }
-        break; // Process one rating prompt at a time
+        break;
       }
     }
 
     checkRatingLoop();
   }, [matches, user]);
 
+  // Filtra partidos por deporte seleccionado.
   const filteredMatches = selectedSport
     ? liveMatches.filter((m) => m.sport === selectedSport)
     : liveMatches;
 
+  // Canchas más cercanas según ubicación base.
   const closestCourts = useMemo(() => {
     if (!baseLocation) return courts.slice(0, 5);
     return [...courts]
@@ -444,7 +465,7 @@ function Dashboard() {
           { name: "Running", emoji: "🏃" },
         ];
 
-  // Match creation state
+  // === BLOQUE: Estados para el modal de creación de partido ===
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [matchTitle, setMatchTitle] = useState("");
   const [matchSport, setMatchSport] = useState("");
@@ -457,13 +478,13 @@ function Dashboard() {
   const [filteredCourts, setFilteredCourts] = useState<Court[]>([]);
   const [loadingCourts, setLoadingCourts] = useState(false);
 
+  // Carga las canchas filtradas por deporte cuando se abre el modal.
   useEffect(() => {
     if (!isCreateModalOpen) return;
 
     let active = true;
     setLoadingCourts(true);
 
-    // Try backend first for courts, fallback to Supabase
     backendApi.courts
       .getAll(matchSport || undefined)
       .then((res) => {
@@ -492,6 +513,10 @@ function Dashboard() {
     };
   }, [matchSport, isCreateModalOpen]);
 
+  // === BLOQUE: handleCreateMatch — Crea un nuevo partido ===
+  // Intenta backendApi primero, fallback a apiClient (mock).
+  // Luego inserta al creador en match_participants.
+  // Finalmente invalida el router para refrescar los datos.
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -507,7 +532,6 @@ function Dashboard() {
       setIsCreatingMatch(true);
       let newMatch: Match;
 
-      // Try backend first, fallback to Supabase
       const token = user.id;
       const backendResult = await backendApi.matches
         .create(token, {
@@ -561,9 +585,6 @@ function Dashboard() {
       setMatchMaxPlayers(4);
       setMatchLevel("Intermedio");
 
-      // BUG-01: Use router.invalidate() instead of window.location.reload().
-      // This re-runs the route loader to refresh match data without destroying
-      // React state, causing hydration lags, or risking session loss on mobile.
       await router.invalidate();
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error(err);
@@ -576,9 +597,10 @@ function Dashboard() {
 
   if (!user) return null;
 
+  // === BLOQUE: Renderizado — UI del dashboard ===
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
-      {/* Hero */}
+      {/* === HERO: Saludo y estadísticas del usuario === */}
       <div className="rounded-3xl bg-gradient-card border border-border/60 p-6 md:p-8 shadow-card relative overflow-hidden mb-8 group">
         <div className="absolute -right-10 -top-10 h-60 w-60 rounded-full bg-gradient-primary opacity-15 blur-3xl group-hover:opacity-25 transition-opacity duration-700" />
         <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-neon/5 blur-3xl" />
@@ -621,7 +643,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Sport chips */}
+      {/* === Sport chips (filtro por deporte) === */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-8 -mx-4 px-4">
         {SPORTS.map((s) => (
           <button
@@ -639,9 +661,9 @@ function Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Main Column */}
+        {/* === Columna principal (2/3) === */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Próximo Partido Card */}
+          {/* Próximo partido */}
           {nextMatch ? (
             <div className="animate-slide-up">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 mb-3 flex items-center gap-1.5">
@@ -710,7 +732,7 @@ function Dashboard() {
             </div>
           )}
 
-          {/* Recommended Matches List */}
+          {/* === Partidos recomendados === */}
           <div className="space-y-4">
             <div className="flex items-end justify-between mb-1">
               <div>
@@ -746,9 +768,9 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Side */}
+        {/* === Sidebar (1/3) === */}
         <div className="space-y-6">
-          {/* Billetera Quick Access Card */}
+          {/* Billetera Digital */}
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card relative overflow-hidden card-lift group">
             <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-primary opacity-10 blur-xl group-hover:opacity-20 transition-opacity" />
             <div className="flex items-center gap-4 relative z-10">
@@ -772,7 +794,7 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Weekly Streak & Contribution Graph Widget */}
+          {/* Racha semanal y gráfico de contribución SVG */}
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -847,6 +869,7 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* Jugadores cerca */}
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading text-lg tracking-wide text-foreground">
@@ -901,6 +924,7 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* Canchas cercanas */}
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
             <h3 className="font-heading text-lg tracking-wide text-foreground mb-4">
               Canchas cercanas
@@ -920,7 +944,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Dialog for Match Creation */}
+      {/* === Modal de creación de partido === */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="max-w-md bg-background border border-border/60 rounded-3xl p-6 shadow-card">
           <DialogHeader>
@@ -1066,7 +1090,7 @@ function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Post-Match Review Modal */}
+      {/* === Modal de review post-partido === */}
       <Dialog
         open={!!reviewMatch}
         onOpenChange={(open) => {
@@ -1110,6 +1134,7 @@ function Dashboard() {
   );
 }
 
+// === BLOQUE: Stat — Componente de tarjeta de estadística ===
 function Stat({
   icon,
   label,
@@ -1129,6 +1154,9 @@ function Stat({
   );
 }
 
+// === BLOQUE: MatchCard — Tarjeta de partido individual ===
+// Muestra información del partido, estado (Finalizado, En Curso, Lleno, Buscando),
+// cupos disponibles, barra de progreso, botón de unirse, y check-in geolocalizado.
 function MatchCard({ match }: { match: Match }) {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
@@ -1164,6 +1192,7 @@ function MatchCard({ match }: { match: Match }) {
 
   const [checkedIn, setCheckedIn] = useState(match.status === "IN_PROGRESS");
 
+  // === BLOQUE: handleJoin — Unirse a un partido ===
   const handleJoin = () => {
     if (user && courtFee > user.fitcoins_balance) {
       setIsBalanceModalOpen(true);
@@ -1187,7 +1216,6 @@ function MatchCard({ match }: { match: Match }) {
         toast.success("¡Te uniste al partido!", {
           description: "Revisa tu calendario para más detalles.",
         });
-        // Automatically create a temporary Group Chat for the match
         useChatStore.getState().createMatchGroupChat(match);
         await router.invalidate();
       } catch (err) {
@@ -1202,6 +1230,7 @@ function MatchCard({ match }: { match: Match }) {
     }, 600);
   };
 
+  // === BLOQUE: handleCheckIn — Check-in geolocalizado en la cancha ===
   const handleCheckIn = () => {
     if (!navigator.geolocation) {
       toast.error(t("game_day.checkin_error"));
@@ -1216,7 +1245,7 @@ function MatchCard({ match }: { match: Match }) {
         const courtLng = match.court?.lng || -77.0298;
 
         const distance = calculateDistance(userLat, userLng, courtLat, courtLng);
-        const threshold = 0.1; // 100m
+        const threshold = 0.1;
 
         if (distance <= threshold) {
           try {
@@ -1236,7 +1265,6 @@ function MatchCard({ match }: { match: Match }) {
               match.status = "IN_PROGRESS";
               localStorage.setItem(`sportmatch_demo_checkin_${match.id}`, "true");
 
-              // Local update for contribution graph in demo mode
               if (user) {
                 const todayStr = new Date().toISOString().split("T")[0];
                 const storedAttendance = localStorage.getItem(
@@ -1293,6 +1321,7 @@ function MatchCard({ match }: { match: Match }) {
           <span className="text-[10px] px-2.5 py-1 rounded-full bg-violet/15 text-violet-foreground border border-violet/30 font-extrabold uppercase tracking-wider">
             {match.sport}
           </span>
+          {/* Badge de estado del partido */}
           {(match.status as string) === "Finished" ||
           (match.status as string) === "COMPLETED" ||
           match.status === "Cancelled" ? (
@@ -1377,6 +1406,10 @@ function MatchCard({ match }: { match: Match }) {
   );
 }
 
+// === BLOQUE: PostMatchReviewForm — Formulario de calificación post-partido ===
+// Permite calificar la cancha (1-5 estrellas) y a cada compañero con tags
+// (good_level, punctual, good_teammate, disrespectful, no_show).
+// Los tags negativos ajustan trust_score y fitcoins_balance del evaluado.
 function PostMatchReviewForm({ match, onClose }: { match: Match; onClose: () => void }) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
@@ -1389,6 +1422,9 @@ function PostMatchReviewForm({ match, onClose }: { match: Match; onClose: () => 
     return match.current_players.filter((p) => p.id !== user?.id);
   }, [match.current_players, user]);
 
+  // === BLOQUE: handleSubmit — Envía las calificaciones ===
+  // Itera sobre cada compañero, calcula ajustes de trust_score y fitcoins,
+  // y persiste en Supabase (o MOCK_USERS en modo demo).
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -1495,6 +1531,7 @@ function PostMatchReviewForm({ match, onClose }: { match: Match; onClose: () => 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+      {/* Calificación de la cancha (1-5 estrellas) */}
       {match.court && (
         <div className="space-y-2 border-b border-border/50 pb-4">
           <label className="text-sm font-semibold text-foreground block">
@@ -1519,6 +1556,7 @@ function PostMatchReviewForm({ match, onClose }: { match: Match; onClose: () => 
         </div>
       )}
 
+      {/* Calificación de otros jugadores con tags */}
       <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
         <label className="text-sm font-semibold text-foreground block">
           {t("feedback.rate_players")}

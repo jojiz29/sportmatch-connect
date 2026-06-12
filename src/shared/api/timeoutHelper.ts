@@ -1,6 +1,24 @@
 /**
- * Wraps a promise in a timeout race.
- * If the promise does not resolve within the specified timeout duration, it rejects with a timeout error.
+ * ===================================================================
+ * ARCHIVO: src/shared/api/timeoutHelper.ts
+ * PROPÓSITO: Envolver promesas con un timeout de seguridad para
+ *            evitar que operaciones a la base de datos se cuelguen
+ *            indefinidamente.
+ * USO: const result = await withTimeout(supabase.from(...).select())
+ * ===================================================================
+ */
+
+/**
+ * withTimeout(): Ejecuta una promesa con límite de tiempo
+ * ------------------------------------------------------------------
+ * Si la promesa original no se resuelve dentro de timeoutMs
+ * (10 segundos por defecto), la rechaza con un error descriptivo.
+ * Usa Promise.race() para competir entre la promesa real y un timeout.
+ * Útil para operaciones Supabase que podrían colgarse si la red falla.
+ *
+ * @param promise  - Promesa original a ejecutar
+ * @param timeoutMs - Milisegundos máximos de espera (default: 10000)
+ * @returns Resultado tipado de la promesa original
  */
 export function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = 10000): Promise<T> {
   let timeoutId: NodeJS.Timeout | undefined;

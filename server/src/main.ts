@@ -1,16 +1,20 @@
+// ============================================================
+// main.ts — Punto de entrada del backend NestJS
+// Carga variable de entorno, configura CORS, Swagger y ValidationPipe
+// ============================================================
+
 import * as dotenv from "dotenv";
 import * as path from "path";
 
-// Resolve absolute paths to environment assets
-// This ensures Prisma finds DATABASE_URL regardless of dist/ or root execution context
+// === RESOLUCIÓN DE ENTORNO (Dual-URL Prisma) ===
+// Carga el .env raíz primero (contiene DATABASE_URL real) y luego el del servidor
 const serverEnvPath = path.resolve(process.cwd(), ".env");
 const rootEnvPath = path.resolve(process.cwd(), "../.env");
 
-// Load root-level .env first (contains real DATABASE_URL), then server-level overrides
 dotenv.config({ path: rootEnvPath, override: false });
 dotenv.config({ path: serverEnvPath, override: true });
 
-// If server .env still has the placeholder, revert to the root value (already loaded)
+// Si el .env del servidor aún tiene el placeholder, revierte al valor raíz
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes("<YOUR_PASSWORD>")) {
   dotenv.config({ path: rootEnvPath, override: true });
 }
@@ -29,6 +33,8 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // === CORS CONFIGURATION ===
+  // Permite orígenes definidos en FRONTEND_URL o los defaults locales
   const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:5178")
     .split(",")
     .map((url) => url.trim());
@@ -44,6 +50,8 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // === VALIDACIÓN GLOBAL ===
+  // Whitelist elimina campos no decorados, transform convierte tipos
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -52,8 +60,10 @@ async function bootstrap() {
     }),
   );
 
+  // === PREFIJO GLOBAL ===
   app.setGlobalPrefix("api/v1");
 
+  // === SWAGGER ===
   const config = new DocumentBuilder()
     .setTitle("SportMatch API")
     .setDescription("SportMatch 2026 Backend API")
@@ -64,6 +74,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("docs", app, document);
 
+  // === INICIO DEL SERVIDOR ===
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`Application running on port ${port}`);

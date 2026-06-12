@@ -1,3 +1,4 @@
+// shadcn/ui — Checkbox (casilla de verificación con Radix)
 import * as React from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check } from "lucide-react";

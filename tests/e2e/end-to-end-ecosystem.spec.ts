@@ -1,3 +1,8 @@
+// ============================================================
+// end-to-end-ecosystem.spec.ts — E2E: Ecosistema completo
+// Verifica notificaciones, dashboard BI y compra desde notificación
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase from Notification)", () => {

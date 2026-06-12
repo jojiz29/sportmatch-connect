@@ -1,3 +1,8 @@
+// === BLOQUE: Ruta de Reserva de Canchas ===
+// Catálogo de canchas deportivas con filtros (distrito, deporte, búsqueda),
+// ordenamiento por distancia o rating, y modal de booking.
+// NOTA: Actualmente redirige a /app porque la funcionalidad se integró
+// en el dashboard principal (app.index.tsx).
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { apiClient } from "@/shared/api/apiClient";
@@ -15,6 +20,8 @@ export const Route = createFileRoute("/app/courts")({
     throw redirect({ to: "/app" });
   },
   head: () => ({ meta: [{ title: "Reservas — SportMatch" }] }),
+  // === BLOQUE: Loader de canchas ===
+  // Intenta backendApi primero, con fallback a apiClient.
   loader: async () => {
     const backendCourts = await backendApi.courts.getAll().catch(() => null);
     if (
@@ -36,12 +43,13 @@ function Courts() {
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Filter and pagination states
+  // === BLOQUE: Estado de filtros y paginación ===
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSport, setSelectedSport] = useState("");
   const [visibleCount, setVisibleCount] = useState(24);
 
+  // === BLOQUE: Geolocalización ===
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -59,6 +67,7 @@ function Courts() {
     }
   }, []);
 
+  // === BLOQUE: Ubicación base para ordenar por distancia ===
   const baseLocation = useMemo(() => {
     if (userCoords) return userCoords;
     if (user && user.last_location_lat && user.last_location_lng) {
@@ -67,48 +76,41 @@ function Courts() {
     return null;
   }, [userCoords, user]);
 
-  // Extract unique districts dynamically from courts list
+  // === BLOQUE: Distritos disponibles (dinámicos desde datos) ===
   const availableDistricts = useMemo(() => {
     const set = new Set<string>();
     courts.forEach((c) => {
-      if (c.district) {
-        set.add(c.district);
-      }
+      if (c.district) set.add(c.district);
     });
     return Array.from(set).sort();
   }, [courts]);
 
-  // Extract unique sports dynamically from courts list
+  // === BLOQUE: Deportes disponibles (dinámicos desde datos) ===
   const availableSports = useMemo(() => {
     const set = new Set<string>();
     courts.forEach((c) => {
-      if (c.sport) {
-        set.add(c.sport);
-      }
+      if (c.sport) set.add(c.sport);
     });
     return Array.from(set).sort();
   }, [courts]);
 
-  // Reset pagination when any filter changes
+  // === BLOQUE: Reset de paginación al cambiar filtros ===
   useEffect(() => {
     setVisibleCount(24);
   }, [searchTerm, selectedDistrict, selectedSport]);
 
-  // Filter and sort courts
+  // === BLOQUE: Filtrado y ordenamiento de canchas ===
+  // Aplica filtros secuencialmente: distrito, deporte, búsqueda
+  // y finalmente ordena por distancia o rating.
   const filteredAndSortedCourts = useMemo(() => {
     let result = [...courts];
 
-    // 1. Apply District filter
     if (selectedDistrict) {
       result = result.filter((c) => c.district === selectedDistrict);
     }
-
-    // 2. Apply Sport filter
     if (selectedSport) {
       result = result.filter((c) => c.sport === selectedSport);
     }
-
-    // 3. Apply Search Term filter
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
@@ -117,8 +119,6 @@ function Courts() {
           (c.address && c.address.toLowerCase().includes(term)),
       );
     }
-
-    // 4. Proximity or Rating Sorting
     if (baseLocation) {
       result = result
         .map((c) => ({
@@ -144,7 +144,7 @@ function Courts() {
         subtitle="Disponibilidad en tiempo real para todas las disciplinas en Lima"
       />
 
-      {/* Filters Container */}
+      {/* === BLOQUE: Contenedor de filtros === */}
       <div className="bg-card/20 border border-border/40 rounded-3xl p-5 mb-8 backdrop-blur-md shadow-card">
         <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
           <SlidersHorizontal className="h-4 w-4 text-primary" />
@@ -152,7 +152,7 @@ function Courts() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search filter */}
+          {/* Búsqueda por nombre o dirección */}
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
             <input
@@ -164,7 +164,7 @@ function Courts() {
             />
           </div>
 
-          {/* District filter */}
+          {/* Filtro por distrito */}
           <select
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
@@ -172,13 +172,11 @@ function Courts() {
           >
             <option value="">Todos los distritos ({availableDistricts.length})</option>
             {availableDistricts.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
+              <option key={d} value={d}>{d}</option>
             ))}
           </select>
 
-          {/* Sport filter */}
+          {/* Filtro por deporte */}
           <select
             value={selectedSport}
             onChange={(e) => setSelectedSport(e.target.value)}
@@ -186,19 +184,16 @@ function Courts() {
           >
             <option value="">Todos los deportes ({availableSports.length})</option>
             {availableSports.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Results Section */}
+      {/* === BLOQUE: Resultados === */}
       <div className="flex items-center justify-between mb-6 text-xs text-muted-foreground font-semibold">
         <span>
-          Mostrando {displayedCourts.length} de {filteredAndSortedCourts.length} complejos
-          deportivos
+          Mostrando {displayedCourts.length} de {filteredAndSortedCourts.length} complejos deportivos
         </span>
         {baseLocation && (
           <span className="flex items-center gap-1 text-neon">
@@ -226,7 +221,7 @@ function Courts() {
         </div>
       )}
 
-      {/* Load More Button */}
+      {/* === BLOQUE: Botón "Ver más" (paginación) === */}
       {filteredAndSortedCourts.length > visibleCount && (
         <div className="flex justify-center mt-10">
           <button
@@ -239,6 +234,7 @@ function Courts() {
         </div>
       )}
 
+      {/* === BLOQUE: Modal de booking === */}
       <BookingModal
         court={selectedCourtForBooking}
         isOpen={selectedCourtForBooking !== null}

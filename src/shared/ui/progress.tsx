@@ -1,3 +1,4 @@
+// shadcn/ui — Barra de Progreso (indicador de avance con Radix)
 "use client";
 
 import * as React from "react";

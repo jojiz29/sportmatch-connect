@@ -1,3 +1,8 @@
+// ============================================================
+// jest.config.js — Configuración de Jest (backend NestJS)
+// Transforma TS con ts-jest,覆盖率 en /coverage, entorno node
+// ============================================================
+
 module.exports = {
   moduleFileExtensions: ["js", "json", "ts"],
   rootDir: "src",

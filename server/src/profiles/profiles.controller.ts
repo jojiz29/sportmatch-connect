@@ -1,3 +1,8 @@
+// ============================================================
+// profiles.controller.ts — Controlador de perfiles
+// CRUD público + verificación de identidad con DNI (RENIEC)
+// ============================================================
+
 import { Controller, Get, Param, Patch, Body, UseGuards, Post, Request } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { ProfilesService } from "./profiles.service";

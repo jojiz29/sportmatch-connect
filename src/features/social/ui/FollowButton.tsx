@@ -1,36 +1,51 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// React hooks para estado local y efectos secundarios.
 import React, { useState, useEffect } from "react";
+// Servicios de red social: seguir, dejar de seguir y consultar estado.
 import { followUser, unfollowUser, isFollowing } from "@/shared/api/socialService";
+// Store de autenticación para identificar al usuario actual.
 import { useAuthStore } from "@/entities/user/useAuth";
+// Store de perfil para actualizar el contador de seguidos en tiempo real.
 import { useProfileStore } from "@/features/profile/useProfileStore";
+// Notificaciones toast para feedback visual de éxito/error.
 import { toast } from "sonner";
+// Iconos de Lucide: UserPlus (seguir), UserMinus (dejar de seguir), Loader2 (cargando).
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
+// Traducción i18n para textos dinámicos según el idioma.
 import { useTranslation } from "react-i18next";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Propiedades que recibe el botón de seguir/dejar de seguir.
 interface FollowButtonProps {
   targetUserId: string;
   onFollowChange?: (isFollowingNow: boolean) => void;
 }
 
-/**
- * FollowButton component with Optimistic UI updates.
- * Renders a "Seguir" (Follow) or "Siguiendo" (Following) button.
- * Uses useProfileStore to update the logged-in user's following count in real-time.
- * Automatically performs rollbacks if the network/database request fails.
- * Self-follow check prevents rendering if targetUserId is the current user.
- */
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Componente que muestra un botón para seguir o dejar de seguir a otro usuario.
+// Implementa Optimistic UI: el estado visual cambia inmediatamente y se revierte
+// en caso de error en la petición al servidor.
 export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps) {
+  // Instancia de traducción para textos internacionalizados.
   const { t } = useTranslation();
+  // Usuario actualmente autenticado, obtenido del store de auth.
   const currentUser = useAuthStore((state) => state.user);
+  // Perfil del usuario actual y función para actualizarlo (contador de seguidos).
   const { profile, updateProfile } = useProfileStore();
+  // Estado optimista: indica si actualmente estamos siguiendo al usuario destino.
   const [following, setFollowing] = useState<boolean>(false);
+  // Estado de carga mientras se consulta el estado inicial de seguimiento.
   const [loading, setLoading] = useState<boolean>(true);
 
+  // === BLOQUE: EFECTO DE CARGA INICIAL ===
+  // Al montar o cambiar el usuario/target, consulta si ya seguimos al usuario destino.
   useEffect(() => {
     if (!currentUser) {
       setLoading(false);
       return;
     }
 
+    // Bandera para evitar actualizar estado si el componente se desmonta (race condition).
     let active = true;
     async function checkStatus() {
       if (!currentUser) return;
@@ -54,26 +69,30 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
     };
   }, [currentUser, targetUserId]);
 
-  // Self-follow check at render boundary
+  // === BLOQUE: AUTO-VERIFICACIÓN ===
+  // No renderiza nada si el usuario no está autenticado o si intenta seguirse a sí mismo.
   if (!currentUser || currentUser.id === targetUserId) {
     return null;
   }
 
+  // === BLOQUE: MANEJADOR DE SEGUIR/DEJAR DE SEGUIR ===
+  // Alterna el estado de seguimiento con actualización optimista y rollback en fallo.
   const handleToggleFollow = async () => {
     if (!currentUser) return;
 
+    // Guarda el estado anterior por si hay que revertir (rollback).
     const previousState = following;
 
     // 1. Optimistic Updates
-    // Update local button state
+    // Cambia el estado local del botón inmediatamente (sin esperar al servidor).
     setFollowing(!previousState);
 
-    // Update parent stats optimistically
+    // Notifica al componente padre del cambio optimista (ej. actualizar contadores).
     if (onFollowChange) {
       onFollowChange(!previousState);
     }
 
-    // Update current user's profile following count optimistically
+    // Actualiza el contador de "siguiendo" del perfil local de forma optimista.
     if (profile) {
       const currentFollowingCount = profile.following_count ?? 0;
       updateProfile({
@@ -84,13 +103,16 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
     }
 
     // 2. Perform background request
+    // Ejecuta la operación real en el servidor (seguir o dejar de seguir).
     try {
       if (previousState) {
+        // Si ya seguía, ahora deja de seguir.
         await unfollowUser(currentUser.id, targetUserId);
         toast.success(
           t("profile.unfollow_success", { defaultValue: "Dejaste de seguir a este usuario." }),
         );
       } else {
+        // Si no seguía, ahora empieza a seguir.
         await followUser(currentUser.id, targetUserId);
         toast.success(
           t("profile.follow_success", { defaultValue: "¡Ahora sigues a este usuario!" }),
@@ -98,11 +120,13 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
       }
     } catch (error) {
       // 3. Rollback on failure
+      // Si la petición falla, restaura el estado anterior (deshace el cambio optimista).
       setFollowing(previousState);
       if (onFollowChange) {
         onFollowChange(previousState);
       }
       if (profile) {
+        // Reversión del contador de seguidos.
         const currentFollowingCount = profile.following_count ?? 0;
         updateProfile({
           following_count: previousState
@@ -120,6 +144,8 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
     }
   };
 
+  // === BLOQUE: RENDERIZADO EN ESTADO DE CARGA ===
+  // Muestra un botón deshabilitado con spinner mientras se consulta el estado inicial.
   if (loading) {
     return (
       <button
@@ -132,6 +158,8 @@ export function FollowButton({ targetUserId, onFollowChange }: FollowButtonProps
     );
   }
 
+  // === BLOQUE: RENDERIZADO PRINCIPAL ===
+  // Botón que alterna entre "Siguiendo" (estilo acento) y "Seguir" (estilo primary).
   return (
     <button
       onClick={handleToggleFollow}

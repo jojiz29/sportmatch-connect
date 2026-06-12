@@ -1,3 +1,8 @@
+// ============================================================
+// postgis-integration.spec.ts — E2E: Búsqueda espacial PostGIS
+// Verifica búsqueda de canchas por proximidad geográfica
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("PostGIS Spatial Search Proximity Test", () => {

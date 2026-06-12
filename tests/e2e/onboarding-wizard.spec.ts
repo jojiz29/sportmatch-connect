@@ -1,3 +1,8 @@
+// ============================================================
+// onboarding-wizard.spec.ts — E2E: Flujo completo de onboarding
+// Verifica selección de deportes, creación de perfil y avatar
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Onboarding Wizard E2E Flow", () => {

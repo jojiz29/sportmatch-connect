@@ -1,9 +1,30 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/useBackendMatches.ts
+ * PROPÓSITO: Hooks de TanStack Query para operaciones CRUD de partidos
+ *            contra el backend NestJS.
+ * INCLUYE: useBackendMatches() - hook principal con consulta, creación,
+ *          unión y abandono de partidos.
+ *          useMatchOperations() - hook secundario para actualizar/eliminar.
+ * ===================================================================
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { backendApi } from "@/shared/api/backendApi";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { Match } from "@/entities/types";
 import { toast } from "sonner";
 
+/**
+ * useBackendMatches(): Hook principal de gestión de partidos
+ * ------------------------------------------------------------------
+ * Provee:
+ *   - matches:      Lista de partidos
+ *   - createMatch:  Crear nuevo partido
+ *   - joinMatch:    Unirse a un partido existente
+ *   - leaveMatch:   Abandonar un partido
+ * Todas las mutaciones invalidan "backendMatches" al completarse.
+ */
 export function useBackendMatches() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
@@ -87,6 +108,9 @@ export function useBackendMatches() {
   };
 }
 
+/**
+ * useMatchOperations(): Hook para operaciones de actualización/eliminación
+ */
 export function useMatchOperations() {
   const queryClient = useQueryClient();
 

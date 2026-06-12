@@ -1,3 +1,6 @@
+// === BLOQUE: DEPENDENCIAS ===
+// Store de autenticación con Zustand + persistencia parcial.
+// El modo demo se almacena solo en memoria para evitar manipulaciones vía DevTools.
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
@@ -6,6 +9,7 @@ import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { MOCK_USERS } from "@/shared/api/apiClient";
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -21,6 +25,9 @@ interface AuthState {
   setDemoMode: (status: boolean) => void;
 }
 
+// === BLOQUE: STORE ZUSTAND PERSISTIDO ===
+// Se persisten solo `user` e `isAuthenticated` en localStorage.
+// `isDemoMode` se excluye explícitamente por seguridad (SEC-02).
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -51,12 +58,11 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-/**
- * Purges all persisted Zustand stores and clears localStorage keys.
- * Called during sign-out to ensure a clean session state.
- */
+// === BLOQUE: LIMPIEZA DE SESIÓN ===
+// Purga todas las stores Zustand persistidas y las claves de localStorage.
+// Se invoca durante el cierre de sesión para garantizar un estado limpio.
 export function purgeAllStores() {
-  // Clear all known localStorage keys for this app
+  // Limpia todas las claves conocidas de localStorage para esta app
   const STORE_KEYS = [
     "sportmatch-auth",
     "sportmatch-profile",
@@ -69,17 +75,21 @@ export function purgeAllStores() {
       try {
         safeLocalStorage.removeItem(key);
       } catch {
-        // Ignore individual key failures
+        // Ignora fallos individuales por clave
       }
     });
   } catch {
-    // Ignore storage access errors
+    // Ignora errores de acceso al storage
   }
 
-  // Reset Zustand auth store state
+  // Resetea el estado de la store de autenticación
   useAuthStore.setState({ user: null, isAuthenticated: false });
 }
 
+// === BLOQUE: GESTIÓN DE USUARIOS DE MOCK ===
+// Carga los usuarios simulados desde localStorage o los inicializa
+// con MOCK_USERS. Incluye una recarga forzada de caché si faltan
+// los nuevos perfiles B2B de negocio.
 const getDemoUsers = (): User[] => {
   if (typeof window === "undefined") return MOCK_USERS;
   const stored = localStorage.getItem("sportmatch_demo_users");
@@ -89,7 +99,7 @@ const getDemoUsers = (): User[] => {
   }
   try {
     const parsed = JSON.parse(stored);
-    // Force refresh cache if the new B2B business profiles are missing
+    // Fuerza recarga de caché si faltan los nuevos perfiles B2B
     if (!parsed || !Array.isArray(parsed) || !parsed.some((u: User) => u.id === "business-gym-1")) {
       localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
       return MOCK_USERS;
@@ -101,15 +111,25 @@ const getDemoUsers = (): User[] => {
   }
 };
 
+// Persiste los usuarios simulados en localStorage
 const saveDemoUsers = (users: User[]) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
   }
 };
 
+// === BLOQUE: HOOK PRINCIPAL DE AUTENTICACIÓN ===
+// Expone las funciones signIn, signUp, register y signOut.
+// En modo demo o mock todo el flujo opera contra localStorage;
+// en modo real usa Supabase Auth + backend NestJS.
 export function useAuth() {
   const store = useAuthStore();
 
+  // === INICIO DE SESIÓN ===
+  // Soporta tres modos:
+  //   1. Mock/Demo — login con email sin contraseña contra usuarios locales
+  //   2. Supabase Auth + backend NestJS — login real con credenciales
+  //   3. Invitado — login anónimo con usuario demo genérico
   const signIn = async (email?: string, password?: string) => {
     // E2E / Mock login bypass
     const isMockAttempt = !!(email && !password);
@@ -133,7 +153,7 @@ export function useAuth() {
         }
       }
 
-      // Sync user balance from persisted demo balances
+      // Sincroniza el saldo del usuario con los balances persistidos en demo
       const storedBalances = localStorage.getItem("sportmatch_demo_balances");
       const balances = storedBalances ? JSON.parse(storedBalances) : {};
       const actualBalance =
@@ -144,6 +164,7 @@ export function useAuth() {
       return;
     }
 
+    // Flujo real: autenticación contra Supabase Auth
     if (email && password) {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -162,6 +183,7 @@ export function useAuth() {
       const token = authData.session?.access_token;
       let profile = null;
 
+      // Intenta obtener el perfil desde el backend NestJS primero
       if (token && import.meta.env.VITE_API_URL) {
         try {
           const response = await backendApi.auth.getProfile(token);
@@ -174,6 +196,7 @@ export function useAuth() {
         }
       }
 
+      // Fallback: obtiene el perfil directamente desde Supabase
       if (!profile) {
         const { data: supabaseProfile, error: profileError } = await supabase
           .from("profiles")
@@ -193,7 +216,7 @@ export function useAuth() {
       return;
     }
 
-    // Guest login sets demo mode and bypasses Supabase queries entirely
+    // Login como invitado: activa modo demo y omite consultas a Supabase
     store.setDemoMode(true);
     const demoUser: User = {
       id: "demo-user-id",
@@ -219,11 +242,16 @@ export function useAuth() {
     store.login(demoUser);
   };
 
+  // === REGISTRO ===
+  // En modo demo crea un usuario mock local; en modo real registra en Supabase Auth,
+  // espera el trigger handle_new_user y hace hasta 5 reintentos para obtener el perfil.
+  // Si el trigger no se ejecutó, inserta manualmente la fila en public.profiles.
   const signUp = async (newUser: User) => {
     if (!newUser.email || !newUser.password) {
       throw new Error("Email y contraseña son obligatorios");
     }
 
+    // Modo simulado: registro contra localStorage
     if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
       store.setDemoMode(true);
       const mockRegisteredUser: User = {
@@ -243,6 +271,7 @@ export function useAuth() {
       return;
     }
 
+    // Modo real: registro contra Supabase Auth
     try {
       if (import.meta.env.DEV)
         console.log("Intentando registrar usuario en Supabase Auth:", newUser.email);
@@ -266,8 +295,8 @@ export function useAuth() {
         throw new Error("El registro en Supabase Auth falló.");
       }
 
-      // Supabase trigger handle_new_user should automatically create the public.profiles record.
-      // We attempt to fetch this record with a retry mechanism.
+      // El trigger handle_new_user de Supabase debería crear public.profiles automáticamente.
+      // Reintentamos hasta 5 veces con 500ms de espera entre cada intento.
       let profile = null;
       for (let i = 0; i < 5; i++) {
         const { data } = await supabase
@@ -282,7 +311,7 @@ export function useAuth() {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      // If the trigger hasn't run or is missing, manually insert the profile row.
+      // Si el trigger no se ha ejecutado, insertamos la fila manualmente
       if (!profile) {
         const { data: inserted, error: insertError } = await supabase
           .from("profiles")
@@ -306,7 +335,7 @@ export function useAuth() {
         }
         profile = inserted;
       } else {
-        // Enforce extra metadata fields that the automatic trigger might not have updated
+        // Actualiza campos extra que el trigger automático podría no haber incluido
         const { data: updated } = await supabase
           .from("profiles")
           .update({
@@ -327,6 +356,7 @@ export function useAuth() {
         }
       }
 
+      // Establece la sesión en Supabase para que el usuario quede autenticado
       if (authData.session) {
         await supabase.auth.setSession({
           access_token: authData.session.access_token,
@@ -341,17 +371,20 @@ export function useAuth() {
     }
   };
 
+  // Alias público de signUp para compatibilidad con la interfaz AuthState
   const register = async (newUser: User) => {
     return await signUp(newUser);
   };
 
+  // === CIERRE DE SESIÓN ===
+  // Cierra sesión en Supabase Auth (ignorando errores) y purga todas las stores.
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
     } catch (e) {
       if (import.meta.env.DEV) console.warn("Supabase Auth signOut warning:", e);
     }
-    // Purge all Zustand stores and localStorage keys for a clean session exit
+    // Purga todas las stores Zustand y claves de localStorage
     purgeAllStores();
   };
 

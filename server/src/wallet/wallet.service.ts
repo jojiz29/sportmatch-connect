@@ -1,3 +1,8 @@
+// ============================================================
+// wallet.service.ts — Servicio de billetera
+// Consulta de saldo FitCoins e historial de transacciones
+// ============================================================
+
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 

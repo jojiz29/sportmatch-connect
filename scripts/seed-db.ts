@@ -1,3 +1,8 @@
+// ============================================================
+// seed-db.ts — Script de seed para Vercel Postgres
+// Crea tablas, índices PostGIS y siembra datos de mock users/courts
+// ============================================================
+
 import dotenv from "dotenv";
 import path from "path";
 

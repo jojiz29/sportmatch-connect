@@ -1,17 +1,54 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/backendApi.ts
+ * PROPÓSITO: Cliente HTTP para el backend NestJS.
+ *            Proporciona métodos tipados para cada endpoint REST
+ *            del servidor (auth, matches, courts, posts, etc.).
+ * DIFERENCIA con apiClient.ts: Este llama al backend NestJS
+ * (API REST tradicional), mientras apiClient.ts usa Supabase
+ * directo (API REST de Supabase + RLS).
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
 
+// URL base de la API NestJS + prefijo /api/v1
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000") + "/api/v1";
 
+// ==============================================================
+// TIPOS INTERNOS
+// ==============================================================
+
+/** Formato de respuesta estándar: data + error */
 interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
 
+// ==============================================================
+// FUNCIÓN BASE: fetchApi
+// ==============================================================
+/**
+ * fetchApi(): Ejecuta una llamada HTTP genérica al backend NestJS
+ * ------------------------------------------------------------------
+ * Características:
+ *   - SEC-03: Obtiene dinámicamente el access_token de la sesión
+ *     actual de Supabase y lo inyecta como Bearer token
+ *   - Si el body es FormData, no fuerza Content-Type (lo pone el
+ *     navegador automáticamente con el boundary correcto)
+ *   - Si el body NO es FormData, fuerza application/json
+ *   - Manejo de 401: cierra sesión y redirige al login
+ *   - Manejo de errores HTTP: parsea el body de error
+ *
+ * @param endpoint - Ruta relativa (ej: "/matches")
+ * @param options  - Opciones fetch estándar (method, headers, body)
+ * @returns ApiResponse con data tipada o mensaje de error
+ */
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
-    // SEC-03: Dynamically retrieve standard access_token from active Supabase session (Task 2.1)
+    // Obtiene token de sesión actual de Supabase
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -25,7 +62,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Unless the body is a native FormData object, enforce application/json MIME-type (Task 2.1 / Task 2.2)
+    // Si no es FormData, fuerza JSON
     if (!(options?.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
@@ -35,6 +72,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
       headers,
     });
 
+    // 401 = sesión expirada -> logout automático
     if (response.status === 401) {
       toast.error("Sesión expirada. Por favor, inicia sesión de nuevo.");
       useAuthStore.getState().logout();
@@ -54,35 +92,38 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
   }
 }
 
+// ==============================================================
+// BACKEND API: Exportación principal
+// ==============================================================
 export const backendApi = {
+  // ------------------------------------------------------------
+  // AUTH (Autenticación)
+  // ------------------------------------------------------------
   auth: {
     async getProfile(token: string) {
       return fetchApi("/auth/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     },
 
     async updateProfile(token: string, data: { name?: string; bio?: string; avatar_url?: string }) {
       return fetchApi("/auth/profile", {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       });
     },
 
     async verifyToken(token: string) {
       return fetchApi("/auth/verify", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     },
   },
 
+  // ------------------------------------------------------------
+  // MATCHES (Partidos)
+  // ------------------------------------------------------------
   matches: {
     async getAll(sport?: string) {
       const endpoint = sport ? `/matches?sport=${encodeURIComponent(sport)}` : "/matches";
@@ -107,9 +148,7 @@ export const backendApi = {
     ) {
       return fetchApi("/matches", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(match),
       });
     },
@@ -130,9 +169,7 @@ export const backendApi = {
     ) {
       return fetchApi(`/matches/${id}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       });
     },
@@ -140,31 +177,28 @@ export const backendApi = {
     async delete(token: string, id: string) {
       return fetchApi(`/matches/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     },
 
     async join(token: string, matchId: string) {
       return fetchApi(`/matches/${matchId}/join`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     },
 
     async leave(token: string, matchId: string) {
       return fetchApi(`/matches/${matchId}/leave`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     },
   },
 
+  // ------------------------------------------------------------
+  // COURTS (Canchas)
+  // ------------------------------------------------------------
   courts: {
     async getAll(sport?: string) {
       const endpoint = sport ? `/courts?sport=${encodeURIComponent(sport)}` : "/courts";
@@ -191,9 +225,7 @@ export const backendApi = {
     ) {
       return fetchApi("/courts", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(court),
       });
     },
@@ -211,9 +243,7 @@ export const backendApi = {
     ) {
       return fetchApi(`/courts/${id}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       });
     },
@@ -221,21 +251,19 @@ export const backendApi = {
     async addReview(
       token: string,
       courtId: string,
-      review: {
-        rating: number;
-        comment?: string;
-      },
+      review: { rating: number; comment?: string },
     ) {
       return fetchApi(`/courts/${courtId}/reviews`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(review),
       });
     },
   },
 
+  // ------------------------------------------------------------
+  // PROFILES (Perfiles de usuario)
+  // ------------------------------------------------------------
   profiles: {
     async getById(id: string) {
       return fetchApi(`/profiles/${id}`);
@@ -255,9 +283,7 @@ export const backendApi = {
     ) {
       return fetchApi(`/profiles/${id}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       });
     },
@@ -269,14 +295,15 @@ export const backendApi = {
     async verifyDni(token: string, dni: string) {
       return fetchApi("/profiles/verify-dni", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({ dni }),
       });
     },
   },
 
+  // ------------------------------------------------------------
+  // POSTS (Publicaciones del feed)
+  // ------------------------------------------------------------
   posts: {
     async getAll(sport?: string) {
       const endpoint = sport ? `/posts?sport=${encodeURIComponent(sport)}` : "/posts";
@@ -289,28 +316,20 @@ export const backendApi = {
 
     async create(
       token: string,
-      post: {
-        content: string;
-        type?: string;
-        sport?: string;
-        media_url?: string;
-      },
+      post: { content: string; type?: string; sport?: string; media_url?: string },
     ) {
       return fetchApi("/posts", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(post),
       });
     },
 
+    /** createMultipart(): Subida de post con imagen via FormData */
     async createMultipart(token: string, formData: FormData) {
       return fetchApi("/posts", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
     },
@@ -318,25 +337,18 @@ export const backendApi = {
     async delete(token: string, id: string) {
       return fetchApi(`/posts/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
     },
 
     async addComment(
       token: string,
       postId: string,
-      comment: {
-        content: string;
-        parent_id?: string;
-      },
+      comment: { content: string; parent_id?: string },
     ) {
       return fetchApi(`/posts/${postId}/comments`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(comment),
       });
     },
@@ -344,27 +356,28 @@ export const backendApi = {
     async addReaction(
       token: string,
       postId: string,
-      reaction: {
-        comment_id: string;
-        reaction_type: string;
-      },
+      reaction: { comment_id: string; reaction_type: string },
     ) {
       return fetchApi(`/posts/${postId}/reactions`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(reaction),
       });
     },
   },
 
+  // ------------------------------------------------------------
+  // HEALTH (Estado del servidor)
+  // ------------------------------------------------------------
   health: {
     async check() {
       return fetchApi("/health");
     },
   },
 
+  // ------------------------------------------------------------
+  // USERS (Usuarios)
+  // ------------------------------------------------------------
   users: {
     async getAll(excludeUserId?: string) {
       const endpoint = excludeUserId ? `/users?excludeUserId=${excludeUserId}` : "/users";
@@ -376,6 +389,9 @@ export const backendApi = {
     },
   },
 
+  // ------------------------------------------------------------
+  // WALLET (Billetera FitCoins)
+  // ------------------------------------------------------------
   wallet: {
     async getBalance(userId: string) {
       return fetchApi(`/wallet/${userId}/balance`);
@@ -387,29 +403,28 @@ export const backendApi = {
 
     async createTransaction(
       token: string,
-      data: {
-        user_id: string;
-        amount: number;
-        description: string;
-        type: "EARN" | "SPEND";
-      },
+      data: { user_id: string; amount: number; description: string; type: "EARN" | "SPEND" },
     ) {
       return fetchApi("/wallet/transactions", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       });
     },
   },
 
+  // ------------------------------------------------------------
+  // SPORTS (Catálogo de deportes)
+  // ------------------------------------------------------------
   sports: {
     async getAll() {
       return fetchApi("/sports");
     },
   },
 
+  // ------------------------------------------------------------
+  // BOOKINGS (Reservas)
+  // ------------------------------------------------------------
   bookings: {
     async getByCourtAndDate(courtId: string, date: string) {
       return fetchApi(`/bookings?courtId=${courtId}&date=${date}`);
@@ -430,9 +445,7 @@ export const backendApi = {
     ) {
       return fetchApi("/bookings", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),
       });
     },

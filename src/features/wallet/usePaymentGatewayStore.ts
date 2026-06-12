@@ -1,3 +1,4 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -6,6 +7,8 @@ import { PaymentMethod } from "@/shared/lib/paymentUtils";
 import type { Stripe, StripeElements } from "@stripe/stripe-js";
 import { CardElement } from "@stripe/react-stripe-js";
 
+// === BLOQUE: PAYLOAD DE PAGO ===
+// Datos necesarios para procesar un pago: método, monto, uso de FitCoins y datos del titular.
 export interface PaymentPayload {
   method: PaymentMethod;
   amount: number;
@@ -15,6 +18,8 @@ export interface PaymentPayload {
   phone?: string;
 }
 
+// === BLOQUE: RESULTADO DE PAGO ===
+// Información devuelta tras procesar un pago: éxito, ID de transacción y montos.
 export interface PaymentResult {
   success: boolean;
   transactionId?: string;
@@ -23,6 +28,7 @@ export interface PaymentResult {
   errorCode?: string;
 }
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface PaymentGatewayState {
   isProcessing: boolean;
   status: "idle" | "processing" | "success" | "failed";
@@ -39,6 +45,9 @@ interface PaymentGatewayState {
   resetPayment: () => void;
 }
 
+// === BLOQUE: STORE DE PASARELA DE PAGOS ===
+// Procesa pagos con tarjeta (Stripe), Yape/Plin y descuento con FitCoins.
+// No se persiste en localStorage (el estado es transaccional).
 export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
   isProcessing: false,
   status: "idle",
@@ -47,6 +56,11 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
   errorCode: null,
   lastPaymentMethod: null,
 
+  // === PROCESAR PAGO ===
+  // Soporta tres flujos:
+  //   1. Tarjeta (Stripe) — modo demo simulado o real con PaymentIntent
+  //   2. Yape/Plin — validación de número de celular
+  //   3. FitCoins — canje desde el monedero
   processPayment: async (payload, courtName, stripe, elements) => {
     set({
       isProcessing: true,
@@ -56,6 +70,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       transactionId: null,
     });
 
+    // Registro del intento de pago para auditoría
     const attempt = {
       id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       timestamp: new Date().toISOString(),
@@ -68,7 +83,9 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
 
     const isDemo = useAuthStore.getState().isDemoMode;
 
+    // ── Flujo: Pago con tarjeta (Stripe) ────────────────────────────────
     if (payload.method === "card" && payload.amount > 0) {
+      // Valida que el nombre del titular tenga al menos 3 caracteres
       if (!payload.cardHolderName || payload.cardHolderName.trim().length < 3) {
         const errorCode = "CARD_HOLDER_INVALID";
         const error = "El nombre del titular debe tener al menos 3 letras.";
@@ -77,8 +94,8 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
       }
 
+      // Modo demo: simula éxito sin llamar a Stripe
       if (isDemo) {
-        // Simular éxito de pago con tarjeta en modo demo
         const txId = `TXN-DEMO-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
         set({
           isProcessing: false,
@@ -97,6 +114,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         };
       }
 
+      // Stripe no está inicializado
       if (!stripe || !elements) {
         const errorCode = "STRIPE_NOT_READY";
         const error = "Stripe no está listo. Recarga la página y vuelve a intentar.";
@@ -105,6 +123,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
       }
 
+      // Construye la URL de la función Supabase para crear el PaymentIntent
       const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
       const supabaseUrl = supabaseUrlRaw
         .replace(/\/(?:rest\/v1|functions\/v1)\/?$/, "")
@@ -114,6 +133,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         `${supabaseUrl}/functions/v1`;
 
       try {
+        // Llama a la función serverless de Supabase que crea el PaymentIntent
         const response = await fetch(`${supabaseFunctionsUrl}/create-stripe-payment-intent`, {
           method: "POST",
           mode: "cors",
@@ -146,6 +166,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
           return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
         }
 
+        // Obtiene el elemento CardElement para confirmar el pago
         const cardElement = elements.getElement(CardElement);
         if (!cardElement) {
           const errorCode = "CARD_ELEMENT_MISSING";
@@ -155,6 +176,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
           return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
         }
 
+        // Confirma el pago con Stripe.js
         const confirmResult = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -192,6 +214,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       }
     }
 
+    // ── Flujo: Pago con Yape o Plin ──────────────────────────────────────
     if (payload.method === "yape" || payload.method === "plin") {
       if (!payload.phone || !/^[0-9]{9}$/.test(payload.phone)) {
         const errorCode = "PHONE_INVALID";
@@ -202,6 +225,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       }
     }
 
+    // ── Flujo: Descuento con FitCoins ────────────────────────────────────
     if (payload.useFitcoins && payload.fitcoinsToUse > 0) {
       const ledgerDesc = `Reserva: ${courtName}`;
       const ledgerSuccess = await useWalletStore
@@ -216,6 +240,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       }
     }
 
+    // Éxito: genera un ID de transacción y actualiza el estado
     const txId = `TXN-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
     set({
       isProcessing: false,
@@ -234,6 +259,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
     };
   },
 
+  // === REINICIAR ESTADO DE PAGO ===
   resetPayment: () => {
     set({
       isProcessing: false,

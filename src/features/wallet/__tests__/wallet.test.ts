@@ -1,3 +1,8 @@
+// ============================================================
+// wallet.test.ts — Tests de funciones puras de wallet
+// Verifica cálculo de comisión y total de reserva
+// ============================================================
+
 import { describe, it, expect } from "vitest";
 
 // Función pura extraída para testing de cálculo

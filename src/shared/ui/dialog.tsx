@@ -1,3 +1,4 @@
+// shadcn/ui — Diálogo Modal (ventana emergente con Radix)
 "use client";
 
 import * as React from "react";

@@ -1,3 +1,8 @@
+// ============================================================
+// create-post.dto.ts — DTOs de publicaciones, comentarios y reacciones
+// Incluye validaciones de contenido con límite de caracteres
+// ============================================================
+
 import { IsString, IsOptional, MaxLength } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 

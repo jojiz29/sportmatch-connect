@@ -1,3 +1,8 @@
+// ============================================================
+// edwin-flow.spec.ts — E2E: Flujo de usuario Edwin Flores
+// Verifica registro, matchmaking y actividades del perfil demo
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Edwin Flores E2E Flow", () => {

@@ -1,8 +1,20 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/useBackendPosts.ts
+ * PROPÓSITO: Hooks de TanStack Query para operaciones CRUD de posts
+ *            contra el backend NestJS.
+ * INCLUYE: Consulta, creación, eliminación, comentarios y reacciones.
+ * ===================================================================
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { backendApi } from "@/shared/api/backendApi";
 import { Post } from "@/entities/types";
 import { toast } from "sonner";
 
+/**
+ * useGetPostByIdQuery(): Hook para obtener un post por ID
+ */
 export function useGetPostByIdQuery(id: string) {
   return useQuery({
     queryKey: ["backendPost", id],
@@ -14,6 +26,19 @@ export function useGetPostByIdQuery(id: string) {
   });
 }
 
+/**
+ * useBackendPosts(): Hook principal de gestión de posts
+ * ------------------------------------------------------------------
+ * Provee:
+ *   - posts:       Lista de posts
+ *   - createPost:  Crear nuevo post
+ *   - deletePost:  Eliminar post
+ *   - addComment:  Agregar comentario a un post
+ *   - addReaction: Reaccionar a un comentario
+ *
+ * Cada mutación invalida "backendPosts" al completarse para
+ * refrescar automáticamente el feed.
+ */
 export function useBackendPosts() {
   const queryClient = useQueryClient();
 

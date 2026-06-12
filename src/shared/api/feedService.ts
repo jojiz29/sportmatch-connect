@@ -1,3 +1,13 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/feedService.ts
+ * PROPÓSITO: Servicio del feed de noticias sociales.
+ *            Gestiona la obtención y creación de posts con
+ *            lógica de visibilidad (seguidos, propios, patrocinados
+ *            cercanos) y notificaciones B2B.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { Post } from "@/entities/types";
 import { calculateDistance } from "./geoService";
@@ -10,6 +20,9 @@ import { useSocialStore } from "@/features/social/model/useSocialStore";
 
 const LOCAL_STORAGE_KEY_POSTS = "sportmatch_demo_posts";
 
+// ==============================================================
+// DATOS MOCK: Posts iniciales de demostración
+// ==============================================================
 const DEFAULT_MOCK_POSTS: Post[] = [
   {
     id: "post-demo-1",
@@ -46,6 +59,10 @@ const DEFAULT_MOCK_POSTS: Post[] = [
   },
 ];
 
+// ==============================================================
+// HELPERS DE DEMO MODE
+// ==============================================================
+
 function getMockPosts(): Post[] {
   if (typeof window === "undefined") return DEFAULT_MOCK_POSTS;
   try {
@@ -68,6 +85,7 @@ function saveMockPosts(posts: Post[]) {
   }
 }
 
+/** Interfaz de post tal como lo devuelve Supabase (con perfil anidado) */
 interface SupabasePost {
   id: string;
   user_id: string;
@@ -88,13 +106,26 @@ interface SupabasePost {
   } | null;
 }
 
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
+
+/**
+ * getFeed(): Obtiene posts para el feed del usuario
+ * ------------------------------------------------------------------
+ * Lógica de visibilidad en modo real:
+ *   1. Posts propios del usuario
+ *   2. Posts de usuarios que el usuario sigue
+ *   3. Posts patrocinados de negocios dentro de un radio de 5km
+ *      (para mostrar contenido relevante cerca de la ubicación)
+ */
 export async function getFeed(userId: string): Promise<Post[]> {
   try {
     if (useAuthStore.getState().isDemoMode) {
       return getMockPosts();
     }
 
-    // 1. Fetch user's own profile for distance calculation
+    // 1. Obtiene ubicación del usuario actual para calcular distancias
     const { data: currentUser } = await withTimeout(
       supabase
         .from("profiles")
@@ -103,14 +134,14 @@ export async function getFeed(userId: string): Promise<Post[]> {
         .single(),
     ).catch(() => ({ data: null }));
 
-    // 2. Fetch the list of followed users
+    // 2. Obtiene la lista de usuarios seguidos
     const { data: following } = await withTimeout(
       supabase.from("followers").select("following_id").eq("follower_id", userId),
     ).catch(() => ({ data: null }));
 
     const followingIds = new Set((following || []).map((f) => f.following_id));
 
-    // 3. Fetch all posts with their author profiles
+    // 3. Obtiene todos los posts con sus autores
     const { data: posts, error } = await withTimeout(
       supabase
         .from("posts")
@@ -123,18 +154,18 @@ export async function getFeed(userId: string): Promise<Post[]> {
       return [];
     }
 
-    // 4. Filter posts based on logic (own, following, or sponsored within 5km)
+    // 4. Filtra posts según visibilidad
     const filtered = ((posts as unknown as SupabasePost[]) || []).filter((post) => {
       const author = post.profile;
       if (!author) return false;
 
-      // Own post
+      // Post propio: siempre visible
       if (post.user_id === userId) return true;
 
-      // Following user post
+      // Post de usuario seguido: visible
       if (followingIds.has(post.user_id)) return true;
 
-      // Sponsored post within 5km
+      // Post patrocinado dentro de 5km: visible (marketing geolocalizado)
       if (author.is_sponsored) {
         if (!currentUser?.last_location_lat || !currentUser?.last_location_lng) return false;
         if (!author.last_location_lat || !author.last_location_lng) return false;
@@ -151,6 +182,7 @@ export async function getFeed(userId: string): Promise<Post[]> {
       return false;
     });
 
+    // 5. Normaliza la respuesta
     return (filtered as SupabasePost[]).map((post) => ({
       id: post.id,
       user_id: post.user_id,
@@ -168,6 +200,25 @@ export async function getFeed(userId: string): Promise<Post[]> {
   }
 }
 
+/**
+ * createPost(): Crea un nuevo post en el feed
+ * ------------------------------------------------------------------
+ * Soporta dos modos de subida:
+ *   - Sin imagen: insert normal en Supabase
+ *   - Con imagen (imageFile): subida multipart al backend NestJS
+ *     (Task 2.2 - E2E Hydration)
+ *
+ * Si el autor es un negocio (BUSINESS), notifica automáticamente
+ * a todos sus seguidores sobre la nueva publicación (ofertas,
+ * promociones, etc.)
+ *
+ * @param userId    - ID del autor
+ * @param content   - Contenido del post
+ * @param type      - Tipo de post (TEXT, IMAGE, etc.)
+ * @param mediaUrl  - URL de media (opcional)
+ * @param sport     - Deporte relacionado (opcional)
+ * @param imageFile - Archivo de imagen para subida directa (opcional)
+ */
 export async function createPost(
   userId: string,
   content: string,
@@ -193,10 +244,9 @@ export async function createPost(
     posts.unshift(newPost);
     saveMockPosts(posts);
 
-    // Trigger B2B notification for followers in demo mode
+    // Notifica a seguidores si es negocio (Demo Mode)
     if (currentUser && currentUser.user_role === "BUSINESS") {
       const businessName = currentUser.company_name || currentUser.name;
-      // Fetch first catalog item for deep link
       getCatalogItems(userId)
         .then(async (catalog) => {
           const itemIdToLink = catalog[0]?.id;
@@ -204,18 +254,10 @@ export async function createPost(
           const notifTitle = `Nueva oferta de ${businessName}`;
           const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
 
-          // In demo mode, notify all users who follow this business
           const relationships = useSocialStore.getState().relationships;
           const followerIds = relationships
             .filter((r) => r.followingId === userId)
             .map((r) => r.followerId);
-
-          console.log("B2B NOTIFICATION DEBUG:", {
-            userId,
-            relationships,
-            followerIds,
-            notifTitle,
-          });
 
           for (const followerId of followerIds) {
             await createNotification(
@@ -235,7 +277,9 @@ export async function createPost(
     return newPost;
   }
 
-  // E2E Hydration: If an image file was supplied, upload via multipart FormData to NestJS (Task 2.2)
+  // --- MODO REAL ---
+
+  // Si hay archivo de imagen, sube via multipart FormData al backend NestJS
   if (imageFile) {
     const formData = new FormData();
     formData.append("userId", userId);
@@ -254,9 +298,9 @@ export async function createPost(
     return uploadResult as Post;
   }
 
+  // Post de texto: inserta en Supabase
   const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // 1. Insert post in Supabase
   const { data: post, error } = await withTimeout(
     supabase
       .from("posts")
@@ -278,13 +322,12 @@ export async function createPost(
     throw error || new Error("Failed to create post");
   }
 
-  // 2. Trigger notification for business followers
+  // Notifica a seguidores si el autor es un negocio
   try {
     const author = (post as unknown as SupabasePost).profile;
     if (author && author.user_role === "BUSINESS") {
       const businessName = author.company_name || author.name;
 
-      // Fetch first catalog item for deep link
       const { data: catalogItems } = await supabase
         .from("business_catalog")
         .select("id")
@@ -296,7 +339,6 @@ export async function createPost(
       const notifTitle = `Nueva oferta de ${businessName}`;
       const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
 
-      // Fetch followers
       const { data: followers } = await supabase
         .from("followers")
         .select("follower_id")
@@ -318,6 +360,7 @@ export async function createPost(
     if (import.meta.env.DEV) console.warn("Could not trigger B2B post notifications:", err);
   }
 
+  // Normaliza la respuesta
   const postAuthor = (post as unknown as SupabasePost).profile || {
     name: "Deportista",
     avatar_url: "",

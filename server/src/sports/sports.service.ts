@@ -1,3 +1,8 @@
+// ============================================================
+// sports.service.ts — Servicio de deportes
+// Obtiene todos los deportes ordenados alfabéticamente
+// ============================================================
+
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 

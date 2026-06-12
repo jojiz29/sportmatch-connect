@@ -1,3 +1,8 @@
+// === BLOQUE: Ruta de Chat / Mensajería ===
+// Punto de entrada para la mensajería en tiempo real entre jugadores.
+// Gestiona la lista de conversaciones, conexiones deportivas, creación de
+// Squads grupales y envío de tarjetas interactivas (invitaciones a Squads,
+// propuestas de partido, booking de canchas).
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Search, Plus, Users, MessageSquare } from "lucide-react";
@@ -18,12 +23,16 @@ import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import { PlayerConnection, getMutualPlayerConnections } from "@/shared/api/connectionService";
 
 export const Route = createFileRoute("/app/chat")({
-  head: () => ({ meta: [{ title: "Chat — SportMatch" }] }),
-  component: Chat,
+  head: () => ({ meta: [{ title: "Chats — SportMatch" }] }),
+  component: Chats,
 });
 
-function Chat() {
+function Chats() {
   const { t } = useTranslation();
+
+  // === BLOQUE: Estado del chat y búsqueda ===
+  // Obtenemos el store central de chat (conversaciones, mensajes, suscripciones)
+  // y variables de UI para búsqueda, modales y adjuntos.
   const {
     chats,
     activeConversationId,
@@ -34,6 +43,7 @@ function Chat() {
     subscribeToChat,
     subscribeToAllChats,
   } = useChatStore();
+
   const [text, setText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
@@ -43,12 +53,18 @@ function Chat() {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const currentUser = useAuthStore((s) => s.user);
+
+  // === BLOQUE: Carga de perfiles y conexiones ===
+  // Lista completa de usuarios registrados para mostrar nombres/avatares
+  // en la lista de conversaciones y conexiones deportivas.
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
   const [areProfilesLoading, setAreProfilesLoading] = useState(true);
   const [sidebarView, setSidebarView] = useState<"chats" | "connections">("chats");
   const [playerConnections, setPlayerConnections] = useState<PlayerConnection[]>([]);
 
-  // Media attachments & interactive cards state
+  // === BLOQUE: Adjuntos y tarjetas interactivas ===
+  // Manejo de imágenes en base64, menú de adjuntos, Squads y partidos
+  // del usuario para enviar como tarjetas interactivas en el chat.
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
   const [userSquads, setUserSquads] = useState<Squad[]>([]);
@@ -56,9 +72,13 @@ function Chat() {
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
 
+  // Mapas de estado para unirse a Squads desde el chat
   const [isJoiningMap, setIsJoiningMap] = useState<Record<string, boolean>>({});
   const [joinedMap, setJoinedMap] = useState<Record<string, boolean>>({});
 
+  // === BLOQUE: handleJoinSquad ===
+  // Permite al usuario unirse a un Squad directamente desde el chat.
+  // Actualiza el estado local de forma optimista y muestra notificación.
   const handleJoinSquad = async (squadId: string, squadName: string) => {
     if (!currentUser) return;
     try {
@@ -77,7 +97,9 @@ function Chat() {
   const relationships = useSocialStore((state) => state.relationships);
   const createGroupChat = useChatStore((state) => state.createGroupChat);
 
-  // Sync followings & catalog information
+  // === BLOQUE: Sincronización de relaciones (followers) ===
+  // Carga las relaciones de seguimiento desde Supabase para usarlas
+  // en la selección de miembros para Squads grupales.
   useEffect(() => {
     if (!currentUser || useAuthStore.getState().isDemoMode) return;
 
@@ -101,14 +123,15 @@ function Chat() {
     syncRelationships();
   }, [currentUser]);
 
-  // Load squads & matches for user attachments
+  // === BLOQUE: Carga de Squads y partidos para adjuntos ===
+  // Obtiene los Squads y partidos activos del usuario para mostrarlos
+  // como opciones en el menú de adjuntos del chat.
   useEffect(() => {
     if (!currentUser) return;
     getSquads()
       .then((list) => setUserSquads(list))
       .catch((err) => console.warn("Failed to load user squads for attachments:", err));
 
-    // Try backend first for matches, fallback to Supabase
     backendApi.matches
       .getAll()
       .then((list) => setSystemMatches(list as Match[]))
@@ -120,6 +143,9 @@ function Chat() {
       });
   }, [currentUser]);
 
+  // === BLOQUE: IDs de usuarios seguidos/seguidores ===
+  // Extrae los IDs de usuarios con los que el usuario actual tiene
+  // una relación de seguimiento (para sugerir como contactos).
   const socialUserIds = useMemo(() => {
     if (!currentUser) return [];
     const followingIds = relationships
@@ -134,10 +160,16 @@ function Chat() {
     );
   }, [relationships, currentUser]);
 
+  // === BLOQUE: Usuarios con relación social ===
+  // Filtra la lista completa de registrados para obtener solo aquellos
+  // que tienen una relación de seguimiento con el usuario actual.
   const socialUsers = useMemo(() => {
     return registeredUsers.filter((u) => socialUserIds.includes(u.id));
   }, [registeredUsers, socialUserIds]);
 
+  // === BLOQUE: Carga inicial de usuarios ===
+  // Obtiene todos los usuarios registrados desde la API para
+  // mostrar nombres y avatares en la interfaz de chat.
   useEffect(() => {
     let active = true;
     setAreProfilesLoading(true);
@@ -155,12 +187,13 @@ function Chat() {
     };
   }, []);
 
+  // === BLOQUE: Carga de conexiones deportivas ===
+  // Las conexiones se administran desde Mensajes para poder iniciar
+  // varias conversaciones, desafíos o invitaciones con el mismo jugador.
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
 
-    // Las conexiones se administran desde Mensajes para poder iniciar varias
-    // conversaciones, desafíos o invitaciones con el mismo jugador.
     getMutualPlayerConnections(currentUser.id)
       .then((connections) => {
         if (active) setPlayerConnections(connections);
@@ -172,17 +205,20 @@ function Chat() {
     };
   }, [currentUser]);
 
+  // === BLOQUE: Inicialización del chat y suscripción global ===
+  // Inicializa el store de chat y se suscribe a todas las conversaciones
+  // del usuario para recibir mensajes en tiempo real.
   useEffect(() => {
     initChat();
   }, [initChat]);
 
   useEffect(() => {
-    // La bandeja global recibe mensajes de todas las conversaciones en tiempo real,
-    // incluso cuando el usuario está leyendo otro chat.
     const unsubscribe = subscribeToAllChats();
     return unsubscribe;
   }, [subscribeToAllChats]);
 
+  // === BLOQUE: Filtrado de chats y scroll automático ===
+  // Filtra los chats del usuario actual y hace scroll al último mensaje.
   const userChats = chats.filter((c) => currentUser && c.current_players.includes(currentUser.id));
   const activeChat = userChats.find((c) => c.id === activeConversationId);
 
@@ -190,13 +226,17 @@ function Chat() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages]);
 
+  // === BLOQUE: Suscripción a la conversación activa ===
+  // Se suscribe a los cambios en tiempo real de la conversación activa
+  // para mostrar mensajes entrantes sin recargar.
   useEffect(() => {
     if (!activeConversationId) return;
     const unsubscribe = subscribeToChat(activeConversationId);
     return unsubscribe;
   }, [activeConversationId, subscribeToChat]);
 
-  // Handle selected image attachments transcoding to base64
+  // === BLOQUE: Manejo de adjuntos de imágenes ===
+  // Convierte el archivo seleccionado a base64 para enviarlo como adjunto.
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -209,13 +249,16 @@ function Chat() {
     }
   };
 
+  // === BLOQUE: Envío de mensajes ===
+  // Valida que haya una conversación activa y contenido, limpia el
+  // compositor inmediatamente para experiencia de mensajería instantánea
+  // y recupera el borrador si Supabase falla.
   const handleSend = async () => {
     console.log("[chat] ui:send-click", {
       activeConversationId,
       hasText: Boolean(text.trim()),
       hasImage: Boolean(selectedImageBase64),
     });
-    // Un mensaje necesita conversación activa y contenido real o un adjunto.
     if (!activeConversationId) {
       toast.error("No hay una conversación activa");
       return;
@@ -225,8 +268,6 @@ function Chat() {
     const pendingText = text.trim();
     const pendingImage = selectedImageBase64;
 
-    // Limpiamos el compositor inmediatamente para que el chat responda como una
-    // aplicación de mensajería. Si Supabase falla, recuperamos el borrador.
     setText("");
     setSelectedImageBase64(null);
     setIsAttachmentMenuOpen(false);
@@ -243,7 +284,9 @@ function Chat() {
     }
   };
 
-  // Helper callbacks to send Actionable Cards
+  // === BLOQUE: Tarjetas interactivas ===
+  // Envía tarjetas con datos estructurados (Squad invite, Match proposal)
+  // para que el receptor pueda interactuar directamente desde el chat.
   const sendSquadInviteCard = (squad: Squad) => {
     if (!activeConversationId) return;
     sendMessage(activeConversationId, `¡Únete a mi Squad: ${squad.name}! 👥`, undefined, {
@@ -269,9 +312,11 @@ function Chat() {
     toast.success("Propuesta de Partido enviada.");
   };
 
+  // === BLOQUE: Checkout de cancha desde tarjeta ===
+  // Al hacer clic en "Jugar" desde una tarjeta de propuesta de partido,
+  // carga los datos de la cancha para abrir el modal de booking.
   const handlePlayCheckout = async (courtId: string) => {
     try {
-      // Try backend first, fallback to Supabase
       const backendResult = await backendApi.courts.getById(courtId);
       if (backendResult.data) {
         setSelectedCourtForBooking(backendResult.data as Court);
@@ -287,6 +332,7 @@ function Chat() {
 
   if (!currentUser) return null;
 
+  // === BLOQUE: Filtrado por búsqueda ===
   const filteredUserChats = userChats.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
@@ -302,7 +348,9 @@ function Chat() {
       <PageHeader title={t("chat.title")} />
 
       <div className="flex-1 bg-gradient-card border border-border rounded-2xl shadow-card overflow-hidden flex mt-4">
-        {/* Sidebar */}
+        {/* === BLOQUE: Sidebar de conversaciones === */}
+        {/* Barra lateral con buscador, botones de nuevo chat y crear Squad,
+            y pestañas para alternar entre Conversaciones y Conexiones. */}
         <div className="w-full md:w-80 border-r border-border flex flex-col bg-card/50">
           <div className="p-4 border-b border-border flex items-center gap-2">
             <div className="relative flex-1">
@@ -338,6 +386,7 @@ function Chat() {
               <Plus className="h-4 w-4" />
             </button>
           </div>
+          {/* === BLOQUE: Pestañas de navegación === */}
           <div className="grid grid-cols-2 gap-1 p-2 border-b border-border bg-background/30">
             <button
               onClick={() => setSidebarView("chats")}
@@ -357,6 +406,7 @@ function Chat() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
+            {/* === BLOQUE: Lista de conversaciones === */}
             {sidebarView === "chats" &&
               filteredUserChats.map((c) => {
                 const lastMessage = c.messages[c.messages.length - 1];
@@ -419,6 +469,7 @@ function Chat() {
                 );
               })}
 
+            {/* === BLOQUE: Lista de conexiones deportivas === */}
             {sidebarView === "connections" &&
               filteredConnections.map((connection) => {
                 const profile =
@@ -482,7 +533,9 @@ function Chat() {
           </div>
         </div>
 
-        {/* Chat Area */}
+        {/* === BLOQUE: Área de chat === */}
+        {/* Panel principal de mensajería con ChatWindow que maneja
+            el historial, el compositor y las tarjetas interactivas. */}
         <div className="hidden md:flex flex-1 flex-col bg-background/50">
           <ChatWindow
             activeChat={activeChat}
@@ -512,7 +565,7 @@ function Chat() {
         </div>
       </div>
 
-      {/* Booking Modal Checkout */}
+      {/* === BLOQUE: Modal de Booking === */}
       <BookingModal
         court={selectedCourtForBooking}
         isOpen={selectedCourtForBooking !== null}
@@ -520,7 +573,9 @@ function Chat() {
         baseLocation={null}
       />
 
-      {/* New Chat Modal Overlay */}
+      {/* === BLOQUE: Modal de nuevo chat === */}
+      {/* Overlay con buscador de usuarios registrados para iniciar
+          una nueva conversación uno a uno. */}
       {isNewChatModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -589,7 +644,9 @@ function Chat() {
         </div>
       )}
 
-      {/* Create Squad Modal Overlay */}
+      {/* === BLOQUE: Modal de creación de Squad === */}
+      {/* Overlay con formulario para crear un Squad grupal seleccionando
+          miembros de la lista de contactos (followers/following). */}
       {isCreateSquadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -709,4 +766,5 @@ function Chat() {
     </div>
   );
 }
-export default Chat;
+
+export default Chats;
