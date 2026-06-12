@@ -440,12 +440,48 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
 // DATOS MOCK: Catálogo de deportes disponibles en la plataforma
 // ------------------------------------------------------------------
 const MOCK_SPORTS: SportCatalog[] = [
-  { id: "s1", name: "Pádel", icon_slug: "padel", default_max_players: 4, created_at: new Date().toISOString() },
-  { id: "s2", name: "Fútbol", icon_slug: "futbol", default_max_players: 14, created_at: new Date().toISOString() },
-  { id: "s3", name: "Tenis", icon_slug: "tenis", default_max_players: 2, created_at: new Date().toISOString() },
-  { id: "s4", name: "Vóley", icon_slug: "voley", default_max_players: 12, created_at: new Date().toISOString() },
-  { id: "s5", name: "Básquet", icon_slug: "basquet", default_max_players: 10, created_at: new Date().toISOString() },
-  { id: "s6", name: "Running", icon_slug: "running", default_max_players: 20, created_at: new Date().toISOString() },
+  {
+    id: "s1",
+    name: "Pádel",
+    icon_slug: "padel",
+    default_max_players: 4,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "s2",
+    name: "Fútbol",
+    icon_slug: "futbol",
+    default_max_players: 14,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "s3",
+    name: "Tenis",
+    icon_slug: "tenis",
+    default_max_players: 2,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "s4",
+    name: "Vóley",
+    icon_slug: "voley",
+    default_max_players: 12,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "s5",
+    name: "Básquet",
+    icon_slug: "basquet",
+    default_max_players: 10,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "s6",
+    name: "Running",
+    icon_slug: "running",
+    default_max_players: 20,
+    created_at: new Date().toISOString(),
+  },
 ];
 
 // ------------------------------------------------------------------
@@ -483,7 +519,6 @@ interface DBResponseMatch {
 //   2. Si no -> consulta Supabase y transforma la respuesta
 // ==================================================================
 export const apiClient = {
-
   // ==============================================================
   // SECCIÓN: USERS (Perfiles de usuario)
   // ==============================================================

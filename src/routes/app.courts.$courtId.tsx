@@ -5,8 +5,14 @@
 // NOTA: Actualmente redirige a /app (integrado en el dashboard).
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
-  ArrowLeft, Star, MapPin, Calendar as CalendarIcon,
-  Clock, Loader2, Check, QrCode,
+  ArrowLeft,
+  Star,
+  MapPin,
+  Calendar as CalendarIcon,
+  Clock,
+  Loader2,
+  Check,
+  QrCode,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -18,7 +24,9 @@ import { backendApi } from "@/shared/api/backendApi";
 import { InsufficientBalanceModal } from "@/components/InsufficientBalanceModal";
 import { calculateDistance } from "@/shared/api/geoService";
 import {
-  usePaymentGatewayStore, PaymentPayload, PaymentResult,
+  usePaymentGatewayStore,
+  PaymentPayload,
+  PaymentResult,
 } from "@/features/wallet/usePaymentGatewayStore";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 import { logPaymentAttempt } from "@/services/paymentService";
@@ -63,7 +71,10 @@ export const Route = createFileRoute("/app/courts/$courtId")({
     }
 
     const { data: court, error } = await supabase
-      .from("courts").select("*").eq("id", params.courtId).single();
+      .from("courts")
+      .select("*")
+      .eq("id", params.courtId)
+      .single();
 
     if (error || !court) {
       console.error("Court details not found in Supabase:", error);
@@ -114,7 +125,10 @@ function CourtDetail() {
   // Cuando el usuario selecciona un horario, se inicia un conteo
   // regresivo de 5 minutos. Al vencer, se libera el slot.
   useEffect(() => {
-    if (!slot) { setHoldExpiry(null); return; }
+    if (!slot) {
+      setHoldExpiry(null);
+      return;
+    }
     setHoldExpiry(Date.now() + 5 * 60 * 1000);
   }, [slot]);
 
@@ -123,13 +137,17 @@ function CourtDetail() {
     const interval = window.setInterval(() => {
       const diff = holdExpiry - Date.now();
       if (diff <= 0) {
-        setSlot(null); setHoldExpiry(null); setHoldCountdown("00:00");
+        setSlot(null);
+        setHoldExpiry(null);
+        setHoldCountdown("00:00");
         toast.error("El tiempo de retención del horario venció. Selecciona otro horario.");
         return;
       }
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
-      setHoldCountdown(`${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`);
+      setHoldCountdown(
+        `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+      );
     }, 1000);
     return () => window.clearInterval(interval);
   }, [holdExpiry]);
@@ -138,8 +156,12 @@ function CourtDetail() {
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => { setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude }); },
-        (error) => { console.warn("Geolocation unavailable.", error.message); },
+        (position) => {
+          setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        (error) => {
+          console.warn("Geolocation unavailable.", error.message);
+        },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
     }
@@ -171,20 +193,27 @@ function CourtDetail() {
         try {
           const booked = await apiClient.bookings.getByCourtAndDate(court.id, todayStr);
           setBookedSlots(booked);
-        } catch (err) { console.error("Error loading booked slots:", err); }
-      } finally { setLoadingBookings(false); }
+        } catch (err) {
+          console.error("Error loading booked slots:", err);
+        }
+      } finally {
+        setLoadingBookings(false);
+      }
     }
     fetchBookedSlots();
 
     const channel = supabase
       .channel(`public:bookings:court_id=eq.${court.id}`)
-      .on("postgres_changes",
+      .on(
+        "postgres_changes",
         { event: "*", schema: "public", table: "bookings", filter: `court_id=eq.${court.id}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const newBooking = payload.new as { date: string; time_slot: string };
             if (newBooking.date === todayStr) {
-              setBookedSlots((prev) => prev.includes(newBooking.time_slot) ? prev : [...prev, newBooking.time_slot]);
+              setBookedSlots((prev) =>
+                prev.includes(newBooking.time_slot) ? prev : [...prev, newBooking.time_slot],
+              );
             }
           } else if (payload.eventType === "DELETE") {
             const oldBooking = payload.old as { date: string; time_slot: string };
@@ -196,11 +225,15 @@ function CourtDetail() {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [court, user]);
 
   if (!court || !user) {
-    return <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />;
+    return (
+      <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
+    );
   }
 
   // === BLOQUE: Cálculo de costos ===
@@ -220,8 +253,14 @@ function CourtDetail() {
     stripe?: Stripe | null,
     elements?: StripeElements | null,
   ) => {
-    if (!slot) { toast.error("Por favor selecciona un horario."); return; }
-    if (!user) { toast.error("Debes iniciar sesión para realizar una reserva."); return; }
+    if (!slot) {
+      toast.error("Por favor selecciona un horario.");
+      return;
+    }
+    if (!user) {
+      toast.error("Debes iniciar sesión para realizar una reserva.");
+      return;
+    }
 
     setPaymentSelection(selection);
     setIsBooking(true);
@@ -325,7 +364,15 @@ function CourtDetail() {
 
   // === BLOQUE: Slots dinámicos ===
   const slots = court.operating_hours || [
-    "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "19:00", "20:00", "21:00",
+    "08:00",
+    "10:00",
+    "12:00",
+    "14:00",
+    "16:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
   ];
 
   const holdPaymentDiscount = paymentSelection?.fitcoinsToUse ?? 0;
@@ -349,7 +396,9 @@ function CourtDetail() {
             <img
               src={court.image_url || getSportFallbackImage(court.sport)}
               alt={court.name}
-              onError={(e) => { e.currentTarget.src = getSportFallbackImage(court.sport); }}
+              onError={(e) => {
+                e.currentTarget.src = getSportFallbackImage(court.sport);
+              }}
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -371,7 +420,8 @@ function CourtDetail() {
                 </span>
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${court.lat},${court.lng}`}
-                  target="_blank" rel="noopener noreferrer"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all"
                 >
                   <MapPin className="h-3 w-3 text-neon" /> Cómo llegar
@@ -385,7 +435,9 @@ function CourtDetail() {
             <h3 className="font-semibold mb-4">Comodidades</h3>
             <div className="flex flex-wrap gap-2">
               {court.amenities?.map((a) => (
-                <span key={a} className="px-3 py-1 rounded-xl bg-accent text-sm">{a}</span>
+                <span key={a} className="px-3 py-1 rounded-xl bg-accent text-sm">
+                  {a}
+                </span>
               ))}
             </div>
           </div>
@@ -393,11 +445,15 @@ function CourtDetail() {
 
         {/* === BLOQUE: Sección de reserva y pago === */}
         <div>
-          <div id="booking-section" className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card sticky top-8">
+          <div
+            id="booking-section"
+            className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card sticky top-8"
+          >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Reserva tu turno</h2>
               <div className="text-xl font-semibold text-neon">
-                ${court.price_per_hour}<span className="text-sm text-muted-foreground">/h</span>
+                ${court.price_per_hour}
+                <span className="text-sm text-muted-foreground">/h</span>
               </div>
             </div>
 
@@ -408,9 +464,14 @@ function CourtDetail() {
                   <CalendarIcon className="h-4 w-4 text-primary" /> Fecha
                 </label>
                 <div className="p-3 rounded-xl border border-border bg-background text-sm flex justify-between items-center cursor-not-allowed opacity-80">
-                  <span>Hoy, {new Date().toLocaleDateString("es-AR", {
-                    weekday: "short", day: "numeric", month: "short",
-                  })}</span>
+                  <span>
+                    Hoy,{" "}
+                    {new Date().toLocaleDateString("es-AR", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
                   <span className="text-neon text-xs font-semibold">Seleccionado</span>
                 </div>
               </div>
@@ -419,7 +480,9 @@ function CourtDetail() {
               <div>
                 <label className="text-sm font-semibold mb-3 flex items-center gap-2">
                   <Clock className="h-4 w-4 text-electric" /> Horarios disponibles
-                  {loadingBookings && <Loader2 className="h-3 w-3 animate-spin text-primary ml-2" />}
+                  {loadingBookings && (
+                    <Loader2 className="h-3 w-3 animate-spin text-primary ml-2" />
+                  )}
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   {slots.map((s) => {
@@ -428,7 +491,9 @@ function CourtDetail() {
                       <button
                         key={s}
                         disabled={taken}
-                        onClick={() => { if (!confirmed) setSlot(s); }}
+                        onClick={() => {
+                          if (!confirmed) setSlot(s);
+                        }}
                         className={`py-3 rounded-xl text-sm font-medium transition-all ${
                           taken
                             ? "bg-muted/30 text-muted-foreground/30 line-through cursor-not-allowed"
@@ -483,12 +548,18 @@ function CourtDetail() {
             {/* Detalle de la transacción */}
             <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
               <div className="flex justify-between items-center pb-2 border-b border-border/30">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Transacción</span>
-                <span className="font-mono text-xs font-bold text-neon">{transactionId || "TXN-DEMO123"}</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Transacción
+                </span>
+                <span className="font-mono text-xs font-bold text-neon">
+                  {transactionId || "TXN-DEMO123"}
+                </span>
               </div>
               <div className="space-y-1">
                 <div className="font-bold text-foreground text-sm">{court.name}</div>
-                <div className="text-[11px] text-muted-foreground leading-normal">{court.address}</div>
+                <div className="text-[11px] text-muted-foreground leading-normal">
+                  {court.address}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-1">
                 <div>
@@ -496,14 +567,18 @@ function CourtDetail() {
                   <div className="text-xs font-bold text-foreground">{court.sport}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-muted-foreground font-semibold">Fecha y Hora</div>
+                  <div className="text-[10px] text-muted-foreground font-semibold">
+                    Fecha y Hora
+                  </div>
                   <div className="text-xs font-bold text-foreground">Hoy, {slot}</div>
                 </div>
               </div>
 
               {/* Detalle del pago */}
               <div className="pt-3 border-t border-border/30 space-y-1.5">
-                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Detalle del Pago</div>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Detalle del Pago
+                </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Precio Cancha / Hora</span>
                   <span>S/ {court.price_per_hour.toFixed(2)}</span>
@@ -521,9 +596,13 @@ function CourtDetail() {
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Método de pago</span>
                   <span>
-                    {paymentSelection?.method === "fitcoins" ? "FitCoins"
-                      : paymentSelection?.method === "card" ? "Tarjeta"
-                      : paymentSelection?.method === "yape" ? "Yape" : "Plin"}
+                    {paymentSelection?.method === "fitcoins"
+                      ? "FitCoins"
+                      : paymentSelection?.method === "card"
+                        ? "Tarjeta"
+                        : paymentSelection?.method === "yape"
+                          ? "Yape"
+                          : "Plin"}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-dashed border-border/40">
@@ -535,7 +614,9 @@ function CourtDetail() {
 
             {/* QR Code */}
             <div className="mt-5 space-y-3">
-              <p className="text-[10px] text-muted-foreground">Mostrá este QR de check-in al ingresar al club</p>
+              <p className="text-[10px] text-muted-foreground">
+                Mostrá este QR de check-in al ingresar al club
+              </p>
               <div className="mx-auto h-32 w-32 rounded-2xl bg-white border border-border p-2 flex items-center justify-center shadow-glow">
                 <QrCode className="h-28 w-28 text-black" />
               </div>

@@ -97,7 +97,10 @@ export function ReviewModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" id="review-modal-overlay">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          id="review-modal-overlay"
+        >
           {/* Fondo oscuro */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -121,7 +124,10 @@ export function ReviewModal({
                 <Star className="h-5 w-5 text-warning" />
                 <h2 className="font-bold text-foreground text-base">Valorar jugador</h2>
               </div>
-              <button onClick={handleClose} className="h-8 w-8 rounded-xl hover:bg-accent grid place-items-center transition-colors cursor-pointer">
+              <button
+                onClick={handleClose}
+                className="h-8 w-8 rounded-xl hover:bg-accent grid place-items-center transition-colors cursor-pointer"
+              >
                 <X className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
@@ -145,12 +151,14 @@ export function ReviewModal({
                   <div>
                     <p className="font-bold text-foreground">¡Valoración enviada!</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Puntuaste a <span className="font-semibold text-foreground">{targetUserName}</span> con{" "}
+                      Puntuaste a{" "}
+                      <span className="font-semibold text-foreground">{targetUserName}</span> con{" "}
                       <span className="text-warning font-bold">{rating} estrellas</span>
                     </p>
                     {averageAfter > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Promedio actualizado: <span className="text-neon font-semibold">{averageAfter} ★</span>
+                        Promedio actualizado:{" "}
+                        <span className="text-neon font-semibold">{averageAfter} ★</span>
                       </p>
                     )}
                   </div>
@@ -174,7 +182,9 @@ export function ReviewModal({
                     <div>
                       <p className="text-sm font-semibold text-foreground">{targetUserName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {averageAfter > 0 ? `Promedio actual: ${averageAfter} ★` : "Sin valoraciones aún"}
+                        {averageAfter > 0
+                          ? `Promedio actual: ${averageAfter} ★`
+                          : "Sin valoraciones aún"}
                       </p>
                     </div>
                   </div>
@@ -197,7 +207,9 @@ export function ReviewModal({
                         >
                           <Star
                             className={`h-9 w-9 transition-colors ${
-                              star <= displayRating ? "text-warning fill-warning" : "text-muted-foreground"
+                              star <= displayRating
+                                ? "text-warning fill-warning"
+                                : "text-muted-foreground"
                             }`}
                           />
                         </motion.button>
@@ -216,7 +228,8 @@ export function ReviewModal({
                   {/* Campo de comentario opcional */}
                   <div className="mb-4">
                     <label className="block text-xs font-semibold text-foreground mb-1.5">
-                      Comentario <span className="text-muted-foreground font-normal">(opcional)</span>
+                      Comentario{" "}
+                      <span className="text-muted-foreground font-normal">(opcional)</span>
                     </label>
                     <textarea
                       value={comment}
@@ -244,7 +257,11 @@ export function ReviewModal({
                       className="flex-1 py-2.5 rounded-xl bg-gradient-neon text-neon-foreground text-sm font-semibold hover:shadow-neon transition-shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                       id="review-submit-btn"
                     >
-                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                       Enviar valoración
                     </button>
                   </div>

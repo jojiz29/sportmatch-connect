@@ -316,7 +316,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                     className="flex-1 flex flex-col gap-3"
                   >
                     <div>
-                      <label htmlFor="courtName" className="block text-xs font-semibold text-foreground mb-1.5">
+                      <label
+                        htmlFor="courtName"
+                        className="block text-xs font-semibold text-foreground mb-1.5"
+                      >
                         Nombre de la cancha / lugar
                       </label>
                       <div className="relative">
@@ -335,7 +338,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                     </div>
 
                     <div>
-                      <label htmlFor="address" className="block text-xs font-semibold text-foreground mb-1.5">
+                      <label
+                        htmlFor="address"
+                        className="block text-xs font-semibold text-foreground mb-1.5"
+                      >
                         Dirección
                       </label>
                       <div className="relative">
@@ -355,7 +361,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="date" className="block text-xs font-semibold text-foreground mb-1.5">
+                        <label
+                          htmlFor="date"
+                          className="block text-xs font-semibold text-foreground mb-1.5"
+                        >
                           <Calendar className="inline h-3.5 w-3.5 mr-1" />
                           Fecha
                         </label>
@@ -370,7 +379,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                         />
                       </div>
                       <div>
-                        <label htmlFor="time" className="block text-xs font-semibold text-foreground mb-1.5">
+                        <label
+                          htmlFor="time"
+                          className="block text-xs font-semibold text-foreground mb-1.5"
+                        >
                           <Clock className="inline h-3.5 w-3.5 mr-1" />
                           Hora
                         </label>
@@ -411,7 +423,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                     </div>
 
                     <div>
-                      <label htmlFor="title" className="block text-xs font-semibold text-foreground mb-1.5">
+                      <label
+                        htmlFor="title"
+                        className="block text-xs font-semibold text-foreground mb-1.5"
+                      >
                         Título del partido
                       </label>
                       <input
@@ -430,7 +445,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                     </div>
 
                     <div>
-                      <label htmlFor="maxPlayers" className="block text-xs font-semibold text-foreground mb-1.5">
+                      <label
+                        htmlFor="maxPlayers"
+                        className="block text-xs font-semibold text-foreground mb-1.5"
+                      >
                         <Users className="inline h-3.5 w-3.5 mr-1" />
                         Máximo de jugadores
                       </label>
@@ -484,7 +502,13 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                       const finalTitle = values.title || autoTitle;
                       setValues((v) => ({ ...v, title: finalTitle }));
                       const maxP = Number(values.maxPlayers);
-                      if (!finalTitle || !values.courtName || !values.address || !values.date || !values.time) {
+                      if (
+                        !finalTitle ||
+                        !values.courtName ||
+                        !values.address ||
+                        !values.date ||
+                        !values.time
+                      ) {
                         toast.error("Completa todos los campos obligatorios.");
                         return;
                       }

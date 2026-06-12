@@ -78,7 +78,9 @@ function ReportCard({ report }: { report: UserReport }) {
               <span className="font-semibold text-foreground">{report.reportedUserName}</span>
             </p>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
-              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${cfg.badgeClass}`}>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${cfg.badgeClass}`}
+              >
                 {cfg.label}
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-foreground border border-border font-medium">
@@ -151,7 +153,10 @@ export function AdminModerationPanel() {
   const filtered = activeTab === "TODAS" ? reports : reports.filter((r) => r.status === activeTab);
 
   return (
-    <div className="glass border border-destructive/30 rounded-3xl p-6 relative overflow-hidden" id="admin-moderation-panel">
+    <div
+      className="glass border border-destructive/30 rounded-3xl p-6 relative overflow-hidden"
+      id="admin-moderation-panel"
+    >
       {/* Borde pulsante decorativo */}
       <div className="absolute inset-0 rounded-3xl border-2 border-destructive/20 pointer-events-none animate-pulse" />
 
@@ -201,9 +206,13 @@ export function AdminModerationPanel() {
               {icon}
               {label}
               {countByTab[key] > 0 && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
-                  activeTab === key ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"
-                }`}>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                    activeTab === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-accent text-muted-foreground"
+                  }`}
+                >
                   {countByTab[key]}
                 </span>
               )}
@@ -215,7 +224,11 @@ export function AdminModerationPanel() {
         <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
           <AnimatePresence>
             {filtered.length === 0 ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 text-muted-foreground">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 text-muted-foreground"
+              >
                 <Shield className="h-10 w-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No hay reportes en esta categoría.</p>
               </motion.div>

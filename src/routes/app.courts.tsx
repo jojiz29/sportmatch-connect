@@ -172,7 +172,9 @@ function Courts() {
           >
             <option value="">Todos los distritos ({availableDistricts.length})</option>
             {availableDistricts.map((d) => (
-              <option key={d} value={d}>{d}</option>
+              <option key={d} value={d}>
+                {d}
+              </option>
             ))}
           </select>
 
@@ -184,7 +186,9 @@ function Courts() {
           >
             <option value="">Todos los deportes ({availableSports.length})</option>
             {availableSports.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         </div>
@@ -193,7 +197,8 @@ function Courts() {
       {/* === BLOQUE: Resultados === */}
       <div className="flex items-center justify-between mb-6 text-xs text-muted-foreground font-semibold">
         <span>
-          Mostrando {displayedCourts.length} de {filteredAndSortedCourts.length} complejos deportivos
+          Mostrando {displayedCourts.length} de {filteredAndSortedCourts.length} complejos
+          deportivos
         </span>
         {baseLocation && (
           <span className="flex items-center gap-1 text-neon">

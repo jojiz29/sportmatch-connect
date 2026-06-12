@@ -17,7 +17,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 // Se obtienen del archivo .env mediante Vite (import.meta.env).
 // Si no existen, se asigna cadena vacía para activar el modo fallback.
 const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
-const supabaseUrl = supabaseUrlRaw.replace(/\/+$/, "");  // Limpia diagonales finales
+const supabaseUrl = supabaseUrlRaw.replace(/\/+$/, ""); // Limpia diagonales finales
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "") as string;
 
 // ------------------------------------------------------------------
@@ -26,7 +26,7 @@ const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "") as string
 let isUrlValid = false;
 try {
   if (supabaseUrl) {
-    new URL(supabaseUrl);  // Lanza error si no es URL válida
+    new URL(supabaseUrl); // Lanza error si no es URL válida
     isUrlValid = true;
   }
 } catch {

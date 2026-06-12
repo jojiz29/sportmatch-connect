@@ -248,11 +248,7 @@ export const backendApi = {
       });
     },
 
-    async addReview(
-      token: string,
-      courtId: string,
-      review: { rating: number; comment?: string },
-    ) {
+    async addReview(token: string, courtId: string, review: { rating: number; comment?: string }) {
       return fetchApi(`/courts/${courtId}/reviews`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },

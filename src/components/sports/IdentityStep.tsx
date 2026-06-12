@@ -122,9 +122,12 @@ export function IdentityStep({
       const isSafe = await analyzeImage(file);
       toast.dismiss(scanToastId);
       if (!isSafe) {
-        toast.error("Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.", {
-          className: "bg-red-500 text-white border-red-600",
-        });
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
         if (e.target) e.target.value = "";
         setIsAnalyzingImage(false);
         return;
@@ -145,7 +148,9 @@ export function IdentityStep({
         // En modo demo, usa URL efímera de objeto (blob)
         const localUrl = URL.createObjectURL(file);
         setAvatarUrl(localUrl);
-        toast.success(t("profile.photo_updated_demo", "Foto de perfil actualizada (Modo Demo)"), { id: toastId });
+        toast.success(t("profile.photo_updated_demo", "Foto de perfil actualizada (Modo Demo)"), {
+          id: toastId,
+        });
         return;
       }
 
@@ -193,7 +198,14 @@ export function IdentityStep({
       toast.error(t("onboarding.bio_too_long", "La biografía no puede superar los 150 caracteres"));
       return;
     }
-    onComplete({ avatar_url: avatarUrl, bio: trimmedBio, gender, weekly_hours: weeklyHours, lat, lng });
+    onComplete({
+      avatar_url: avatarUrl,
+      bio: trimmedBio,
+      gender,
+      weekly_hours: weeklyHours,
+      lat,
+      lng,
+    });
   };
 
   // === BLOQUE: ESTILOS DE GÉNERO ===
@@ -228,7 +240,15 @@ export function IdentityStep({
     // Mixto: trofeo abstracto
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-[#39FF14] to-[#1E3A1E] flex items-center justify-center">
-        <svg className="w-14 h-14 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          className="w-14 h-14 text-white/90"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
           <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
           <path d="M4 22h16" />
@@ -247,7 +267,10 @@ export function IdentityStep({
           {t("onboarding.step2_title", "Completa tu perfil")}
         </h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          {t("onboarding.step2_subtitle", "Sube una foto y ajusta tus preferencias de emparejamiento.")}
+          {t(
+            "onboarding.step2_subtitle",
+            "Sube una foto y ajusta tus preferencias de emparejamiento.",
+          )}
         </p>
       </div>
 
@@ -260,8 +283,10 @@ export function IdentityStep({
         >
           {isAnalyzingImage ? (
             // Estado de análisis NSFW con animación de pulso y spinner
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 z-10 p-2 text-center border-2 rounded-full"
-              style={{ animation: "pulseBorder 2s infinite ease-in-out" }}>
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 z-10 p-2 text-center border-2 rounded-full"
+              style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+            >
               <style>{`
                 @keyframes pulseBorder {
                   0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
@@ -270,7 +295,9 @@ export function IdentityStep({
                 }
               `}</style>
               <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
-              <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🛡️ Escaneando...</span>
+              <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                🛡️ Escaneando...
+              </span>
             </div>
           ) : avatarUrl ? (
             <img src={avatarUrl} alt="Avatar Preview" className="h-full w-full object-cover" />
@@ -283,26 +310,52 @@ export function IdentityStep({
               {isUploading ? (
                 <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
               ) : (
-                <><Camera className="h-5 w-5 mb-1" /><span>{t("profile.change_photo", "Subir Foto")}</span></>
+                <>
+                  <Camera className="h-5 w-5 mb-1" />
+                  <span>{t("profile.change_photo", "Subir Foto")}</span>
+                </>
               )}
             </div>
           )}
         </div>
-        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" disabled={isUploading || isAnalyzingImage} />
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          className="hidden"
+          disabled={isUploading || isAnalyzingImage}
+        />
         <span className="text-[10px] text-muted-foreground">
-          {avatarUrl ? t("onboarding.avatar_uploaded", "Foto sincronizada/subida") : t("onboarding.avatar_fallback", "Usando avatar dinámico por género")}
+          {avatarUrl
+            ? t("onboarding.avatar_uploaded", "Foto sincronizada/subida")
+            : t("onboarding.avatar_fallback", "Usando avatar dinámico por género")}
         </span>
       </div>
 
       {/* === BLOQUE: SELECTOR DE GÉNERO === */}
       {/* Botones segmentados en cuadrícula de 3 columnas con colores distintivos */}
       <div className="space-y-3">
-        <label className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 block">{t("onboarding.gender_label", "Género")}</label>
+        <label className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 block">
+          {t("onboarding.gender_label", "Género")}
+        </label>
         <div className="grid grid-cols-3 gap-2 bg-background/40 border border-border p-1.5 rounded-2xl">
           {[
-            { value: "Masculino", label: "♂ Masculino", activeClass: "bg-[#FF6B35] text-white shadow-[0_0_10px_rgba(255,107,53,0.4)]" },
-            { value: "Femenino", label: "♀ Femenino", activeClass: "bg-[#D946EF] text-white shadow-[0_0_10px_rgba(217,70,239,0.4)]" },
-            { value: "Mixto", label: "⚡ Mixto", activeClass: "bg-[#39FF14] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]" },
+            {
+              value: "Masculino",
+              label: "♂ Masculino",
+              activeClass: "bg-[#FF6B35] text-white shadow-[0_0_10px_rgba(255,107,53,0.4)]",
+            },
+            {
+              value: "Femenino",
+              label: "♀ Femenino",
+              activeClass: "bg-[#D946EF] text-white shadow-[0_0_10px_rgba(217,70,239,0.4)]",
+            },
+            {
+              value: "Mixto",
+              label: "⚡ Mixto",
+              activeClass: "bg-[#39FF14] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]",
+            },
           ].map((item) => (
             <button
               key={item.value}
@@ -320,17 +373,32 @@ export function IdentityStep({
       {/* Textarea con contador de caracteres y sanitización XSS */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <label className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 block">{t("onboarding.bio_label", "Biografía")}</label>
-          <span className={`text-[10px] font-semibold ${bio.trim().length < 10 || bio.trim().length > 150 ? "text-warning" : "text-muted-foreground"}`}>{bio.trim().length}/150</span>
+          <label className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 block">
+            {t("onboarding.bio_label", "Biografía")}
+          </label>
+          <span
+            className={`text-[10px] font-semibold ${bio.trim().length < 10 || bio.trim().length > 150 ? "text-warning" : "text-muted-foreground"}`}
+          >
+            {bio.trim().length}/150
+          </span>
         </div>
         <textarea
-          value={bio} onChange={handleBioChange}
-          placeholder={t("onboarding.bio_placeholder", "Cuéntanos sobre ti, tus horarios de juego, clubs favoritos...")}
-          rows={3} maxLength={150} id="onboarding-bio-input"
+          value={bio}
+          onChange={handleBioChange}
+          placeholder={t(
+            "onboarding.bio_placeholder",
+            "Cuéntanos sobre ti, tus horarios de juego, clubs favoritos...",
+          )}
+          rows={3}
+          maxLength={150}
+          id="onboarding-bio-input"
           className="w-full bg-background/50 border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
         />
         <p className="text-[10px] text-muted-foreground leading-normal">
-          {t("onboarding.bio_requirements", "Debe tener entre 10 y 150 caracteres. Se sanitiza automáticamente.")}
+          {t(
+            "onboarding.bio_requirements",
+            "Debe tener entre 10 y 150 caracteres. Se sanitiza automáticamente.",
+          )}
         </p>
       </div>
 
@@ -339,17 +407,27 @@ export function IdentityStep({
       <div className="bg-gradient-card border border-border rounded-2xl p-5 space-y-4">
         <div className="flex justify-between items-center">
           <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-            <Award className="h-4 w-4 text-neon" /> {t("onboarding.weekly_dedication", "Dedicación Semanal")}
+            <Award className="h-4 w-4 text-neon" />{" "}
+            {t("onboarding.weekly_dedication", "Dedicación Semanal")}
           </span>
           <span className="text-xs font-extrabold text-neon">
-            {weeklyHours} {weeklyHours === 1 ? t("onboarding.weekly_hour_sing", "hora") : t("onboarding.weekly_hour_plur", "horas")}
+            {weeklyHours}{" "}
+            {weeklyHours === 1
+              ? t("onboarding.weekly_hour_sing", "hora")
+              : t("onboarding.weekly_hour_plur", "horas")}
           </span>
         </div>
         <div className="relative pt-2 pb-1">
-          <input type="range" min="1" max="20" value={weeklyHours}
+          <input
+            type="range"
+            min="1"
+            max="20"
+            value={weeklyHours}
             onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
             className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#39FF14]"
-            style={{ background: `linear-gradient(to right, #39FF14 ${((weeklyHours - 1) / 19) * 100}%, #1e293b ${((weeklyHours - 1) / 19) * 100}%)` }}
+            style={{
+              background: `linear-gradient(to right, #39FF14 ${((weeklyHours - 1) / 19) * 100}%, #1e293b ${((weeklyHours - 1) / 19) * 100}%)`,
+            }}
             id="hours-slider"
           />
         </div>
@@ -362,14 +440,24 @@ export function IdentityStep({
 
       {/* === BLOQUE: BOTONES DE NAVEGACIÓN === */}
       <div className="flex gap-3 pt-4">
-        <button type="button" onClick={onBack} disabled={isSaving}
-          className="flex-1 py-3.5 bg-accent hover:bg-accent/80 text-foreground font-bold rounded-xl border border-border transition-all cursor-pointer text-sm disabled:opacity-50">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isSaving}
+          className="flex-1 py-3.5 bg-accent hover:bg-accent/80 text-foreground font-bold rounded-xl border border-border transition-all cursor-pointer text-sm disabled:opacity-50"
+        >
           {t("onboarding.btn_back", "Atrás")}
         </button>
-        <button type="button" onClick={handleSave} disabled={isSaving || isUploading || isAnalyzingImage}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || isUploading || isAnalyzingImage}
           className="flex-1 py-3.5 bg-gradient-primary text-primary-foreground font-bold rounded-xl shadow-glow transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer text-sm"
-          id="onboarding-finish-btn">
-          {isSaving ? t("common.saving", "Guardando...") : t("onboarding.btn_finish", "Finalizar y Registrarse")}
+          id="onboarding-finish-btn"
+        >
+          {isSaving
+            ? t("common.saving", "Guardando...")
+            : t("onboarding.btn_finish", "Finalizar y Registrarse")}
         </button>
       </div>
     </div>

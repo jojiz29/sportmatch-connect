@@ -41,8 +41,8 @@ interface CommentTreeProps {
   currentUserId: string;
   onReply: (parentId: string) => void;
   onDelete: (commentId: string) => void;
-  depth?: number;        // Profundidad actual en el árbol (para indentación visual).
-  maxDepth?: number;     // Límite de profundidad recursiva para prevenir desbordamiento.
+  depth?: number; // Profundidad actual en el árbol (para indentación visual).
+  maxDepth?: number; // Límite de profundidad recursiva para prevenir desbordamiento.
   onReport?: (commentId: string, type: "comment") => void;
 }
 

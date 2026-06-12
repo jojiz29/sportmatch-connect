@@ -12,8 +12,8 @@
 import { create } from "zustand";
 
 interface TourState {
-  run: boolean;        // Indica si el tour está activo
-  stepIndex: number;   // Paso actual del tour (0 = inicio)
+  run: boolean; // Indica si el tour está activo
+  stepIndex: number; // Paso actual del tour (0 = inicio)
   setRun: (run: boolean) => void;
   setStepIndex: (index: number) => void;
   startTour: () => void;

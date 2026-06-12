@@ -18,7 +18,12 @@ const DEMO_STORAGE_KEY = "sportmatch_demo_player_challenges";
 // TIPOS
 // ==============================================================
 
-export type ChallengeStatus = "pending" | "accepted" | "rejected" | "cancelled";
+export type ChallengeStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "cancelled"
+  | "counter_proposed";
 
 export interface PlayerChallenge {
   id: string;

@@ -10,7 +10,9 @@ import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/app/wallet/history")({
-  beforeLoad: () => { throw redirect({ to: "/app" }); },
+  beforeLoad: () => {
+    throw redirect({ to: "/app" });
+  },
   head: () => ({ meta: [{ title: "Historial de FitCoins — SportMatch" }] }),
   component: WalletHistory,
 });
@@ -19,13 +21,18 @@ function WalletHistory() {
   const { t } = useTranslation();
   const { balance, transactions, initWallet } = useWalletStore();
 
-  useEffect(() => { initWallet(); }, [initWallet]);
+  useEffect(() => {
+    initWallet();
+  }, [initWallet]);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
       {/* === BLOQUE: Enlace de retroceso a la billetera === */}
-      <Link to="/app/wallet" search={{ buyItem: undefined }}
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
+      <Link
+        to="/app/wallet"
+        search={{ buyItem: undefined }}
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+      >
         <ArrowLeft className="h-4 w-4" /> {t("wallet.back")}
       </Link>
 
@@ -69,23 +76,37 @@ function WalletHistory() {
                 }
 
                 return (
-                  <div key={tItem.id} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
+                  <div
+                    key={tItem.id}
+                    className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
+                  >
                     <div className="flex items-center gap-4">
-                      <div className={`h-10 w-10 rounded-full grid place-items-center ${isEarn ? "bg-neon/10 text-neon" : isPenalty ? "bg-red-500/10 text-red-500" : "bg-electric/10 text-electric"}`}>
+                      <div
+                        className={`h-10 w-10 rounded-full grid place-items-center ${isEarn ? "bg-neon/10 text-neon" : isPenalty ? "bg-red-500/10 text-red-500" : "bg-electric/10 text-electric"}`}
+                      >
                         {icon}
                       </div>
                       <div>
                         <div className="font-semibold text-sm flex flex-wrap items-center gap-2">
                           <span>{tItem.description}</span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase border ${badgeStyle}`}>{typeLabel}</span>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase border ${badgeStyle}`}
+                          >
+                            {typeLabel}
+                          </span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(tItem.created_at).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" })}
+                          {new Date(tItem.created_at).toLocaleDateString("es-AR", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
                         </div>
                       </div>
                     </div>
                     <div className={`font-bold ${isEarn ? "text-neon" : "text-foreground"}`}>
-                      {isEarn ? "+" : ""}{tItem.amount} FC
+                      {isEarn ? "+" : ""}
+                      {tItem.amount} FC
                     </div>
                   </div>
                 );

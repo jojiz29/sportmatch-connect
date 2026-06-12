@@ -21,9 +21,9 @@ i18n
   // Integración con React
   .use(initReactI18next)
   .init({
-    fallbackLng: "es",         // Idioma por defecto: español
+    fallbackLng: "es", // Idioma por defecto: español
     supportedLngs: ["es", "en"], // Idiomas soportados
-    load: "languageOnly",       // Carga solo "es" no "es-ES"
+    load: "languageOnly", // Carga solo "es" no "es-ES"
     resources: {
       es: { translation: esTranslations },
       en: { translation: enTranslations },
