@@ -92,8 +92,40 @@ function timeAgo(dateStr: string): string {
   return `${diffDays}d`;
 }
 
+// ─── Tab definitions ────────────────────────────────────────────────────────
+
+type TabKey = "TODAS" | "INVITE" | "RESERVE" | "ALERT";
+
+const INVITE_TYPES: AppNotification["type"][] = ["FOLLOW", "SQUAD_INVITE"];
+const RESERVE_TYPES: AppNotification["type"][] = ["TRANSACTION_SUCCESS"];
+const ALERT_TYPES: AppNotification["type"][] = ["AD_IMPRESSION", "MATCH_ALERT", "SQUAD_MESSAGE"];
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "TODAS", label: "Todas" },
+  { key: "INVITE", label: "Invitaciones" },
+  { key: "RESERVE", label: "Reservas" },
+  { key: "ALERT", label: "Alertas" },
+] as const satisfies { key: TabKey; label: string }[];
+
+function filterByTab(notifs: AppNotification[], tab: TabKey): AppNotification[] {
+  switch (tab) {
+    case "INVITE":
+      return notifs.filter((n) => (INVITE_TYPES as string[]).includes(n.type));
+    case "RESERVE":
+      return notifs.filter((n) => (RESERVE_TYPES as string[]).includes(n.type));
+    case "ALERT":
+      return notifs.filter((n) => (ALERT_TYPES as string[]).includes(n.type));
+    case "TODAS":
+    default:
+      return notifs;
+  }
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>("TODAS");
   const panelRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -182,6 +214,19 @@ export function NotificationBell() {
 
   const unreadCount = userNotifs.filter((n) => !n.is_read).length;
 
+  // Per-category unread counts for tab badges
+  const unreadByTab: Record<TabKey, number> = {
+    TODAS: unreadCount,
+    INVITE: userNotifs.filter((n) => !n.is_read && (INVITE_TYPES as string[]).includes(n.type))
+      .length,
+    RESERVE: userNotifs.filter((n) => !n.is_read && (RESERVE_TYPES as string[]).includes(n.type))
+      .length,
+    ALERT: userNotifs.filter((n) => !n.is_read && (ALERT_TYPES as string[]).includes(n.type))
+      .length,
+  };
+
+  const visibleNotifs = filterByTab(userNotifs, activeTab).slice(0, 30);
+
   // Close panel on click outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -239,12 +284,12 @@ export function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute right-0 left-auto top-14 w-[290px] min-[375px]:w-[340px] sm:w-[360px] max-h-[480px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right lg:left-0 lg:right-auto lg:origin-top-left"
+            className="absolute right-0 left-auto top-14 w-[290px] min-[375px]:w-[340px] sm:w-[360px] max-h-[520px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right lg:left-0 lg:right-auto lg:origin-top-left"
             id="notification-panel"
           >
             {/* Header */}
             <div className="px-4 py-3 flex items-center justify-between border-b border-border/50">
-              <h3 className="font-bold text-sm">Notificaciones</h3>
+              <h3 className="font-bold text-sm text-foreground">Notificaciones</h3>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
                   <button
@@ -264,69 +309,122 @@ export function NotificationBell() {
               </div>
             </div>
 
-            {/* Notification List */}
-            <div className="flex-1 overflow-y-auto overscroll-contain" id="notification-list">
-              {userNotifs.length > 0 ? (
-                userNotifs.slice(0, 30).map((notif) => (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleNotifClick(notif)}
-                    className={`w-full text-left px-4 py-3 flex gap-3 items-start border-b border-border/30 transition-colors cursor-pointer ${
-                      notif.is_read ? "hover:bg-accent/30" : "bg-primary/5 hover:bg-primary/10"
-                    }`}
-                    id={`notif-item-${notif.id}`}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleNotifClick(notif);
-                      }
-                    }}
+            {/* Tab Bar */}
+            <div className="flex border-b border-border/50 px-2 gap-1" role="tablist">
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.key;
+                const badgeCount = unreadByTab[tab.key];
+                return (
+                  <button
+                    key={tab.key}
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={[
+                      "relative flex items-center gap-1 px-2 py-2.5 text-[11px] font-medium whitespace-nowrap transition-colors cursor-pointer",
+                      isActive
+                        ? "border-b-2 border-primary text-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground border-b-2 border-transparent",
+                    ].join(" ")}
                   >
-                    <div
-                      className={`shrink-0 h-9 w-9 rounded-xl border grid place-items-center mt-0.5 ${
-                        TYPE_COLORS[notif.type]
-                      }`}
-                    >
-                      {ICON_MAP[notif.type]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`text-xs font-semibold truncate ${notif.is_read ? "text-muted-foreground" : "text-foreground"}`}
-                        >
-                          {notif.title}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {timeAgo(notif.created_at)}
-                        </span>
-                      </div>
-                      <p
-                        className={`text-[11px] mt-0.5 line-clamp-2 ${notif.is_read ? "text-muted-foreground/70" : "text-muted-foreground"}`}
+                    {tab.label}
+                    {badgeCount > 0 && (
+                      <motion.span
+                        key={`tab-badge-${tab.key}-${badgeCount}`}
+                        initial={{ scale: 0.6, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className={[
+                          "inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold leading-none",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-accent text-muted-foreground",
+                        ].join(" ")}
                       >
-                        {notif.content}
-                      </p>
-                      {!notif.is_read && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsRead(notif.id);
-                          }}
-                          className="mt-1 text-[10px] text-primary/80 hover:text-primary flex items-center gap-0.5 cursor-pointer"
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </motion.span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Notification List — animated on tab change */}
+            <div className="flex-1 overflow-y-auto overscroll-contain" id="notification-list">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                >
+                  {visibleNotifs.length > 0 ? (
+                    visibleNotifs.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => handleNotifClick(notif)}
+                        className={`w-full text-left px-4 py-3 flex gap-3 items-start border-b border-border/30 transition-colors cursor-pointer ${
+                          notif.is_read ? "hover:bg-accent/30" : "bg-primary/5 hover:bg-primary/10"
+                        }`}
+                        id={`notif-item-${notif.id}`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleNotifClick(notif);
+                          }
+                        }}
+                      >
+                        <div
+                          className={`shrink-0 h-9 w-9 rounded-xl border grid place-items-center mt-0.5 ${
+                            TYPE_COLORS[notif.type]
+                          }`}
                         >
-                          <Check className="h-3 w-3" /> Marcar leída
-                        </button>
-                      )}
+                          {ICON_MAP[notif.type]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={`text-xs font-semibold truncate ${notif.is_read ? "text-muted-foreground" : "text-foreground"}`}
+                            >
+                              {notif.title}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              {timeAgo(notif.created_at)}
+                            </span>
+                          </div>
+                          <p
+                            className={`text-[11px] mt-0.5 line-clamp-2 ${notif.is_read ? "text-muted-foreground/70" : "text-muted-foreground"}`}
+                          >
+                            {notif.content}
+                          </p>
+                          {!notif.is_read && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAsRead(notif.id);
+                              }}
+                              className="mt-1 text-[10px] text-primary/80 hover:text-primary flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Check className="h-3 w-3" /> Marcar leída
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2 px-4">
+                      <Bell className="h-8 w-8 opacity-30" />
+                      <span className="text-xs text-center">
+                        {activeTab === "TODAS"
+                          ? "No tienes notificaciones aún."
+                          : "No hay notificaciones en esta categoría."}
+                      </span>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2 px-4">
-                  <Bell className="h-8 w-8 opacity-30" />
-                  <span className="text-xs text-center">No tienes notificaciones aún.</span>
-                </div>
-              )}
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

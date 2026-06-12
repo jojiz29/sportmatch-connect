@@ -20,11 +20,15 @@ import {
   Package,
   MapPin,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
 import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 import { useTranslation } from "react-i18next";
+import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
+import { JuryTour } from "@/components/JuryTour";
+import { useTourStore } from "@/shared/hooks/useTourStore";
 
 const ACCOUNT_ITEMS = [
   { to: "/app/profile", labelKey: "nav.perfil", icon: User },
@@ -93,7 +97,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-background relative flex flex-col overflow-hidden">
         <WorldCupBackground />
-        <div className="relative z-10 flex-1 flex flex-col">{children}</div>
+        <div className="relative z-10 flex-1 flex flex-col">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </div>
       </div>
     );
   }
@@ -278,7 +284,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow group-hover:scale-110 active:scale-95 transition-all duration-300">
                 <Zap className="h-6 w-6 text-white" />
               </div>
-              <span className="font-heading text-xl tracking-wide text-white">SportMatch</span>
+              <span className="font-heading text-xl tracking-wide text-foreground">SportMatch</span>
             </Link>
             <div className="flex items-center gap-1">
               <ThemeToggle />
@@ -303,6 +309,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={`${item.to}-${item.search?.tab || ""}`}
                       to={item.to}
+                      id={item.to === "/app/tournaments" ? "tournaments-nav-tour" : undefined}
                       search={item.search}
                       className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
@@ -323,7 +330,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {filteredAccountItems.length > 0 && (
               <div className="space-y-1 pt-4 border-t border-border/10">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-1.5">
                   {t("nav.groups.account")}
                 </div>
                 {filteredAccountItems.map((item) => {
@@ -364,6 +371,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="text-sm font-semibold truncate leading-tight text-foreground/90">
                   {currentUser.name}
                 </div>
+                <Link
+                  to="/app/wallet"
+                  search={{ buyItem: undefined }}
+                  className="text-xs text-neon/80 hover:text-neon hover:bg-muted/50 cursor-pointer transition-colors rounded px-1.5 py-0.5 -ml-1.5 w-fit flex items-center gap-1 mt-0.5 font-medium"
+                >
+                  <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
+                </Link>
                 <div className="text-xs text-neon/80 flex items-center gap-1 mt-0.5 font-medium">
                   {isBusiness ? (
                     <span>🏢 {currentUser.business_category}</span>
@@ -393,6 +407,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="font-bold text-sm tracking-tight text-gradient">SportMatch</span>
             </Link>
             <div className="flex items-center gap-2">
+              <Link
+                to="/app/wallet"
+                search={{ buyItem: undefined }}
+                className="text-xs text-neon font-semibold flex items-center gap-1 hover:text-neon/80 transition-colors"
+              >
+                <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
+              </Link>
               <span className="text-xs text-neon font-semibold flex items-center gap-1">
                 {isBusiness ? (
                   <span>🏢 {currentUser.business_category}</span>
@@ -422,6 +443,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={`${item.to}-${item.search?.tab || ""}`}
                   to={item.to}
+                  id={item.to === "/app/tournaments" ? "tournaments-nav-mobile-tour" : undefined}
                   search={item.search}
                   className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all duration-200 active:scale-90 rounded-xl ${
                     active
@@ -442,9 +464,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <main className="lg:pl-72 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
+      <JuryTour />
+      <TourTriggerButton />
     </div>
+  );
+}
+
+function TourTriggerButton() {
+  const { startTour, run } = useTourStore();
+  const [showTrigger, setShowTrigger] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tour") === "true") {
+      setShowTrigger(true);
+    }
+  }, []);
+
+  if (!showTrigger) return null;
+
+  return (
+    <button
+      onClick={() => startTour()}
+      className="fixed bottom-20 lg:bottom-6 right-4 z-[49] px-4 py-2.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(255,87,34,0.6)] border border-orange-400 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+    >
+      <Zap className="h-4 w-4 animate-pulse" />
+      <span>{run ? "Tour Activo 🛡️" : "Iniciar Tour Jurado"}</span>
+    </button>
   );
 }

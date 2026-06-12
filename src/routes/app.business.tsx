@@ -108,20 +108,20 @@ function BusinessPage() {
   // Metrics Calculation (moved up to satisfy Hook rules)
   const businessAds = useMemo(() => {
     if (!user) return [];
-    return ads.filter((ad) => ad.business_id === user.id);
+    return (ads || []).filter((ad) => ad.business_id === user.id);
   }, [ads, user]);
 
-  const totalAdsCount = businessAds.length;
+  const totalAdsCount = (businessAds || []).length;
   const totalViews = useMemo(
-    () => businessAds.reduce((acc, ad) => acc + (ad.views || 0), 0),
+    () => (businessAds || []).reduce((acc, ad) => acc + (ad.views || 0), 0),
     [businessAds],
   );
   const totalClicks = useMemo(
-    () => businessAds.reduce((acc, ad) => acc + (ad.clicks || 0), 0),
+    () => (businessAds || []).reduce((acc, ad) => acc + (ad.clicks || 0), 0),
     [businessAds],
   );
   const totalContacts = useMemo(
-    () => businessAds.reduce((acc, ad) => acc + (ad.contacts || 0), 0),
+    () => (businessAds || []).reduce((acc, ad) => acc + (ad.contacts || 0), 0),
     [businessAds],
   );
 
@@ -444,17 +444,17 @@ function BusinessPage() {
         setItems(catalogData);
 
         if (useAuthStore.getState().isDemoMode) {
-          const allVenues = await apiClient.venues.getAll();
+          const allVenues = (await apiClient.venues.getAll()) || [];
           // Una empresa solo administra las sedes que registró; no apropiamos datos de prueba.
           const venuesData = allVenues.filter((c) => c.owner_id === businessId);
-          setVenues(venuesData);
+          setVenues(venuesData || []);
           // Try backend first for sports, fallback to Supabase
           const backendSports = await backendApi.sports.getAll().catch(() => null);
           // El backend envuelve sus resultados en { data, error }; la interfaz necesita el arreglo.
           const sportsData = Array.isArray(backendSports?.data)
             ? backendSports.data
             : await apiClient.sports.getAll();
-          setSportsList(sportsData as SportCatalog[]);
+          setSportsList((sportsData || []) as SportCatalog[]);
           setLoading(false);
           setLoadingVenues(false);
           return;
@@ -474,7 +474,7 @@ function BusinessPage() {
         const sportsData = Array.isArray(backendSports?.data)
           ? backendSports.data
           : await apiClient.sports.getAll();
-        setSportsList(sportsData as SportCatalog[]);
+        setSportsList((sportsData || []) as SportCatalog[]);
       } catch (err) {
         console.error("Failed to load business dashboard data:", err);
         toast.error("Error al cargar datos del negocio");
@@ -985,9 +985,9 @@ function BusinessPage() {
                   <Loader2 className="h-6 w-6 animate-spin text-neon" />
                   <span>Cargando anuncios...</span>
                 </div>
-              ) : businessAds.length > 0 ? (
+              ) : (businessAds || []).length > 0 ? (
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {businessAds.map((ad) => (
+                  {(businessAds || []).map((ad) => (
                     <div
                       key={ad.id}
                       className="glass border border-border rounded-2xl p-4 flex gap-4 items-center hover:ring-glow transition-all relative group"
@@ -1415,9 +1415,9 @@ function BusinessPage() {
                   <Loader2 className="h-6 w-6 animate-spin text-neon" />
                   <span>Cargando catálogo...</span>
                 </div>
-              ) : items.length > 0 ? (
+              ) : (items || []).length > 0 ? (
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {items.map((item) => (
+                  {(items || []).map((item) => (
                     <div
                       key={item.id}
                       className="glass border border-border rounded-2xl p-4 flex gap-4 items-center hover:ring-glow transition-all relative group"
@@ -1465,11 +1465,11 @@ function BusinessPage() {
             {/* Sales History */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-4">📈 Registro de Ventas Recientes</h3>
-              {sales &&
-              sales.filter((s) => items.some((i) => i.id === s.catalog_item_id)).length > 0 ? (
+              {(sales || []).filter((s) => (items || []).some((i) => i.id === s.catalog_item_id))
+                .length > 0 ? (
                 <div className="space-y-3">
-                  {sales
-                    .filter((s) => items.some((i) => i.id === s.catalog_item_id))
+                  {(sales || [])
+                    .filter((s) => (items || []).some((i) => i.id === s.catalog_item_id))
                     .map((sale) => (
                       <div
                         key={sale.id}
@@ -1613,9 +1613,9 @@ function BusinessPage() {
               <Loader2 className="h-8 w-8 animate-spin text-neon" />
               <span className="text-sm font-semibold">Cargando sedes...</span>
             </div>
-          ) : venues.length > 0 ? (
+          ) : (venues || []).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {venues.map((venue) => (
+              {(venues || []).map((venue) => (
                 <div
                   key={venue.id}
                   className="premium-card overflow-hidden hover:ring-glow transition-all relative group flex flex-col h-full"
@@ -1748,7 +1748,7 @@ function BusinessPage() {
                         <option value="Patrocinador">⭐ Patrocinador</option>
                       </optgroup>
                       <optgroup label="Disciplinas Deportivas">
-                        {sportsList.map((sport) => (
+                        {(sportsList || []).map((sport) => (
                           <option key={sport.id} value={sport.name}>
                             {sport.name}
                           </option>

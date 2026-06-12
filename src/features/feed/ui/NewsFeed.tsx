@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PostComments } from "./PostComments";
 import { ReportModal } from "@/components/ReportModal";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
+import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 
 const SPORT_EMOJIS: Record<string, string> = {
   Pádel: "🏓",
@@ -84,6 +85,18 @@ export function NewsFeed() {
     null,
   );
 
+  // AI Moderation Engine States
+  const { analyzeImage } = useNSFWJS();
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState<boolean>(false);
+
+  // Open image dropzone automatically if we are running the Capstone Jury Tour
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tour") === "true") {
+      setShowImageDropzone(true);
+    }
+  }, []);
+
   // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change (Task 2.4)
   useEffect(() => {
     return () => {
@@ -93,7 +106,12 @@ export function NewsFeed() {
     };
   }, [mediaUrl]);
 
-  const handleImageFile = (file: File) => {
+  const handleImageFile = async (file: File) => {
+    if (isAnalyzingImage) {
+      toast.error("Ya hay un análisis de imagen en curso. Por favor, espere.");
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error("El archivo supera el límite de 5MB");
       return;
@@ -103,12 +121,34 @@ export function NewsFeed() {
       return;
     }
 
-    // Eliminate all client-side Base64 string conversions to prevent database bloating (Task 2.2)
-    // We use lightweight URL.createObjectURL for preview, and store the raw File in state.
+    // Set preview URL and raw File in state immediately
     const localUrl = URL.createObjectURL(file);
     setMediaUrl(localUrl);
     setImageFile(file);
-    toast.success("Imagen cargada correctamente");
+    setIsAnalyzingImage(true);
+
+    try {
+      const isSafe = await analyzeImage(file);
+      if (!isSafe) {
+        setImageFile(null);
+        setMediaUrl("");
+        URL.revokeObjectURL(localUrl);
+        toast.error(
+          "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
+          {
+            className: "bg-red-500 text-white border-red-600",
+          },
+        );
+      } else {
+        toast.success("Imagen cargada correctamente");
+      }
+    } catch (error) {
+      console.error("Error checking image safety:", error);
+      // Fallback gracefully: treat as safe
+      toast.success("Imagen cargada correctamente");
+    } finally {
+      setIsAnalyzingImage(false);
+    }
   };
 
   // Track current user ID in a ref so the Realtime callback can reference it
@@ -216,7 +256,7 @@ export function NewsFeed() {
   // ── Post submission ─────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !content.trim()) return;
+    if (!currentUser || !content.trim() || isAnalyzingImage) return;
 
     try {
       setSubmitting(true);
@@ -325,7 +365,7 @@ export function NewsFeed() {
 
               <button
                 type="submit"
-                disabled={submitting || !content.trim()}
+                disabled={submitting || isAnalyzingImage || !content.trim()}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-semibold text-xs shadow-glow disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                 id="feed-post-submit"
               >
@@ -340,7 +380,7 @@ export function NewsFeed() {
 
             {/* Collapsible Drag-and-Drop Dropzone */}
             {(showImageDropzone || mediaUrl) && (
-              <div className="w-full animate-slide-up">
+              <div className="w-full animate-slide-up" id="news-feed-dropzone-tour">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -354,16 +394,36 @@ export function NewsFeed() {
                 {mediaUrl ? (
                   <div className="relative mt-2 rounded-xl overflow-hidden border border-border/50 max-h-48 bg-muted group animate-scale-in">
                     <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMediaUrl("");
-                        setImageFile(null);
-                      }}
-                      className="absolute top-2 right-2 px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
-                    >
-                      Quitar foto
-                    </button>
+                    {isAnalyzingImage && (
+                      <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-2 z-10 border-2 rounded-xl"
+                        style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
+                      >
+                        <style>{`
+                          @keyframes pulseBorder {
+                            0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                            50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
+                            100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+                          }
+                        `}</style>
+                        <Loader2 className="h-6 w-6 text-[#FF6B35] animate-spin" />
+                        <span className="text-xs font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                          🛡️ Escaneando contenido...
+                        </span>
+                      </div>
+                    )}
+                    {!isAnalyzingImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaUrl("");
+                          setImageFile(null);
+                        }}
+                        className="absolute top-2 right-2 px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                      >
+                        Quitar foto
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div

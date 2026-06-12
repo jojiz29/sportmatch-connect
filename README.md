@@ -1,191 +1,94 @@
-# SportMatch Connect ⚡
+# SportMatch Connect - Frontend Architecture ⚡
 
-### _La Revolución de la Economía y Conectividad del Deporte Amateur_
-
-[![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=black&style=for-the-badge)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white&style=for-the-badge)](https://www.typescriptlang.org/)
-[![TanStack Router](https://img.shields.io/badge/TanStack_Router-1.168-FF4154?logo=react&logoColor=white&style=for-the-badge)](https://tanstack.com/router)
-[![Zustand](https://img.shields.io/badge/Zustand-5.0-orange?style=for-the-badge)](https://github.com/pmndrs/zustand)
-[![Supabase](https://img.shields.io/badge/Supabase-2.106-3ECF8E?logo=supabase&logoColor=white&style=for-the-badge)](https://supabase.com/)
-[![Tailwind v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?logo=tailwindcss&logoColor=white&style=for-the-badge)](https://tailwindcss.com/)
-[![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white&style=for-the-badge)](https://www.docker.com/)
+### _Plataforma de Matchmaking Deportivo y Torneos con Moderación Inteligente en el Borde (Edge AI)_
 
 ---
 
-## 1. El Pitch de Negocio y Visión Estratégica
+## 1. Descripción del Proyecto
 
-### La Oportunidad de Mercado (El Dolor)
+**SportMatch Connect** es un ecosistema digital avanzado diseñado para revolucionar el deporte amateur y el emparejamiento de jugadores de fútbol, tenis, básquetbol, pádel y vóleibol. A través de geolocalización en tiempo real, algoritmos de matchmaking predictivos y una economía gamificada basada en recompensas virtuales (FitCoins), la plataforma mitiga el abandono de la actividad física y centraliza de manera interactiva la coordinación de partidos y la gestión de torneos competitivos.
 
-El deporte amateur mueve a millones de personas diariamente, sin embargo, el ecosistema padece tres grandes fricciones no resueltas:
-
-1. **Fragmentación Extrema:** Reservar una cancha implica navegar entre llamadas telefónicas, chats de WhatsApp informales o múltiples apps locales de pago que no se comunican entre sí.
-2. **Abandono y Falta de Incentivos:** Más del 40% de los deportistas amateurs dejan de practicar semanalmente por falta de motivación, problemas de agenda o incapacidad de encontrar rivales de su misma categoría.
-3. **Comunidades Desconectadas:** Los jugadores con agendas compatibles pero sin círculos sociales comunes no tienen un canal unificado para conectar de forma segura y confiable.
-
-### La Solución (SportMatch Connect)
-
-**SportMatch Connect** es la primera super-app que fusiona geolocalización avanzada, incentivos económicos y telemetría en tiempo real bajo tres pilares disruptivos:
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          SPORTMATCH CONNECT                             │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-         ┌───────────────────────────┼───────────────────────────┐
-         ▼                           ▼                           ▼
-┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
-│   MATCHMAKING    │       │     FITCOINS     │       │  TELEMETRÍA IOT  │
-│  Predictivo IA   │       │  'Play-to-Earn'  │       │   Wearables Live │
-└──────────────────┘       └──────────────────┘       └──────────────────┘
-```
-
-1. **Matchmaking Predictivo impulsado por IA:** Olvídate del spam. Nuestro algoritmo empareja instantáneamente a jugadores analizando su disponibilidad horaria, ubicación física, historial deportivo y su **Trust Score** (reputación basada en asistencia y conducta).
-2. **Economía Deportiva Gamificada (FitCoins):** Transformamos el sudor en recompensa. A través de un modelo económico sostenible de _Play-to-Earn_, los usuarios ganan FitCoins al finalizar sus partidos o completar retos semanales. Estos FitCoins se canjean directamente por productos reales (bebidas isotónicas, indumentaria, paletas de pádel o alquiler gratuito de canchas) en nuestro Marketplace integrado.
-3. **Sincronización de Telemetría IoT en Vivo:** Integramos wearables y dispositivos inteligentes para capturar el rendimiento físico real (frecuencia cardíaca, pasos, calorías quemadas). Estos datos no solo se visualizan de forma atractiva, sino que sirven como prueba de esfuerzo auditable para desbloquear y reclamar recompensas de FitCoins de manera transparente.
-
-### Capacidades Operativas y Escalabilidad
-
-SportMatch Connect está diseñado para un rendimiento de nivel corporativo:
-
-- **Mapa de Alta Densidad:** Renderiza dinámicamente y con cero latencia más de **10k+ usuarios concurrentes** utilizando clústeres espaciales optimizados basados en Leaflet y TanStack Query.
-- **Resiliencia SSR/Hydration:** Capa de mapas robusta protegida contra caídas de renderizado de librerías nativas mediante detección dinámica del lado del cliente.
-- **Offline-First:** Sistema preparado para operar en modo simulación local sin depender del backend en zonas de baja conectividad.
+La arquitectura de la aplicación está optimizada bajo los más rigurosos estándares de desarrollo frontend, garantizando interfaces receptivas, animaciones fluidas y blindajes de seguridad a nivel de cliente para proteger la integridad comunitaria.
 
 ---
 
-## 2. Gobernanza Técnica e Ingeniería
+## 2. Stack Tecnológico
 
-### Arquitectura de Software (Feature-Sliced Design)
+El frontend del proyecto se ha desarrollado empleando las tecnologías más robustas del desarrollo web moderno:
 
-El proyecto se rige por los estrictos principios arquitectónicos de **Feature-Sliced Design (FSD)**. Esta metodología divide el código en capas jerárquicas desacopladas para asegurar la mantenibilidad y escalabilidad del software:
-
-```
-src/
-├── app/              # Proveedores globales, rutas raíz y estilos principales
-├── pages/            # Vistas completas de la aplicación organizadas por layouts
-├── features/         # Rebanadas de funcionalidad con efectos secundarios (lógica de negocio)
-│   ├── matchmaking/  # Swipe y emparejamiento inteligente de jugadores
-│   ├── map/          # Visualización espacial y lógica de geolocalización
-│   └── wallet/       # Sistema transaccional de FitCoins y Marketplace
-├── entities/         # Modelos de datos puros, stores globales de estado y contratos
-│   ├── user/         # Modelos de usuario y hooks de autenticación (useAuth)
-│   └── types.ts      # Definiciones de tipo estrictas e inmutables del proyecto
-└── shared/           # Elementos atómicos, utilitarios de red (apiClient) e i18n
-```
-
-### Políticas Inquebrantables de Código (The Team Rules)
-
-> [!IMPORTANT]
-> **1. Zero-Any Policy**
-> Está estrictamente prohibido el uso del tipo `any`. Todo objeto o respuesta de red del `apiClient` debe estar tipado explícitamente mediante contratos genéricos en [types.ts](file:///c:/Users/ejuni/OneDrive%20-%20SEIDOR%20SOLUTIONS%20S.L/Documentos/GitHub/sportmatch-connect/src/entities/types.ts). Si un servicio externo no tiene tipos, debes crear su declaración correspondiente en la carpeta `@types`.
-
-> [!WARNING]
-> **2. Arquitectura Desacoplada**
-> Las vistas localizadas en `src/routes/` deben actuar puramente como orquestadoras del enrutamiento y cargadores de datos preliminares (`loaders`). Queda terminantemente prohibido escribir lógica de negocio pesada, mutaciones o llamadas de API directas en las rutas. Delegue siempre este procesamiento a los hooks especializados dentro de `src/features/`.
-
-> [!TIP]
-> **3. Prioridad de Internacionalización (i18n)**
-> Está prohibido escribir strings estáticos directamente en el código de la UI. Todo texto (títulos, descripciones, botones, avisos y toasts) debe ser registrado en [es.json](file:///c:/Users/ejuni/OneDrive%20-%20SEIDOR%20SOLUTIONS%20S.L/Documentos/GitHub/sportmatch-connect/src/shared/i18n/locales/es.json) y consumido a través del hook `useTranslation` mediante el helper `t()`.
+- **React 19 (Concurrent Features):** Empleo de las últimas capacidades de concurrencia de React para un ciclo de renderizado eficiente y carga optimizada.
+- **Vite:** Orquestador de desarrollo y empaquetador de producción ultra rápido de nueva generación.
+- **Tailwind CSS (v4):** Sistema de diseño basado en utilidades de alto rendimiento con tokens cromáticos adaptados a un modo oscuro premium.
+- **Zustand:** Gestor de estado ligero y reactivo para orquestar los perfiles, balances de la billetera y flujos de autenticación.
+- **TanStack Router:** Motor de enrutamiento del lado del cliente declarativo y 100% type-safe, que previene rutas rotas en compilación.
+- **Vitest:** Framework de pruebas unitarias de velocidad nativa sobre el compilador de Vite.
 
 ---
 
-## 3. Guía Paso a Paso para Levantar el Proyecto
+## 3. Hitos Arquitectónicos (Key Highlights)
 
-### Requisitos Previos
+El sistema incorpora componentes avanzados y patrones de diseño críticos para garantizar la escalabilidad y disponibilidad del servicio:
 
-- **Node.js** v20.x o superior.
-- **npm** v10.x o superior.
-- **Docker** y **Docker Compose** instalados (opcional para levantar bases de datos/contenedores).
+### 🛡️ Moderación de Imágenes en el Cliente (Edge AI)
 
-### 1. Clonar el repositorio
+- **Lógica Zero-Cost:** Implementación de un motor de moderación neuronal directamente en el navegador del usuario utilizando `@tensorflow/tfjs` y `nsfwjs`.
+- **Privacidad y Ahorro:** Las imágenes seleccionadas se convierten a un objeto `HTMLImageElement` temporal en memoria local (`URL.createObjectURL`) y son analizadas localmente por la red convolucional Mobilenet antes de generar cualquier carga útil de red o mutación. Esto elimina costos de computación en la nube para procesamiento de IA y resguarda la privacidad del usuario.
+- **Regla Estricta de Bloqueo:** Si el modelo detecta categorías explícitas (`Porn`, `Hentai` o `Sexy`) con una probabilidad estrictamente superior al **60%** (`0.60`), se detiene el flujo, se revocan los recursos de memoria y se bloquea la subida mediante un banner rojo informativo. En caso de fallas de red del CDN del modelo, el sistema aplica un fallback tolerante (safe) para garantizar la continuidad operativa.
+- **Mecanismos Anti-Spam:** Incorporación de flags de bloqueo concurrente (`isAnalyzingImage` / `isAnalyzingAvatar`) que inhabilitan cargas paralelas o re-entradas durante el proceso de inferencia, previniendo fugas de memoria y corrupción de estado de UI.
 
-```bash
-git clone https://github.com/jojiz29/sportmatch-connect.git
-cd sportmatch-connect
-```
+### ⚡ Rendimiento & Resiliencia
 
-### 2. Configurar el Archivo de Entorno
+- **Code Splitting & Lazy Loading (AI Model):** La carga de librerías neurales de TensorFlow.js se posterga dinámicamente (`await import(...)`) para que ocurra únicamente en el instante en que el usuario activa el dropzone de imágenes o decide cambiar su avatar. El bundle inicial permanece ligero y libre de dependencias pesadas.
+- **React Error Boundaries:** Implementación de límites de errores interactivos en el layout general (`AppShell`) y en páginas clave con alta transaccionalidad (`NewsFeed`, `TournamentHub`). En caso de fallos inesperados de procesamiento o desbordamiento de memoria por renderizado 3D de mapas/IA, se captura el error de forma segura y se presenta una UI alternativa elegante que permite recargar el módulo afectado sin interrumpir la sesión ni provocar pantallas en blanco.
+- **Zero-Lag Skeleton Loaders:** Transiciones de estado e hidrataciones asíncronas disimuladas mediante esqueletos de precarga que mitigan el lag percibido y mejoran el posicionamiento UX.
 
-Crea un archivo `.env` en la raíz del proyecto. Por defecto, para el desarrollo local y pruebas offline de la Fase 4, configure las siguientes variables:
+### 🧪 Tipado Estricto & Garantía de Calidad (QA)
 
-```env
-VITE_USE_MOCKS=true
-VITE_SUPABASE_URL=https://placeholder-url.supabase.co
-VITE_SUPABASE_ANON_KEY=placeholder-anon-key
-```
+- **Strict Form Hooks (`useStrictForm`):** Desarrollo de un hook personalizado para validación y sanitización en tiempo de entrada. Bloquea entradas formadas enteramente por espacios vacíos u hojas con espacios iniciales, forzando un deep-trim automático antes de cualquier validación y submit.
+- **Cobertura de Pruebas Unitarias:** 100% de éxito en la suite de pruebas unitarias integrando tests asíncronos complejos con simulación del ciclo de vida del cargador de TensorFlow y manipulación de mocks del Canvas DOM del navegador.
 
-### 3. Levantamiento del Proyecto
+---
 
-#### Método A: Despliegue con Docker (Recomendado para entornos limpios)
+## 4. Comandos de Desarrollo y Verificación
 
-Para orquestar el ecosistema completo en contenedores aislados:
+Para ejecutar la aplicación localmente y realizar controles de calidad, utilice los siguientes comandos en la terminal de la raíz del proyecto:
 
-```bash
-docker-compose up --build
-```
+### Iniciar Entorno de Desarrollo Local
 
-#### Método B: Despliegue Nativo
-
-Para levantar el servidor de desarrollo local de forma nativa:
+Inicia simultáneamente el servidor de desarrollo de Vite para el frontend y el servidor NestJS para el backend:
 
 ```bash
-# 1. Instalar dependencias del proyecto
-npm install
-
-# 2. Iniciar el entorno de desarrollo local
 npm run dev
 ```
 
-_Nota: Para evitar conflictos en tu sistema local si tienes otros proyectos de desarrollo activos, el servidor de desarrollo de Vite está configurado para intentar enrutarse prioritariamente en el puerto **5178**. Si este está en uso, Vite detectará y escalará automáticamente al primer puerto disponible (ej. 5179)._
+### Compilar para Producción
+
+Compila y optimiza el código TypeScript y los assets con Vite, generando el directorio `dist` listo para despliegues estáticos con separación de chunks optimizada:
+
+```bash
+npm run build
+```
+
+### Ejecutar Pruebas Unitarias (QA)
+
+Corre la suite de pruebas de Vitest para validar los hooks y servicios críticos de la plataforma:
+
+```bash
+npm run test
+```
+
+### Análisis Estático y Formateado
+
+Inspecciona errores estilísticos y corrige el formato de todos los archivos del código fuente:
+
+```bash
+npm run lint
+```
+
+```bash
+npm run format
+```
 
 ---
 
-## 4. Scripts de Control de Calidad (QA) & Optimización
-
-El proyecto cuenta con un pipeline integrado de calidad técnica para asegurar la robustez de las entregas:
-
-| Comando                 | Propósito                                                         | Tecnología            |
-| :---------------------- | :---------------------------------------------------------------- | :-------------------- |
-| `npm run test`          | Ejecuta las pruebas unitarias y de lógica de negocio              | **Vitest**            |
-| `npm run test:e2e`      | Ejecuta las pruebas integrales de flujos de usuario (E2E)         | **Playwright**        |
-| `npm run build`         | Compila la aplicación en un paquete de producción optimizado      | **Vite / ESBuild**    |
-| `npm run build:analyze` | Analiza el tamaño de las dependencias y la distribución de assets | **Rollup Visualizer** |
-| `npm run lint`          | Ejecuta el análisis estático de código para reglas de estilo      | **ESLint**            |
-| `npm run format`        | Aplica un formato homogéneo a todos los archivos del código       | **Prettier**          |
-
-### Análisis del Bundle
-
-Al ejecutar `npm run build:analyze`, se generará un reporte interactivo en `dist/stats.html`. Utiliza este reporte antes de cada _Pull Request_ para vigilar que el tamaño del paquete no se infle por dependencias pesadas y asegurar una carga ultra-rápida en móviles.
-
----
-
-## 5. Gobernanza de Repositorio y Contexto AI
-
-Para asegurar la calidad técnica y la uniformidad visual del código desarrollado por el equipo y los asistentes de Inteligencia Artificial, el repositorio incorpora mecanismos de gobernanza automática y guías de referencia. Es obligatorio revisar la guía de contribución del equipo en [CONTRIBUTING.md](file:///c:/Users/ejuni/OneDrive - SEIDOR SOLUTIONS S.L/Documentos/GitHub/sportmatch-connect/CONTRIBUTING.md) antes de abrir cualquier Pull Request:
-
-### Contexto de Inteligencia Artificial (MCP)
-
-Cualquier asistente de IA (Cursor, Copilot, Lovable, etc.) utilizado en este proyecto leerá automáticamente el archivo [.cursorrules](file:///c:/Users/ejuni/OneDrive - SEIDOR SOLUTIONS S.L/Documentos/GitHub/sportmatch-connect/.cursorrules) en la raíz del repositorio. Este archivo actúa como el manual de directivas de codificación:
-
-- **Feature-Sliced Design (FSD)**: Cumplimiento arquitectónico estricto por capas.
-- **Tipado Estricto**: Cero tolerancia al uso de `any` en variables y retornos de funciones.
-- **Internacionalización**: Obligatoriedad del uso de hooks de `useTranslation` e inyección en `es.json` (no hardcoding de textos).
-- **Zustand y TanStack Query**: Políticas claras para estados persistentes y mutaciones del lado del servidor.
-
-### Sistema de Diseño y Pautas Estéticas
-
-Los desarrolladores deben guiarse estrictamente por el manual técnico [design-system.md](file:///c:/Users/ejuni/OneDrive - SEIDOR SOLUTIONS S.L/Documentos/GitHub/sportmatch-connect/docs/design-system.md) ubicado en la carpeta de documentación. En él se especifican:
-
-- Paletas cromáticas de HSL (Sleek Dark Mode & Neon Green).
-- Convenciones de tipografía y espaciados basados en Tailwind CSS v4.
-- Orquestación de animaciones físicas y de arrastre mediante `framer-motion`.
-- Catálogo de componentes atómicos Shadcn UI en `shared/ui`.
-
-### Blindaje en el Control de Versiones (Hooks de Pre-Commit)
-
-Hemos configurado **Husky** y **lint-staged** para automatizar el control de calidad antes de cada commit. Al realizar una confirmación en Git:
-
-1. `eslint --fix` y `prettier --write` se ejecutan sobre los archivos TS/JSX modificados para forzar el cumplimiento estilístico.
-2. `npm run typecheck` (`tsc --noEmit`) se dispara globalmente en el repositorio para evitar la subida de código con errores de tipado TypeScript.
-
-Si alguna de estas verificaciones falla, el commit es abortado de inmediato para mantener la integridad de la rama principal (`main`).
+_SportMatch Connect - Proyecto de Ingeniería de Software 2026. Diseñado para un rendimiento premium._
