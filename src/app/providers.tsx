@@ -42,22 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    const timeoutRef = { current: null as NodeJS.Timeout | null };
 
-    async function initAuth() {
+async function initAuth() {
       try {
-        // SEC-05: Strict 1.5s timeout on Supabase authentication sync
-        // If it takes longer, we automatically fallback to local mock mode so the user is NEVER stuck (Task 2.4 / 2.5)
-        timeoutId = setTimeout(() => {
-          if (mounted) {
-            console.warn("Auth synchronization timed out. Falling back to demo mode.");
-            useAuthStore.getState().setDemoMode(true);
-            const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
-            useAuthStore.getState().login(fallbackUser);
-            setIsLoading(false);
-          }
-        }, 1500);
-
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -74,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (existingProfile && !error) {
             profile = existingProfile;
           } else {
-            // New Google/OAuth user profile auto-creation
             const userMeta = session.user.user_metadata || {};
             const name = userMeta.full_name || userMeta.name || "Jugador Google";
             const avatarUrl =
@@ -99,8 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!insertError && newProfile) {
               profile = newProfile;
             } else {
-              console.error("Error creating profile for Google login:", insertError);
-              // Fallback: Retry fetching the profile in case the trigger inserted it concurrently
               const { data: retriedProfile } = await supabase
                 .from("profiles")
                 .select("*")
@@ -114,6 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (profile) {
             loginRef.current(profile);
+            // Clean URL hash after successful OAuth login
+            if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
+              window.history.replaceState(null, "", window.location.pathname + window.location.search);
+            }
           } else {
             logoutRef.current();
           }
@@ -124,7 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("AuthProvider initAuth error:", err);
         logoutRef.current();
       } finally {
-        clearTimeout(timeoutId);
         if (mounted) {
           initializedRef.current = true;
           setIsLoading(false);
@@ -137,11 +125,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("onAuthStateChange fired:", event, session?.user?.email);
       if (!mounted) return;
-      // Skip INITIAL_SESSION — already handled synchronously by initAuth()
-      if (!initializedRef.current) return;
+
+      // Only skip INITIAL_SESSION if already initialized (already handled by initAuth)
+      // But ALWAYS process SIGNED_IN — it comes from OAuth callback and needs to be handled
+      if (event === "INITIAL_SESSION" && initializedRef.current) {
+        return;
+      }
+
+      // If not initialized yet and event is SIGNED_IN, process it (OAuth callback)
+      // If not initialized yet and event is anything else, skip
+      if (!initializedRef.current && event !== "SIGNED_IN") {
+        console.log("Skipping because not initialized yet, event:", event);
+        return;
+      }
 
       if (event === "SIGNED_IN" && session?.user) {
+        console.log("Processing SIGNED_IN, user:", session.user.email);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+          console.log("Cleared auth timeout at start of SIGNED_IN");
+        }
         let profile = null;
         const { data: existingProfile, error } = await supabase
           .from("profiles")
@@ -149,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq("id", session.user.id)
           .single();
 
+        console.log("Profile fetch result:", existingProfile, error);
         if (existingProfile && !error) {
           profile = existingProfile;
         } else {
@@ -194,8 +201,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (profile && mounted) {
+          console.log("Logging in with profile:", profile.name);
           loginRef.current(profile);
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+            console.log("Cleared auth timeout after SIGNED_IN");
+          }
+          initializedRef.current = true;
+          // Clean URL hash after successful OAuth login
+          if (window.location.hash.includes("access_token")) {
+            window.history.replaceState(null, "", window.location.pathname + window.location.search);
+            console.log("Cleaned OAuth hash from URL");
+          }
+        } else {
+          console.log("Profile or mounted false:", { profile: !!profile, mounted });
         }
+        // Always clear loading state when SIGNED_IN is processed
+        setIsLoading(false);
       } else if (event === "SIGNED_OUT") {
         logoutRef.current();
       }

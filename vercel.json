@@ -3,5 +3,9 @@
   "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "npx vite build",
   "devCommand": "npm run dev",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/app", "destination": "/index.html" },
+    { "source": "/app/:path*", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
