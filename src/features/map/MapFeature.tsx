@@ -82,9 +82,17 @@ interface PopupContentProps {
   onViewCourt: (venueId: string) => void;
   owner?: User;
   onViewCommercialSheet?: (business: User) => void;
+  onOpenVenueActivity?: (venue: Venue) => void;
 }
 
-function PopupContent({ venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet }: PopupContentProps) {
+function PopupContent({
+  venue,
+  onBookCourt,
+  onViewCourt,
+  owner,
+  onViewCommercialSheet,
+  onOpenVenueActivity,
+}: PopupContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Previene que Leaflet cierre el popup al interactuar con sus elementos internos.
@@ -99,13 +107,29 @@ function PopupContent({ venue, onBookCourt, onViewCourt, owner, onViewCommercial
       const clickable = target.closest("[data-action]");
       if (!clickable) return;
       const action = clickable.getAttribute("data-action");
-      if (action === "book") { e.preventDefault(); e.stopPropagation(); onBookCourt?.(venue); }
-      else if (action === "view") { e.preventDefault(); e.stopPropagation(); onViewCourt(venue.id); }
-      else if (action === "profile") { e.preventDefault(); e.stopPropagation(); if (owner) onViewCommercialSheet?.(owner); }
+      if (action === "book") {
+        e.preventDefault();
+        e.stopPropagation();
+        onBookCourt?.(venue);
+      } else if (action === "view") {
+        e.preventDefault();
+        e.stopPropagation();
+        onViewCourt(venue.id);
+      } else if (action === "profile") {
+        e.preventDefault();
+        e.stopPropagation();
+        if (owner) onViewCommercialSheet?.(owner);
+      } else if (action === "activity") {
+        e.preventDefault();
+        e.stopPropagation();
+        onOpenVenueActivity?.(venue);
+      }
     };
     el.addEventListener("click", handleNativeClick);
-    return () => el.removeEventListener("click", handleNativeClick);
-  }, [venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet]);
+    return () => {
+      el.removeEventListener("click", handleNativeClick);
+    };
+  }, [venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet, onOpenVenueActivity]);
 
   return (
     <div ref={containerRef} className="p-1 min-w-[200px] max-w-[240px] font-sans text-left">
@@ -153,6 +177,13 @@ function PopupContent({ venue, onBookCourt, onViewCourt, owner, onViewCommercial
       )}
 
       <div className="flex gap-2">
+        <button
+          type="button"
+          data-action="activity"
+          className="flex-1 text-center py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-[10px] font-bold cursor-pointer border-0"
+        >
+          ACTIVIDAD
+        </button>
         {owner?.whatsapp && (
           <a href={`https://wa.me/${owner.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
@@ -233,13 +264,19 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 // Mapa Leaflet con marcadores de canchas (venues) y negocios (players).
 // Incluye círculo de resaltado temporal al seleccionar un distrito.
 export function MapFeature({
-  venues, players, onBookCourt, selectedDistrictCenter, onViewCommercialSheet,
+  venues,
+  players,
+  onBookCourt,
+  selectedDistrictCenter,
+  onViewCommercialSheet,
+  onOpenVenueActivity,
 }: {
   venues: Venue[];
   players: User[];
   onBookCourt?: (venue: Venue) => void;
   selectedDistrictCenter?: [number, number] | null;
   onViewCommercialSheet?: (business: User) => void;
+  onOpenVenueActivity?: (venue: Venue) => void;
 }) {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
@@ -269,13 +306,19 @@ export function MapFeature({
         <Marker key={`${c.id}-${c.name}-${c.district}`} position={[c.lat, c.lng]}
           icon={createCourtIcon(c.sport, c.is_sponsored)}>
           <Popup>
-            <PopupContent venue={c} onBookCourt={onBookCourt} onViewCourt={onViewCourt}
-              owner={owner} onViewCommercialSheet={onViewCommercialSheet} />
+            <PopupContent
+              venue={c}
+              onBookCourt={onBookCourt}
+              onViewCourt={onViewCourt}
+              owner={owner}
+              onViewCommercialSheet={onViewCommercialSheet}
+              onOpenVenueActivity={onOpenVenueActivity}
+            />
           </Popup>
         </Marker>
       );
     });
-  }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet]);
+  }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet, onOpenVenueActivity]);
 
   // Marcadores de negocios (players con rol BUSINESS).
   const matchMarkers = useMemo(() => {

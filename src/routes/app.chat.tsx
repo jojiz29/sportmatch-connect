@@ -5,7 +5,7 @@
 // propuestas de partido, booking de canchas).
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import { Search, Plus, Users, MessageSquare } from "lucide-react";
+import { Search, Plus, Users, MessageSquare, Swords, X } from "lucide-react";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,12 @@ import { toast } from "sonner";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import { PlayerConnection, getMutualPlayerConnections } from "@/shared/api/connectionService";
+import {
+  createPlayerChallenge,
+  proposeChallengeChanges,
+  respondToChallengeCounterProposal,
+  respondToPlayerChallenge,
+} from "@/shared/api/challengeService";
 
 export const Route = createFileRoute("/app/chat")({
   head: () => ({ meta: [{ title: "Chats — SportMatch" }] }),
@@ -71,6 +77,23 @@ function Chats() {
   const [systemMatches, setSystemMatches] = useState<Match[]>([]);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
+  const [isChallengeComposerOpen, setIsChallengeComposerOpen] = useState(false);
+  const [isSavingChallenge, setIsSavingChallenge] = useState(false);
+  const [challengeResponses, setChallengeResponses] = useState<
+    Record<string, "accepted" | "rejected" | "counter_proposed">
+  >({});
+  const [counterProposalTarget, setCounterProposalTarget] = useState<{
+    id: string;
+    challengerId: string;
+  } | null>(null);
+  const [challengeDraft, setChallengeDraft] = useState({
+    sport: "",
+    modality: "amistoso",
+    scheduledDate: "",
+    scheduledTime: "",
+    location: "",
+    message: "",
+  });
 
   // Mapas de estado para unirse a Squads desde el chat
   const [isJoiningMap, setIsJoiningMap] = useState<Record<string, boolean>>({});
@@ -221,6 +244,23 @@ function Chats() {
   // Filtra los chats del usuario actual y hace scroll al último mensaje.
   const userChats = chats.filter((c) => currentUser && c.current_players.includes(currentUser.id));
   const activeChat = userChats.find((c) => c.id === activeConversationId);
+  const visibleChallengeResponses = useMemo(() => {
+    const responses = { ...challengeResponses };
+    // Las respuestas también viajan como mensajes para sincronizar ambas sesiones
+    // mediante Realtime y reconstruir el estado después de recargar la página.
+    for (const message of activeChat?.messages || []) {
+      if (
+        message.metadata?.type === "challenge_response" &&
+        typeof message.metadata.challenge_id === "string" &&
+        (message.metadata.decision === "accepted" ||
+          message.metadata.decision === "rejected" ||
+          message.metadata.decision === "counter_proposed")
+      ) {
+        responses[message.metadata.challenge_id] = message.metadata.decision;
+      }
+    }
+    return responses;
+  }, [activeChat?.messages, challengeResponses]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -315,6 +355,163 @@ function Chats() {
   // === BLOQUE: Checkout de cancha desde tarjeta ===
   // Al hacer clic en "Jugar" desde una tarjeta de propuesta de partido,
   // carga los datos de la cancha para abrir el modal de booking.
+  const openChallengeComposer = () => {
+    setCounterProposalTarget(null);
+    setChallengeDraft((current) => ({
+      ...current,
+      sport: current.sport || currentUser?.preferred_sports?.[0] || "",
+    }));
+    setIsChallengeComposerOpen(true);
+  };
+
+  const openCounterProposal = (challenge: {
+    id: string;
+    sport: string;
+    modality: string;
+    scheduledDate: string;
+    scheduledTime: string;
+    location?: string;
+    challengerId: string;
+  }) => {
+    setCounterProposalTarget({ id: challenge.id, challengerId: challenge.challengerId });
+    setChallengeDraft({
+      sport: challenge.sport,
+      modality: challenge.modality,
+      scheduledDate: challenge.scheduledDate,
+      scheduledTime: challenge.scheduledTime,
+      location: challenge.location || "",
+      message: "",
+    });
+    setIsChallengeComposerOpen(true);
+  };
+
+  const sendChallengeProposal = async () => {
+    if (!currentUser || !activeChat || !activeConversationId) return;
+    const challengedId = activeChat.current_players.find((id: string) => id !== currentUser.id);
+    if (!challengedId) return;
+    if (!challengeDraft.sport || !challengeDraft.scheduledDate || !challengeDraft.scheduledTime) {
+      toast.error("Completa deporte, fecha y hora");
+      return;
+    }
+
+    try {
+      setIsSavingChallenge(true);
+      if (counterProposalTarget) {
+        await proposeChallengeChanges({
+          challengeId: counterProposalTarget.id,
+          challengedId: currentUser.id,
+          scheduledDate: challengeDraft.scheduledDate,
+          scheduledTime: challengeDraft.scheduledTime,
+          location: challengeDraft.location,
+        });
+        await sendMessage(
+          activeConversationId,
+          challengeDraft.message.trim() || "Propongo cambiar los detalles del desafío.",
+          undefined,
+          {
+            type: "challenge_counter_proposal",
+            challenge_id: counterProposalTarget.id,
+            action_user_id: counterProposalTarget.challengerId,
+            sport: challengeDraft.sport,
+            modality: challengeDraft.modality,
+            scheduled_date: challengeDraft.scheduledDate,
+            scheduled_time: challengeDraft.scheduledTime,
+            location: challengeDraft.location,
+          },
+        );
+        await sendMessage(
+          activeConversationId,
+          "Se propusieron cambios para el desafío.",
+          undefined,
+          {
+            type: "challenge_response",
+            challenge_id: counterProposalTarget.id,
+            decision: "counter_proposed",
+          },
+        );
+        setCounterProposalTarget(null);
+        setIsChallengeComposerOpen(false);
+        toast.success("Contrapropuesta enviada");
+        return;
+      }
+
+      // El desafío se persiste antes de enviarlo al chat para que la tarjeta siempre
+      // represente una propuesta real y pueda ser respondida por el receptor.
+      const challenge = await createPlayerChallenge({
+        challengerId: currentUser.id,
+        challengedId,
+        sport: challengeDraft.sport,
+        modality: challengeDraft.modality,
+        scheduledDate: challengeDraft.scheduledDate,
+        scheduledTime: challengeDraft.scheduledTime,
+        location: challengeDraft.location,
+        message: challengeDraft.message,
+      });
+
+      await sendMessage(
+        activeConversationId,
+        challengeDraft.message.trim() || `Te propongo un desafío de ${challengeDraft.sport}.`,
+        undefined,
+        {
+          type: "challenge_proposal",
+          challenge_id: challenge.id,
+          challenger_id: currentUser.id,
+          challenged_id: challengedId,
+          sport: challengeDraft.sport,
+          modality: challengeDraft.modality,
+          scheduled_date: challengeDraft.scheduledDate,
+          scheduled_time: challengeDraft.scheduledTime,
+          location: challengeDraft.location,
+        },
+      );
+      setIsChallengeComposerOpen(false);
+      setChallengeDraft({
+        sport: currentUser.preferred_sports?.[0] || "",
+        modality: "amistoso",
+        scheduledDate: "",
+        scheduledTime: "",
+        location: "",
+        message: "",
+      });
+      toast.success("Desafío enviado en la conversación");
+    } catch (error) {
+      console.error("Error al proponer desafío desde el chat:", error);
+      toast.error("No se pudo enviar el desafío");
+    } finally {
+      setIsSavingChallenge(false);
+    }
+  };
+
+  const handleRespondChallenge = async (challengeId: string, decision: "accepted" | "rejected") => {
+    if (!currentUser || !activeConversationId) return;
+    try {
+      const isCounterProposalResponse = activeChat?.messages.some(
+        (message) =>
+          message.metadata?.type === "challenge_counter_proposal" &&
+          message.metadata.challenge_id === challengeId &&
+          message.metadata.action_user_id === currentUser.id,
+      );
+      if (isCounterProposalResponse) {
+        await respondToChallengeCounterProposal(challengeId, currentUser.id, decision);
+      } else {
+        await respondToPlayerChallenge(challengeId, currentUser.id, decision);
+      }
+      setChallengeResponses((current) => ({ ...current, [challengeId]: decision }));
+      await sendMessage(
+        activeConversationId,
+        decision === "accepted"
+          ? "Acepté el desafío. Coordinemos los últimos detalles."
+          : "No podré aceptar este desafío.",
+        undefined,
+        { type: "challenge_response", challenge_id: challengeId, decision },
+      );
+      toast.success(decision === "accepted" ? "Desafío aceptado" : "Desafío rechazado");
+    } catch (error) {
+      console.error("Error al responder desafío desde el chat:", error);
+      toast.error("El desafío ya no está disponible");
+    }
+  };
+
   const handlePlayCheckout = async (courtId: string) => {
     try {
       const backendResult = await backendApi.courts.getById(courtId);
@@ -555,6 +752,10 @@ function Chats() {
             sendSquadInviteCard={sendSquadInviteCard}
             sendMatchProposalCard={sendMatchProposalCard}
             handlePlayCheckout={handlePlayCheckout}
+            openChallengeComposer={openChallengeComposer}
+            challengeResponses={visibleChallengeResponses}
+            onRespondChallenge={handleRespondChallenge}
+            onOpenCounterProposal={openCounterProposal}
             onJoinSquad={handleJoinSquad}
             isJoiningMap={isJoiningMap}
             joinedMap={joinedMap}
@@ -576,6 +777,129 @@ function Chats() {
       {/* === BLOQUE: Modal de nuevo chat === */}
       {/* Overlay con buscador de usuarios registrados para iniciar
           una nueva conversación uno a uno. */}
+      {isChallengeComposerOpen && activeChat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            aria-label="Cerrar formulario de desafío"
+            className="absolute inset-0 bg-background/85 backdrop-blur-sm cursor-default"
+            onClick={() => setIsChallengeComposerOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-card">
+            <button
+              onClick={() => setIsChallengeComposerOpen(false)}
+              className="absolute right-4 top-4 h-8 w-8 rounded-full bg-muted grid place-items-center cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-11 w-11 rounded-xl bg-primary/15 grid place-items-center">
+                <Swords className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase text-primary">
+                  {counterProposalTarget ? "Proponer cambios" : "Nueva propuesta"}
+                </div>
+                <h2 className="text-xl font-bold">
+                  {counterProposalTarget ? "Ajustar desafío" : `Desafiar a ${activeChat.name}`}
+                </h2>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="col-span-2 text-xs font-semibold">
+                Deporte
+                <input
+                  value={challengeDraft.sport}
+                  onChange={(event) =>
+                    setChallengeDraft((current) => ({ ...current, sport: event.target.value }))
+                  }
+                  placeholder="Ej. Fútbol"
+                  disabled={Boolean(counterProposalTarget)}
+                  className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold">
+                Modalidad
+                <select
+                  value={challengeDraft.modality}
+                  onChange={(event) =>
+                    setChallengeDraft((current) => ({ ...current, modality: event.target.value }))
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                  disabled={Boolean(counterProposalTarget)}
+                >
+                  <option value="amistoso">Amistoso</option>
+                  <option value="competitivo">Competitivo</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold">
+                Lugar opcional
+                <input
+                  value={challengeDraft.location}
+                  onChange={(event) =>
+                    setChallengeDraft((current) => ({ ...current, location: event.target.value }))
+                  }
+                  placeholder="Distrito o cancha"
+                  className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold">
+                Fecha
+                <input
+                  type="date"
+                  value={challengeDraft.scheduledDate}
+                  onChange={(event) =>
+                    setChallengeDraft((current) => ({
+                      ...current,
+                      scheduledDate: event.target.value,
+                    }))
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                />
+              </label>
+              <label className="text-xs font-semibold">
+                Hora
+                <input
+                  type="time"
+                  value={challengeDraft.scheduledTime}
+                  onChange={(event) =>
+                    setChallengeDraft((current) => ({
+                      ...current,
+                      scheduledTime: event.target.value,
+                    }))
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                />
+              </label>
+              <label className="col-span-2 text-xs font-semibold">
+                Mensaje opcional
+                <textarea
+                  value={challengeDraft.message}
+                  maxLength={240}
+                  rows={3}
+                  onChange={(event) =>
+                    setChallengeDraft((current) => ({ ...current, message: event.target.value }))
+                  }
+                  className="mt-1.5 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+                />
+              </label>
+            </div>
+            <button
+              onClick={sendChallengeProposal}
+              disabled={isSavingChallenge}
+              className="mt-5 w-full rounded-xl bg-gradient-primary py-3 text-sm font-bold text-primary-foreground shadow-glow cursor-pointer disabled:opacity-50"
+            >
+              {isSavingChallenge
+                ? "Enviando..."
+                : counterProposalTarget
+                  ? "Enviar contrapropuesta"
+                  : "Enviar desafío"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* New Chat Modal Overlay */}
       {isNewChatModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
