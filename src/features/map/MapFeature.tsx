@@ -133,6 +133,7 @@ interface PopupContentProps {
   onViewCourt: (venueId: string) => void;
   owner?: User;
   onViewCommercialSheet?: (business: User) => void;
+  onOpenVenueActivity?: (venue: Venue) => void;
 }
 
 function PopupContent({
@@ -141,6 +142,7 @@ function PopupContent({
   onViewCourt,
   owner,
   onViewCommercialSheet,
+  onOpenVenueActivity,
 }: PopupContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -170,6 +172,10 @@ function PopupContent({
         e.preventDefault();
         e.stopPropagation();
         if (owner) onViewCommercialSheet?.(owner);
+      } else if (action === "activity") {
+        e.preventDefault();
+        e.stopPropagation();
+        onOpenVenueActivity?.(venue);
       }
     };
 
@@ -177,7 +183,7 @@ function PopupContent({
     return () => {
       el.removeEventListener("click", handleNativeClick);
     };
-  }, [venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet]);
+  }, [venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet, onOpenVenueActivity]);
 
   return (
     <div ref={containerRef} className="p-1 min-w-[200px] max-w-[240px] font-sans text-left">
@@ -238,6 +244,13 @@ function PopupContent({
       )}
 
       <div className="flex gap-2">
+        <button
+          type="button"
+          data-action="activity"
+          className="flex-1 text-center py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-[10px] font-bold cursor-pointer border-0"
+        >
+          ACTIVIDAD
+        </button>
         {owner?.whatsapp && (
           <a
             href={`https://wa.me/${owner.whatsapp.replace(/\D/g, "")}`}
@@ -346,12 +359,14 @@ export function MapFeature({
   onBookCourt,
   selectedDistrictCenter,
   onViewCommercialSheet,
+  onOpenVenueActivity,
 }: {
   venues: Venue[];
   players: User[];
   onBookCourt?: (venue: Venue) => void;
   selectedDistrictCenter?: [number, number] | null;
   onViewCommercialSheet?: (business: User) => void;
+  onOpenVenueActivity?: (venue: Venue) => void;
 }) {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
@@ -396,12 +411,13 @@ export function MapFeature({
               onViewCourt={onViewCourt}
               owner={owner}
               onViewCommercialSheet={onViewCommercialSheet}
+              onOpenVenueActivity={onOpenVenueActivity}
             />
           </Popup>
         </Marker>
       );
     });
-  }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet]);
+  }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet, onOpenVenueActivity]);
 
   const matchMarkers = useMemo(() => {
     return players.map((m) => {

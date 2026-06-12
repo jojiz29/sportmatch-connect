@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { ImageUploadField } from "@/components/ImageUploadField";
+import { VenueLocationPicker } from "@/features/map/VenueLocationPicker";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -59,6 +60,32 @@ import {
 
 interface BusinessSearch {
   tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings";
+}
+
+async function uploadVenueImage(imageValue: string, businessId: string): Promise<string> {
+  if (!imageValue.startsWith("data:image/")) return imageValue;
+
+  console.info("[venue-register] image-upload:start", { businessId });
+  const imageBlob = await fetch(imageValue).then((response) => response.blob());
+  const extension =
+    imageBlob.type === "image/png" ? "png" : imageBlob.type === "image/webp" ? "webp" : "jpg";
+  const filePath = `${businessId}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await withTimeout(
+    supabase.storage.from("venue-images").upload(filePath, imageBlob, {
+      contentType: imageBlob.type || "image/webp",
+      upsert: false,
+    }),
+    30000,
+  );
+
+  if (error) {
+    console.error("[venue-register] image-upload:error", { message: error.message });
+    throw new Error(`No se pudo subir la imagen de la sede: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from("venue-images").getPublicUrl(filePath);
+  console.info("[venue-register] image-upload:success", { filePath });
+  return data.publicUrl;
 }
 
 export const Route = createFileRoute("/app/business")({
@@ -247,7 +274,7 @@ function BusinessPage() {
       return;
     }
     if (!venueName || !venueAddress || venueLat === "" || venueLng === "") {
-      toast.error("Por favor completa los campos obligatorios.");
+      toast.error("Completa los datos obligatorios y selecciona la sede en el mapa.");
       return;
     }
 
@@ -302,6 +329,15 @@ function BusinessPage() {
         setVenues((prev) => [...prev, newVenue]);
         toast.success("¡Sede registrada con éxito en modo Demo!");
       } else {
+        // Los archivos locales se suben a Storage; PostgreSQL conserva únicamente su URL pública.
+        const imageUrl = venueImage
+          ? await uploadVenueImage(venueImage, user.id)
+          : "https://images.unsplash.com/photo-1554068865-24cecd4e34b8";
+
+        console.info("[venue-register] court-insert:start", {
+          ownerId: user.id,
+          name: venueName,
+        });
         const { data: createdVenue, error: insertErr } = await withTimeout(
           supabase
             .from("courts")
@@ -315,23 +351,27 @@ function BusinessPage() {
               address: venueAddress,
               max_players: maxPlayersVal,
               operating_hours: hoursVal,
-              image_url: venueImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+              image_url: imageUrl,
               amenities: newVenue.amenities,
               owner_id: user.id,
               is_available: true,
               rating: 5.0,
               reviews_count: 0,
               district: venueDistrict || compDistrict || "Surco",
-              description: venueDescription,
             })
             .select()
             .single(),
         );
 
         if (insertErr) {
+          console.error("[venue-register] court-insert:error", {
+            code: insertErr.code,
+            message: insertErr.message,
+          });
           throw insertErr;
         }
 
+        console.info("[venue-register] court-insert:success", { venueId: createdVenue.id });
         setVenues((prev) => [...prev, createdVenue as Venue]);
         toast.success("¡Sede registrada con éxito!");
       }
@@ -350,7 +390,7 @@ function BusinessPage() {
       setVenueHours("");
       setVenueFormOpen(false);
     } catch (err: unknown) {
-      console.error(err);
+      console.error("[venue-register] failed", err);
       const msg = err instanceof Error ? err.message : String(err);
       toast.error("Error al registrar sede: " + msg);
     } finally {
@@ -405,21 +445,15 @@ function BusinessPage() {
 
         if (useAuthStore.getState().isDemoMode) {
           const allVenues = await apiClient.venues.getAll();
-          let venuesData = allVenues.filter((c) => c.owner_id === businessId);
-          if (venuesData.length === 0) {
-            const updatedVenues = allVenues.map((c, idx) => {
-              if (idx < 3) {
-                return { ...c, owner_id: businessId };
-              }
-              return c;
-            });
-            localStorage.setItem("sportmatch_demo_venues", JSON.stringify(updatedVenues));
-            venuesData = updatedVenues.filter((c) => c.owner_id === businessId);
-          }
+          // Una empresa solo administra las sedes que registró; no apropiamos datos de prueba.
+          const venuesData = allVenues.filter((c) => c.owner_id === businessId);
           setVenues(venuesData);
           // Try backend first for sports, fallback to Supabase
           const backendSports = await backendApi.sports.getAll().catch(() => null);
-          const sportsData = backendSports || (await apiClient.sports.getAll());
+          // El backend envuelve sus resultados en { data, error }; la interfaz necesita el arreglo.
+          const sportsData = Array.isArray(backendSports?.data)
+            ? backendSports.data
+            : await apiClient.sports.getAll();
           setSportsList(sportsData as SportCatalog[]);
           setLoading(false);
           setLoadingVenues(false);
@@ -436,7 +470,10 @@ function BusinessPage() {
 
         // Load sports catalog - try backend first, fallback to Supabase
         const backendSports = await backendApi.sports.getAll().catch(() => null);
-        const sportsData = backendSports || (await apiClient.sports.getAll());
+        // Evita que la pestaña "Mis sedes" intente ejecutar .map() sobre la respuesta completa.
+        const sportsData = Array.isArray(backendSports?.data)
+          ? backendSports.data
+          : await apiClient.sports.getAll();
         setSportsList(sportsData as SportCatalog[]);
       } catch (err) {
         console.error("Failed to load business dashboard data:", err);
@@ -1639,18 +1676,10 @@ function BusinessPage() {
                       </span>
                     </div>
 
-                    {/* GPS Tag */}
-                    <div className="text-[9px] font-mono text-muted-foreground/60 flex items-center gap-1">
-                      <span>GPS:</span>
-                      <span>
-                        {typeof venue.lat === "number" && !isNaN(venue.lat)
-                          ? venue.lat.toFixed(4)
-                          : "n/e"}
-                        ,{" "}
-                        {typeof venue.lng === "number" && !isNaN(venue.lng)
-                          ? venue.lng.toFixed(4)
-                          : "n/e"}
-                      </span>
+                    {/* Confirmamos que la sede aparecerá en el mapa sin exponer coordenadas. */}
+                    <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-neon" />
+                      <span>Ubicación configurada en el mapa</span>
                     </div>
                   </div>
                 </div>
@@ -1803,44 +1832,30 @@ function BusinessPage() {
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs font-semibold">Coordenadas GPS</label>
+                    <label className="text-xs font-semibold">Ubicación del establecimiento</label>
                     <button
                       type="button"
                       onClick={handleAutofillLocation}
                       className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1.5 cursor-pointer border-0 bg-transparent"
                     >
-                      📍 Usar GPS actual
+                      Usar mi ubicación actual
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <input
-                        type="number"
-                        step="any"
-                        required
-                        placeholder="Latitud"
-                        value={venueLat}
-                        onChange={(e) =>
-                          setVenueLat(e.target.value === "" ? "" : Number(e.target.value))
-                        }
-                        className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                        id="venue-register-lat"
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        step="any"
-                        required
-                        placeholder="Longitud"
-                        value={venueLng}
-                        onChange={(e) =>
-                          setVenueLng(e.target.value === "" ? "" : Number(e.target.value))
-                        }
-                        className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                        id="venue-register-lng"
-                      />
-                    </div>
+                  <p className="mb-2 text-[11px] text-muted-foreground">
+                    Haz clic sobre el mapa para marcar la entrada principal de tu sede.
+                  </p>
+                  <VenueLocationPicker
+                    lat={venueLat}
+                    lng={venueLng}
+                    onChange={(lat, lng) => {
+                      setVenueLat(lat);
+                      setVenueLng(lng);
+                    }}
+                  />
+                  <div className="mt-2 text-[11px] font-medium text-muted-foreground">
+                    {venueLat === "" || venueLng === ""
+                      ? "Todavía no has seleccionado una ubicación."
+                      : "Ubicación seleccionada correctamente."}
                   </div>
                 </div>
 

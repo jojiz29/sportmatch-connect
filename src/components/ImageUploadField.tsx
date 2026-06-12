@@ -23,7 +23,7 @@ export function ImageUploadField({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Limit size to 2.5MB for Base64 storage
+    // Limitamos el archivo antes de prepararlo para su posterior subida a Storage.
     if (file.size > 2.5 * 1024 * 1024) {
       toast.error("La imagen es demasiado grande. El límite es de 2.5MB.");
       return;
