@@ -1,3 +1,8 @@
+// === BLOQUE: Ruta de Registro de Usuario ===
+// Formulario de registro con selector de rol (PLAYER / BUSINESS),
+// validación estricta de email (RFC + whitelist de dominios + TLDs),
+// validación de contraseña con indicador de fortaleza visual,
+// autocompletado de geolocalización y autenticación con Google OAuth.
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
@@ -11,6 +16,7 @@ export const Route = createFileRoute("/app/register")({
   component: RegisterPage,
 });
 
+// === BLOQUE: Whitelist de dominios de correo permitidos ===
 const ALLOWED_DOMAINS = [
   "gmail.com",
   "outlook.com",
@@ -22,43 +28,35 @@ const ALLOWED_DOMAINS = [
   "puka.com",
 ];
 
+// === BLOQUE: TLDs permitidos ===
 const ALLOWED_TLDS = [".com", ".pe", ".edu", ".org", ".net", ".app"];
 
+// === BLOQUE: getEmailValidationError ===
+// Valida el email contra RFC 5322 básico, verifica TLD permitido
+// y dominio en whitelist. Retorna null si es válido.
 function getEmailValidationError(email: string, t: (key: string) => string): string | null {
   if (!email) return null;
 
-  // RFC Standard Regex for basic structure
   const rfcRegex =
     /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  if (!rfcRegex.test(email)) {
-    return t("auth.email_invalid_format");
-  }
+  if (!rfcRegex.test(email)) return t("auth.email_invalid_format");
 
   const parts = email.split("@");
-  if (parts.length !== 2) {
-    return t("auth.email_invalid_format");
-  }
+  if (parts.length !== 2) return t("auth.email_invalid_format");
 
   const domain = parts[1].toLowerCase();
-
-  // TLD check: the domain must end with one of the allowed TLDs
   const hasAllowedTld = ALLOWED_TLDS.some((tld) => domain.endsWith(tld));
-  if (!hasAllowedTld) {
-    return t("auth.email_invalid_tld");
-  }
+  if (!hasAllowedTld) return t("auth.email_invalid_tld");
 
-  // Whitelist check
-  const isWhitelisted = ALLOWED_DOMAINS.some((allowed) => {
-    return domain === allowed || domain.endsWith("." + allowed);
-  });
-
-  if (!isWhitelisted) {
-    return t("auth.email_invalid_domain");
-  }
+  const isWhitelisted = ALLOWED_DOMAINS.some(
+    (allowed) => domain === allowed || domain.endsWith("." + allowed),
+  );
+  if (!isWhitelisted) return t("auth.email_invalid_domain");
 
   return null;
 }
 
+// === BLOQUE: Criterios de contraseña ===
 function getPasswordCriteria(password: string) {
   return {
     length: password.length >= 8,
@@ -69,6 +67,8 @@ function getPasswordCriteria(password: string) {
   };
 }
 
+// === BLOQUE: getPasswordStrength ===
+// Calcula la fortaleza de la contraseña basada en cuántos criterios cumple.
 function getPasswordStrength(criteria: {
   length: boolean;
   upper: boolean;
@@ -89,10 +89,10 @@ function RegisterPage() {
 
   const [role, setRole] = useState<"PLAYER" | "BUSINESS">("PLAYER");
   const [showPassword, setShowPassword] = useState(false);
-
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
 
+  // === BLOQUE: Geolocalización automática ===
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -112,6 +112,9 @@ function RegisterPage() {
     }
   }, []);
 
+  // === BLOQUE: useStrictForm ===
+  // Hook personalizado que maneja validación estricta, envío
+  // y creación del usuario en el store de autenticación.
   const { values, handleChange, handleBlur, handleSubmit, isSubmitting } = useStrictForm({
     initialValues: {
       fullName: "",
@@ -135,15 +138,12 @@ function RegisterPage() {
       const emailErr = getEmailValidationError(vals.email, t);
       if (emailErr) errors.email = emailErr;
       const criteria = getPasswordCriteria(vals.password);
-      if (!Object.values(criteria).every(Boolean)) {
+      if (!Object.values(criteria).every(Boolean))
         errors.password = "La contraseña no cumple con todos los requisitos.";
-      }
-      if (role === "PLAYER" && !vals.fullName.trim()) {
+      if (role === "PLAYER" && !vals.fullName.trim())
         errors.fullName = "El nombre completo es requerido.";
-      }
-      if (role === "BUSINESS" && !vals.companyName.trim()) {
+      if (role === "BUSINESS" && !vals.companyName.trim())
         errors.companyName = "El nombre de la empresa es requerido.";
-      }
       return errors;
     },
     onSubmit: async (vals) => {
@@ -177,16 +177,12 @@ function RegisterPage() {
       };
 
       await register(newUser);
-
-      if (role === "BUSINESS") {
-        navigate({ to: "/app/business" });
-      } else {
-        navigate({ to: "/app" });
-      }
+      navigate({ to: role === "BUSINESS" ? "/app/business" : "/app" });
     },
     successMessage: t("register.success_toast"),
   });
 
+  // === BLOQUE: Validaciones en tiempo real ===
   const emailError = values.email ? getEmailValidationError(values.email, t) : null;
   const criteria = getPasswordCriteria(values.password);
   const isPasswordValid = Object.values(criteria).every(Boolean);
@@ -198,20 +194,19 @@ function RegisterPage() {
     values.email.length > 0 &&
     emailError === null &&
     isPasswordValid;
-
   const isFormValid =
     (role === "PLAYER" ? isPlayerStep1Valid : values.companyName.trim().length > 0) &&
     values.email.length > 0 &&
     emailError === null &&
     isPasswordValid;
 
+  // === BLOQUE: handleGoogleLogin ===
   const handleGoogleLogin = async () => {
     try {
       await signInWithGoogle();
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error en Google register:", err);
-      const errorMessage = err instanceof Error ? err.message : t("register.error_toast");
-      toast.error(`Error: ${errorMessage}`);
+      toast.error(`Error: ${err instanceof Error ? err.message : t("register.error_toast")}`);
     }
   };
 
@@ -228,35 +223,28 @@ function RegisterPage() {
           <p className="text-muted-foreground mt-2 text-sm">{t("register.subtitle")}</p>
         </div>
 
-        {/* Role Switcher */}
+        {/* === BLOQUE: Selector de rol (PLAYER / BUSINESS) === */}
         <div className="flex bg-background/50 border border-border rounded-xl p-1 mb-6">
           <button
             type="button"
-            onClick={() => setRole("PLAYER")}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
-              role === "PLAYER"
-                ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
             id="register-role-player"
+            onClick={() => setRole("PLAYER")}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${role === "PLAYER" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:text-foreground"}`}
           >
             {t("register.role_player")}
           </button>
           <button
             type="button"
-            onClick={() => setRole("BUSINESS")}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
-              role === "BUSINESS"
-                ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
             id="register-role-business"
+            onClick={() => setRole("BUSINESS")}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${role === "BUSINESS" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:text-foreground"}`}
           >
             {t("register.role_business")}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* === BLOQUE: Campos para PLAYER === */}
           {role === "PLAYER" ? (
             <div>
               <label className="text-sm font-semibold mb-2 block">{t("register.fullName")}</label>
@@ -265,17 +253,18 @@ function RegisterPage() {
                 <input
                   type="text"
                   required
+                  id="register-fullname-input"
                   name="fullName"
                   value={values.fullName}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className="w-full pl-12 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   placeholder={t("profile.placeholder_name") || "Tu nombre completo"}
-                  id="register-fullname-input"
                 />
               </div>
             </div>
           ) : (
+            /* === BLOQUE: Campos para BUSINESS === */
             <>
               <div>
                 <label className="text-sm font-semibold mb-2 block">
@@ -286,27 +275,26 @@ function RegisterPage() {
                   <input
                     type="text"
                     required
+                    id="register-company-name"
                     name="companyName"
                     value={values.companyName}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className="w-full pl-12 pr-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                     placeholder={t("register.placeholder_company") || "Ej. Deportes Flores S.A.C."}
-                    id="register-company-name"
                   />
                 </div>
               </div>
-
               <div>
                 <label className="text-sm font-semibold mb-2 block">
                   {t("register.businessCategory")}
                 </label>
                 <select
                   name="category"
+                  id="register-business-category"
                   value={values.category}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
-                  id="register-business-category"
                 >
                   <option value="Canchas">{t("register.cat_courts")}</option>
                   <option value="Gym">{t("register.cat_gym")}</option>
@@ -320,7 +308,6 @@ function RegisterPage() {
                   <option value="Patrocinador">{t("register.cat_sponsor")}</option>
                 </select>
               </div>
-
               <div>
                 <label className="text-sm font-semibold mb-2 block">
                   {t("register.gps_location")}
@@ -334,11 +321,11 @@ function RegisterPage() {
                       type="number"
                       step="any"
                       required
+                      id="register-business-lat"
                       value={lat || ""}
                       onChange={(e) => setLat(parseFloat(e.target.value))}
                       className="w-full px-4 py-2 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
                       placeholder={t("register.latitude") || "Latitud"}
-                      id="register-business-lat"
                     />
                   </div>
                   <div>
@@ -349,11 +336,11 @@ function RegisterPage() {
                       type="number"
                       step="any"
                       required
+                      id="register-business-lng"
                       value={lng || ""}
                       onChange={(e) => setLng(parseFloat(e.target.value))}
                       className="w-full px-4 py-2 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
                       placeholder={t("register.longitude") || "Longitud"}
-                      id="register-business-lng"
                     />
                   </div>
                 </div>
@@ -361,6 +348,7 @@ function RegisterPage() {
             </>
           )}
 
+          {/* === BLOQUE: Campo de email con validación === */}
           <div>
             <label className="text-sm font-semibold mb-2 block">{t("register.email")}</label>
             <div className="relative">
@@ -368,15 +356,13 @@ function RegisterPage() {
               <input
                 type="email"
                 required
+                id="register-email-input"
                 name="email"
                 value={values.email}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full pl-12 pr-4 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  emailError ? "border-red-500/50" : "border-border"
-                }`}
+                className={`w-full pl-12 pr-4 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${emailError ? "border-red-500/50" : "border-border"}`}
                 placeholder={t("login.email_placeholder", { defaultValue: "tu@email.com" })}
-                id="register-email-input"
               />
             </div>
             {emailError && (
@@ -384,6 +370,7 @@ function RegisterPage() {
             )}
           </div>
 
+          {/* === BLOQUE: Campo de contraseña con indicador de fortaleza === */}
           <div>
             <label className="text-sm font-semibold mb-2 block">{t("register.password")}</label>
             <div className="relative">
@@ -391,15 +378,13 @@ function RegisterPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                id="register-password-input"
                 name="password"
                 value={values.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full pl-12 pr-12 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  values.password && !isPasswordValid ? "border-red-500/50" : "border-border"
-                }`}
+                className={`w-full pl-12 pr-12 py-3 bg-background/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${values.password && !isPasswordValid ? "border-red-500/50" : "border-border"}`}
                 placeholder="••••••••"
-                id="register-password-input"
               />
               <button
                 type="button"
@@ -416,31 +401,17 @@ function RegisterPage() {
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground">{t("auth.password_strength_title")}</span>
                   <span
-                    className={`font-semibold ${
-                      strength === "weak"
-                        ? "text-red-500"
-                        : strength === "medium"
-                          ? "text-yellow-500"
-                          : "text-green-500"
-                    }`}
+                    className={`font-semibold ${strength === "weak" ? "text-red-500" : strength === "medium" ? "text-yellow-500" : "text-green-500"}`}
                   >
                     {t(`auth.password_strength_${strength}`)}
                   </span>
                 </div>
-
                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full transition-all duration-300 ${
-                      strength === "weak"
-                        ? "bg-red-500"
-                        : strength === "medium"
-                          ? "bg-yellow-500"
-                          : "bg-green-500"
-                    }`}
+                    className={`h-full transition-all duration-300 ${strength === "weak" ? "bg-red-500" : strength === "medium" ? "bg-yellow-500" : "bg-green-500"}`}
                     style={{ width: `${strengthPercent}%` }}
                   />
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] mt-2">
                   <div className="flex items-center gap-1.5">
                     <span
@@ -499,15 +470,17 @@ function RegisterPage() {
             )}
           </div>
 
+          {/* === BLOQUE: Botón de registro === */}
           <button
             type="submit"
+            id={role === "PLAYER" ? "register-player-next-btn" : "register-submit-btn"}
             disabled={(role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid) || isSubmitting}
             className="w-full py-4 mt-4 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 text-primary-foreground font-bold rounded-xl shadow-glow transition-all cursor-pointer"
-            id="register-player-next-btn"
           >
             {role === "PLAYER" ? "Siguiente" : t("register.btn_register")}
           </button>
 
+          {/* === BLOQUE: Separador OAuth === */}
           <div className="relative my-4 flex items-center justify-center">
             <div className="absolute inset-x-0 h-px bg-border/60" />
             <span className="relative bg-background px-3 text-xs text-muted-foreground uppercase font-semibold">
@@ -515,10 +488,11 @@ function RegisterPage() {
             </span>
           </div>
 
+          {/* === BLOQUE: Botón de Google OAuth === */}
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full py-3 bg-white text-black border-2 border-[#39FF14]/50 font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer hover:border-[#FF6B35] transition-all duration-300 shadow-sm hover:scale-[1.01]"
+            className="w-full py-3 bg-white text-black border-2 border-primary/50 font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer hover:border-secondary transition-all duration-300 shadow-sm hover:scale-[1.01]"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
               <path

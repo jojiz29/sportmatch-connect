@@ -1,3 +1,4 @@
+// shadcn/ui — Campo de Entrada (input de texto base)
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

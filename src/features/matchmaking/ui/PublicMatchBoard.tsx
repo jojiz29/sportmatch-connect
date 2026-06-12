@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Users, Clock, Plus, UserX, Star, Trophy, X, ShieldAlert } from "lucide-react";
@@ -8,10 +9,11 @@ import { AdminModerationPanel } from "@/features/matchmaking/ui/AdminModerationP
 import { ReportModal } from "@/components/ReportModal";
 import { useAuthStore } from "@/entities/user/useAuth";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Tipos ──────────────────────────────────────────────────────────────────────
 type FilterKey = "TODAS" | "OPEN" | "FULL" | "MIS_PARTIDOS";
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+// Colores de borde izquierdo según el deporte, para identificar visualmente cada tarjeta.
 const SPORT_COLORS: Record<string, string> = {
   Fútbol: "border-l-neon",
   Pádel: "border-l-electric",
@@ -22,6 +24,7 @@ const SPORT_COLORS: Record<string, string> = {
   default: "border-l-primary",
 };
 
+// Emojis asociados a cada deporte para mostrar en la tarjeta del partido.
 const SPORT_EMOJIS: Record<string, string> = {
   Fútbol: "⚽",
   Básquet: "🏀",
@@ -37,6 +40,7 @@ const SPORT_EMOJIS: Record<string, string> = {
   Ciclismo: "🚴",
 };
 
+// Configuración visual para cada estado posible del partido.
 const STATUS_CONFIG = {
   Open: { label: "Abierto", className: "bg-neon/10 text-neon border-neon/20" },
   Full: { label: "Completo", className: "bg-warning/10 text-warning border-warning/20" },
@@ -47,6 +51,7 @@ const STATUS_CONFIG = {
   },
 };
 
+// Formatea una fecha ISO a formato legible en español peruano (ej. "15 jun").
 function formatDate(dateStr: string): string {
   try {
     return new Date(dateStr + "T00:00:00").toLocaleDateString("es-PE", {
@@ -58,7 +63,7 @@ function formatDate(dateStr: string): string {
   }
 }
 
-// ─── Match Card ────────────────────────────────────────────────────────────────
+// ─── Componente de tarjeta de partido ──────────────────────────────────────────
 interface MatchCardProps {
   match: PublicMatch;
   currentUserId: string | undefined;
@@ -66,6 +71,7 @@ interface MatchCardProps {
   onReport: (match: PublicMatch) => void;
 }
 
+// Tarjeta individual que muestra la info del partido, participantes y acciones disponibles.
 function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps) {
   const joinMatch = usePublicMatchStore((s) => s.joinMatch);
   const kickParticipant = usePublicMatchStore((s) => s.kickParticipant);
@@ -88,7 +94,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
       className={`bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all border-l-4 ${sportColor} flex flex-col gap-3`}
       id={`match-card-${match.id}`}
     >
-      {/* Top row */}
+      {/* Fila superior: emoji, título, nivel y estado */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-2xl shrink-0">{SPORT_EMOJIS[match.sport] ?? "🏟️"}</span>
@@ -111,7 +117,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
         </div>
       </div>
 
-      {/* Meta row */}
+      {/* Fila de metadatos: cancha, dirección, fecha/hora */}
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Trophy className="h-3 w-3" />
@@ -127,10 +133,9 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
         </span>
       </div>
 
-      {/* Participants */}
+      {/* Sección de participantes: avatares apilados y contador */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {/* Avatar stack */}
           <div className="flex -space-x-2">
             {(match.participants || []).slice(0, 5).map((p) => (
               <div key={p.userId} className="relative group">
@@ -140,7 +145,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
                   title={p.name}
                   className="h-7 w-7 rounded-full border-2 border-card bg-muted object-cover"
                 />
-                {/* Kick button — only for creator, not self */}
+                {/* Botón de expulsión — solo visible para el creador, sobre el avatar al hover */}
                 {isCreator && p.userId !== currentUserId && match.status === "Open" && (
                   <button
                     onClick={() => kickParticipant(match.id, p.userId)}
@@ -165,7 +170,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
           </span>
         </div>
 
-        {/* Creator rating */}
+        {/* Rating promedio del creador */}
         {avg > 0 && (
           <span className="text-xs text-warning flex items-center gap-0.5">
             <Star className="h-3 w-3 fill-warning" />
@@ -174,9 +179,8 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
         )}
       </div>
 
-      {/* Action buttons */}
+      {/* Botones de acción: unirse, cancelar, valorar, reportar */}
       <div className="flex gap-2 pt-1 border-t border-border/40">
-        {/* Join or status chip */}
         {match.status === "Open" &&
           !isCreator &&
           (isParticipant ? (
@@ -196,7 +200,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
             </motion.button>
           ))}
 
-        {/* Creator: cancel */}
+        {/* Botón de cancelar (solo creador, partido abierto) */}
         {isCreator && match.status === "Open" && (
           <button
             onClick={() => cancelMatch(match.id)}
@@ -207,7 +211,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
           </button>
         )}
 
-        {/* Review button */}
+        {/* Botón de valorar al creador */}
         {!isCreator && (
           <button
             onClick={() => onReview(match)}
@@ -219,7 +223,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
           </button>
         )}
 
-        {/* Report button */}
+        {/* Botón de reportar al creador */}
         {!isCreator && (
           <button
             onClick={() => onReport(match)}
@@ -235,7 +239,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
   );
 }
 
-// ─── Public Match Board ────────────────────────────────────────────────────────
+// ─── Componente principal PublicMatchBoard ──────────────────────────────────────
 const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: "TODAS", label: "Todos" },
   { key: "OPEN", label: "Abiertos" },
@@ -243,6 +247,7 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: "MIS_PARTIDOS", label: "Mis partidos" },
 ];
 
+// Tablero principal que lista todos los partidos públicos con filtros y acciones.
 export function PublicMatchBoard() {
   const currentUser = useAuthStore((s) => s.user);
   const matches = usePublicMatchStore((s) => s.publicMatches) || [];
@@ -250,20 +255,21 @@ export function PublicMatchBoard() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("TODAS");
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Review state
+  // Estado del modal de valoración.
   const [reviewTarget, setReviewTarget] = useState<{
     userId: string;
     name: string;
     avatar: string;
   } | null>(null);
 
-  // Report state
+  // Estado del modal de reporte.
   const [reportTarget, setReportTarget] = useState<{
     userId: string;
     name: string;
     avatar: string;
   } | null>(null);
 
+  // Filtra los partidos según la pestaña activa.
   const filtered = matches.filter((m) => {
     if (activeFilter === "OPEN") return m.status === "Open";
     if (activeFilter === "FULL") return m.status === "Full";
@@ -271,6 +277,7 @@ export function PublicMatchBoard() {
     return true;
   });
 
+  // Conteo de partidos por filtro para mostrar en las pestañas.
   const countByFilter = {
     TODAS: matches.length,
     OPEN: matches.filter((m) => m.status === "Open").length,
@@ -280,7 +287,7 @@ export function PublicMatchBoard() {
 
   return (
     <div className="space-y-6" id="public-match-board">
-      {/* Header */}
+      {/* Cabecera con título y botón de crear */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Partidos Públicos</h2>
@@ -298,7 +305,7 @@ export function PublicMatchBoard() {
         </motion.button>
       </div>
 
-      {/* Filter tabs */}
+      {/* Pestañas de filtro */}
       <div className="flex border-b border-border/50 gap-1">
         {FILTER_TABS.map(({ key, label }) => (
           <button
@@ -327,7 +334,7 @@ export function PublicMatchBoard() {
         ))}
       </div>
 
-      {/* Tactical Grid */}
+      {/* Grid de partidos o estado vacío */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
           <span className="text-5xl">⚽</span>
@@ -368,10 +375,10 @@ export function PublicMatchBoard() {
         </div>
       )}
 
-      {/* Admin Moderation Panel (only visible to admins) */}
+      {/* Panel de moderación para administradores */}
       <AdminModerationPanel />
 
-      {/* Modals */}
+      {/* Modales */}
       <CreateMatchModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {reviewTarget && (

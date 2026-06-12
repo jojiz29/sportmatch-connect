@@ -12,8 +12,8 @@ import {
   LogOut,
   Rss,
   Shield,
-  Sun,
   Moon,
+  Sun,
   Megaphone,
   TrendingUp,
   Settings,
@@ -39,42 +39,13 @@ const ACCOUNT_ITEMS = [
 function ThemeToggle() {
   const { theme, toggleTheme } = useThemeStore();
 
-  const getThemeDetails = () => {
-    switch (theme) {
-      case "light":
-        return {
-          title: "Modo Futbolista Oscuro",
-          icon: <Sun className="h-5 w-5 text-amber-500 hover:scale-110 transition-transform" />,
-        };
-      case "dark-footballer":
-        return {
-          title: "Modo Claro",
-          icon: <Moon className="h-5 w-5 text-[#39FF14] hover:scale-110 transition-transform" />,
-        };
-      case "world-cup":
-        return {
-          title: "Modo Claro",
-          icon: (
-            <Trophy className="h-5 w-5 text-[#D4AF37] hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(212,175,55,0.7)]" />
-          ),
-        };
-      default:
-        return {
-          title: "Cambiar Tema",
-          icon: <Moon className="h-5 w-5" />,
-        };
-    }
-  };
-
-  const { title, icon } = getThemeDetails();
-
   return (
     <button
       onClick={toggleTheme}
-      title={title}
-      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all active:scale-90 flex items-center justify-center cursor-pointer"
+      title={theme === "world-cup" ? "Cambiar a Neón Urbano" : "Cambiar a Copa del Mundo"}
+      className="h-8 w-8 rounded-full border border-border/40 bg-background/50 hover:bg-accent/40 active:scale-95 transition-all flex items-center justify-center cursor-pointer text-primary shrink-0"
     >
-      {icon}
+      {theme === "world-cup" ? <Moon className="h-4.5 w-4.5" /> : <Sun className="h-4.5 w-4.5" />}
     </button>
   );
 }
@@ -191,11 +162,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
             { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
             { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
+            { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
           ],
-        },
-        {
-          titleKey: "nav.groups.analytics",
-          items: [{ to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy }],
         },
       ];
 
@@ -271,7 +239,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background bg-[url('/images/sports/fondo-sportmatch-app.webp')] bg-cover bg-center bg-fixed relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/95 backdrop-blur-sm -z-10" />
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
@@ -309,7 +278,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={`${item.to}-${item.search?.tab || ""}`}
                       to={item.to}
-                      id={item.to === "/app/tournaments" ? "tournaments-nav-tour" : undefined}
+                      id={
+                        item.to === "/app/business" && item.search?.tab
+                          ? `business-tab-${item.search.tab}`
+                          : item.to === "/app/tournaments"
+                            ? "tournaments-nav-tour"
+                            : undefined
+                      }
                       search={item.search}
                       className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
@@ -340,6 +315,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.to}
                       to={item.to}
+                      id={item.to === "/app/business" ? "sidebar-nav-business" : undefined}
                       className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
@@ -368,13 +344,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-neon border-2 border-background" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate leading-tight text-foreground/90">
+                <div
+                  id="sidebar-user-name"
+                  className="text-sm font-semibold truncate leading-tight text-foreground/90"
+                >
                   {currentUser.name}
                 </div>
                 <Link
                   to="/app/wallet"
                   search={{ buyItem: undefined }}
-                  className="text-xs text-neon/80 hover:text-neon hover:bg-muted/50 cursor-pointer transition-colors rounded px-1.5 py-0.5 -ml-1.5 w-fit flex items-center gap-1 mt-0.5 font-medium"
+                  id="sidebar-user-balance"
+                  className="text-xs text-neon text-neon/80 hover:text-neon hover:bg-muted/50 cursor-pointer transition-colors rounded px-1.5 py-0.5 -ml-1.5 w-fit flex items-center gap-1 mt-0.5 font-medium"
                 >
                   <Trophy className="h-3 w-3" /> {currentUser.fitcoins_balance} FC
                 </Link>
@@ -443,7 +423,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={`${item.to}-${item.search?.tab || ""}`}
                   to={item.to}
-                  id={item.to === "/app/tournaments" ? "tournaments-nav-mobile-tour" : undefined}
+                  id={
+                    item.to === "/app/business" && item.search?.tab
+                      ? `business-tab-mobile-${item.search.tab}`
+                      : item.to === "/app/tournaments"
+                        ? "tournaments-nav-mobile-tour"
+                        : undefined
+                  }
                   search={item.search}
                   className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all duration-200 active:scale-90 rounded-xl ${
                     active

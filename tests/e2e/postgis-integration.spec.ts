@@ -1,3 +1,8 @@
+// ============================================================
+// postgis-integration.spec.ts — E2E: Búsqueda espacial PostGIS
+// Verifica búsqueda de canchas por proximidad geográfica
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("PostGIS Spatial Search Proximity Test", () => {
@@ -26,7 +31,7 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
 
     // 4. Navigate to live map
     await page.goto(`${targetURL}/app/map`);
-    await expect(page.locator("h1")).toContainText("Mapa en vivo");
+    await expect(page.locator("h1")).toContainText("Mapa Comercial");
 
     // 5. Verify Leaflet map container is visible
     await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 10000 });
@@ -39,8 +44,8 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
     await expect(listContainer).toBeVisible();
 
     const firstCourt = listContainer.locator("div.flex.gap-3.items-center").first();
-    await expect(firstCourt.locator(".text-sm.font-semibold")).toContainText("Pádel Center Surco");
-    await expect(firstCourt).toContainText("0.8 km");
+    await expect(firstCourt.locator(".text-sm.font-semibold")).toContainText("Padel Academy Lima");
+    await expect(firstCourt).toContainText("1.8 km");
 
     // 7. Move user to San Borja center (-12.10, -76.99)
     await context.setGeolocation({ latitude: -12.1, longitude: -76.99 });
@@ -55,9 +60,9 @@ test.describe("PostGIS Spatial Search Proximity Test", () => {
     });
     const firstCourtSanBorja = listContainerSanBorja.locator("div.flex.gap-3.items-center").first();
     await expect(firstCourtSanBorja.locator(".text-sm.font-semibold")).toContainText(
-      "Tenis Club San Borja",
+      "Megatlon Center",
       { timeout: 15000 },
     );
-    await expect(firstCourtSanBorja).toContainText("0.0 km");
+    await expect(firstCourtSanBorja).toContainText("1.2 km");
   });
 });

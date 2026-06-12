@@ -1,3 +1,8 @@
+// ============================================================
+// test_auth.mjs — Script de prueba de autenticación Supabase
+// Verifica conexión y obtención de token desde variables de entorno
+// ============================================================
+
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 

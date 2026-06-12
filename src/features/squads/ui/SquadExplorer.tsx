@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import React, { useState, useEffect } from "react";
 import {
   getSquads,
@@ -30,11 +31,9 @@ import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { BookingModal } from "@/components/BookingModal";
 
-/**
- * SquadExplorer component.
- * Lists clubs/squads, handles joining/leaving with optimistic UI updates, and provides a create squad form.
- * Includes a dedicated Squad Dashboard with user invitation engine, dynamic chat integration, and group bookings.
- */
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Explorador de Squads: lista clubs, permite unirse/crear con UI optimista,
+// incluye dashboard de squad con chat grupal, invitaciones y reserva colectiva.
 export function SquadExplorer() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
@@ -42,30 +41,31 @@ export function SquadExplorer() {
   const [loading, setLoading] = useState<boolean>(true);
   const [memberships, setMemberships] = useState<Record<string, boolean>>({});
 
-  // Active Selected Squad Dashboard
+  // Estado del dashboard del squad seleccionado.
   const [selectedSquad, setSelectedSquad] = useState<Squad | null>(null);
   const [squadMembers, setSquadMembers] = useState<User[]>([]);
   const [loadingMembers, setLoadingMembers] = useState<boolean>(false);
 
-  // Invite Modal States
+  // Estado del modal de invitación.
   const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
   const [inviteSearch, setInviteSearch] = useState<string>("");
   const [allSystemUsers, setAllSystemUsers] = useState<User[]>([]);
 
-  // Collective Booking States
+  // Estado de reserva colectiva.
   const [squadCourts, setSquadCourts] = useState<Court[]>([]);
   const [loadingCourts, setLoadingCourts] = useState<boolean>(false);
   const [selectedCourtForBooking, setSelectedCourtForBooking] = useState<Court | null>(null);
 
-  // Create squad form states
+  // Estado del formulario de creación.
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
+  // === BLOQUE: CARGA INICIAL DE SQUADS ===
+  // Obtiene la lista de squads y verifica membresías en paralelo.
   useEffect(() => {
     if (!currentUser) return;
-    const userId = currentUser.id;
     let active = true;
     async function loadSquads() {
       try {
@@ -73,25 +73,20 @@ export function SquadExplorer() {
         const data = await getSquads();
         if (active) {
           setSquads(data);
-
-          // Check memberships in parallel
           const membershipMap: Record<string, boolean> = {};
           await Promise.all(
             data.map(async (squad) => {
-              const status = await isMember(squad.id, userId);
+              if (!currentUser) return;
+              const status = await isMember(squad.id, currentUser.id);
               membershipMap[squad.id] = status;
             }),
           );
-          if (active) {
-            setMemberships(membershipMap);
-          }
+          if (active) setMemberships(membershipMap);
         }
       } catch (err) {
         console.error("Failed to load squads:", err);
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     }
     loadSquads();
@@ -100,21 +95,19 @@ export function SquadExplorer() {
     };
   }, [currentUser]);
 
-  // Load squad details / members
+  // === BLOQUE: CARGA DE MIEMBROS DEL SQUAD SELECCIONADO ===
   useEffect(() => {
     if (!selectedSquad) {
       setSquadMembers([]);
       return;
     }
-    const squadId = selectedSquad.id;
     let active = true;
     async function fetchMembers() {
       try {
         setLoadingMembers(true);
-        const list = await getSquadMembers(squadId);
-        if (active) {
-          setSquadMembers(list);
-        }
+        if (!selectedSquad) return;
+        const list = await getSquadMembers(selectedSquad.id);
+        if (active) setSquadMembers(list);
       } catch (err) {
         console.error("Error loading squad members:", err);
       } finally {
@@ -127,33 +120,38 @@ export function SquadExplorer() {
     };
   }, [selectedSquad]);
 
-  // Load system profiles & courts once for invitation / group booking
+  // === BLOQUE: CARGA DE USUARIOS Y CANCHAS PARA INVITACIÓN/RESERVA ===
   useEffect(() => {
     if (!currentUser) return;
     apiClient.users
       .getMatches()
       .then((users) => setAllSystemUsers(users))
       .catch((err) => console.error("Error fetching match users:", err));
-
     setLoadingCourts(true);
-
-    // Try backend first for courts, fallback to Supabase
     backendApi.courts
       .getAll()
-      .then((courtsList) => setSquadCourts(courtsList as Court[]))
+      .then((res) => {
+        if (res && Array.isArray(res.data)) {
+          setSquadCourts(res.data);
+        } else {
+          apiClient.courts
+            .getAll()
+            .then((list) => setSquadCourts(list))
+            .catch((err) => console.error("Error fetching courts:", err));
+        }
+      })
       .catch(() => {
         apiClient.courts
           .getAll()
-          .then((courtsList) => setSquadCourts(courtsList))
+          .then((list) => setSquadCourts(list))
           .catch((err) => console.error("Error fetching courts:", err));
       })
       .finally(() => setLoadingCourts(false));
   }, [currentUser]);
 
-  // Realtime: broadcast new squads created by other users
+  // === BLOQUE: REALTIME — NUEVOS SQUADS EN VIVO ===
   useEffect(() => {
     if (!currentUser) return;
-
     const channel = supabase
       .channel(`squads-realtime-${currentUser.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "squads" }, (payload) => {
@@ -165,9 +163,7 @@ export function SquadExplorer() {
           creator_id: string;
           avatar_url: string | null;
         };
-
         if (newRow.creator_id === currentUser.id) return;
-
         const newSquad: Squad = {
           id: newRow.id,
           name: newRow.name,
@@ -177,29 +173,25 @@ export function SquadExplorer() {
           avatar_url: newRow.avatar_url,
           members_count: 1,
         };
-
         setSquads((prev) => {
           if (prev.some((s) => s.id === newSquad.id)) return prev;
           return [newSquad, ...prev];
         });
-
-        toast(`Nuevo Squad disponible: ${newSquad.name}`, {
-          description: "¡Puedes unirte ahora!",
-        });
+        toast(`Nuevo Squad disponible: ${newSquad.name}`, { description: "¡Puedes unirte ahora!" });
       })
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentUser]);
 
+  // === BLOQUE: MANEJADOR DE UNIRSE/SALIR (OPTIMISTIC UI) ===
   const handleToggleJoin = async (squadId: string, event?: React.MouseEvent) => {
-    if (event) event.stopPropagation(); // Avoid opening dashboard when clicking join button
+    if (event) event.stopPropagation();
     if (!currentUser) return;
     const isCurrentlyMember = memberships[squadId];
 
-    // Optimistic UI Updates
+    // Actualización optimista inmediata.
     setMemberships((prev) => ({ ...prev, [squadId]: !isCurrentlyMember }));
     setSquads((prev) =>
       prev.map((s) =>
@@ -223,7 +215,7 @@ export function SquadExplorer() {
         toast.success("¡Te has unido al Squad!");
       }
     } catch (error) {
-      // Rollback on failure
+      // Rollback en caso de error.
       setMemberships((prev) => ({ ...prev, [squadId]: isCurrentlyMember }));
       setSquads((prev) =>
         prev.map((s) =>
@@ -242,17 +234,15 @@ export function SquadExplorer() {
     }
   };
 
+  // === BLOQUE: CREACIÓN DE SQUAD ===
   const handleCreateSquad = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !name.trim()) return;
-
     try {
       setSubmitting(true);
       const newSquad = await createSquad(name, description, currentUser.id);
-
       setSquads((prev) => [newSquad, ...prev]);
       setMemberships((prev) => ({ ...prev, [newSquad.id]: true }));
-
       setName("");
       setDescription("");
       setShowCreateForm(false);
@@ -265,12 +255,10 @@ export function SquadExplorer() {
     }
   };
 
-  // Open Chat for Selected Squad
+  // === BLOQUE: APERTURA DE CHAT GRUPAL ===
   const handleOpenChat = async () => {
     if (!currentUser || !selectedSquad) return;
     const chatId = `chat_squad_${selectedSquad.id}`;
-
-    // Optimistically ensure this squad chat has a spot in chats state
     const chatStore = useChatStore.getState();
     const existing = chatStore.chats.find((c) => c.id === chatId);
     if (!existing) {
@@ -290,12 +278,11 @@ export function SquadExplorer() {
         unread: 0,
       });
     }
-
     chatStore.setActiveConversation(chatId);
     navigate({ to: "/app/chat" });
   };
 
-  // Invite user lookup and insert
+  // === BLOQUE: INVITACIÓN A USUARIO ===
   const handleInviteUser = async (user: User) => {
     if (!selectedSquad || !currentUser) return;
     try {
@@ -318,7 +305,7 @@ export function SquadExplorer() {
 
   if (!currentUser) return null;
 
-  // Selected Squad Detail Dashboard
+  // === BLOQUE: DASHBOARD DEL SQUAD SELECCIONADO ===
   if (selectedSquad) {
     const isUserMember = memberships[selectedSquad.id] || false;
     const filteredUsersToInvite = allSystemUsers.filter(
@@ -330,7 +317,7 @@ export function SquadExplorer() {
 
     return (
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
+        {/* Cabecera del squad */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
           <div className="flex gap-4 items-center">
             <button
@@ -350,7 +337,6 @@ export function SquadExplorer() {
               <p className="text-xs text-muted-foreground mt-0.5">{selectedSquad.description}</p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleToggleJoin(selectedSquad.id)}
@@ -362,7 +348,6 @@ export function SquadExplorer() {
             >
               {isUserMember ? "Salir del Squad" : "Unirse al Squad"}
             </button>
-
             {isUserMember && (
               <button
                 onClick={handleOpenChat}
@@ -374,9 +359,9 @@ export function SquadExplorer() {
           </div>
         </div>
 
-        {/* Dashboard Grid */}
+        {/* Grid del dashboard */}
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Members Column */}
+          {/* Columna de miembros */}
           <div className="md:col-span-1 bg-gradient-card border border-border rounded-3xl p-5 shadow-card space-y-4 flex flex-col h-[500px]">
             <div className="flex justify-between items-center pb-2 border-b border-border/50">
               <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -394,7 +379,6 @@ export function SquadExplorer() {
                 </button>
               )}
             </div>
-
             {loadingMembers ? (
               <div className="flex-1 flex items-center justify-center">
                 <Loader2 className="h-5 w-5 animate-spin text-electric" />
@@ -428,7 +412,7 @@ export function SquadExplorer() {
             )}
           </div>
 
-          {/* Group Booking Column */}
+          {/* Columna de reserva colectiva */}
           <div className="md:col-span-2 bg-gradient-card border border-border rounded-3xl p-5 shadow-card space-y-4 flex flex-col h-[500px]">
             <div className="pb-2 border-b border-border/50">
               <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -439,7 +423,6 @@ export function SquadExplorer() {
                 entre todos los miembros activos del Squad.
               </p>
             </div>
-
             {loadingCourts ? (
               <div className="flex-1 flex items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-electric" />
@@ -449,7 +432,6 @@ export function SquadExplorer() {
                 {squadCourts.slice(0, 8).map((court) => {
                   const bookingMembersCount = squadMembers.length || 1;
                   const priceSplit = (court.price_per_hour + 3) / bookingMembersCount;
-
                   return (
                     <div
                       key={court.id}
@@ -478,7 +460,6 @@ export function SquadExplorer() {
                           </div>
                         </div>
                       </div>
-
                       <button
                         onClick={() => setSelectedCourtForBooking(court)}
                         disabled={!isUserMember}
@@ -494,7 +475,7 @@ export function SquadExplorer() {
           </div>
         </div>
 
-        {/* Member Invitation Dialog Overlay */}
+        {/* Modal de invitación */}
         {isInviteModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
@@ -511,7 +492,6 @@ export function SquadExplorer() {
                   ✕
                 </button>
               </div>
-
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
@@ -522,7 +502,6 @@ export function SquadExplorer() {
                   className="w-full bg-background border border-border rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-primary"
                 />
               </div>
-
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[250px]">
                 {filteredUsersToInvite.length === 0 ? (
                   <div className="text-xs text-muted-foreground py-10 text-center">
@@ -572,10 +551,10 @@ export function SquadExplorer() {
     );
   }
 
-  // Discover List (Default Explorer view)
+  // === BLOQUE: VISTA DE EXPLORACIÓN (LISTA DE SQUADS) ===
   return (
     <div className="space-y-6">
-      {/* Create Squad Form Trigger & Card */}
+      {/* Formulario de creación de squad */}
       <div className="bg-gradient-card border border-border rounded-3xl p-5 shadow-card">
         {!showCreateForm ? (
           <div className="flex justify-between items-center">
@@ -651,13 +630,13 @@ export function SquadExplorer() {
         )}
       </div>
 
-      {/* Live indicator */}
+      {/* Indicador en vivo */}
       <div className="flex items-center gap-2 text-xs text-electric font-semibold mb-2">
         <Zap className="h-3 w-3 animate-pulse" />
         <span>En vivo — Nuevos squads aparecen al instante</span>
       </div>
 
-      {/* Discover Squads List */}
+      {/* Lista de squads */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground text-sm gap-2">
           <Loader2 className="h-6 w-6 animate-spin text-electric" />
@@ -668,7 +647,6 @@ export function SquadExplorer() {
           <AnimatePresence>
             {squads.map((squad) => {
               const joined = memberships[squad.id] || false;
-
               return (
                 <motion.div
                   key={squad.id}
@@ -701,7 +679,6 @@ export function SquadExplorer() {
                       {squad.description}
                     </p>
                   </div>
-
                   <div className="mt-4 pt-3 border-t border-border/50 flex justify-between items-center">
                     <span className="text-[10px] text-electric font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                       Ver Panel →

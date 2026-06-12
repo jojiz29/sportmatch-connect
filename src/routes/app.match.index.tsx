@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del matchmaking ===
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Filter, Zap, Globe } from "lucide-react";
@@ -9,6 +10,9 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
+// === BLOQUE: Ruta /app/match/ — createFileRoute con loader y meta tags ===
+// Carga el stack de perfiles inicial excluyendo al usuario autenticado.
+// pendingComponent: esqueleto de carga con animación pulse.
 export const Route = createFileRoute("/app/match/")({
   head: () => ({
     meta: [
@@ -27,8 +31,8 @@ export const Route = createFileRoute("/app/match/")({
     ],
   }),
   loader: () => {
-    // Exclude the current authenticated user from the swipe stack.
-    // useAuthStore.getState() is safe here — loaders run outside React rendering.
+    // Excluye al usuario autenticado del stack de swipe.
+    // useAuthStore.getState() es seguro aquí — los loaders corren fuera del renderizado React.
     const currentUserId = useAuthStore.getState().user?.id;
     return apiClient.users.getMatches(currentUserId);
   },
@@ -36,6 +40,7 @@ export const Route = createFileRoute("/app/match/")({
   component: Match,
 });
 
+// === BLOQUE: MatchPendingComponent — Esqueleto de carga ===
 function MatchPendingComponent() {
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -55,6 +60,11 @@ function MatchPendingComponent() {
 
 type TabKey = "ia" | "public";
 
+// === BLOQUE: Match — Componente principal de matchmaking ===
+// Dos pestañas:
+//   - "ia": MatchmakingFeature (swipe de perfiles con algoritmo IA).
+//   - "public": PublicMatchBoard (partidos abiertos).
+// El loader inicial provee el stack de perfiles para MatchmakingFeature.
 function Match() {
   const { t } = useTranslation();
   const initialStack = Route.useLoaderData();
@@ -84,7 +94,7 @@ function Match() {
         }
       />
 
-      {/* Tab switcher */}
+      {/* Selector de pestañas (IA / Públicos) */}
       <div className="flex gap-1 p-1 bg-muted/60 border border-border rounded-2xl w-fit mb-6">
         <button
           onClick={() => setActiveTab("ia")}

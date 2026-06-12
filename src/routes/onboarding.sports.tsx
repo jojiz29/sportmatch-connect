@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del onboarding deportivo ===
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
@@ -10,6 +11,8 @@ import { Sport, Level } from "@/entities/types";
 import { SportsMatrixStep } from "@/components/sports/SportsMatrixStep";
 import { IdentityStep } from "@/components/sports/IdentityStep";
 
+// === BLOQUE: Ruta /onboarding/sports — createFileRoute ===
+// Guard de autenticación: redirige a /login si el usuario no está autenticado.
 export const Route = createFileRoute("/onboarding/sports")({
   beforeLoad: () => {
     const isAuthenticated = useAuthStore.getState().isAuthenticated;
@@ -20,6 +23,10 @@ export const Route = createFileRoute("/onboarding/sports")({
   component: OnboardingSports,
 });
 
+// === BLOQUE: OnboardingSports — Flujo de onboarding en 2 pasos ===
+// Paso 1 (SportsMatrixStep): selección de deportes y niveles.
+// Paso 2 (IdentityStep): avatar, bio, género, ubicación, horas semanales.
+// Al completar, persiste en Supabase vía updateProfile y redirige a /app.
 function OnboardingSports() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -31,12 +38,13 @@ function OnboardingSports() {
   const [sportsMatrix, setSportsMatrix] = useState<Record<string, 1 | 2 | 3>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // === BLOQUE: useEffect — Carga inicial de preferencias deportivas ===
+  // Al montar, verifica si ya se vio el tutorial (localStorage) y
+  // precarga la matriz deportiva desde user_sports del usuario autenticado.
   useEffect(() => {
-    // 1. Check tutorial state in localStorage
     const hasSeen = localStorage.getItem("has_seen_sport_tutorial") === "true";
     setHasSeenTutorial(hasSeen);
 
-    // 2. Pre-fill sports matrix from authenticated user's current preferences
     if (user?.user_sports) {
       const initial: Record<string, 1 | 2 | 3> = {};
       user.user_sports.forEach((us) => {
@@ -46,6 +54,9 @@ function OnboardingSports() {
     }
   }, [user]);
 
+  // === BLOQUE: handleSportChange — Actualiza la matriz deportiva ===
+  // Si level es undefined, elimina el deporte de la matriz.
+  // Si tiene valor, lo asigna (1=Principiante, 2=Intermedio, 3=Avanzado).
   const handleSportChange = (sportId: string, level: 1 | 2 | 3 | undefined) => {
     setSportsMatrix((prev) => {
       const next = { ...prev };
@@ -58,6 +69,13 @@ function OnboardingSports() {
     });
   };
 
+  // === BLOQUE: handleComplete — Persiste el onboarding en Supabase ===
+  // Construye el payload consolidado que incluye:
+  //   - user_sports (array de objetos {sport_id, level})
+  //   - sport_preferences.legacy (backwards compatibility)
+  //   - onboarding_completed: true
+  //   - Datos de identidad (avatar, bio, género, ubicación)
+  // Realiza validación previa: verifica sesión activa (si no es demo).
   const handleComplete = async (identityData: {
     avatar_url: string;
     bio: string;
@@ -76,7 +94,7 @@ function OnboardingSports() {
     try {
       setIsSaving(true);
 
-      // --- Pre-flight: Validate auth session before touching Supabase ---
+      // Verifica sesión activa antes de tocar Supabase (salta en modo demo).
       const isDemoMode = useAuthStore.getState().isDemoMode;
       if (!isDemoMode) {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -87,13 +105,13 @@ function OnboardingSports() {
         }
       }
 
-      // Structure user_sports array of objects containing sport_id AND specific level
+      // Estructura user_sports: array de objetos para la tabla relacional.
       const userSports = sportsKeys.map((key) => ({
         sport_id: key,
         level: sportsMatrix[key] as 1 | 2 | 3,
       }));
 
-      // Structure legacy sport_preferences mapping for backward compatibility
+      // Estructura legacy para backward compatibility con perfiles antiguos.
       const legacyMatrix: Record<
         string,
         { level: "Amateur" | "Intermediate" | "Advanced" | "Pro"; weight: number }
@@ -105,17 +123,18 @@ function OnboardingSports() {
         legacyMatrix[key] = { level: stringLevel, weight };
       });
 
+      // Traduce el nivel del primer deporte para el campo level del perfil.
       const firstSportKey = sportsKeys[0];
       const primaryLevelVal = sportsMatrix[firstSportKey];
       const translatedLevel: Level =
         primaryLevelVal === 1 ? "Principiante" : primaryLevelVal === 2 ? "Intermedio" : "Avanzado";
 
-      // 2. DEFENSIVE MAPPING FOR LEGACY ACCOUNTS
+      // Mapeo defensivo para evitar datos nulos en columnas legacy.
       const cleanSportsMatrix =
         legacyMatrix && Object.keys(legacyMatrix).length > 0 ? legacyMatrix : {};
       const cleanUserSports = Array.isArray(userSports) ? userSports : [];
 
-      // Build consolidated atomic payload
+      // Payload atómico consolidado para updateProfile.
       const updatedPayload = {
         user_sports: cleanUserSports,
         onboarding_completed: true,
@@ -135,8 +154,8 @@ function OnboardingSports() {
         last_location_lng: identityData.lng,
       };
 
-      // updateProfile now propagates errors — any Supabase failure, RLS violation,
-      // or 12-second timeout will throw and land in the catch block below.
+      // updateProfile propaga errores — cualquier fallo de Supabase,
+      // violación RLS o timeout de 12s lanzará excepción al catch.
       await updateProfile(updatedPayload);
 
       toast.success(t("register.success_toast", "¡Configuración guardada con éxito!"));
@@ -144,7 +163,7 @@ function OnboardingSports() {
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error saving onboarding sports:", err);
       const errMsg = err instanceof Error ? err.message : "Error desconocido al guardar el perfil.";
-      // If the profile store exhausted retries due to missing columns, show migration hint
+      // Si el store agotó reintentos por columnas faltantes, muestra hint de migración.
       if (errMsg.includes("migración SQL") || errMsg.includes("varios intentos")) {
         toast.error(
           "Tu base de datos necesita una migración. Ejecuta el SQL en Supabase → SQL Editor.",
@@ -158,18 +177,20 @@ function OnboardingSports() {
     }
   };
 
+  // === BLOQUE: handleDismissTutorial — Marca tutorial como visto ===
   const handleDismissTutorial = () => {
     localStorage.setItem("has_seen_sport_tutorial", "true");
     setHasSeenTutorial(true);
   };
 
+  // === BLOQUE: Renderizado — UI del onboarding ===
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between relative">
-      {/* Full screen backdrop blur tutorial */}
+      {/* Coachmark tutorial en pantalla completa (solo paso 1 si no se ha visto) */}
       {!hasSeenTutorial && step === 1 && <CoachmarkTutorial onDismiss={handleDismissTutorial} />}
 
       <div className="max-w-4xl w-full mx-auto px-4 py-12 space-y-8 flex-1 flex flex-col justify-center">
-        {/* Step Indicator */}
+        {/* Indicador de progreso (paso 1 de 2) */}
         <div className="flex justify-between items-center px-2 mb-4">
           <span className="text-[10px] uppercase tracking-wider font-extrabold text-muted-foreground">
             {t("onboarding.step_indicator", "Paso {{step}} de 2", { step })}
@@ -184,6 +205,7 @@ function OnboardingSports() {
           </div>
         </div>
 
+        {/* === BLOQUE: Selector de paso === */}
         {step === 1 ? (
           <SportsMatrixStep
             sportsMatrix={sportsMatrix}

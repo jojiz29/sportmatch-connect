@@ -1,3 +1,8 @@
+// ============================================================
+// sports.controller.ts — Controlador de deportes
+// GET /sports — Lista completa del catálogo de deportes
+// ============================================================
+
 import { Controller, Get } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { SportsService } from "./sports.service";

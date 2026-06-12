@@ -1,3 +1,4 @@
+// shadcn/ui — Etiqueta (label accesible con Radix)
 "use client";
 
 import * as React from "react";

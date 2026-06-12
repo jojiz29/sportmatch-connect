@@ -1,3 +1,6 @@
+// === BLOQUE: IMPORTACIONES ===
+// Dependencias: React (hooks de estado, efecto y ref), internacionalización, iconos Lucide, cliente Supabase, notificaciones (sonner),
+// utilidad de compresión WebP y hook de moderación de imágenes NSFW
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Camera, Award } from "lucide-react";
@@ -6,6 +9,8 @@ import { toast } from "sonner";
 import { compressToWebP } from "@/shared/lib/imageUtils";
 import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Recibe el userId, modo demo, callbacks de navegación y el estado de guardado para el paso de identidad del onboarding
 interface IdentityStepProps {
   userId: string;
   isDemoMode: boolean;
@@ -21,6 +26,9 @@ interface IdentityStepProps {
   isSaving: boolean;
 }
 
+// === BLOQUE: COMPONENTE DE IDENTIDAD (PASO 2 DEL ONBOARDING) ===
+// Formulario de perfil que permite al usuario subir avatar (con moderación NSFW y compresión WebP),
+// seleccionar género, escribir biografía y ajustar horas semanales de dedicación deportiva
 export function IdentityStep({
   userId,
   isDemoMode,
@@ -31,7 +39,8 @@ export function IdentityStep({
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form State
+  // === BLOQUE: ESTADOS DEL FORMULARIO ===
+  // Almacenan los valores del perfil antes de enviarlos al callback onComplete
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [bio, setBio] = useState<string>("");
   const [gender, setGender] = useState<"Masculino" | "Femenino" | "Mixto">("Masculino");
@@ -39,14 +48,13 @@ export function IdentityStep({
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
 
-  // Upload state
+  // Estados de subida y moderación de imagen
   const [isUploading, setIsUploading] = useState(false);
-
-  // AI Moderation Hook and States
   const { analyzeImage } = useNSFWJS();
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
-  // 1. Silent Geolocation Fetch on Mount
+  // === BLOQUE: EFECTO DE GEOLOCALIZACIÓN SILENCIOSA ===
+  // Obtiene las coordenadas del usuario al montar el componente sin interacción explícita
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -64,7 +72,8 @@ export function IdentityStep({
     }
   }, []);
 
-  // 2. Google OAuth Avatar Sync on Mount
+  // === BLOQUE: SINCRONIZACIÓN DE AVATAR DE GOOGLE OAUTH ===
+  // Si el usuario inició sesión con Google, sincroniza automáticamente su foto de perfil
   useEffect(() => {
     async function syncGoogleAvatar() {
       if (isDemoMode) return;
@@ -83,7 +92,8 @@ export function IdentityStep({
     syncGoogleAvatar();
   }, [isDemoMode]);
 
-  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change
+  // === BLOQUE: LIMPIEZA DE OBJECT URLS (SEGURIDAD) ===
+  // Revoca las URLs de tipo blob para evitar fugas de memoria al desmontar o cambiar la URL
   useEffect(() => {
     return () => {
       if (avatarUrl && avatarUrl.startsWith("blob:")) {
@@ -92,21 +102,22 @@ export function IdentityStep({
     };
   }, [avatarUrl]);
 
+  // === BLOQUE: MANEJADOR DE SUBIDA DE ARCHIVO ===
+  // Valida tamaño (5MB), analiza con IA NSFW, comprime a WebP y sube a Supabase Storage
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (isAnalyzingImage || isUploading) return;
 
-    // Check size limit: 5MB
+    // Validación de límite de tamaño: 5MB
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));
       return;
     }
 
+    // Análisis de contenido con NSFWJS
     setIsAnalyzingImage(true);
     const scanToastId = toast.loading("🛡️ Analizando imagen con IA...");
-
     try {
       const isSafe = await analyzeImage(file);
       toast.dismiss(scanToastId);
@@ -124,17 +135,17 @@ export function IdentityStep({
     } catch (err) {
       console.error("AI Moderation error:", err);
       toast.dismiss(scanToastId);
-      // Fallback gracefully: treat as safe
+      // Fallback seguro: tratar como contenido permitido
     } finally {
       setIsAnalyzingImage(false);
     }
 
+    // Subida del archivo
     setIsUploading(true);
     const toastId = toast.loading(t("profile.uploading_photo", "Subiendo foto..."));
-
     try {
       if (isDemoMode) {
-        // Ephemeral URL for demo mode
+        // En modo demo, usa URL efímera de objeto (blob)
         const localUrl = URL.createObjectURL(file);
         setAvatarUrl(localUrl);
         toast.success(t("profile.photo_updated_demo", "Foto de perfil actualizada (Modo Demo)"), {
@@ -143,24 +154,19 @@ export function IdentityStep({
         return;
       }
 
-      // Compress to WebP
+      // Compresión a WebP (400px, calidad 0.8)
       const webpBlob = await compressToWebP(file, 400, 0.8);
       const filePath = `public/${userId}_profile_${Date.now()}.webp`;
 
-      // Upload to Supabase Storage
+      // Subida a Supabase Storage en bucket "avatars"
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, webpBlob, {
-          contentType: "image/webp",
-          upsert: true,
-        });
-
+        .upload(filePath, webpBlob, { contentType: "image/webp", upsert: true });
       if (uploadError) throw uploadError;
 
-      // Get Public URL
+      // Obtención de URL pública con cache buster
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-
       setAvatarUrl(publicUrl);
       toast.success(t("profile.photo_updated", "Foto de perfil actualizada"), { id: toastId });
     } catch (err) {
@@ -168,21 +174,21 @@ export function IdentityStep({
       toast.error(t("profile.photo_error", "Error al subir la foto"), { id: toastId });
     } finally {
       setIsUploading(false);
-      // Reset input value
       if (e.target) e.target.value = "";
     }
   };
 
-  // 4. Bio Input XSS Sanitization & Validation
+  // === BLOQUE: SANITIZACIÓN DE BIOGRAFÍA (XSS) ===
+  // Elimina etiquetas HTML para prevenir ataques XSS básicos
   const handleBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const rawValue = e.target.value;
-    // Strip HTML tags for basic XSS prevention
     const sanitized = rawValue.replace(/<[^>]*>/g, "");
     setBio(sanitized);
   };
 
+  // === BLOQUE: VALIDACIÓN Y GUARDADO DEL FORMULARIO ===
+  // Valida que la biografía tenga entre 10 y 150 caracteres antes de invocar onComplete
   const handleSave = () => {
-    // Basic Bio Validation: 10 to 150 chars
     const trimmedBio = bio.trim();
     if (trimmedBio.length < 10) {
       toast.error(t("onboarding.bio_too_short", "La biografía debe tener al menos 10 caracteres"));
@@ -192,7 +198,6 @@ export function IdentityStep({
       toast.error(t("onboarding.bio_too_long", "La biografía no puede superar los 150 caracteres"));
       return;
     }
-
     onComplete({
       avatar_url: avatarUrl,
       bio: trimmedBio,
@@ -203,14 +208,16 @@ export function IdentityStep({
     });
   };
 
-  // Gender visual styles
+  // === BLOQUE: ESTILOS DE GÉNERO ===
+  // Devuelve clases de borde y sombra según el género seleccionado (naranja/rosado/verde)
   const getGenderGlowClass = () => {
     if (gender === "Masculino") return "border-[#FF6B35] shadow-[0_0_15px_rgba(255,107,53,0.3)]";
     if (gender === "Femenino") return "border-[#D946EF] shadow-[0_0_15px_rgba(217,70,239,0.3)]";
-    return "border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3)]";
+    return "border-primary shadow-[0_0_15px_hsl(var(--primary)/0.3)]";
   };
 
-  // Falling silhouettes based on gender fallback
+  // === BLOQUE: AVATAR FALLBACK POR GÉNERO ===
+  // Renderiza siluetas SVG con colores distintivos según el género cuando no hay foto
   const renderFallbackAvatar = () => {
     if (gender === "Masculino") {
       return (
@@ -230,9 +237,9 @@ export function IdentityStep({
         </div>
       );
     }
-    // Mixto (Abstract Trophy)
+    // Mixto: trofeo abstracto
     return (
-      <div className="absolute inset-0 bg-gradient-to-br from-[#39FF14] to-[#1E3A1E] flex items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/20 flex items-center justify-center">
         <svg
           className="w-14 h-14 text-white/90"
           viewBox="0 0 24 24"
@@ -254,6 +261,7 @@ export function IdentityStep({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* === BLOQUE: ENCABEZADO === */}
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground">
           {t("onboarding.step2_title", "Completa tu perfil")}
@@ -266,13 +274,15 @@ export function IdentityStep({
         </p>
       </div>
 
-      {/* Circular Glassmorphism Avatar Uploader */}
+      {/* === BLOQUE: SUBIDA DE AVATAR (CÍRCULO DE CRISTAL) === */}
+      {/* Círculo interactivo con efecto glassmorphism para subir foto de perfil */}
       <div className="flex flex-col items-center gap-3">
         <div
           onClick={() => !isUploading && !isAnalyzingImage && fileInputRef.current?.click()}
           className={`h-32 w-32 rounded-full border-4 cursor-pointer relative overflow-hidden bg-background/30 flex items-center justify-center transition-all duration-300 ${getGenderGlowClass()}`}
         >
           {isAnalyzingImage ? (
+            // Estado de análisis NSFW con animación de pulso y spinner
             <div
               className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 z-10 p-2 text-center border-2 rounded-full"
               style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
@@ -284,7 +294,7 @@ export function IdentityStep({
                   100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
                 }
               `}</style>
-              <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+              <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
               <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 🛡️ Escaneando...
               </span>
@@ -294,7 +304,7 @@ export function IdentityStep({
           ) : (
             renderFallbackAvatar()
           )}
-
+          {/* Overlay hover para subir foto */}
           {!isAnalyzingImage && (
             <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold transition-opacity">
               {isUploading ? (
@@ -323,7 +333,8 @@ export function IdentityStep({
         </span>
       </div>
 
-      {/* Segmented Gender Selector */}
+      {/* === BLOQUE: SELECTOR DE GÉNERO === */}
+      {/* Botones segmentados en cuadrícula de 3 columnas con colores distintivos */}
       <div className="space-y-3">
         <label className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 block">
           {t("onboarding.gender_label", "Género")}
@@ -343,18 +354,14 @@ export function IdentityStep({
             {
               value: "Mixto",
               label: "⚡ Mixto",
-              activeClass: "bg-[#39FF14] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]",
+              activeClass: "bg-primary text-primary-foreground shadow-glow",
             },
           ].map((item) => (
             <button
               key={item.value}
               type="button"
               onClick={() => setGender(item.value as "Masculino" | "Femenino" | "Mixto")}
-              className={`py-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                gender === item.value
-                  ? item.activeClass
-                  : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground"
-              }`}
+              className={`py-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${gender === item.value ? item.activeClass : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground"}`}
             >
               {item.label}
             </button>
@@ -362,7 +369,8 @@ export function IdentityStep({
         </div>
       </div>
 
-      {/* Bio text area */}
+      {/* === BLOQUE: ÁREA DE BIOGRAFÍA === */}
+      {/* Textarea con contador de caracteres y sanitización XSS */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <label className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 block">
@@ -394,6 +402,8 @@ export function IdentityStep({
         </p>
       </div>
 
+      {/* === BLOQUE: SLIDER DE HORAS SEMANALES === */}
+      {/* Control deslizante para definir la dedicación semanal al deporte (1-20 horas) */}
       <div className="bg-gradient-card border border-border rounded-2xl p-5 space-y-4">
         <div className="flex justify-between items-center">
           <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1">
@@ -407,7 +417,6 @@ export function IdentityStep({
               : t("onboarding.weekly_hour_plur", "horas")}
           </span>
         </div>
-
         <div className="relative pt-2 pb-1">
           <input
             type="range"
@@ -415,14 +424,13 @@ export function IdentityStep({
             max="20"
             value={weeklyHours}
             onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#39FF14]"
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-primary"
             style={{
-              background: `linear-gradient(to right, #39FF14 ${((weeklyHours - 1) / 19) * 100}%, #1e293b ${((weeklyHours - 1) / 19) * 100}%)`,
+              background: `linear-gradient(to right, hsl(var(--primary)) ${((weeklyHours - 1) / 19) * 100}%, hsl(var(--muted)) ${((weeklyHours - 1) / 19) * 100}%)`,
             }}
             id="hours-slider"
           />
         </div>
-
         <div className="flex justify-between text-[9px] text-muted-foreground font-semibold pt-1">
           <span>{t("onboarding.weekly_min", "Mínimo (1h)")}</span>
           <span>{t("onboarding.weekly_default", "Predeterminado (6h)")}</span>
@@ -430,7 +438,7 @@ export function IdentityStep({
         </div>
       </div>
 
-      {/* Navigation Buttons */}
+      {/* === BLOQUE: BOTONES DE NAVEGACIÓN === */}
       <div className="flex gap-3 pt-4">
         <button
           type="button"

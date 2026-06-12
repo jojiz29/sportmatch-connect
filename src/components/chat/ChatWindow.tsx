@@ -1,3 +1,5 @@
+// === BLOQUE: IMPORTACIONES ===
+// Dependencias: React, iconos Lucide (Phone, Video, Send, etc.), tipos User/Match/Squad, store de chat y VerifiedBadge
 import React from "react";
 import {
   Phone,
@@ -13,9 +15,11 @@ import {
   MapPin,
 } from "lucide-react";
 import { User, Match, Squad } from "@/entities/types";
-import { useChatStore } from "@/features/chat/useChatStore";
+import { Chat, ChatMessage, useChatStore } from "@/features/chat/useChatStore";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
+import type { TFunction } from "i18next";
 
+// === BLOQUE: INTERFAZ DE TARJETA DE INVITACIÓN A SQUAD ===
 interface SquadInviteCardProps {
   squadId: string;
   squadName: string;
@@ -24,6 +28,8 @@ interface SquadInviteCardProps {
   joinedMap: Record<string, boolean>;
 }
 
+// === BLOQUE: COMPONENTE DE TARJETA DE INVITACIÓN A SQUAD ===
+// Renderiza una invitación interactiva dentro del chat para unirse a un squad
 export function SquadInviteCard({
   squadId,
   squadName,
@@ -66,6 +72,7 @@ export function SquadInviteCard({
   );
 }
 
+// === BLOQUE: INTERFAZ DE TARJETA DE PROPUESTA DE PARTIDO ===
 interface MatchProposalCardProps {
   matchTitle: string;
   courtName: string;
@@ -74,6 +81,8 @@ interface MatchProposalCardProps {
   onPlay: (courtId: string) => void;
 }
 
+// === BLOQUE: COMPONENTE DE TARJETA DE PROPUESTA DE PARTIDO ===
+// Muestra una tarjeta con información de un partido y un botón para jugar directamente
 export function MatchProposalCard({
   matchTitle,
   courtName,
@@ -107,6 +116,9 @@ export function MatchProposalCard({
   );
 }
 
+// === BLOQUE: INTERFAZ DE PROPS DEL CHAT WINDOW ===
+// Recibe el chat activo, usuario actual, usuarios registrados, handlers de envío/archivos, estado de adjuntos,
+// listas de squads y partidos, y referencias para scroll infinito y file input
 interface ChallengeProposalCardProps {
   challengeId: string;
   sport: string;
@@ -219,8 +231,7 @@ function ChallengeProposalCard({
 }
 
 interface ChatWindowProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  activeChat: any;
+  activeChat: Chat | undefined | null;
   currentUser: User | null;
   registeredUsers: User[];
   areProfilesLoading: boolean;
@@ -254,10 +265,12 @@ interface ChatWindowProps {
   joinedMap: Record<string, boolean>;
   endRef: React.RefObject<HTMLDivElement | null>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: any;
+  t: TFunction;
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL DE VENTANA DE CHAT ===
+// Interfaz de chat en tiempo real con: encabezado del chat, burbujas de mensajes (incluyendo tarjetas interactivas),
+// indicadores de escritura en vivo, menú de adjuntos (compartir squads/proponer partidos) y campo de entrada con imagen
 export function ChatWindow({
   activeChat,
   currentUser,
@@ -286,45 +299,46 @@ export function ChatWindow({
   fileInputRef,
   t,
 }: ChatWindowProps) {
+  // === BLOQUE: ESTADO DE INDICADOR DE ESCRITURA ===
+  // Obtiene funciones de la store de chat para enviar estado de escritura y lista de usuarios escribiendo
   const sendTypingStatus = useChatStore((s) => s.sendTypingStatus);
   const typingUsers = useChatStore((s) => s.typingUsers);
 
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = React.useRef(false);
 
+  // Limpia el timeout al desmontar el componente
   React.useEffect(() => {
     return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, []);
 
+  // === BLOQUE: MANEJADOR DE ESCRITURA (TYPING INDICATOR) ===
+  // Envía estado "escribiendo" con debounce de 1.5s para evitar spam
   const handleTyping = () => {
     if (!isTypingRef.current) {
       isTypingRef.current = true;
       sendTypingStatus(true);
     }
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
       sendTypingStatus(false);
     }, 1500);
   };
 
+  // === BLOQUE: ENVÍO DE MENSAJE ===
+  // Limpia el estado de escritura antes de enviar
   const onSend = () => {
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     isTypingRef.current = false;
     sendTypingStatus(false);
     handleSend();
   };
 
+  // === BLOQUE: ESTADO VACÍO ===
+  // Muestra mensaje cuando no hay un chat activo seleccionado
   if (!activeChat) {
     return (
       <div className="flex-1 grid place-items-center text-muted-foreground flex-col">
@@ -335,6 +349,8 @@ export function ChatWindow({
 
   return (
     <>
+      {/* === BLOQUE: ENCABEZADO DEL CHAT === */}
+      {/* Avatar, nombre del chat, badge de verificación (DNI), contador de participantes y acciones (llamada/video/más) */}
       <div className="h-16 border-b border-border flex items-center justify-between px-6 bg-card/50">
         <div className="flex items-center gap-3">
           <div className="relative h-10 w-10">
@@ -367,6 +383,15 @@ export function ChatWindow({
           </div>
         </div>
         <div className="flex items-center gap-4 text-muted-foreground">
+          <button className="hover:text-foreground cursor-pointer">
+            <Phone className="h-5 w-5" />
+          </button>
+          <button className="hover:text-foreground cursor-pointer">
+            <Video className="h-5 w-5" />
+          </button>
+          <button className="hover:text-foreground cursor-pointer">
+            <MoreVertical className="h-5 w-5" />
+          </button>
           <button
             onClick={openChallengeComposer}
             className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/15 cursor-pointer"
@@ -386,9 +411,11 @@ export function ChatWindow({
         </div>
       </div>
 
+      {/* === BLOQUE: ÁREA DE MENSAJES === */}
+      {/* Renderiza burbujas de mensajes con soporte para: mensajes del sistema, propios, de otros usuarios,
+          imágenes adjuntas, tarjetas de invitación a Squad y tarjetas de propuesta de partido */}
       <div className="flex-1 p-6 overflow-y-auto space-y-4">
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {activeChat.messages.map((msg: any) => {
+        {activeChat.messages.map((msg: ChatMessage) => {
           const isSystem = msg.sender_id === "system";
           if (isSystem) {
             return (
@@ -399,7 +426,6 @@ export function ChatWindow({
               </div>
             );
           }
-
           const isMe = msg.sender_id === currentUser?.id;
           const sender = registeredUsers.find((u) => u.id === msg.sender_id) || {
             name: activeChat.name,
@@ -417,22 +443,19 @@ export function ChatWindow({
               key={msg.id}
               className={`flex gap-3 max-w-[80%] ${isMe ? "ml-auto flex-row-reverse" : ""}`}
             >
+              {/* Avatar del remitente */}
               {isMe ? (
                 <div className="h-8 w-8 rounded-full bg-gradient-primary grid place-items-center text-white text-[10px] font-bold shrink-0">
                   {t("chat.me", "YO")}
                 </div>
+              ) : sender?.avatar_url ? (
+                <img
+                  src={sender.avatar_url}
+                  alt=""
+                  className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
+                />
               ) : (
-                <>
-                  {sender?.avatar_url ? (
-                    <img
-                      src={sender.avatar_url}
-                      alt=""
-                      className="h-8 w-8 rounded-full bg-muted shrink-0 object-cover"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
-                  )}
-                </>
+                <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
               )}
               <div>
                 {!isMe && (
@@ -444,7 +467,6 @@ export function ChatWindow({
                 <div
                   className={`p-3 text-sm flex flex-col ${isMe ? "bg-gradient-primary text-primary-foreground rounded-2xl rounded-tr-none shadow-glow" : "bg-accent rounded-2xl rounded-tl-none"}`}
                 >
-                  {/* Rich attachment image rendering */}
                   {msg.media_url && (
                     <img
                       src={msg.media_url}
@@ -452,14 +474,13 @@ export function ChatWindow({
                       className="max-w-[200px] max-h-[160px] object-cover rounded-xl mb-2 border border-border/60"
                     />
                   )}
-
                   <span>{msg.text}</span>
 
                   {/* Actionable cards integration */}
                   {msg.metadata?.type === "squad_invite" && (
                     <SquadInviteCard
-                      squadId={msg.metadata.squad_id}
-                      squadName={msg.metadata.squad_name}
+                      squadId={msg.metadata.squad_id as string}
+                      squadName={msg.metadata.squad_name as string}
                       onJoinSquad={onJoinSquad}
                       isJoiningMap={isJoiningMap}
                       joinedMap={joinedMap}
@@ -468,54 +489,55 @@ export function ChatWindow({
 
                   {msg.metadata?.type === "match_proposal" && (
                     <MatchProposalCard
-                      matchTitle={msg.metadata.match_title}
-                      courtName={msg.metadata.court_name}
-                      price={msg.metadata.price}
-                      courtId={msg.metadata.court_id}
+                      matchTitle={msg.metadata.match_title as string}
+                      courtName={msg.metadata.court_name as string}
+                      price={msg.metadata.price as number}
+                      courtId={msg.metadata.court_id as string}
                       onPlay={handlePlayCheckout}
                     />
                   )}
 
-                  {msg.metadata?.type === "challenge_proposal" && (
+                  {msg.metadata?.type === "challenge_proposal" && msg.metadata && (
                     <ChallengeProposalCard
-                      challengeId={msg.metadata.challenge_id}
-                      sport={msg.metadata.sport}
-                      modality={msg.metadata.modality}
-                      scheduledDate={msg.metadata.scheduled_date}
-                      scheduledTime={msg.metadata.scheduled_time}
-                      location={msg.metadata.location}
+                      challengeId={msg.metadata.challenge_id as string}
+                      sport={msg.metadata.sport as string}
+                      modality={msg.metadata.modality as string}
+                      scheduledDate={msg.metadata.scheduled_date as string}
+                      scheduledTime={msg.metadata.scheduled_time as string}
+                      location={msg.metadata.location as string | undefined}
                       isReceiver={msg.metadata.challenged_id === currentUser?.id}
-                      response={challengeResponses[msg.metadata.challenge_id]}
+                      response={challengeResponses[msg.metadata.challenge_id as string]}
                       onRespond={onRespondChallenge}
                       onProposeChanges={() =>
                         onOpenCounterProposal({
-                          id: msg.metadata.challenge_id,
-                          sport: msg.metadata.sport,
-                          modality: msg.metadata.modality,
-                          scheduledDate: msg.metadata.scheduled_date,
-                          scheduledTime: msg.metadata.scheduled_time,
-                          location: msg.metadata.location,
-                          challengerId: msg.metadata.challenger_id,
+                          id: msg.metadata!.challenge_id as string,
+                          sport: msg.metadata!.sport as string,
+                          modality: msg.metadata!.modality as string,
+                          scheduledDate: msg.metadata!.scheduled_date as string,
+                          scheduledTime: msg.metadata!.scheduled_time as string,
+                          location: msg.metadata!.location as string | undefined,
+                          challengerId: msg.metadata!.challenger_id as string,
                         })
                       }
                     />
                   )}
 
-                  {msg.metadata?.type === "challenge_counter_proposal" && (
+                  {msg.metadata?.type === "challenge_counter_proposal" && msg.metadata && (
                     <ChallengeProposalCard
-                      challengeId={msg.metadata.challenge_id}
-                      sport={msg.metadata.sport}
-                      modality={msg.metadata.modality}
-                      scheduledDate={msg.metadata.scheduled_date}
-                      scheduledTime={msg.metadata.scheduled_time}
-                      location={msg.metadata.location}
+                      challengeId={msg.metadata.challenge_id as string}
+                      sport={msg.metadata.sport as string}
+                      modality={msg.metadata.modality as string}
+                      scheduledDate={msg.metadata.scheduled_date as string}
+                      scheduledTime={msg.metadata.scheduled_time as string}
+                      location={msg.metadata.location as string | undefined}
                       isReceiver={msg.metadata.action_user_id === currentUser?.id}
                       isCounterProposal
-                      response={challengeResponses[msg.metadata.challenge_id]}
+                      response={challengeResponses[msg.metadata.challenge_id as string]}
                       onRespond={onRespondChallenge}
                     />
                   )}
                 </div>
+                {/* Indicador de tiempo y estado de entrega (enviando / visto) */}
                 <div
                   className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isMe ? "text-primary/75 mr-1" : "text-muted-foreground ml-1"}`}
                 >
@@ -543,7 +565,8 @@ export function ChatWindow({
           );
         })}
 
-        {/* Real-time Typing Indicators */}
+        {/* === BLOQUE: INDICADORES DE ESCRITURA EN VIVO === */}
+        {/* Muestra burbujas animadas cuando otros usuarios están escribiendo */}
         {Object.keys(typingUsers).map((userId) => {
           if (userId === currentUser?.id) return null;
           const typingUser = registeredUsers.find((u) => u.id === userId) || {
@@ -592,15 +615,16 @@ export function ChatWindow({
         <div ref={endRef} />
       </div>
 
+      {/* === BLOQUE: BARRA DE ENTRADA DE MENSAJE === */}
+      {/* Incluye: botón de adjuntos (menú drawer), campo de texto, botón de imagen y botón de envío */}
       <div className="p-4 bg-card/50 border-t border-border space-y-3 relative">
-        {/* File Attachment & Card menu drawer */}
+        {/* Menú de adjuntos: compartir Squad / proponer Partido */}
         {isAttachmentMenuOpen && (
           <div className="absolute bottom-20 left-4 right-4 bg-background border border-border p-4 rounded-2xl shadow-card z-10 flex flex-col gap-3 animate-slide-up">
             <div className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1">
               Compartir e Invitar
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {/* Invite to Squad selector list */}
               <div className="border border-border/60 rounded-xl p-2.5 space-y-2 max-h-[140px] overflow-y-auto">
                 <div className="text-[10px] font-bold text-primary">MIS SQUADS</div>
                 {userSquads.length === 0 ? (
@@ -619,8 +643,6 @@ export function ChatWindow({
                   ))
                 )}
               </div>
-
-              {/* Propose Active Match selector list */}
               <div className="border border-border/60 rounded-xl p-2.5 space-y-2 max-h-[140px] overflow-y-auto">
                 <div className="text-[10px] font-bold text-electric">PARTIDOS ACTIVOS</div>
                 {systemMatches.length === 0 ? (
@@ -641,7 +663,7 @@ export function ChatWindow({
           </div>
         )}
 
-        {/* Selected File Attachment Preview */}
+        {/* Previsualización de imagen seleccionada */}
         {selectedImageBase64 && (
           <div className="relative inline-block p-1 bg-accent/40 rounded-xl border border-border">
             <img src={selectedImageBase64} className="h-16 w-16 object-cover rounded-lg" />
@@ -654,6 +676,7 @@ export function ChatWindow({
           </div>
         )}
 
+        {/* Campo de entrada con botones */}
         <div className="flex items-center gap-2 bg-background border border-border rounded-full px-4 py-2">
           <button
             onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
@@ -664,7 +687,6 @@ export function ChatWindow({
               className={`h-5 w-5 transition-transform ${isAttachmentMenuOpen ? "rotate-45" : ""}`}
             />
           </button>
-
           <input
             type="text"
             placeholder={t("chat.placeholder", "Escribe un mensaje...")}
@@ -676,7 +698,6 @@ export function ChatWindow({
             }}
             onKeyDown={(e) => e.key === "Enter" && onSend()}
           />
-
           <button
             onClick={() => fileInputRef.current?.click()}
             className="text-muted-foreground hover:text-neon cursor-pointer"
@@ -684,7 +705,6 @@ export function ChatWindow({
           >
             <ImageIcon className="h-5 w-5" />
           </button>
-
           <input
             type="file"
             ref={fileInputRef}
@@ -692,7 +712,6 @@ export function ChatWindow({
             accept="image/*"
             className="hidden"
           />
-
           <button
             onClick={onSend}
             disabled={!text.trim() && !selectedImageBase64}

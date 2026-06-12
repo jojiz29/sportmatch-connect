@@ -1,7 +1,9 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { Ad } from "@/entities/types";
 import { adsService } from "@/shared/api/adsService";
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface AdsState {
   ads: Ad[];
   isLoading: boolean;
@@ -15,10 +17,14 @@ interface AdsState {
   trackAdAction: (adId: string, action: "views" | "clicks" | "contacts") => Promise<void>;
 }
 
+// === BLOQUE: STORE DE ANUNCIOS ===
+// Gestiona el CRUD de anuncios publicitarios y el tracking de métricas.
+// No se persiste en localStorage porque los datos vienen del servicio remoto.
 export const useAdsStore = create<AdsState>((set) => ({
   ads: [],
   isLoading: false,
 
+  // Obtiene los anuncios, filtrados opcionalmente por negocio
   fetchAds: async (businessId) => {
     try {
       set({ isLoading: true });
@@ -30,6 +36,7 @@ export const useAdsStore = create<AdsState>((set) => ({
     }
   },
 
+  // Crea un nuevo anuncio y lo agrega al estado local
   createAd: async (adData) => {
     try {
       set({ isLoading: true });
@@ -46,6 +53,7 @@ export const useAdsStore = create<AdsState>((set) => ({
     }
   },
 
+  // Actualiza un anuncio existente y reemplaza su entrada en el array
   updateAd: async (adId, adData) => {
     try {
       set({ isLoading: true });
@@ -62,6 +70,7 @@ export const useAdsStore = create<AdsState>((set) => ({
     }
   },
 
+  // Elimina un anuncio y lo remueve del estado local
   deleteAd: async (adId) => {
     try {
       set({ isLoading: true });
@@ -77,20 +86,22 @@ export const useAdsStore = create<AdsState>((set) => ({
     }
   },
 
+  // Registra una acción (vista, clic, contacto) con actualización optimista
+  // y reversión automática si la llamada al servicio falla
   trackAdAction: async (adId, action) => {
     try {
-      // Optimistic update
+      // Actualización optimista: incrementa el contador de inmediato en UI
       set((state) => ({
         ads: state.ads.map((ad) =>
           ad.id === adId ? { ...ad, [action]: (ad[action] || 0) + 1 } : ad,
         ),
       }));
 
-      // Sinking action to DB/demo storage
+      // Persiste la acción en BD/demo storage
       await adsService.trackAdAction(adId, action);
     } catch (err) {
       console.error(`Error tracking ad action ${action} in store:`, err);
-      // Revert if failed
+      // Reversión: si falla, decrementa el contador para mantener consistencia
       set((state) => ({
         ads: state.ads.map((ad) =>
           ad.id === adId ? { ...ad, [action]: Math.max(0, (ad[action] || 0) - 1) } : ad,

@@ -1,3 +1,8 @@
+# ============================================================
+# Dockerfile — Servidor NestJS para SportMatch
+# Build multi-etapa: instala dependencias, genera Prisma, compila y expone puerto 3000
+# ============================================================
+
 FROM node:20-alpine
 
 WORKDIR /app

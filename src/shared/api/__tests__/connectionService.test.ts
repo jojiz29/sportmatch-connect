@@ -1,3 +1,8 @@
+// ============================================================
+// connectionService.test.ts — Tests de conexiones entre jugadores
+// Verifica crear, listar y eliminar player_connections
+// ============================================================
+
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   createPlayerConnection,

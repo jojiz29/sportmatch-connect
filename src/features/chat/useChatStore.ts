@@ -1,3 +1,4 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { supabase } from "@/shared/api/supabase";
@@ -7,6 +8,7 @@ import { MOCK_USERS } from "@/shared/api/apiClient";
 import { Match } from "@/entities/types";
 import { withTimeout } from "@/shared/api/timeoutHelper";
 
+// === BLOQUE: MENSAJE DE CHAT ===
 export interface ChatMessage {
   id: string;
   sender_id: string;
@@ -16,6 +18,7 @@ export interface ChatMessage {
   metadata?: Record<string, unknown>;
 }
 
+// === BLOQUE: CONVERSACIÓN ===
 export interface Chat {
   id: string;
   name: string;
@@ -25,6 +28,7 @@ export interface Chat {
   unread: number;
 }
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface ChatState {
   chats: Chat[];
   activeConversationId: string | null;
@@ -55,17 +59,28 @@ interface ChatState {
   subscribeToChat: (chatId: string) => () => void;
 }
 
-// Module-level channel tracker — survives Zustand re-renders but is cleaned
-// up when subscribeToChat is called again or on component unmount.
+// === BLOQUE: CANALES REALTIME GLOBALES ===
+// Variables a nivel de módulo que sobreviven a re-renders de Zustand.
+// Se limpian cuando subscribeToChat se llama de nuevo o al desmontar el componente.
 let _activeChatChannel: ReturnType<typeof supabase.channel> | null = null;
 let _subscribedChatId: string | null = null;
 let _globalChatChannel: ReturnType<typeof supabase.channel> | null = null;
 
+// === BLOQUE: LOG DE CHAT ===
+// Incluye identificadores y etapas del ciclo de vida del mensaje,
+// nunca el contenido privado del mensaje.
 function chatLog(event: string, context: Record<string, unknown> = {}) {
-  // Los logs de chat incluyen identificadores y etapas, nunca el contenido privado.
   console.log(`[chat] ${event}`, context);
 }
 
+// === BLOQUE: STORE DE CHAT ===
+// Gestiona mensajería instantánea con soporte para:
+// - Chats directos (1-a-1) con IDs persistentes vía RPC
+// - Chats grupales por escuadra
+// - Chats de partido (match)
+// - Realtime con Supabase para mensajes y typing indicators
+// - Actualizaciones optimistas con rollback en caso de error
+// Persistido parcialmente en localStorage (chats + activeConversationId).
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
@@ -74,6 +89,9 @@ export const useChatStore = create<ChatState>()(
       typingUsers: {},
       lastDiagnostic: "Chat todavía no inicializado.",
 
+      // === CAMBIAR CONVERSACIÓN ACTIVA ===
+      // Al cambiar de conversación, resetea el estado de "escribiendo" y
+      // marca los mensajes como leídos.
       setActiveConversation: (id) => {
         set({
           activeConversationId: id,
@@ -85,6 +103,9 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      // === INICIALIZAR CHAT ===
+      // En modo demo, crea chats semilla precargados.
+      // En modo real, carga las conversaciones persistentes desde Supabase.
       initChat: () => {
         const user = useAuthStore.getState().user;
         if (user) {
@@ -139,6 +160,10 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      // === ENVIAR MENSAJE ===
+      // Actualización optimista: agrega el mensaje al estado local de inmediato,
+      // luego persiste en Supabase. Si falla, revierte (rollback).
+      // En modo real, también hace broadcast vía Realtime para entrega inmediata.
       sendMessage: async (chatId, text, mediaUrl, metadata) => {
         const normalizedText = text.trim();
         // Esta validación protege todos los puntos de entrada, no solo el formulario del chat.
@@ -152,6 +177,7 @@ export const useChatStore = create<ChatState>()(
         const sendingMetadata = { ...metadata, delivery_status: "sending" };
         const sentMetadata = { ...metadata, delivery_status: "sent" };
 
+        // Crea el mensaje con estado "sending"
         const newMessage: ChatMessage = {
           id: newMessageId,
           sender_id,
@@ -163,6 +189,7 @@ export const useChatStore = create<ChatState>()(
         chatLog("send:start", { chatId, messageId: newMessageId, hasMedia: Boolean(mediaUrl) });
         set({ lastDiagnostic: `Enviando mensaje en ${chatId}...` });
 
+        // Inserta el mensaje en el estado local (optimista)
         set((state) => {
           const updatedChats = state.chats.map((chat) => {
             if (chat.id === chatId) {
@@ -174,6 +201,7 @@ export const useChatStore = create<ChatState>()(
         });
 
         if (!isDemo) {
+          // Persiste en Supabase: usa RPC para directos o INSERT directo para grupales
           const sendResult = await withTimeout(
             chatId.startsWith("direct_")
               ? supabase.rpc("send_direct_message", {
@@ -194,7 +222,7 @@ export const useChatStore = create<ChatState>()(
           );
           let { error } = sendResult;
 
-          // Permite probar el chat aunque el RPC nuevo todavía no haya sido desplegado.
+          // Fallback: si el RPC no existe (PGRST202), intenta inserción directa
           if (error && chatId.startsWith("direct_") && error.code === "PGRST202") {
             console.warn("[chat] send:rpc-missing, intentando inserción directa", { chatId });
             const fallback = await supabase.from("messages").insert({
@@ -209,7 +237,7 @@ export const useChatStore = create<ChatState>()(
           }
 
           if (error) {
-            // Si Supabase rechaza el mensaje, retiramos la copia optimista local.
+            // Rollback: si Supabase rechaza el mensaje, elimina la copia optimista local
             set((state) => ({
               chats: state.chats.map((chat) =>
                 chat.id === chatId
@@ -224,6 +252,7 @@ export const useChatStore = create<ChatState>()(
             console.error("[chat] send:error", { chatId, messageId: newMessageId, error });
             throw error;
           }
+
           chatLog("send:confirmed", { chatId, messageId: newMessageId });
           const confirmedMessage = { ...newMessage, metadata: sentMetadata };
           set((state) => ({
@@ -240,8 +269,8 @@ export const useChatStore = create<ChatState>()(
             lastDiagnostic: `Mensaje confirmado en ${chatId}.`,
           }));
 
-          // Broadcast entrega el mensaje inmediatamente al chat abierto del receptor.
-          // PostgreSQL Realtime continúa siendo la fuente persistente y evita pérdidas.
+          // Broadcast: entrega el mensaje inmediatamente al chat abierto del receptor.
+          // PostgreSQL Realtime es la fuente persistente y evita pérdidas.
           if (_subscribedChatId === chatId && _activeChatChannel) {
             await _activeChatChannel.send({
               type: "broadcast",
@@ -250,7 +279,7 @@ export const useChatStore = create<ChatState>()(
             });
           }
         } else {
-          // Simulate target reads the message after 2 seconds in Demo mode
+          // Modo demo: simula que el destino lee el mensaje después de 2 segundos
           setTimeout(() => {
             set((state) => {
               const updatedChats = state.chats.map((chat) => {
@@ -273,11 +302,16 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      // === CREAR CHAT DIRECTO ===
+      // Crea o reutiliza una conversación directa 1-a-1.
+      // En modo real usa el RPC create_direct_conversation que devuelve
+      // siempre el mismo ID para una pareja de usuarios.
       createChat: async (targetUserId) => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return "";
         const isDemo = useAuthStore.getState().isDemoMode;
 
+        // Reutiliza conversación existente (directa y con los mismos 2 participantes)
         const existingChat = get().chats.find(
           (c) =>
             c.current_players.length === 2 &&
@@ -295,7 +329,7 @@ export const useChatStore = create<ChatState>()(
           return existingChat.id;
         }
 
-        // Fetch target user profile dynamically from Supabase profiles
+        // Obtiene el perfil del usuario destino
         let name = "Deportista";
         let avatar = "";
         let chatId = `chat_${Date.now()}`;
@@ -349,11 +383,15 @@ export const useChatStore = create<ChatState>()(
         return newChat.id;
       },
 
+      // === CARGAR CONVERSACIONES PERSISTENTES ===
+      // Obtiene todas las conversaciones del usuario desde Supabase,
+      // incluyendo los datos del perfil del otro participante y los mensajes.
       loadPersistentChats: async () => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser || useAuthStore.getState().isDemoMode) return;
 
         try {
+          // Obtiene los IDs de conversación del usuario actual
           const { data: ownRows, error: ownError } = await supabase
             .from("conversation_participants")
             .select("conversation_id")
@@ -371,6 +409,7 @@ export const useChatStore = create<ChatState>()(
             return;
           }
 
+          // Obtiene los datos del otro participante de cada conversación
           const { data: participantRows, error: participantsError } = await supabase
             .from("conversation_participants")
             .select(
@@ -392,6 +431,7 @@ export const useChatStore = create<ChatState>()(
             };
           });
 
+          // Obtiene todos los mensajes de todas las conversaciones
           const { data: messageRows, error: messagesError } = await supabase
             .from("messages")
             .select("*")
@@ -399,8 +439,8 @@ export const useChatStore = create<ChatState>()(
             .order("created_at", { ascending: true });
           if (messagesError) throw messagesError;
 
-          // Cargamos todos los historiales al entrar para que la lista se comporte
-          // como una bandeja de mensajería y no dependa de abrir cada conversación.
+          // Carga todos los historiales al entrar para que la lista se comporte
+          // como una bandeja de mensajería sin depender de abrir cada conversación.
           for (const chat of persistentChats) {
             chat.messages = (messageRows || [])
               .filter((row) => row.chat_id === chat.id)
@@ -415,8 +455,8 @@ export const useChatStore = create<ChatState>()(
           }
 
           set((state) => {
-            // Descartamos chats directos heredados con ID local porque cada navegador
-            // generaba uno diferente y nunca podían compartir mensajes.
+            // Descarta chats locales heredados con ID no persistente
+            // (cada navegador generaba uno diferente, incompatibles entre sí).
             const compatibleLocalChats = state.chats.filter(
               (chat) =>
                 (chat.id.startsWith("chat_squad_") || chat.id.startsWith("chat_match_")) &&
@@ -444,6 +484,8 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      // === CREAR CHAT GRUPAL ===
+      // Crea un chat grupal para una escuadra (squad).
       createGroupChat: async (name, targetUserIds) => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return "";
@@ -472,6 +514,9 @@ export const useChatStore = create<ChatState>()(
         return newChat.id;
       },
 
+      // === CREAR CHAT DE PARTIDO ===
+      // Crea un chat grupal vinculado a un partido específico.
+      // Solo se crea si el usuario actual es participante o creador.
       createMatchGroupChat: (match) => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return;
@@ -481,7 +526,6 @@ export const useChatStore = create<ChatState>()(
           participantIds.push(match.creator_id);
         }
 
-        // We only create if currentUser is a participant/creator of this match
         if (!participantIds.includes(currentUser.id)) return;
 
         const chatId = `chat_match_${match.id}`;
@@ -518,6 +562,8 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      // === CARGAR HISTORIAL DE MENSAJES ===
+      // Obtiene todos los mensajes de una conversación desde Supabase.
       loadChatHistory: async (chatId) => {
         const isDemo =
           useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
@@ -563,6 +609,8 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      // === INDICADOR "ESCRIBIENDO" ===
+      // Envía vía broadcast Realtime el estado de escritura del usuario actual.
       sendTypingStatus: (isTyping) => {
         const user = useAuthStore.getState().user;
         if (!user || !_activeChatChannel) return;
@@ -574,6 +622,10 @@ export const useChatStore = create<ChatState>()(
         });
       },
 
+      // === MARCAR MENSAJES COMO LEÍDOS ===
+      // Marca como vistos todos los mensajes de otros usuarios en una conversación.
+      // En modo demo, actualización local.
+      // En modo real, persiste en Supabase y actualiza el estado local.
       markMessagesAsSeen: async (chatId) => {
         const user = useAuthStore.getState().user;
         if (!user) return;
@@ -599,7 +651,7 @@ export const useChatStore = create<ChatState>()(
         }
 
         try {
-          // Select unseen messages sent by others
+          // Selecciona mensajes no vistos de otros usuarios
           const { data, error } = await supabase
             .from("messages")
             .select("id, metadata")
@@ -619,8 +671,8 @@ export const useChatStore = create<ChatState>()(
             await Promise.all(updates);
           }
 
-          // Reflejamos la lectura de inmediato para el receptor. El evento UPDATE de
-          // Realtime actualizará los dobles checks en la sesión del remitente.
+          // Refleja la lectura de inmediato.
+          // El evento UPDATE de Realtime actualizará los dobles checks en la sesión del remitente.
           set((state) => ({
             chats: state.chats.map((chat) =>
               chat.id === chatId
@@ -641,16 +693,20 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
+      // === SUSCRIBIRSE A UN CANAL DE CHAT ===
+      // Activa un canal Realtime para una conversación específica.
+      // Escucha broadcasts "new-message" y "typing".
+      // Limpia la suscripción anterior antes de crear una nueva.
       subscribeToChat: (chatId) => {
         if (useAuthStore.getState().isDemoMode) {
           return () => {};
         }
 
-        // Load existing history first
+        // Carga el historial existente y marca como leído
         get().loadChatHistory(chatId);
         get().markMessagesAsSeen(chatId);
 
-        // Prevent duplicate subscriptions for the same chat
+        // Si ya está suscrito al mismo chat, solo devuelve cleanup
         if (_subscribedChatId === chatId && _activeChatChannel) {
           return () => {
             if (_activeChatChannel) {
@@ -661,15 +717,15 @@ export const useChatStore = create<ChatState>()(
           };
         }
 
-        // Clean up previous subscription
+        // Limpia suscripción anterior a otro chat
         if (_activeChatChannel) {
           supabase.removeChannel(_activeChatChannel);
           _activeChatChannel = null;
           _subscribedChatId = null;
         }
 
-        // La conversación activa conserva un canal separado para eventos efímeros,
-        // como el indicador "escribiendo".
+        // La conversación activa tiene un canal separado para eventos efímeros
+        // como el indicador "escribiendo" y entrega inmediata de mensajes.
         const channel = supabase
           .channel(`chat-messages-${chatId}`)
           .on("broadcast", { event: "new-message" }, ({ payload }) => {
@@ -709,7 +765,7 @@ export const useChatStore = create<ChatState>()(
         _activeChatChannel = channel;
         _subscribedChatId = chatId;
 
-        // Return cleanup function for component unmount
+        // Devuelve función de limpieza para usar en el cleanup del componente
         return () => {
           supabase.removeChannel(channel);
           _activeChatChannel = null;
@@ -718,6 +774,9 @@ export const useChatStore = create<ChatState>()(
         };
       },
 
+      // === SUSCRIBIRSE A TODOS LOS CHATS ===
+      // Canal global que escucha mensajes INSERT y UPDATE en la tabla messages
+      // mediante postgres_changes. Actualiza la bandeja de entrada en tiempo real.
       subscribeToAllChats: () => {
         if (useAuthStore.getState().isDemoMode) return () => {};
         if (_globalChatChannel) return () => {};
@@ -813,6 +872,7 @@ export const useChatStore = create<ChatState>()(
     {
       name: "sportmatch-chat",
       storage: createJSONStorage(() => safeLocalStorage),
+      // Solo persiste chats y activeConversationId, no el estado transitorio
       partialize: (state) => ({
         chats: state.chats,
         activeConversationId: state.activeConversationId,
@@ -821,15 +881,16 @@ export const useChatStore = create<ChatState>()(
   ),
 );
 
-// Subscribe to useAuthStore.
-// Only re-initializes chat when the user ID actually changes (login/logout).
+// === BLOQUE: SUSCRIPCIÓN A CAMBIOS DE AUTENTICACIÓN ===
+// Reinicializa el chat solo cuando cambia el ID del usuario (login/logout).
+// Limpia los canales Realtime activos antes de recargar.
 let _prevChatUserId: string | null = useAuthStore.getState().user?.id ?? null;
 useAuthStore.subscribe((state) => {
   const userId = state.user?.id ?? null;
   if (userId !== _prevChatUserId) {
     _prevChatUserId = userId;
 
-    // Clean up any active Realtime channel on user change
+    // Limpia canales Realtime activos al cambiar de usuario
     if (_activeChatChannel) {
       supabase.removeChannel(_activeChatChannel);
       _activeChatChannel = null;

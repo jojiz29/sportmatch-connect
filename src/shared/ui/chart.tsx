@@ -1,3 +1,4 @@
+// shadcn/ui — Gráfico (envoltura Recharts con estilos coherentes)
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 

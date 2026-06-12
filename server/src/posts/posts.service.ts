@@ -1,3 +1,8 @@
+// ============================================================
+// posts.service.ts — Servicio de publicaciones
+// CRUD con comentarios jerárquicos (parent_id) y reacciones toggle
+// ============================================================
+
 import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreatePostDto, UpdatePostDto, CreateCommentDto, CreateReactionDto } from "./dto";

@@ -1,3 +1,4 @@
+// shadcn/ui — Insignia de Verificación (marca de verificado azul)
 import { Check } from "lucide-react";
 
 export interface VerifiedBadgeProps {

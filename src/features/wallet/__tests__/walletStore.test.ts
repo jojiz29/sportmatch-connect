@@ -1,3 +1,8 @@
+// ============================================================
+// walletStore.test.ts — Tests de la store de billetera FitCoins
+// Verifica balance, transacciones y desafíos/challenges
+// ============================================================
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useWalletStore } from "../useWalletStore";
 import { useAuthStore } from "@/entities/user/useAuth";

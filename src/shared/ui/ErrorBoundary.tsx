@@ -1,3 +1,4 @@
+// shadcn/ui — Límite de Error (captura errores en el árbol de componentes)
 import React from "react";
 import { AlertCircle } from "lucide-react";
 

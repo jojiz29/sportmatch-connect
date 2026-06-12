@@ -1,3 +1,8 @@
+// ============================================================
+// MatchmakingFeature.test.tsx — Tests del componente de matchmaking
+// Verifica renderizado, swipe y modal de match
+// ============================================================
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";

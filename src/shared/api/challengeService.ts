@@ -1,14 +1,29 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/challengeService.ts
+ * PROPÓSITO: Servicio de desafíos jugador vs jugador.
+ *            Permite a los jugadores retarse mutuamente en un
+ *            deporte específico, y aceptar/rechazar desafíos.
+ * INCLUYE: Creación, listado de pendientes (enviados/recibidos),
+ *          respuesta (aceptar/rechazar).
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 
 const DEMO_STORAGE_KEY = "sportmatch_demo_player_challenges";
 
+// ==============================================================
+// TIPOS
+// ==============================================================
+
 export type ChallengeStatus =
   | "pending"
-  | "counter_proposed"
   | "accepted"
   | "rejected"
-  | "cancelled";
+  | "cancelled"
+  | "counter_proposed";
 
 export interface PlayerChallenge {
   id: string;
@@ -42,6 +57,9 @@ export interface CreateChallengeInput {
   message?: string;
 }
 
+// ==============================================================
+// HELPERS DE DEMO MODE
+// ==============================================================
 export interface CounterProposalInput {
   challengeId: string;
   challengedId: string;
@@ -66,10 +84,16 @@ function saveDemoChallenges(challenges: PlayerChallenge[]): void {
   localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(challenges));
 }
 
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
+
 /**
- * Crea un desafío pendiente y evita duplicados para el mismo deporte.
- * La restricción también existe en PostgreSQL para proteger la regla aunque
- * dos solicitudes lleguen casi al mismo tiempo.
+ * createPlayerChallenge(): Crea un desafío pendiente
+ * ------------------------------------------------------------------
+ * Valida que no sea autodesafío y evita duplicados activos
+ * (mismo deporte + mismo rival + estado pending) tanto en el
+ * cliente como en PostgreSQL (código 23505 = unique violation).
  */
 export async function createPlayerChallenge(input: CreateChallengeInput): Promise<PlayerChallenge> {
   if (input.challengerId === input.challengedId) {
@@ -122,7 +146,7 @@ export async function createPlayerChallenge(input: CreateChallengeInput): Promis
     .single();
 
   if (error) {
-    // PostgreSQL usa 23505 cuando la restricción de desafío pendiente detecta duplicado.
+    // PostgreSQL error 23505 = unique constraint violation (desafío duplicado)
     if (error.code === "23505") {
       const existing = await getPendingChallengesSent(input.challengerId);
       const duplicate = existing.find(
@@ -138,8 +162,7 @@ export async function createPlayerChallenge(input: CreateChallengeInput): Promis
 }
 
 /**
- * Recupera desafíos pendientes enviados para restaurar el estado visual
- * después de recargar o iniciar sesión desde otro dispositivo.
+ * getPendingChallengesSent(): Desafíos pendientes ENVIADOS por un jugador
  */
 export async function getPendingChallengesSent(challengerId: string): Promise<PlayerChallenge[]> {
   if (useAuthStore.getState().isDemoMode) {
@@ -160,8 +183,8 @@ export async function getPendingChallengesSent(challengerId: string): Promise<Pl
 }
 
 /**
- * Recupera solicitudes pendientes recibidas junto con los datos mínimos
- * del retador necesarios para construir la bandeja visual.
+ * getPendingChallengesReceived(): Desafíos pendientes RECIBIDOS por un jugador
+ * Incluye los datos del retador (nombre, avatar, nivel) mediante JOIN.
  */
 export async function getPendingChallengesReceived(
   challengedId: string,
@@ -186,8 +209,11 @@ export async function getPendingChallengesReceived(
 }
 
 /**
- * Acepta o rechaza un desafío recibido. El filtro por receptor y estado pendiente
- * complementa las políticas RLS para impedir resolver solicitudes ajenas o cerradas.
+ * respondToPlayerChallenge(): Acepta o rechaza un desafío recibido
+ * ------------------------------------------------------------------
+ * La validación triple (id + challenged_id + status pending) actúa
+ * como seguridad adicional a las políticas RLS, impidiendo responder
+ * desafíos ajenos o ya cerrados.
  */
 export async function respondToPlayerChallenge(
   challengeId: string,

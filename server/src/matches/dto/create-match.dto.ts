@@ -1,3 +1,8 @@
+// ============================================================
+// create-match.dto.ts — DTOs de partido (creación y actualización)
+// Validaciones con class-validator para crear y modificar partidos
+// ============================================================
+
 import { IsString, IsInt, IsOptional, Min, Max } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 

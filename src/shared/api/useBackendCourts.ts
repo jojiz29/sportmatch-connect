@@ -1,8 +1,20 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/useBackendCourts.ts
+ * PROPÓSITO: Hooks de TanStack Query para operaciones CRUD de canchas
+ *            contra el backend NestJS.
+ * INCLUYE: Consulta de canchas, creación, actualización y reseñas.
+ * ===================================================================
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { backendApi } from "@/shared/api/backendApi";
 import { Court } from "@/entities/types";
 import { toast } from "sonner";
 
+/**
+ * useGetCourtByIdQuery(): Hook para obtener una cancha por ID
+ */
 export function useGetCourtByIdQuery(id: string) {
   return useQuery({
     queryKey: ["backendCourt", id],
@@ -14,6 +26,17 @@ export function useGetCourtByIdQuery(id: string) {
   });
 }
 
+/**
+ * useBackendCourts(): Hook principal de gestión de canchas
+ * ------------------------------------------------------------------
+ * Provee:
+ *   - courts:      Lista de canchas (datos)
+ *   - createCourt: Mutación para crear cancha
+ *   - updateCourt: Mutación para actualizar cancha
+ *   - addReview:   Mutación para agregar reseña
+ * Cada mutación invalida la query "backendCourts" al completarse
+ * para refrescar automáticamente la lista.
+ */
 export function useBackendCourts() {
   const queryClient = useQueryClient();
 

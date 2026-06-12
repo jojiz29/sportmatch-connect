@@ -1,3 +1,8 @@
+// ============================================================
+// social-integration.spec.ts — E2E: Grafo social y seguidores
+// Verifica seguir/dejar de seguir y feed de actividad social
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Social Graph & Followers Integration Test", () => {

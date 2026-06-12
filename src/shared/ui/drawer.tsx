@@ -1,3 +1,4 @@
+// shadcn/ui — Cajón (panel deslizable tipo mobile con VAUL)
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 

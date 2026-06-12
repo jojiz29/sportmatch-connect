@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del perfil propio ===
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/app/profile/")({
   component: Profile,
 });
 
+// === BLOQUE: BADGES — Definición de logros deportivos ===
 const BADGES = [
   {
     id: 1,
@@ -78,6 +80,9 @@ const BADGES = [
   },
 ];
 
+// === BLOQUE: Profile — Componente principal del perfil personal ===
+// Permite editar nombre, ciudad, bio, avatar (con moderación NSFW + compresión WebP),
+// matriz deportiva, ver logros, estadísticas y verificar identidad (DNI).
 function Profile() {
   const { t } = useTranslation();
   const { profile, updateProfile, initProfile } = useProfileStore();
@@ -86,8 +91,17 @@ function Profile() {
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
+  const [barWidth, setBarWidth] = useState(0);
 
-  // AI Moderation Hook and States
+  useEffect(() => {
+    if (profile) {
+      const timer = setTimeout(() => {
+        setBarWidth(profile.trust_score || 0);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
+
   const { analyzeImage } = useNSFWJS();
   const [isAnalyzingAvatar, setIsAnalyzingAvatar] = useState(false);
   const [dni, setDni] = useState("");
@@ -95,15 +109,14 @@ function Profile() {
   const [dniError, setDniError] = useState("");
   const [isDniDialogOpen, setIsDniDialogOpen] = useState(false);
 
+  // === BLOQUE: handleVerifyDni — Verificación de identidad contra RENIEC ===
   const handleVerifyDni = async () => {
     if (!/^\d{8}$/.test(dni)) {
       setDniError("El DNI debe tener exactamente 8 dígitos.");
       return;
     }
-
     setIsVerifyingDni(true);
     setDniError("");
-
     const isDemo = useAuthStore.getState().isDemoMode;
 
     if (isDemo) {
@@ -111,18 +124,13 @@ function Profile() {
         setIsVerifyingDni(false);
         if (dni === "99999999") {
           const nextIntentos = (profile?.dni_intentos || 0) + 1;
-          const updatedUser = {
-            ...profile!,
-            dni_intentos: nextIntentos,
-          };
+          const updatedUser = { ...profile!, dni_intentos: nextIntentos };
           useAuthStore.setState({ user: updatedUser });
           useProfileStore.setState({ profile: updatedUser });
           const attemptsLeft = 3 - nextIntentos;
-          const suffix =
-            attemptsLeft > 0
-              ? ` Te quedan ${attemptsLeft} intentos.`
-              : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte.";
-          setDniError(`El nombre en tu cuenta no coincide con el DNI ingresado.${suffix}`);
+          setDniError(
+            `El nombre en tu cuenta no coincide con el DNI ingresado.${attemptsLeft > 0 ? ` Te quedan ${attemptsLeft} intentos.` : " Has bloqueado el flujo de verificación. Por favor, contacta a soporte."}`,
+          );
           toast.error("Error de verificación.");
         } else {
           const updatedUser = {
@@ -146,48 +154,34 @@ function Profile() {
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
-      if (!token) {
-        throw new Error("No active session found.");
-      }
-
+      if (!token) throw new Error("No active session found.");
       const res = await backendApi.profiles.verifyDni(token, dni);
-      if (res.error) {
-        throw new Error(res.error);
-      }
+      if (res.error) throw new Error(res.error);
 
-      // Success! Fetch updated profile
       const { data: updatedProfile, error: fetchErr } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", profile!.id)
         .single();
-
       if (!fetchErr && updatedProfile) {
         useAuthStore.setState({ user: updatedProfile as User });
         useProfileStore.setState({ profile: updatedProfile as User });
       }
-
       toast.success("¡Identidad verificada exitosamente!");
       setIsDniDialogOpen(false);
       setDni("");
     } catch (err) {
       const error = err as { message?: string };
       console.error("DNI verification error:", error);
-      const msg = error.message || "Error al verificar el DNI.";
-      setDniError(msg);
+      setDniError(error.message || "Error al verificar el DNI.");
       toast.error("La verificación falló.");
-
       const { data: currentProfile } = await supabase
         .from("profiles")
         .select("dni_intentos")
         .eq("id", profile!.id)
         .single();
-
       if (currentProfile) {
-        const updatedUser = {
-          ...profile!,
-          dni_intentos: currentProfile.dni_intentos,
-        };
+        const updatedUser = { ...profile!, dni_intentos: currentProfile.dni_intentos };
         useAuthStore.setState({ user: updatedUser });
         useProfileStore.setState({ profile: updatedUser });
       }
@@ -196,6 +190,7 @@ function Profile() {
     }
   };
 
+  // === BLOQUE: useStrictForm — Formulario de edición de perfil ===
   const {
     values: editForm,
     setValues: setEditForm,
@@ -203,31 +198,19 @@ function Profile() {
     handleBlur,
     handleSubmit: handleFormSubmit,
   } = useStrictForm({
-    initialValues: {
-      name: "",
-      city: "",
-      bio: "",
-      preferred_sports: "",
-      avatar_url: "",
-    },
+    initialValues: { name: "", city: "", bio: "", preferred_sports: "", avatar_url: "" },
     validate: (vals) => {
       const errors: Record<string, string> = {};
-      if (!vals.name.trim()) {
-        errors.name = "El nombre es requerido";
-      }
+      if (!vals.name.trim()) errors.name = "El nombre es requerido";
       return errors;
     },
     onSubmit: async (vals) => {
       if (!profile) return;
       const sportsKeys = Object.keys(editSportsMatrix);
-
-      // Structure user_sports array of objects containing sport_id AND specific level
       const userSports = sportsKeys.map((key) => ({
         sport_id: key,
         level: editSportsMatrix[key] as 1 | 2 | 3,
       }));
-
-      // Structure legacy sport_preferences mapping for backward compatibility
       const legacyMatrix: Record<
         string,
         { level: "Amateur" | "Intermediate" | "Advanced" | "Pro"; weight: number }
@@ -235,10 +218,8 @@ function Profile() {
       sportsKeys.forEach((key) => {
         const lvl = editSportsMatrix[key];
         const stringLevel = lvl === 1 ? "Amateur" : lvl === 2 ? "Intermediate" : "Advanced";
-        const weight = lvl === 1 ? 1.0 : lvl === 2 ? 2.0 : 3.5;
-        legacyMatrix[key] = { level: stringLevel, weight };
+        legacyMatrix[key] = { level: stringLevel, weight: lvl === 1 ? 1.0 : lvl === 2 ? 2.0 : 3.5 };
       });
-
       const firstSportKey = sportsKeys[0];
       const primaryLevelVal = firstSportKey ? editSportsMatrix[firstSportKey] : 2;
       const translatedLevel =
@@ -270,11 +251,10 @@ function Profile() {
   const [tempSportsMatrix, setTempSportsMatrix] = useState<Record<string, 1 | 2 | 3>>({});
   const [shouldRenderGrid, setShouldRenderGrid] = useState(false);
 
+  // Retrasa el renderizado del SportSelectionGrid para evitar parpadeos del Dialog.
   useEffect(() => {
     if (isSportsDialogOpen) {
-      const timer = setTimeout(() => {
-        setShouldRenderGrid(true);
-      }, 100);
+      const timer = setTimeout(() => setShouldRenderGrid(true), 100);
       return () => clearTimeout(timer);
     } else {
       setShouldRenderGrid(false);
@@ -284,11 +264,8 @@ function Profile() {
   const handleTempSportChange = (sportId: string, level: 1 | 2 | 3 | undefined) => {
     setTempSportsMatrix((prev) => {
       const next = { ...prev };
-      if (level === undefined) {
-        delete next[sportId];
-      } else {
-        next[sportId] = level;
-      }
+      if (level === undefined) delete next[sportId];
+      else next[sportId] = level;
       return next;
     });
   };
@@ -296,10 +273,7 @@ function Profile() {
   const handleAcceptSports = () => {
     setEditSportsMatrix(tempSportsMatrix);
     const sportsKeys = Object.keys(tempSportsMatrix);
-    setEditForm((prev) => ({
-      ...prev,
-      preferred_sports: sportsKeys.join(", "),
-    }));
+    setEditForm((prev) => ({ ...prev, preferred_sports: sportsKeys.join(", ") }));
     setIsSportsDialogOpen(false);
   };
 
@@ -307,75 +281,57 @@ function Profile() {
     initProfile();
   }, [initProfile]);
 
+  // === BLOQUE: Carga y sincronización de logros ===
   useEffect(() => {
     let active = true;
     if (!profile) return;
     const currentProfile = profile;
-
     const isDemoMode = useAuthStore.getState().isDemoMode;
 
     async function loadAndSyncAchievements() {
       if (isDemoMode) {
         const unlocked = BADGES.filter((b) => b.checkUnlock(currentProfile)).map((b) => b.key);
-        if (active) {
-          setUnlockedKeys(unlocked);
-        }
+        if (active) setUnlockedKeys(unlocked);
         return;
       }
-
       try {
         const { data: dbAchievements, error } = await supabase
           .from("user_achievements")
           .select("achievement_key")
           .eq("user_id", currentProfile.id);
-
         if (error) throw error;
-
         const dbKeys =
           dbAchievements?.map((row: { achievement_key: string }) => row.achievement_key) || [];
-
-        // Check if there are any new achievements that should be unlocked
         const newlyUnlocked = BADGES.filter(
           (b) => b.checkUnlock(currentProfile) && !dbKeys.includes(b.key),
         );
-
         if (newlyUnlocked.length > 0) {
           const insertData = newlyUnlocked.map((b) => ({
             user_id: currentProfile.id,
             achievement_key: b.key,
           }));
-
           const { error: insertError } = await supabase
             .from("user_achievements")
             .insert(insertData);
-
-          if (!insertError && active) {
+          if (!insertError && active)
             setUnlockedKeys([...dbKeys, ...newlyUnlocked.map((b) => b.key)]);
-          } else if (active) {
-            setUnlockedKeys(dbKeys);
-          }
+          else if (active) setUnlockedKeys(dbKeys);
         } else {
-          if (active) {
-            setUnlockedKeys(dbKeys);
-          }
+          if (active) setUnlockedKeys(dbKeys);
         }
       } catch (err) {
         if (import.meta.env.DEV) console.error("Error loading/syncing achievements:", err);
         const unlocked = BADGES.filter((b) => b.checkUnlock(currentProfile)).map((b) => b.key);
-        if (active) {
-          setUnlockedKeys(unlocked);
-        }
+        if (active) setUnlockedKeys(unlocked);
       }
     }
-
     loadAndSyncAchievements();
-
     return () => {
       active = false;
     };
   }, [profile]);
 
-  // SEC-04: Prevent memory leaks by revoking object URLs on unmount or URL change
+  // === BLOQUE: SEC-04 Prevención de memory leaks (revocar object URLs) ===
   useEffect(() => {
     return () => {
       if (editForm.avatar_url && editForm.avatar_url.startsWith("blob:")) {
@@ -384,6 +340,7 @@ function Profile() {
     };
   }, [editForm.avatar_url]);
 
+  // === BLOQUE: Carga inicial del perfil y partidos del usuario ===
   useEffect(() => {
     if (profile) {
       setEditForm({
@@ -393,15 +350,18 @@ function Profile() {
         preferred_sports: profile.preferred_sports.join(", "),
         avatar_url: profile.avatar_url || "",
       });
-
-      // Try backend first for user matches, fallback to Supabase
       backendApi.matches
         .getAll()
-        .then((backendMatches) => {
-          const userMatches = (backendMatches as Match[]).filter(
-            (m) => m.creator_id === profile.id,
-          );
-          setUserMatches(userMatches);
+        .then((res) => {
+          if (res && Array.isArray(res.data)) {
+            const userMatches = res.data.filter((m) => m.creator_id === profile.id);
+            setUserMatches(userMatches);
+          } else {
+            apiClient.matches
+              .getUserMatches(profile.id)
+              .then(setUserMatches)
+              .catch(() => setUserMatches([]));
+          }
         })
         .catch(() => {
           apiClient.matches
@@ -424,7 +384,6 @@ function Profile() {
       : (profile.trust_score || 0) >= 70
         ? t("profile.trust_level_good")
         : t("profile.trust_level_risk");
-
   const trustColor =
     (profile.trust_score || 0) >= 90
       ? "text-neon"
@@ -444,7 +403,6 @@ function Profile() {
       });
     }
     setEditSportsMatrix(initial);
-
     setEditForm({
       name: profile.name,
       city: profile.city,
@@ -457,14 +415,12 @@ function Profile() {
 
   const handleSave = () => handleFormSubmit();
 
+  // === BLOQUE: handleFileChange — Subida de avatar con moderación NSFW ===
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const target = e.target;
     const file = target?.files?.[0];
     if (!file || !profile) return;
-
     if (isAnalyzingAvatar || isUploadingAvatar) return;
-
-    // Check size limit: 5MB
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("profile.photo_error_size", "La imagen debe ser menor a 5MB"));
       return;
@@ -472,16 +428,13 @@ function Profile() {
 
     setIsAnalyzingAvatar(true);
     const scanToastId = toast.loading("🛡️ Analizando imagen con IA...");
-
     try {
       const isSafe = await analyzeImage(file);
       toast.dismiss(scanToastId);
       if (!isSafe) {
         toast.error(
           "Contenido Bloqueado: Esta imagen no cumple con nuestras políticas de seguridad.",
-          {
-            className: "bg-red-500 text-white border-red-600",
-          },
+          { className: "bg-red-500 text-white border-red-600" },
         );
         if (target) {
           try {
@@ -496,7 +449,6 @@ function Profile() {
     } catch (err) {
       console.error("AI Moderation error:", err);
       toast.dismiss(scanToastId);
-      // Fallback gracefully: treat as safe
     } finally {
       setIsAnalyzingAvatar(false);
     }
@@ -512,39 +464,22 @@ function Profile() {
         toast.success(t("profile.photo_updated_demo"), { id: toastId });
         return;
       }
-
-      // 1. Compress to WebP via Canvas (max 400px, quality 0.8)
       const webpBlob = await compressToWebP(file, 400, 0.8);
-
-      // 2. Upload to Supabase Storage bucket 'avatars'
       const filePath = `public/${profile.id}.webp`;
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, webpBlob, {
-          contentType: "image/webp",
-          upsert: true,
-        });
-
+        .upload(filePath, webpBlob, { contentType: "image/webp", upsert: true });
       if (uploadError) throw uploadError;
-
-      // 3. Get public URL with cache-busting timestamp
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
       const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-
-      // 4. Persist the URL to profiles table via the store
       await updateProfile({ avatar_url: publicUrl });
-
-      // 5. Update the edit form to show the new avatar immediately
       setEditForm((prev) => ({ ...prev, avatar_url: publicUrl }));
-
       toast.success(t("profile.photo_updated"), { id: toastId });
     } catch (err) {
       if (import.meta.env.DEV) console.error("Avatar upload error:", err);
       toast.error(t("profile.photo_error"), { id: toastId });
     } finally {
       setIsUploadingAvatar(false);
-      // Reset file input safely so the same file can be selected again if needed
       if (target) {
         try {
           target.value = "";
@@ -559,9 +494,11 @@ function Profile() {
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title={t("profile.title")} />
 
+      {/* === Tarjeta principal del perfil === */}
       <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card relative overflow-hidden">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-gradient-primary opacity-15 blur-3xl" />
         <div className="flex flex-wrap md:flex-nowrap items-start gap-6 relative">
+          {/* Avatar con overlay de carga / edición */}
           <div className="relative shrink-0">
             <img
               src={isEditing ? editForm.avatar_url : profile.avatar_url}
@@ -570,23 +507,15 @@ function Profile() {
             />
             {isEditing && (
               <label
-                className={`absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors ${
-                  isUploadingAvatar || isAnalyzingAvatar ? "pointer-events-none" : ""
-                }`}
+                className={`absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center text-[10px] text-white font-bold cursor-pointer hover:bg-black/80 transition-colors ${isUploadingAvatar || isAnalyzingAvatar ? "pointer-events-none" : ""}`}
               >
                 {isAnalyzingAvatar ? (
                   <div
                     className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-1.5 p-2 text-center border-2 rounded-2xl animate-[scale-in_0.2s_ease-out]"
                     style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
                   >
-                    <style>{`
-                      @keyframes pulseBorder {
-                        0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
-                        50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); }
-                        100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
-                      }
-                    `}</style>
-                    <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+                    <style>{`@keyframes pulseBorder { 0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); } 50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); } 100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); } }`}</style>
+                    <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                       🛡️ Escaneando...
                     </span>
@@ -642,6 +571,7 @@ function Profile() {
                   placeholder={t("profile.placeholder_bio")}
                   rows={2}
                 />
+                {/* Diálogo de selección de deportes */}
                 <Dialog open={isSportsDialogOpen} onOpenChange={setIsSportsDialogOpen}>
                   <DialogTrigger asChild>
                     <button
@@ -673,7 +603,6 @@ function Profile() {
                         )}
                       </DialogDescription>
                     </DialogHeader>
-
                     <div className="py-4 text-left min-h-[300px] flex items-center justify-center">
                       {shouldRenderGrid ? (
                         <SportSelectionGrid
@@ -689,7 +618,6 @@ function Profile() {
                         </div>
                       )}
                     </div>
-
                     <DialogFooter className="flex justify-end gap-2 pt-4 border-t border-border">
                       <button
                         type="button"
@@ -767,6 +695,7 @@ function Profile() {
           </div>
         </div>
 
+        {/* === Grid de estadísticas === */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-8">
           <Stat icon={<Trophy className="h-4 w-4 text-neon" />} label="FitCoins" value={balance} />
           <Stat
@@ -798,6 +727,7 @@ function Profile() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mt-6">
+        {/* === Columna: Trust Score y verificación DNI === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold flex items-center gap-2">
             <Shield className="h-4 w-4 text-neon" /> {t("profile.trust_score")}
@@ -806,8 +736,13 @@ function Profile() {
             <div className="text-5xl font-bold text-gradient">{profile.trust_score}</div>
             <div className={`text-sm font-semibold mt-1 ${trustColor}`}>{trustLevel}</div>
           </div>
-          <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-gradient-neon" style={{ width: `${profile.trust_score}%` }} />
+          <div
+            className={`mt-4 h-3 rounded-full bg-muted overflow-hidden ${profile.trust_score >= 80 ? "animate-pulse shadow-glow" : ""}`}
+          >
+            <div
+              className="h-full bg-gradient-neon transition-all duration-1000 ease-out"
+              style={{ width: `${barWidth}%` }}
+            />
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <Metric label={t("profile.punctuality")} value={98} />
@@ -816,7 +751,7 @@ function Profile() {
             <Metric label={t("profile.behavior")} value={92} />
           </div>
 
-          {/* DNI Identity Verification Status Card Block */}
+          {/* === Bloque de verificación de identidad (DNI) === */}
           <div className="mt-6 pt-4 border-t border-border/60">
             {profile.dni_verificado ? (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
@@ -867,7 +802,6 @@ function Profile() {
                         contra RENIEC.
                       </DialogDescription>
                     </DialogHeader>
-
                     <div className="py-4 space-y-4">
                       <div className="space-y-1.5 text-left">
                         <label className="text-xs font-semibold text-muted-foreground block">
@@ -895,7 +829,6 @@ function Profile() {
                         </span>
                       </div>
                     </div>
-
                     <DialogFooter className="flex justify-end gap-2 pt-4 border-t border-border">
                       <button
                         type="button"
@@ -928,6 +861,7 @@ function Profile() {
           </div>
         </div>
 
+        {/* === Columna: Logros / Insignias === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">{t("profile.achievements")}</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -936,15 +870,15 @@ function Profile() {
               const name = t(`profile.badge_${b.key}_name`);
               const description = t(`profile.badge_${b.key}_desc`);
               const progressText = b.progress(profile, t);
-
               return (
                 <div
                   key={b.id}
-                  className={`text-center p-3 rounded-xl transition-all cursor-default flex flex-col justify-between items-center ${
+                  className={`text-center p-3 rounded-xl cursor-default flex flex-col justify-between items-center ${
                     isUnlocked
-                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50"
-                      : "bg-muted/15 border border-border/40 grayscale opacity-45 hover:opacity-75 transition-opacity"
+                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50 transition-all"
+                      : "bg-muted/15 border border-border/40 opacity-40 grayscale transition-all duration-300 hover:grayscale-0 hover:opacity-100"
                   }`}
+                  title={!isUnlocked ? "Juega más para desbloquear" : undefined}
                 >
                   <div className="flex flex-col items-center">
                     <div className="text-3xl">{b.emoji}</div>
@@ -970,6 +904,7 @@ function Profile() {
           </div>
         </div>
 
+        {/* === Columna: Historial reciente de partidos === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">{t("profile.recent_history")}</h3>
           <div className="space-y-3">
@@ -993,13 +928,7 @@ function Profile() {
                       +{20 + Math.floor(Math.random() * 30)} FC
                     </span>
                     <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                        m.status === "Finished"
-                          ? "bg-muted text-muted-foreground"
-                          : m.status === "IN_PROGRESS"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-primary/20 text-primary-foreground border border-primary/30"
-                      }`}
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${m.status === "Finished" ? "bg-muted text-muted-foreground" : m.status === "IN_PROGRESS" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-primary/20 text-primary-foreground border border-primary/30"}`}
                     >
                       {m.status === "Finished"
                         ? "Finalizado"

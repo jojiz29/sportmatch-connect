@@ -1,3 +1,8 @@
+// ============================================================
+// CommercialSheetModal.test.tsx — Tests del modal comercial B2B
+// Verifica renderizado de catálogo y acciones comerciales
+// ============================================================
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";

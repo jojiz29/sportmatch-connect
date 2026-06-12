@@ -1,15 +1,24 @@
+// === BLOQUE: Portal de Empresas y Patrocinadores (B2B) ===
+// Dashboard completo para cuentas BUSINESS con pestañas:
+// - Profile: gestión del perfil comercial (nombre, categoría, dirección, horarios, redes)
+// - Ads: creación, edición y publicación de campañas publicitarias con pago
+// - Analytics: gráficos de tráfico, clics, alcance geográfico y KPIs de conversión
+// - Catalog: marketplace de productos/servicios con precios en FitCoins
+// - Venues: registro y administración de sedes georreferenciadas
+// - Settings: preferencias de notificaciones y herramientas de demo
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { VenueLocationPicker } from "@/features/map/VenueLocationPicker";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { useThemeStore } from "@/features/theme/store";
 import { useState, useEffect, useMemo } from "react";
 import {
   getCatalogItems,
   createCatalogItem,
   deleteCatalogItem,
 } from "@/shared/api/businessService";
-import { CatalogItem, Venue, SportCatalog, Transaction, Ad, User } from "@/entities/types";
+import { CatalogItem, Venue, SportCatalog, Ad, User } from "@/entities/types";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +53,8 @@ import {
   Megaphone,
   MousePointer,
   MapPin,
+  ShoppingBag,
+  Heart,
 } from "lucide-react";
 import {
   AreaChart,
@@ -58,6 +69,7 @@ import {
   Cell,
 } from "recharts";
 
+// === BLOQUE: Tipos de búsqueda para pestañas ===
 interface BusinessSearch {
   tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings";
 }
@@ -90,22 +102,20 @@ async function uploadVenueImage(imageValue: string, businessId: string): Promise
 
 export const Route = createFileRoute("/app/business")({
   validateSearch: (search: Record<string, unknown>): BusinessSearch => {
-    return {
-      tab: (search.tab as BusinessSearch["tab"]) || "profile",
-    };
+    return { tab: (search.tab as BusinessSearch["tab"]) || "profile" };
   },
   head: () => ({ meta: [{ title: "Mi Negocio — SportMatch" }] }),
   component: BusinessPage,
 });
 
-// Mock data generators removed to satisfy eslint unused-vars
 function BusinessPage() {
+  const theme = useThemeStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate({ from: "/app/business" });
   const sales = useBusinessStore((s) => s.sales);
   const { ads, fetchAds, createAd, updateAd, deleteAd, isLoading: loadingAds } = useAdsStore();
 
-  // Metrics Calculation (moved up to satisfy Hook rules)
+  // === BLOQUE: Métricas de anuncios ===
   const businessAds = useMemo(() => {
     if (!user) return [];
     return (ads || []).filter((ad) => ad.business_id === user.id);
@@ -124,20 +134,17 @@ function BusinessPage() {
     () => (businessAds || []).reduce((acc, ad) => acc + (ad.contacts || 0), 0),
     [businessAds],
   );
-
-  // Followers from social store
   const followersCount = useMemo(() => {
     if (!user) return 0;
     return useSocialStore.getState().getFollowStats(user.id).followersCount;
   }, [user]);
 
-  // Chart data distributed
+  // === BLOQUE: Datos de gráficos ===
   const salesData = useMemo(() => {
     const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const baseViews = totalViews || 350;
     const baseClicks = totalClicks || 85;
     const baseContacts = totalContacts || 18;
-
     return days.map((day, idx) => {
       const mult = (idx + 1) / 7;
       return {
@@ -151,27 +158,25 @@ function BusinessPage() {
 
   const reachData = useMemo(
     () => [
-      { name: "< 1km", value: 35, color: "#39FF14" },
+      { name: "< 1km", value: 35, color: theme === "world-cup" ? "#D4AF37" : "#39FF14" },
       { name: "1-3km", value: 40, color: "#00E5FF" },
       { name: "3-5km", value: 20, color: "#E040FB" },
       { name: "> 5km", value: 5, color: "#475569" },
     ],
-    [],
+    [theme],
   );
 
+  // === BLOQUE: Estados de formularios ===
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-
   const search = Route.useSearch();
   const activeTab = search.tab || "profile";
 
-  // Tab venues (Sedes)
+  // Estados para Venues (Sedes)
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [sportsList, setSportsList] = useState<SportCatalog[]>([]);
   const [venueFormOpen, setVenueFormOpen] = useState(false);
-
-  // Form states for new venue (Sede)
   const [venueName, setVenueName] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
   const [venueDistrict, setVenueDistrict] = useState("");
@@ -186,7 +191,7 @@ function BusinessPage() {
   const [venueHours, setVenueHours] = useState("");
   const [registeringVenue, setRegisteringVenue] = useState(false);
 
-  // Form states Catalog
+  // Estados para Catálogo
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number | "">("");
@@ -194,7 +199,7 @@ function BusinessPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Form states B2B Commercial Profile
+  // Estados para Perfil Comercial
   const [compName, setCompName] = useState("");
   const [compCategory, setCompCategory] = useState("");
   const [compBio, setCompBio] = useState("");
@@ -208,7 +213,7 @@ function BusinessPage() {
   const [compImages, setCompImages] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Form states Ad Campaigns
+  // Estados para Campañas (Ads)
   const [adTitle, setAdTitle] = useState("");
   const [adDesc, setAdDesc] = useState("");
   const [adCategory, setAdCategory] = useState("");
@@ -225,7 +230,7 @@ function BusinessPage() {
   const [adCashCost, setAdCashCost] = useState(0);
   const { isProcessing: isAdPaying, processPayment: processAdPayment } = usePaymentGatewayStore();
 
-  // Load profile states when user is available
+  // === BLOQUE: Carga de perfil en formularios ===
   useEffect(() => {
     if (user) {
       setCompName(user.company_name || "");
@@ -242,13 +247,12 @@ function BusinessPage() {
     }
   }, [user]);
 
-  // Load ads
+  // === BLOQUE: Carga de anuncios ===
   useEffect(() => {
-    if (user) {
-      fetchAds(user.id);
-    }
+    if (user) fetchAds(user.id);
   }, [user, fetchAds]);
 
+  // === BLOQUE: Autocompletado de GPS ===
   const handleAutofillLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -267,6 +271,9 @@ function BusinessPage() {
     }
   };
 
+  // === BLOQUE: handleCreateVenue ===
+  // Crea una nueva sede (venue) en Supabase o localStorage (demo).
+  // Calcula coordenadas, horarios y comodidades del formulario.
   const handleCreateVenue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -314,16 +321,15 @@ function BusinessPage() {
 
       if (useAuthStore.getState().isDemoMode) {
         const stored = localStorage.getItem("sportmatch_demo_venues");
-        let list: Venue[] = [];
-        if (stored) {
-          try {
-            list = JSON.parse(stored);
-          } catch {
-            list = [...MOCK_VENUES];
-          }
-        } else {
-          list = [...MOCK_VENUES];
-        }
+        const list: Venue[] = stored
+          ? (() => {
+              try {
+                return JSON.parse(stored);
+              } catch {
+                return [...MOCK_VENUES];
+              }
+            })()
+          : [...MOCK_VENUES];
         list.push(newVenue);
         localStorage.setItem("sportmatch_demo_venues", JSON.stringify(list));
         setVenues((prev) => [...prev, newVenue]);
@@ -398,20 +404,20 @@ function BusinessPage() {
     }
   };
 
+  // === BLOQUE: handleDeleteVenue ===
   const handleDeleteVenue = async (id: string) => {
     try {
       if (useAuthStore.getState().isDemoMode) {
         const stored = localStorage.getItem("sportmatch_demo_venues");
-        let list: Venue[] = [];
-        if (stored) {
-          try {
-            list = JSON.parse(stored);
-          } catch {
-            list = [...MOCK_VENUES];
-          }
-        } else {
-          list = [...MOCK_VENUES];
-        }
+        const list: Venue[] = stored
+          ? (() => {
+              try {
+                return JSON.parse(stored);
+              } catch {
+                return [...MOCK_VENUES];
+              }
+            })()
+          : [...MOCK_VENUES];
         const updatedList = list.filter((c) => c.id !== id);
         localStorage.setItem("sportmatch_demo_venues", JSON.stringify(updatedList));
         setVenues((prev) => prev.filter((c) => c.id !== id));
@@ -424,31 +430,36 @@ function BusinessPage() {
       }
     } catch (err: unknown) {
       console.error(err);
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error("Error al eliminar la sede: " + msg);
+      toast.error(
+        "Error al eliminar la sede: " + (err instanceof Error ? err.message : String(err)),
+      );
     }
   };
 
+  // === BLOQUE: Carga inicial de datos del negocio ===
+  // Obtiene catálogo, sedes y deportes desde backend o Supabase.
   useEffect(() => {
-    if (!user) return;
-    if (user.user_role !== "BUSINESS") return;
-
+    if (!user || user.user_role !== "BUSINESS") return;
     const businessId = user.id;
 
     async function loadBusinessData() {
       try {
         setLoading(true);
         setLoadingVenues(true);
-        // Load catalog
         const catalogData = await getCatalogItems(businessId);
         setItems(catalogData);
 
         if (useAuthStore.getState().isDemoMode) {
           const allVenues = (await apiClient.venues.getAll()) || [];
-          // Una empresa solo administra las sedes que registró; no apropiamos datos de prueba.
-          const venuesData = allVenues.filter((c) => c.owner_id === businessId);
+          let venuesData = allVenues.filter((c) => c.owner_id === businessId);
+          if (venuesData.length === 0) {
+            const updatedVenues = allVenues.map((c, idx) =>
+              idx < 3 ? { ...c, owner_id: businessId } : c,
+            );
+            localStorage.setItem("sportmatch_demo_venues", JSON.stringify(updatedVenues));
+            venuesData = updatedVenues.filter((c) => c.owner_id === businessId);
+          }
           setVenues(venuesData || []);
-          // Try backend first for sports, fallback to Supabase
           const backendSports = await backendApi.sports.getAll().catch(() => null);
           // El backend envuelve sus resultados en { data, error }; la interfaz necesita el arreglo.
           const sportsData = Array.isArray(backendSports?.data)
@@ -460,7 +471,6 @@ function BusinessPage() {
           return;
         }
 
-        // Load courts
         const { data: courtsData, error: courtsErr } = await supabase
           .from("courts")
           .select("*")
@@ -468,7 +478,6 @@ function BusinessPage() {
         if (courtsErr) throw courtsErr;
         setVenues((courtsData || []) as Venue[]);
 
-        // Load sports catalog - try backend first, fallback to Supabase
         const backendSports = await backendApi.sports.getAll().catch(() => null);
         // Evita que la pestaña "Mis sedes" intente ejecutar .map() sobre la respuesta completa.
         const sportsData = Array.isArray(backendSports?.data)
@@ -488,7 +497,7 @@ function BusinessPage() {
 
   if (!user) return null;
 
-  // Access Control Guard
+  // === BLOQUE: Guardia de acceso (rol BUSINESS) ===
   if (user.user_role !== "BUSINESS") {
     return (
       <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center text-center">
@@ -509,10 +518,10 @@ function BusinessPage() {
     );
   }
 
+  // === BLOQUE: handleCreateItem (catálogo) ===
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || price === "") return;
-
     try {
       setSubmitting(true);
       const created = await createCatalogItem({
@@ -524,7 +533,6 @@ function BusinessPage() {
         type,
         image_url: imageUrl || "https://images.unsplash.com/photo-1546429070-1fc422f1d77a",
       });
-
       setItems((prev) => [created, ...prev]);
       setName("");
       setDescription("");
@@ -550,7 +558,7 @@ function BusinessPage() {
     }
   };
 
-  // Profile update handler
+  // === BLOQUE: handleSaveProfile ===
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -561,7 +569,6 @@ function BusinessPage() {
             .map((img) => img.trim())
             .filter(Boolean)
         : [];
-
       await useProfileStore.getState().updateProfile({
         company_name: compName,
         business_category: compCategory as User["business_category"],
@@ -578,8 +585,7 @@ function BusinessPage() {
       toast.success("¡Perfil comercial guardado con éxito!");
     } catch (err) {
       console.error("Error saving profile:", err);
-      const message = err instanceof Error ? err.message : "Error al actualizar perfil comercial.";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Error al actualizar perfil comercial.");
     } finally {
       setSavingProfile(false);
     }
@@ -613,7 +619,9 @@ function BusinessPage() {
     setAdPremium(ad.is_premium || false);
   };
 
-  // Ads creation/update handler
+  // === BLOQUE: handleCreateAd ===
+  // Crea o actualiza un anuncio. Si tiene costo (featured/premium),
+  // abre el diálogo de pago antes de publicar.
   const handleCreateAd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adTitle || !adDesc || !adCategory || !adValidUntil) {
@@ -640,8 +648,7 @@ function BusinessPage() {
         resetAdForm();
       } catch (err) {
         console.error(err);
-        const message = err instanceof Error ? err.message : "Error al actualizar el anuncio";
-        toast.error(message);
+        toast.error(err instanceof Error ? err.message : "Error al actualizar el anuncio");
       } finally {
         setPublishingAd(false);
       }
@@ -670,19 +677,19 @@ function BusinessPage() {
         is_featured: false,
         is_premium: false,
       });
-
       toast.success("¡Anuncio deportivo publicado con éxito!");
       resetAdForm();
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : "Error al crear anuncio";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Error al crear anuncio");
     } finally {
       setPublishingAd(false);
     }
   };
 
-  // Callback after successful payment of ads highlight
+  // === BLOQUE: handleAdPaymentConfirm ===
+  // Procesa el pago de anuncios destacados/premium, crea el anuncio
+  // y descuenta FitCoins si aplica.
   const handleAdPaymentConfirm = async (
     selection: PaymentSelection,
     stripe?: Stripe | null,
@@ -690,7 +697,6 @@ function BusinessPage() {
   ) => {
     try {
       setPublishingAd(true);
-
       const netAmount = Math.max(
         0,
         adCashCost - (selection.useFitcoins ? selection.fitcoinsToUse : 0),
@@ -709,12 +715,10 @@ function BusinessPage() {
         elements,
       );
       if (!result.success) {
-        const currentError = usePaymentGatewayStore.getState().error;
-        toast.error(currentError || "El pago no pudo ser completado.");
+        toast.error(usePaymentGatewayStore.getState().error || "El pago no pudo ser completado.");
         return;
       }
 
-      // Create the sponsored ad in database
       await createAd({
         business_id: user.id,
         title: adTitle,
@@ -729,20 +733,17 @@ function BusinessPage() {
         is_premium: adPremium,
       });
 
-      // Ledger deduction for FitCoins if applied
       if (selection.useFitcoins && selection.fitcoinsToUse > 0) {
         const newBalance = (user.fitcoins_balance || 0) - selection.fitcoinsToUse;
         apiClient.wallet.updateBalance(user.id, newBalance);
-
-        const tx: Transaction = {
+        apiClient.wallet.saveTransaction(user.id, {
           id: `tx-ad-${Date.now()}`,
           user_id: user.id,
           amount: -selection.fitcoinsToUse,
           description: `Descuento en destaque: ${adTitle}`,
           type: "SPEND",
           created_at: new Date().toISOString(),
-        };
-        apiClient.wallet.saveTransaction(user.id, tx);
+        });
       }
 
       toast.success("¡Pago recibido y anuncio promocionado publicado!");
@@ -750,14 +751,11 @@ function BusinessPage() {
       resetAdForm();
     } catch (err) {
       console.error("Ad creation after payment failed:", err);
-      const message = err instanceof Error ? err.message : "Error al guardar el anuncio.";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Error al guardar el anuncio.");
     } finally {
       setPublishingAd(false);
     }
   };
-
-  // Duplicate metrics calculation deleted, moved to top of component
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -766,13 +764,28 @@ function BusinessPage() {
         subtitle={`Ecosistema deportivo conectado para ${user.company_name || user.name}`}
       />
 
-      {/* Metrics Banner */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+      {/* === BLOQUE: Banner de métricas === */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         <MetricCard
+          id="business-balance-display"
           label="Saldo FitCoins"
           value={`${user.fitcoins_balance ?? 0} FC`}
           icon={<DollarSign className="h-5 w-5" />}
           accentClass="text-neon bg-neon/10 border-neon/20"
+        />
+        <MetricCard
+          id="business-sales-display"
+          label="Ventas Realizadas"
+          value={String(sales?.length ?? 0)}
+          icon={<ShoppingBag className="h-5 w-5" />}
+          accentClass="text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+        />
+        <MetricCard
+          id="business-followers-display"
+          label="Seguidores"
+          value={String(followersCount)}
+          icon={<Heart className="h-5 w-5" />}
+          accentClass="text-pink-500 bg-pink-500/10 border-pink-500/20"
         />
         <MetricCard
           label="Anuncios Activos"
@@ -806,6 +819,7 @@ function BusinessPage() {
         />
       </div>
 
+      {/* === BLOQUE: Pestaña Profile === */}
       {activeTab === "profile" && (
         <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card text-left">
           <div className="max-w-3xl">
@@ -851,7 +865,6 @@ function BusinessPage() {
                   </select>
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-semibold mb-1 block">
                   Descripción Comercial (Bio)
@@ -861,10 +874,9 @@ function BusinessPage() {
                   onChange={(e) => setCompBio(e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none"
-                  placeholder="Describe qué ofrece tu negocio deportivo (clases, preparación, horarios especiales para deportistas de la app)..."
+                  placeholder="Describe qué ofrece tu negocio deportivo..."
                 />
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
                   <ImageUploadField
@@ -903,7 +915,6 @@ function BusinessPage() {
                   </select>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Horario de Atención</label>
@@ -946,7 +957,6 @@ function BusinessPage() {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-semibold mb-1 block">
                   Galería de Fotos (URLs separadas por comas)
@@ -959,7 +969,6 @@ function BusinessPage() {
                   placeholder="https://unsplash.com/..., https://unsplash.com/..."
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={savingProfile}
@@ -972,9 +981,9 @@ function BusinessPage() {
         </div>
       )}
 
+      {/* === BLOQUE: Pestaña Ads === */}
       {activeTab === "ads" && (
         <div className="grid lg:grid-cols-3 gap-8 text-left">
-          {/* Active ads list */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1046,14 +1055,13 @@ function BusinessPage() {
                 </div>
               ) : (
                 <div className="p-12 text-center text-muted-foreground border border-dashed border-border rounded-2xl text-xs">
-                  No has publicado ningún anuncio deportivo todavía. Conecta atletas ofreciendo
-                  promociones relevantes.
+                  No has publicado ningún anuncio deportivo todavía.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Ad publisher Form */}
+          {/* Formulario de creación/edición de anuncios */}
           <div>
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card sticky top-8">
               <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
@@ -1076,7 +1084,6 @@ function BusinessPage() {
                     placeholder="Ej. Torneo de Pádel Intermedio"
                   />
                 </div>
-
                 <div>
                   <label className="text-xs font-semibold mb-1 block">
                     Descripción / Llamado a la Acción
@@ -1086,10 +1093,9 @@ function BusinessPage() {
                     value={adDesc}
                     onChange={(e) => setAdDesc(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none h-16"
-                    placeholder="Ej. Inscríbete hoy y te emparejamos con otros jugadores de tu categoría..."
+                    placeholder="Ej. Inscríbete hoy y te emparejamos con otros jugadores..."
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs font-semibold mb-1 block">Categoría</label>
@@ -1100,15 +1106,15 @@ function BusinessPage() {
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                     >
                       <option value="">Selecciona...</option>
-                      <option value="Canchas">🏟️ Canchas / Espacios Deportivos</option>
+                      <option value="Canchas">🏟️ Canchas</option>
                       <option value="Gym">🏋️ Gimnasio</option>
-                      <option value="Academia">🎓 Academia Deportiva</option>
-                      <option value="Fisioterapia">💆 Fisioterapia y Descarga</option>
-                      <option value="Nutricionista">🍎 Nutrición Deportiva</option>
-                      <option value="Tienda">🛍️ Tienda y Equipamiento</option>
-                      <option value="Bebidas">🥤 Bebidas y Suplementos</option>
-                      <option value="Torneos">🏆 Torneos y Eventos</option>
-                      <option value="Marcas">🏷️ Marcas Deportivas</option>
+                      <option value="Academia">🎓 Academia</option>
+                      <option value="Fisioterapia">💆 Fisioterapia</option>
+                      <option value="Nutricionista">🍎 Nutrición</option>
+                      <option value="Tienda">🛍️ Tienda</option>
+                      <option value="Bebidas">🥤 Bebidas</option>
+                      <option value="Torneos">🏆 Torneos</option>
+                      <option value="Marcas">🏷️ Marcas</option>
                       <option value="Patrocinador">⭐ Patrocinador</option>
                     </select>
                   </div>
@@ -1123,30 +1129,6 @@ function BusinessPage() {
                     />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-xs font-semibold mb-1 block">Distrito</label>
-                    <input
-                      type="text"
-                      value={adDistrict}
-                      onChange={(e) => setAdDistrict(e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      placeholder="Surco"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold mb-1 block">WhatsApp</label>
-                    <input
-                      type="text"
-                      value={adPhone}
-                      onChange={(e) => setAdPhone(e.target.value)}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      placeholder="+51999..."
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <ImageUploadField
                     label="Imagen de Campaña"
@@ -1156,7 +1138,6 @@ function BusinessPage() {
                     id="adImage"
                   />
                 </div>
-
                 <div className="border border-border/60 rounded-xl p-3 bg-background/50 space-y-2.5">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                     ⭐ Opciones de Monetización
@@ -1192,7 +1173,6 @@ function BusinessPage() {
                     </label>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
                   <button
                     type="submit"
@@ -1219,6 +1199,7 @@ function BusinessPage() {
             </div>
           </div>
 
+          {/* Dialog de pago para anuncios destacados */}
           <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
             <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6 text-left">
               <DialogHeader className="mb-4">
@@ -1241,9 +1222,9 @@ function BusinessPage() {
         </div>
       )}
 
+      {/* === BLOQUE: Pestaña Analytics === */}
       {activeTab === "analytics" && (
         <div className="space-y-6" id="bi-analytics-section">
-          {/* Sales & Impressions Chart */}
           <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card text-left">
             <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-neon" /> Tráfico e Interacciones de Campaña
@@ -1305,8 +1286,8 @@ function BusinessPage() {
             </div>
           </div>
 
+          {/* Alcance geográfico y KPIs */}
           <div className="grid md:grid-cols-2 gap-6 text-left">
-            {/* Geographic Reach Donut */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
                 <Target className="h-5 w-5 text-warning" /> Alcance Geográfico B2B
@@ -1358,8 +1339,6 @@ function BusinessPage() {
                 ))}
               </div>
             </div>
-
-            {/* Engagement KPIs */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-1 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-electric" /> KPIs de Conversión Deportiva
@@ -1402,9 +1381,9 @@ function BusinessPage() {
         </div>
       )}
 
+      {/* === BLOQUE: Pestaña Catalog === */}
       {activeTab === "catalog" && (
         <div className="grid lg:grid-cols-3 gap-8 text-left">
-          {/* Catalog List */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1446,9 +1425,8 @@ function BusinessPage() {
                       </div>
                       <button
                         onClick={() => handleDeleteItem(item.id)}
-                        className="h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 border-0 cursor-pointer"
+                        className="h-8 w-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 border-0 cursor-pointer"
                         title="Eliminar del catálogo"
-                        id={`delete-item-${item.id}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1461,8 +1439,6 @@ function BusinessPage() {
                 </div>
               )}
             </div>
-
-            {/* Sales History */}
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
               <h3 className="font-semibold text-lg mb-4">📈 Registro de Ventas Recientes</h3>
               {(sales || []).filter((s) => (items || []).some((i) => i.id === s.catalog_item_id))
@@ -1497,8 +1473,6 @@ function BusinessPage() {
               )}
             </div>
           </div>
-
-          {/* Add Catalog Item Form */}
           <div>
             <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card sticky top-8">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -1512,25 +1486,23 @@ function BusinessPage() {
                   <input
                     type="text"
                     required
+                    id="catalog-item-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                     placeholder="Ej. Bebida Deportiva Isotónica"
-                    id="catalog-item-name"
                   />
                 </div>
-
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Descripción</label>
                   <textarea
+                    id="catalog-item-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none h-16"
                     placeholder="Ej. 500ml sabor limón..."
-                    id="catalog-item-desc"
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs font-semibold mb-1 block">Precio (FitCoins)</label>
@@ -1538,29 +1510,28 @@ function BusinessPage() {
                       type="number"
                       required
                       min="0"
+                      id="catalog-item-price"
                       value={price}
                       onChange={(e) =>
                         setPrice(e.target.value === "" ? "" : Number(e.target.value))
                       }
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                       placeholder="100"
-                      id="catalog-item-price"
                     />
                   </div>
                   <div>
                     <label className="text-xs font-semibold mb-1 block">Tipo</label>
                     <select
+                      id="catalog-item-type"
                       value={type}
                       onChange={(e) => setType(e.target.value as "PRODUCT" | "SERVICE")}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      id="catalog-item-type"
                     >
                       <option value="PRODUCT">Producto</option>
                       <option value="SERVICE">Servicio</option>
                     </select>
                   </div>
                 </div>
-
                 <div>
                   <ImageUploadField
                     label="Imagen del Item"
@@ -1570,12 +1541,11 @@ function BusinessPage() {
                     id="catalog-item-image"
                   />
                 </div>
-
                 <button
                   type="submit"
+                  id="catalog-item-submit"
                   disabled={submitting}
                   className="w-full py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
-                  id="catalog-item-submit"
                 >
                   {submitting ? "Publicando..." : "Publicar en Marketplace"}
                 </button>
@@ -1585,9 +1555,9 @@ function BusinessPage() {
         </div>
       )}
 
+      {/* === BLOQUE: Pestaña Venues === */}
       {activeTab === "venues" && (
         <div className="space-y-6 text-left">
-          {/* Header Portal Section */}
           <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="font-extrabold text-xl mb-1 flex items-center gap-2 text-foreground">
@@ -1601,13 +1571,11 @@ function BusinessPage() {
             <button
               onClick={() => setVenueFormOpen(true)}
               className="px-5 py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0 flex items-center gap-2"
-              id="open-venue-register-dialog"
             >
               <Plus className="h-4 w-4" /> Registrar Nueva Sede
             </button>
           </div>
 
-          {/* Sedes Grid Portal */}
           {loadingVenues ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 bg-gradient-card border border-border rounded-3xl shadow-card">
               <Loader2 className="h-8 w-8 animate-spin text-neon" />
@@ -1620,7 +1588,6 @@ function BusinessPage() {
                   key={venue.id}
                   className="premium-card overflow-hidden hover:ring-glow transition-all relative group flex flex-col h-full"
                 >
-                  {/* Venue Image */}
                   <div className="relative aspect-[16/10] overflow-hidden bg-muted border-b border-border/40 shrink-0">
                     <img
                       src={
@@ -1633,18 +1600,14 @@ function BusinessPage() {
                     <span className="absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-bold shadow-md">
                       {venue.sport}
                     </span>
-
                     <button
                       onClick={() => handleDeleteVenue(venue.id)}
                       className="h-8 w-8 rounded-lg bg-red-500/20 hover:bg-red-500/80 text-red-400 hover:text-white grid place-items-center opacity-0 group-hover:opacity-100 transition-all absolute right-3 top-3 border-0 cursor-pointer shadow-md"
                       title="Eliminar sede"
-                      id={`delete-venue-${venue.id}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-
-                  {/* Venue Info */}
                   <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                     <div className="space-y-2">
                       <h4 className="font-extrabold text-base text-foreground line-clamp-1">
@@ -1662,7 +1625,6 @@ function BusinessPage() {
                         </p>
                       )}
                     </div>
-
                     <div className="pt-3 border-t border-border/20 flex items-center justify-between flex-wrap gap-2">
                       <span className="text-xs font-bold text-neon">
                         {(venue.price_per_hour ?? 0) > 0
@@ -1670,9 +1632,7 @@ function BusinessPage() {
                           : "Acceso Libre"}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded bg-muted text-muted-foreground font-semibold">
-                        {venue.operating_hours && venue.operating_hours[0]
-                          ? venue.operating_hours[0]
-                          : "Horario n/e"}
+                        {venue.operating_hours?.[0] || "Horario n/e"}
                       </span>
                     </div>
 
@@ -1687,7 +1647,7 @@ function BusinessPage() {
             </div>
           ) : (
             <div className="p-20 text-center text-muted-foreground bg-gradient-card border border-dashed border-border rounded-3xl shadow-card flex flex-col items-center justify-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-muted/10 border border-border/40 grid place-items-center mb-2 text-muted-foreground/60">
+              <div className="h-12 w-12 rounded-full bg-muted/10 border border-border/40 grid place-items-center mb-2">
                 <MapPin className="h-6 w-6" />
               </div>
               <p className="text-sm max-w-sm">
@@ -1697,7 +1657,7 @@ function BusinessPage() {
             </div>
           )}
 
-          {/* Dialog Modal for adding new Sede */}
+          {/* Dialog para registrar nueva sede */}
           <Dialog open={venueFormOpen} onOpenChange={setVenueFormOpen}>
             <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-3xl p-6 text-left">
               <DialogHeader className="mb-4">
@@ -1709,7 +1669,6 @@ function BusinessPage() {
                   jugadores.
                 </DialogDescription>
               </DialogHeader>
-
               <form onSubmit={handleCreateVenue} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Nombre de la Sede</label>
@@ -1720,10 +1679,8 @@ function BusinessPage() {
                     onChange={(e) => setVenueName(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                     placeholder="Ej. Megatlon Magdalena"
-                    id="venue-register-name"
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold mb-1 block">Especialidad / Rubro</label>
@@ -1732,19 +1689,18 @@ function BusinessPage() {
                       value={venueSport}
                       onChange={(e) => setVenueSport(e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      id="venue-register-sport"
                     >
                       <option value="">Selecciona...</option>
                       <optgroup label="Categorías Principales">
-                        <option value="Canchas">🏟️ Canchas / Espacios Deportivos</option>
+                        <option value="Canchas">🏟️ Canchas</option>
                         <option value="Gym">🏋️ Gimnasio</option>
-                        <option value="Academia">🎓 Academia Deportiva</option>
-                        <option value="Fisioterapia">💆 Fisioterapia y Descarga</option>
-                        <option value="Nutricionista">🍎 Nutrición Deportiva</option>
-                        <option value="Tienda">🛍️ Tienda y Equipamiento</option>
-                        <option value="Bebidas">🥤 Bebidas y Suplementos</option>
-                        <option value="Torneos">🏆 Torneos y Eventos</option>
-                        <option value="Marcas">🏷️ Marcas Deportivas</option>
+                        <option value="Academia">🎓 Academia</option>
+                        <option value="Fisioterapia">💆 Fisioterapia</option>
+                        <option value="Nutricionista">🍎 Nutrición</option>
+                        <option value="Tienda">🛍️ Tienda</option>
+                        <option value="Bebidas">🥤 Bebidas</option>
+                        <option value="Torneos">🏆 Torneos</option>
+                        <option value="Marcas">🏷️ Marcas</option>
                         <option value="Patrocinador">⭐ Patrocinador</option>
                       </optgroup>
                       <optgroup label="Disciplinas Deportivas">
@@ -1769,11 +1725,9 @@ function BusinessPage() {
                       }
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                       placeholder="0 (Libre)"
-                      id="venue-register-price"
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold mb-1 block">Distrito</label>
@@ -1782,7 +1736,6 @@ function BusinessPage() {
                       value={venueDistrict}
                       onChange={(e) => setVenueDistrict(e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
-                      id="venue-register-district"
                     >
                       <option value="">Selecciona...</option>
                       <option value="Santiago de Surco">Surco</option>
@@ -1800,11 +1753,9 @@ function BusinessPage() {
                       onChange={(e) => setVenueHours(e.target.value)}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                       placeholder="Ej. Lun-Vie 6am - 10pm"
-                      id="venue-register-hours"
                     />
                   </div>
                 </div>
-
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Descripción de la Sede</label>
                   <textarea
@@ -1812,11 +1763,9 @@ function BusinessPage() {
                     onChange={(e) => setVenueDescription(e.target.value)}
                     rows={2}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none"
-                    placeholder="Describe los servicios disponibles en esta sede (ej. zona de spinning, duchas, etc.)"
-                    id="venue-register-desc"
+                    placeholder="Describe los servicios disponibles en esta sede..."
                   />
                 </div>
-
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Dirección Física</label>
                   <input
@@ -1826,10 +1775,8 @@ function BusinessPage() {
                     onChange={(e) => setVenueAddress(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
                     placeholder="Av. Brasil 3450"
-                    id="venue-register-address"
                   />
                 </div>
-
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-semibold">Ubicación del establecimiento</label>
@@ -1858,7 +1805,6 @@ function BusinessPage() {
                       : "Ubicación seleccionada correctamente."}
                   </div>
                 </div>
-
                 <div>
                   <ImageUploadField
                     label="Imagen de la Sede"
@@ -1868,7 +1814,6 @@ function BusinessPage() {
                     id="venue-register-image"
                   />
                 </div>
-
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -1892,6 +1837,7 @@ function BusinessPage() {
         </div>
       )}
 
+      {/* === BLOQUE: Pestaña Settings === */}
       {activeTab === "settings" && (
         <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card text-left max-w-3xl">
           <h3 className="font-extrabold text-xl mb-2 flex items-center gap-2 text-foreground">
@@ -1901,9 +1847,7 @@ function BusinessPage() {
             Administra las preferencias de tu cuenta comercial, notificaciones y herramientas de
             simulación.
           </p>
-
           <div className="space-y-6">
-            {/* Notifications Section */}
             <div className="border-b border-border/40 pb-6">
               <h4 className="font-bold text-sm text-foreground mb-3">
                 Preferencias de Notificaciones
@@ -1939,8 +1883,6 @@ function BusinessPage() {
                 </div>
               </div>
             </div>
-
-            {/* B2B Platform Info */}
             <div className="border-b border-border/40 pb-6">
               <h4 className="font-bold text-sm text-foreground mb-2">Información del Sistema</h4>
               <div className="grid grid-cols-2 gap-4 text-xs">
@@ -1960,16 +1902,13 @@ function BusinessPage() {
                 </div>
               </div>
             </div>
-
-            {/* Demo Reset Section */}
             <div>
               <h4 className="font-bold text-sm text-foreground mb-2 text-warning">
                 Herramientas de Demostración
               </h4>
               <p className="text-xs text-muted-foreground mb-4">
                 Si estás utilizando la aplicación en modo demostración local, puedes limpiar todos
-                los datos dinámicos guardados en tu navegador (sedes registradas, catálogo de venta
-                modificado, transacciones, etc.) para restablecer el estado inicial.
+                los datos dinámicos guardados en tu navegador.
               </p>
               <button
                 type="button"
@@ -1977,17 +1916,13 @@ function BusinessPage() {
                   localStorage.removeItem("sportmatch_demo_venues");
                   localStorage.removeItem("sportmatch_demo_courts");
                   localStorage.removeItem("sportmatch_demo_balances");
-                  // Clear transaction keys
                   for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (key && key.startsWith("sportmatch_demo_transactions_")) {
+                    if (key && key.startsWith("sportmatch_demo_transactions_"))
                       localStorage.removeItem(key);
-                    }
                   }
                   toast.success("¡Datos de demo reiniciados correctamente!");
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 1000);
+                  setTimeout(() => window.location.reload(), 1000);
                 }}
                 className="py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer border-0 flex items-center gap-2"
               >
@@ -2001,23 +1936,26 @@ function BusinessPage() {
   );
 }
 
+// === BLOQUE: MetricCard ===
+// Componente reutilizable para mostrar una métrica con ícono y valor.
 function MetricCard({
   label,
   value,
   icon,
   accentClass,
   id,
-  extra,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
   accentClass: string;
   id?: string;
-  extra?: string;
 }) {
   return (
-    <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card relative overflow-hidden">
+    <div
+      id={id}
+      className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card relative overflow-hidden"
+    >
       <div
         className="absolute right-0 top-0 translate-x-4 -translate-y-4 h-20 w-20 rounded-full opacity-20 blur-2xl"
         style={{ background: "currentColor" }}
@@ -2027,10 +1965,7 @@ function MetricCard({
           <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">
             {label}
           </span>
-          <span className="text-xl md:text-2xl font-extrabold flex items-center gap-1" id={id}>
-            {value}
-          </span>
-          {extra && <span className="text-[10px] text-warning font-semibold">{extra}</span>}
+          <span className="text-xl md:text-2xl font-extrabold">{value}</span>
         </div>
         <div
           className={`h-10 w-10 rounded-xl border grid place-items-center shrink-0 ${accentClass}`}
@@ -2042,6 +1977,8 @@ function MetricCard({
   );
 }
 
+// === BLOQUE: KpiRow ===
+// Barra de progreso horizontal con etiqueta para KPIs de analytics.
 function KpiRow({
   label,
   value,
@@ -2053,6 +1990,18 @@ function KpiRow({
   barWidth: number;
   color: string;
 }) {
+  const getColor = () => {
+    switch (color) {
+      case "neon":
+        return "hsl(var(--neon))";
+      case "electric":
+        return "hsl(var(--electric))";
+      case "warning":
+        return "hsl(var(--warning))";
+      default:
+        return "hsl(var(--primary))";
+    }
+  };
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
@@ -2061,18 +2010,8 @@ function KpiRow({
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
-          className={`h-full rounded-full bg-${color} transition-all duration-700`}
-          style={{
-            width: `${Math.max(barWidth, 2)}%`,
-            background:
-              color === "neon"
-                ? "hsl(var(--neon))"
-                : color === "electric"
-                  ? "hsl(var(--electric))"
-                  : color === "warning"
-                    ? "hsl(var(--warning))"
-                    : "hsl(var(--primary))",
-          }}
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${Math.max(barWidth, 2)}%`, background: getColor() }}
         />
       </div>
     </div>

@@ -1,3 +1,15 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/squadService.ts
+ * PROPÓSITO: Servicio de gestión de equipos (Squads).
+ *            CRUD completo: crear, listar, unirse, salirse,
+ *            verificar membresía y obtener miembros.
+ * FLUJO: Usuario crea squad -> se agrega como CREATOR ->
+ *        Otros usuarios se unen como MEMBER ->
+ *        Se inyecta mensaje de sistema en el chat del squad.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { Squad, User } from "@/entities/types";
 import { withTimeout } from "./timeoutHelper";
@@ -5,6 +17,10 @@ import { useAuthStore } from "@/entities/user/useAuth";
 
 const LOCAL_STORAGE_KEY_SQUADS = "sportmatch_demo_squads";
 const LOCAL_STORAGE_KEY_MEMBERSHIPS = "sportmatch_demo_memberships";
+
+// ==============================================================
+// DATOS MOCK
+// ==============================================================
 
 const DEFAULT_MOCK_SQUADS: Squad[] = [
   {
@@ -32,13 +48,15 @@ const DEFAULT_MEMBERSHIPS: Record<string, string[]> = {
   "squad-2": ["user-2", "user-4"],
 };
 
+// ==============================================================
+// HELPERS DE DEMO MODE
+// ==============================================================
+
 function getMockSquads(): Squad[] {
   if (typeof window === "undefined") return DEFAULT_MOCK_SQUADS;
   try {
     const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_SQUADS);
-    if (saved) {
-      return JSON.parse(saved);
-    }
+    if (saved) return JSON.parse(saved);
   } catch (e) {
     console.warn("Failed to load mock squads from localStorage:", e);
   }
@@ -58,9 +76,7 @@ function getMockMemberships(): Record<string, string[]> {
   if (typeof window === "undefined") return DEFAULT_MEMBERSHIPS;
   try {
     const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_MEMBERSHIPS);
-    if (saved) {
-      return JSON.parse(saved);
-    }
+    if (saved) return JSON.parse(saved);
   } catch (e) {
     console.warn("Failed to load mock memberships from localStorage:", e);
   }
@@ -76,6 +92,19 @@ function saveMockMemberships(memberships: Record<string, string[]>) {
   }
 }
 
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
+
+/**
+ * createSquad(): Crea un nuevo equipo
+ * ------------------------------------------------------------------
+ * En modo real:
+ *   1. Inserta squad en Supabase (UUID generado por DB)
+ *   2. Inserta al creador como miembro con rol CREATOR
+ *   3. Inyecta mensaje de sistema en el chat del squad
+ *      para inicializar la conversación grupal
+ */
 export async function createSquad(
   name: string,
   description: string,
@@ -104,10 +133,11 @@ export async function createSquad(
 
     return newSquad;
   }
+
   const avatar =
     avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
 
-  // 1. Insert squad in Supabase (let database generate UUID)
+  // 1. Crea squad en Supabase
   const { data: squad, error: squadError } = await withTimeout(
     supabase
       .from("squads")
@@ -127,7 +157,7 @@ export async function createSquad(
     throw squadError || new Error("Failed to create squad");
   }
 
-  // 2. Insert creator as squad member
+  // 2. Agrega al creador como miembro con rol CREATOR
   const { error: memberError } = await withTimeout(
     supabase.from("squad_members").insert({
       id: `${squad.id}_${creatorId}`,
@@ -145,7 +175,7 @@ export async function createSquad(
     throw memberError;
   }
 
-  // 3. Inject squad chat ledger initial system message in messages table
+  // 3. Inyecta mensaje de sistema en el chat del squad
   try {
     const systemMsgId = `msg_system_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     await supabase.from("messages").insert({
@@ -169,6 +199,10 @@ export async function createSquad(
   };
 }
 
+/**
+ * getSquads(): Lista todos los squads disponibles
+ * Incluye el conteo de miembros via JOIN con squad_members.
+ */
 export async function getSquads(): Promise<Squad[]> {
   if (useAuthStore.getState().isDemoMode) {
     const squads = getMockSquads();
@@ -200,15 +234,15 @@ export async function getSquads(): Promise<Squad[]> {
   })) as Squad[];
 }
 
+/**
+ * joinSquad(): Un usuario se une a un squad como MEMBER
+ * Ignora error 23505 (unique constraint) si ya era miembro.
+ */
 export async function joinSquad(squadId: string, userId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     const memberships = getMockMemberships();
-    if (!memberships[squadId]) {
-      memberships[squadId] = [];
-    }
-    if (!memberships[squadId].includes(userId)) {
-      memberships[squadId].push(userId);
-    }
+    if (!memberships[squadId]) memberships[squadId] = [];
+    if (!memberships[squadId].includes(userId)) memberships[squadId].push(userId);
     saveMockMemberships(memberships);
     return;
   }
@@ -223,12 +257,14 @@ export async function joinSquad(squadId: string, userId: string): Promise<void> 
   );
 
   if (error && error.code !== "23505") {
-    // Ignore unique constraint violation (on conflict do nothing)
     console.error(`Error joining squad in Supabase (code: ${error.code}):`, error);
     throw error;
   }
 }
 
+/**
+ * leaveSquad(): Un usuario abandona un squad
+ */
 export async function leaveSquad(squadId: string, userId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     const memberships = getMockMemberships();
@@ -251,6 +287,9 @@ export async function leaveSquad(squadId: string, userId: string): Promise<void>
   }
 }
 
+/**
+ * isMember(): Verifica si un usuario es miembro de un squad
+ */
 export async function isMember(squadId: string, userId: string): Promise<boolean> {
   if (useAuthStore.getState().isDemoMode) {
     const memberships = getMockMemberships();
@@ -272,6 +311,9 @@ export async function isMember(squadId: string, userId: string): Promise<boolean
   return data && data.length > 0;
 }
 
+/**
+ * getSquadMembers(): Obtiene los miembros de un squad con sus perfiles
+ */
 export async function getSquadMembers(squadId: string): Promise<User[]> {
   if (useAuthStore.getState().isDemoMode) {
     return [

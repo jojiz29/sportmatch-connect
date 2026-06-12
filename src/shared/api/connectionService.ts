@@ -1,9 +1,26 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/connectionService.ts
+ * PROPÓSITO: Servicio de conexiones entre jugadores (player_connections).
+ *            Cuando dos jugadores se conectan mutuamente, se crea
+ *            un "match mutuo" y se abre automáticamente un chat
+ *            directo entre ellos.
+ * FLUJO: Jugador A conecta con B -> se guarda relación ->
+ *        Si B ya había conectado con A -> MatchMutuo! ->
+ *        Se crea conversación de chat automáticamente.
+ * ===================================================================
+ */
+
 import { User } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { supabase } from "./supabase";
 import { withTimeout } from "./timeoutHelper";
 
 const DEMO_STORAGE_KEY = "sportmatch_demo_player_connections";
+
+// ==============================================================
+// TIPOS
+// ==============================================================
 
 export interface PlayerConnection {
   id: string;
@@ -28,6 +45,10 @@ interface CreateConnectionInput {
   compatibilityScore?: number | null;
 }
 
+// ==============================================================
+// HELPERS DE DEMO MODE
+// ==============================================================
+
 function getDemoConnections(): PlayerConnection[] {
   if (typeof window === "undefined") return [];
   try {
@@ -44,9 +65,20 @@ function saveDemoConnections(connections: PlayerConnection[]): void {
   localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(connections));
 }
 
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
+
 /**
- * Guarda una recomendación como conexión deportiva sin crear todavía un desafío,
- * invitación o chat. Así cada acción posterior puede repetirse de forma independiente.
+ * createPlayerConnection(): Crea una conexión entre dos jugadores
+ * ------------------------------------------------------------------
+ * Estrategia "query first, insert second" para evitar depender de
+ * UPDATE en políticas RLS restrictivas (algunas solo permiten INSERT).
+ *
+ * Si la conexión ya existe, la retorna sin duplicar.
+ * Si existe la conexión recíproca (el otro usuario ya conectó),
+ * se considera "Mutual Match" y se crea automáticamente una
+ * conversación de chat mediante la RPC create_direct_conversation.
  */
 export async function createPlayerConnection(
   input: CreateConnectionInput,
@@ -86,8 +118,7 @@ export async function createPlayerConnection(
     return { connection, isMutualMatch: reciprocal, conversationId: null };
   }
 
-  // Consultamos primero para no depender de UPDATE durante un upsert.
-  // Esto evita esperas innecesarias cuando las políticas RLS solo permiten insertar.
+  // --- MODO REAL: Primero consulta si ya existe ---
   const { data: existing, error: existingError } = await withTimeout(
     supabase
       .from("player_connections")
@@ -100,6 +131,7 @@ export async function createPlayerConnection(
   if (existingError) throw existingError;
   let connection = existing as PlayerConnection | null;
 
+  // Si no existe, crea la conexión
   if (!connection) {
     const { data, error } = await withTimeout(
       supabase
@@ -118,6 +150,7 @@ export async function createPlayerConnection(
     connection = data as PlayerConnection;
   }
 
+  // Verifica si hay conexión recíproca (mutual match)
   const { data: reciprocal, error: reciprocalError } = await withTimeout(
     supabase
       .from("player_connections")
@@ -128,6 +161,7 @@ export async function createPlayerConnection(
   );
   if (reciprocalError) throw reciprocalError;
 
+  // Si es mutuo, crea conversación de chat automáticamente
   let conversationId: string | null = null;
   if (reciprocal) {
     const { data, error } = await withTimeout(
@@ -141,8 +175,8 @@ export async function createPlayerConnection(
 }
 
 /**
- * Recupera las conexiones del usuario junto con el perfil que se mostrará
- * en la bandeja de Mensajes.
+ * getPlayerConnections(): Conexiones de un usuario (salientes)
+ * Incluye el perfil completo del usuario conectado via JOIN.
  */
 export async function getPlayerConnections(userId: string): Promise<PlayerConnection[]> {
   if (useAuthStore.getState().isDemoMode) {
@@ -160,8 +194,11 @@ export async function getPlayerConnections(userId: string): Promise<PlayerConnec
 }
 
 /**
- * Devuelve únicamente conexiones confirmadas por ambos jugadores.
- * Las solicitudes unilaterales permanecen fuera de Mensajes hasta convertirse en match.
+ * getMutualPlayerConnections(): Solo conexiones recíprocas
+ * ------------------------------------------------------------------
+ * Filtra las conexiones del usuario para devolver únicamente aquellas
+ * donde el otro usuario también conectó con él (match mutuo).
+ * Estas son las que aparecen en la bandeja de Mensajes.
  */
 export async function getMutualPlayerConnections(userId: string): Promise<PlayerConnection[]> {
   const outgoing = await getPlayerConnections(userId);

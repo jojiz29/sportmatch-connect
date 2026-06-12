@@ -1,3 +1,8 @@
+// ============================================================
+// courts.controller.ts — Controlador de canchas
+// CRUD completo + creación de reseñas con rating
+// ============================================================
+
 import {
   Controller,
   Get,

@@ -1,3 +1,8 @@
+// ============================================================
+// sync-jira-sprint2-backlog.mjs — Backlog del Sprint 2 en Jira
+// Crea issues pendientes del backlog planificado para Sprint 2
+// ============================================================
+
 import path from "path";
 import fs from "fs";
 

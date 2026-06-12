@@ -1,4 +1,8 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+// === BLOQUE: Ruta de Historial de FitCoins ===
+// Muestra el historial completo de transacciones de FitCoins del usuario,
+// con indicador visual de tipo (EARN/SPEND/PENALTY), saldo actual
+// y resumen mensual (ingresos, egresos, neto).
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, ArrowUpRight, ArrowDownRight, TrendingUp, Trophy } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -6,9 +10,6 @@ import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/app/wallet/history")({
-  beforeLoad: () => {
-    throw redirect({ to: "/app" });
-  },
   head: () => ({ meta: [{ title: "Historial de FitCoins — SportMatch" }] }),
   component: WalletHistory,
 });
@@ -23,6 +24,7 @@ function WalletHistory() {
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
+      {/* === BLOQUE: Enlace de retroceso a la billetera === */}
       <Link
         to="/app/wallet"
         search={{ buyItem: undefined }}
@@ -33,18 +35,19 @@ function WalletHistory() {
 
       <PageHeader title={t("wallet.history_title")} subtitle={t("wallet.history_subtitle")} />
 
+      {/* === BLOQUE: Banner de saldo actual === */}
       <div className="bg-gradient-primary rounded-3xl p-6 shadow-glow relative overflow-hidden mb-8">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-neon opacity-20 blur-3xl" />
         <div className="relative">
           <div className="text-sm text-white/80">{t("wallet.balance")}</div>
           <div className="text-4xl font-extrabold text-white flex items-center gap-2 mt-1">
-            {balance}
-            <Trophy className="h-6 w-6 text-neon" />
+            {balance} <Trophy className="h-6 w-6 text-neon" />
           </div>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
+        {/* === BLOQUE: Lista de transacciones === */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-gradient-card border border-border rounded-2xl shadow-card overflow-hidden">
             <div className="p-4 border-b border-border bg-card/50 flex items-center gap-2 text-sm font-semibold">
@@ -76,13 +79,7 @@ function WalletHistory() {
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className={`h-10 w-10 rounded-full grid place-items-center ${
-                          isEarn
-                            ? "bg-neon/10 text-neon"
-                            : isPenalty
-                              ? "bg-red-500/10 text-red-500"
-                              : "bg-electric/10 text-electric"
-                        }`}
+                        className={`h-10 w-10 rounded-full grid place-items-center ${isEarn ? "bg-neon/10 text-neon" : isPenalty ? "bg-red-500/10 text-red-500" : "bg-electric/10 text-electric"}`}
                       >
                         {icon}
                       </div>
@@ -115,6 +112,7 @@ function WalletHistory() {
           </div>
         </div>
 
+        {/* === BLOQUE: Resumen mensual (sidebar) === */}
         <div>
           <div className="bg-gradient-card border border-border rounded-2xl p-6 shadow-card sticky top-8">
             <h3 className="font-semibold mb-4">{t("wallet.monthly_summary")}</h3>

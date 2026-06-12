@@ -1,3 +1,15 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/businessService.ts
+ * PROPÓSITO: Servicio B2B para gestión de catálogo de productos/
+ *            servicios que los negocios venden a los jugadores
+ *            usando FitCoins como moneda.
+ * FLUJO: Negocio crea items -> Jugador compra con FitCoins ->
+ *        Se debita al comprador, se acredita al vendedor,
+ *        se registra la venta y se notifica a ambas partes.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { CatalogItem, Transaction } from "@/entities/types";
 import { createNotification } from "./notificationService";
@@ -5,6 +17,11 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { apiClient } from "./apiClient";
 import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 
+// ==============================================================
+// DATOS MOCK: Catálogo inicial de demostración
+// Incluye productos (PRODUCT) y servicios (SERVICE) de negocios
+// como Puka Power, gimnasios, academias, etc.
+// ==============================================================
 const MOCK_CATALOG: CatalogItem[] = [
   {
     id: "puka-power-bottle",
@@ -71,6 +88,10 @@ const MOCK_CATALOG: CatalogItem[] = [
   },
 ];
 
+// ==============================================================
+// HELPERS DE DEMO MODE
+// ==============================================================
+
 const getDemoCatalog = (): CatalogItem[] => {
   if (typeof window === "undefined") return MOCK_CATALOG;
   const stored = localStorage.getItem("sportmatch_demo_catalog");
@@ -87,6 +108,14 @@ const saveDemoCatalog = (catalog: CatalogItem[]) => {
   }
 };
 
+// ==============================================================
+// FUNCIONES PRINCIPALES
+// ==============================================================
+
+/**
+ * getCatalogItems(): Obtiene items del catálogo B2B
+ * Opcionalmente filtrados por negocio.
+ */
 export async function getCatalogItems(businessId?: string): Promise<CatalogItem[]> {
   if (useAuthStore.getState().isDemoMode) {
     const catalog = getDemoCatalog();
@@ -109,6 +138,9 @@ export async function getCatalogItems(businessId?: string): Promise<CatalogItem[
   return (data || []) as CatalogItem[];
 }
 
+/**
+ * createCatalogItem(): Agrega un item al catálogo de un negocio
+ */
 export async function createCatalogItem(
   item: Omit<CatalogItem, "created_at">,
 ): Promise<CatalogItem> {
@@ -145,6 +177,9 @@ export async function createCatalogItem(
   return data as CatalogItem;
 }
 
+/**
+ * deleteCatalogItem(): Elimina un item del catálogo
+ */
 export async function deleteCatalogItem(itemId: string): Promise<void> {
   if (useAuthStore.getState().isDemoMode) {
     const catalog = getDemoCatalog();
@@ -164,6 +199,22 @@ export async function deleteCatalogItem(itemId: string): Promise<void> {
   }
 }
 
+/**
+ * purchaseCatalogItem(): Compra un item del catálogo con FitCoins
+ * ------------------------------------------------------------------
+ * Flujo completo en Demo Mode:
+ *   1. Verifica saldo suficiente del comprador
+ *   2. Debita FitCoins del comprador
+ *   3. Acredita FitCoins al vendedor (negocio)
+ *   4. Registra transacciones para ambas partes
+ *   5. Agrega registro de venta al store de negocio
+ *   6. Notifica a comprador y vendedor
+ *
+ * En modo real: ejecuta RPC purchase_catalog_item (transacción
+ * atómica en PostgreSQL).
+ *
+ * @returns boolean - true si la compra fue exitosa
+ */
 export async function purchaseCatalogItem(buyerId: string, itemId: string): Promise<boolean> {
   if (useAuthStore.getState().isDemoMode) {
     const catalog = getDemoCatalog();
@@ -174,9 +225,10 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     if (!buyer) throw new Error("Buyer not found");
 
     if (buyer.fitcoins_balance < item.price) {
-      return false;
+      return false; // Saldo insuficiente
     }
 
+    // Debita al comprador
     const newBuyerBalance = buyer.fitcoins_balance - item.price;
     apiClient.wallet.updateBalance(buyerId, newBuyerBalance);
 
@@ -190,7 +242,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     };
     apiClient.wallet.saveTransaction(buyerId, buyerTx);
 
-    // Credit seller's balance
+    // Acredita al vendedor
     const currentSellerBalance = await apiClient.wallet.getBalance(item.business_id);
     apiClient.wallet.updateBalance(item.business_id, currentSellerBalance + item.price);
 
@@ -204,7 +256,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     };
     apiClient.wallet.saveTransaction(item.business_id, sellerTx);
 
-    // Add B2B sales record to businessStore
+    // Registra la venta en el store de negocio
     useBusinessStore.getState().addSale({
       id: `sale-demo-${Date.now()}`,
       catalog_item_id: item.id,
@@ -215,6 +267,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
       created_at: new Date().toISOString(),
     });
 
+    // Notifica a ambas partes
     createNotification(
       buyerId,
       "TRANSACTION_SUCCESS",
@@ -238,6 +291,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     return true;
   }
 
+  // --- MODO REAL: Ejecuta RPC atómico en PostgreSQL ---
   const { data, error } = await supabase.rpc("purchase_catalog_item", {
     p_buyer_id: buyerId,
     p_item_id: itemId,
@@ -248,6 +302,7 @@ export async function purchaseCatalogItem(buyerId: string, itemId: string): Prom
     throw new Error(error.message || "Failed to purchase item");
   }
 
+  // Dispara notificaciones asíncronas post-compra
   try {
     const { data: item } = await supabase
       .from("business_catalog")

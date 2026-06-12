@@ -1,3 +1,8 @@
+// ============================================================
+// matches.service.ts — Servicio de partidos
+// CRUD con validación de propiedad, unirse/salir con raw queries
+// ============================================================
+
 import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateMatchDto, UpdateMatchDto } from "./dto";

@@ -1,3 +1,8 @@
+// ============================================================
+// inspect_courts.js — Script de inspección de canchas
+// Consulta y muestra las canchas registradas en Supabase
+// ============================================================
+
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 

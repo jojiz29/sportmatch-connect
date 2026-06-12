@@ -1,19 +1,30 @@
+// === BLOQUE: IMPORTACIONES ===
+// Dependencias: estado local (useState), icono Check de Lucide, internacionalización (react-i18next)
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Recibe un callback onDismiss para cerrar el tutorial interactivo
 interface CoachmarkTutorialProps {
   onDismiss: () => void;
 }
 
+// === BLOQUE: COMPONENTE DE TUTORIAL INTERACTIVO (COACHMARK) ===
+// Superposición modal que enseña al usuario cómo seleccionar niveles de habilidad mediante clics progresivos (3 estados + deselección)
 export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
   const { t } = useTranslation();
+  // Estado del nivel seleccionado en la tarjeta de demostración (0=no seleccionado, 1=Aficionado, 2=Experimentado, 3=Competitivo)
   const [level, setLevel] = useState<0 | 1 | 2 | 3>(0);
 
+  // === BLOQUE: MANEJADOR DE CLIC EN TARJETA ===
+  // Alterna entre los 4 estados de forma cíclica para demostrar la mecánica de 3 clics
   const handleCardClick = () => {
     setLevel((prev) => ((prev + 1) % 4) as 0 | 1 | 2 | 3);
   };
 
+  // === BLOQUE: ESTILOS DINÁMICOS DE BORDE ===
+  // Devuelve clases de borde y sombra según el nivel activo (verde/naranja/rojo)
   const getCardBorderClass = () => {
     if (level === 1) {
       return "border-[#3CAC3B] shadow-[0_0_20px_rgba(60,172,59,0.5)] scale-105";
@@ -27,6 +38,8 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
     return "border-white/20 hover:border-white/30";
   };
 
+  // === BLOQUE: INSIGNIA DE NIVEL ===
+  // Renderiza la etiqueta textual del nivel actual (Aficionado/Experimentado/Competitivo) con estilo de color correspondiente
   const getLevelBadge = () => {
     if (level === 1) {
       return (
@@ -53,8 +66,11 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
   };
 
   return (
+    // === BLOQUE: OVERLAY MODAL ===
+    // Fondo oscuro con desenfoque que cubre toda la pantalla
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-fade-in">
       <div className="max-w-md w-full text-center space-y-8">
+        {/* === BLOQUE: ENCABEZADO DEL TUTORIAL === */}
         <div className="space-y-3">
           <h2 className="text-3xl font-black text-white tracking-tight">
             {t("tutorial.title", "¡Elige tu nivel por deporte!")}
@@ -67,17 +83,18 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
           </p>
         </div>
 
-        {/* Interactive Sample Card container with animated pointer */}
+        {/* === BLOQUE: TARJETA DE DEMOSTRACIÓN INTERACTIVA === */}
+        {/* Tarjeta de Fútbol que simula el comportamiento de selección por clics */}
         <div className="relative flex justify-center py-6">
           <div
             onClick={handleCardClick}
             className={`w-64 p-5 border rounded-3xl cursor-pointer select-none bg-gradient-to-br from-emerald-800 via-emerald-950 to-green-950 transition-all duration-300 relative ${getCardBorderClass()}`}
           >
-            {/* Background design */}
+            {/* Fondo decorativo con patrón de cuadrícula */}
             <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none opacity-10">
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px]" />
             </div>
-
+            {/* Contenido de la tarjeta: emoji, insignia de nivel, nombre y descripción */}
             <div className="flex justify-between items-start relative z-10">
               <span className="text-4xl">⚽🏃</span>
               <div className="flex gap-1.5 items-center">
@@ -101,7 +118,8 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
             </p>
           </div>
 
-          {/* Animated Hand/Pointer Cursor */}
+          {/* === BLOQUE: CURSOR ANIMADO === */}
+          {/* Icono de mano que señala la tarjeta para guiar al usuario */}
           <div className="absolute top-1/2 left-1/2 mt-4 ml-6 pointer-events-none animate-bounce">
             <svg
               className="h-10 w-10 text-white fill-neon drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]"
@@ -112,7 +130,8 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
           </div>
         </div>
 
-        {/* Didactic steps */}
+        {/* === BLOQUE: LEYENDA DIDÁCTICA === */}
+        {/* Lista de pasos que explica el significado de cada nivel y el ciclo de deselección */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-left space-y-3 font-semibold text-xs max-w-sm mx-auto">
           <div className="flex items-center gap-3">
             <div className="h-4 w-4 rounded-full bg-[#3CAC3B] shadow-[0_0_6px_#3CAC3B]" />
@@ -140,6 +159,7 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
           </div>
         </div>
 
+        {/* === BLOQUE: BOTÓN DE CERRAR === */}
         <button
           id="coachmark-dismiss-btn"
           onClick={onDismiss}

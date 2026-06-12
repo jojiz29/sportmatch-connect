@@ -1,3 +1,4 @@
+// shadcn/ui — Deslizador (control de rango con Radix)
 import * as React from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 

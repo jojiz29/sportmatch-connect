@@ -1,16 +1,25 @@
+// === BLOQUE: IMPORTACIONES ===
+// Dependencias: React, utilidad de clases condicionales cn y componente base Skeleton de shadcn/ui
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/shared/ui/skeleton";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Define los tipos de esqueleto disponibles: tarjeta de partido, slot de squad, post de feed, estadística de dashboard
 interface SkeletonLoaderProps {
   type: "match-card" | "squad-slot" | "post-feed" | "dashboard-stat";
   count?: number;
   className?: string;
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Renderiza placeholders animados (skeleton loaders) según el tipo especificado, útil para mejorar la percepción de carga
 export function SkeletonLoader({ type, count = 1, className }: SkeletonLoaderProps) {
+  // === BLOQUE: RENDERIZADOR DE ESQUELETO ===
+  // Selecciona la estructura visual del placeholder según el tipo solicitado
   const renderSkeleton = () => {
     switch (type) {
+      // --- Esqueleto para tarjeta de partido (match-card) ---
       case "match-card":
         return (
           <div
@@ -42,6 +51,7 @@ export function SkeletonLoader({ type, count = 1, className }: SkeletonLoaderPro
             </div>
           </div>
         );
+      // --- Esqueleto para slot vacío de squad (squad-slot) ---
       case "squad-slot":
         return (
           <div
@@ -55,6 +65,7 @@ export function SkeletonLoader({ type, count = 1, className }: SkeletonLoaderPro
             <Skeleton className="h-2 w-10 bg-muted/30 rounded mt-1" />
           </div>
         );
+      // --- Esqueleto para publicación en el feed (post-feed) ---
       case "post-feed":
         return (
           <div
@@ -77,6 +88,7 @@ export function SkeletonLoader({ type, count = 1, className }: SkeletonLoaderPro
             <Skeleton className="h-40 w-full bg-muted/20 rounded-xl" />
           </div>
         );
+      // --- Esqueleto para estadística de dashboard (dashboard-stat) ---
       case "dashboard-stat":
         return (
           <div
@@ -89,11 +101,14 @@ export function SkeletonLoader({ type, count = 1, className }: SkeletonLoaderPro
             <Skeleton className="h-6 w-16 bg-muted/30 rounded mt-2" />
           </div>
         );
+      // --- Fallback genérico ---
       default:
         return <Skeleton className={cn("h-4 w-full bg-muted/30 rounded", className)} />;
     }
   };
 
+  // === BLOQUE: RENDERIZADO FINAL ===
+  // Repite el esqueleto según la cantidad solicitada
   return (
     <>
       {Array.from({ length: count }).map((_, idx) => (

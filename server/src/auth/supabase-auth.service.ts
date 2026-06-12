@@ -1,3 +1,8 @@
+// ============================================================
+// supabase-auth.service.ts — Servicio de integración con Supabase Auth
+// Valida tokens JWT, obtiene perfiles y gestiona cliente admin
+// ============================================================
+
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 

@@ -1,3 +1,8 @@
+// ============================================================
+// courts.service.ts — Servicio de canchas
+// CRUD con filtros por deporte/distrito y cálculo de rating promedio
+// ============================================================
+
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateCourtDto, UpdateCourtDto } from "./dto";

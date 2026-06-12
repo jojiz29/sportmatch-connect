@@ -1,3 +1,8 @@
+// ============================================================
+// useStrictForm.test.ts — Tests del hook de formulario estricto
+// Verifica validaciones personalizadas y mensajes de error
+// ============================================================
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { renderHook, act } from "@testing-library/react";
 import { useStrictForm } from "../useStrictForm";

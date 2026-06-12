@@ -1,7 +1,23 @@
+/**
+ * ===================================================================
+ * ARCHIVO: src/shared/api/adsService.ts
+ * PROPÓSITO: Servicio de anuncios/publicidad para negocios (B2B).
+ *            CRUD completo de anuncios + tracking de métricas
+ *            (vistas, clicks, contactos).
+ * FLUJO: Los negocios crean anuncios -> aparecen en el feed de
+ *        jugadores -> se trackean las interacciones.
+ * ===================================================================
+ */
+
 import { supabase } from "./supabase";
 import { Ad } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 
+// ==============================================================
+// DATOS MOCK: Anuncios iniciales de demostración
+// Cada anuncio representa un negocio local con su oferta:
+// torneos, clases, descuentos, servicios.
+// ==============================================================
 const INITIAL_ADS: Ad[] = [
   {
     id: "ad-puka-tournament",
@@ -143,6 +159,11 @@ const INITIAL_ADS: Ad[] = [
   },
 ];
 
+// ==============================================================
+// HELPERS DE DEMO MODE (persistencia en localStorage)
+// ==============================================================
+
+/** Lee anuncios demo desde localStorage */
 const getDemoAds = (): Ad[] => {
   if (typeof window === "undefined") return INITIAL_ADS;
   const stored = localStorage.getItem("sportmatch_demo_ads");
@@ -153,13 +174,20 @@ const getDemoAds = (): Ad[] => {
   return JSON.parse(stored);
 };
 
+/** Guarda anuncios demo en localStorage */
 const saveDemoAds = (ads: Ad[]) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("sportmatch_demo_ads", JSON.stringify(ads));
   }
 };
 
+// ==============================================================
+// ADS SERVICE: Exportación principal
+// ==============================================================
 export const adsService = {
+  /**
+   * getAds(): Obtiene anuncios, opcionalmente filtrados por negocio
+   */
   async getAds(businessId?: string): Promise<Ad[]> {
     if (useAuthStore.getState().isDemoMode) {
       const ads = getDemoAds();
@@ -181,6 +209,10 @@ export const adsService = {
     return (data || []) as Ad[];
   },
 
+  /**
+   * createAd(): Crea un nuevo anuncio
+   * Los campos de métricas (views, clicks, contacts) se inicializan en 0.
+   */
   async createAd(ad: Omit<Ad, "id" | "views" | "clicks" | "contacts" | "created_at">): Promise<Ad> {
     if (useAuthStore.getState().isDemoMode) {
       const newAd: Ad = {
@@ -223,6 +255,10 @@ export const adsService = {
     return data as Ad;
   },
 
+  /**
+   * updateAd(): Actualiza un anuncio existente
+   * Solo permite modificar campos editables (no métricas ni fechas de creación).
+   */
   async updateAd(
     adId: string,
     ad: Partial<Omit<Ad, "id" | "views" | "clicks" | "contacts" | "created_at">>,
@@ -252,6 +288,9 @@ export const adsService = {
     return data as Ad;
   },
 
+  /**
+   * deleteAd(): Elimina un anuncio
+   */
   async deleteAd(adId: string): Promise<void> {
     if (useAuthStore.getState().isDemoMode) {
       const ads = getDemoAds();
@@ -271,6 +310,15 @@ export const adsService = {
     }
   },
 
+  /**
+   * trackAdAction(): Incrementa una métrica de un anuncio
+   * ------------------------------------------------------------------
+   * En modo real usa la RPC increment_ad_metric de Supabase (transacción
+   * atómica). Las métricas trackeadas son: views, clicks, contacts.
+   *
+   * @param adId   - ID del anuncio
+   * @param action - Tipo de métrica a incrementar
+   */
   async trackAdAction(adId: string, action: "views" | "clicks" | "contacts"): Promise<void> {
     if (useAuthStore.getState().isDemoMode) {
       const ads = getDemoAds();

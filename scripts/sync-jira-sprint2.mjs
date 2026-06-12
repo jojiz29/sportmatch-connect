@@ -1,3 +1,8 @@
+// ============================================================
+// sync-jira-sprint2.mjs — Sincronización masiva Jira Sprint 2
+// Crea/actualiza issues del sprint 2 desde .env.local
+// ============================================================
+
 import path from "path";
 import fs from "fs";
 

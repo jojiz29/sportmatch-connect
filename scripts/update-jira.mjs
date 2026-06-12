@@ -1,3 +1,8 @@
+// ============================================================
+// update-jira.mjs — Script de actualización de issues en Jira
+// Sincroniza estado de tareas desde .env.local vía API REST
+// ============================================================
+
 import path from "path";
 import fs from "fs";
 

@@ -1,24 +1,36 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// Hooks de React para estado local y efectos de carga de jugadores.
 import { useState, useEffect } from "react";
+// Framer Motion para animaciones del modal y transiciones.
 import { motion, AnimatePresence } from "framer-motion";
+// Iconos de Lucide para la interfaz de transferencia.
 import { X, Send, Search, Coins, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+// Store de wallet para acceder al saldo y actualizar transacciones.
 import { useWalletStore } from "@/features/wallet/useWalletStore";
+// Store de autenticación para identificar al usuario que envía.
 import { useAuthStore } from "@/entities/user/useAuth";
+// Hook de formulario estricto con validación.
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
+// Cliente API para buscar jugadores en el leaderboard.
 import { apiClient } from "@/shared/api/apiClient";
+// Store de notificaciones para crear notificaciones de transferencia.
 import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
+// Tipo User para los jugadores destino.
 import type { User } from "@/entities/types";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
 interface TransferFitCoinsModalProps {
   open: boolean;
   onClose: () => void;
 }
 
+// === BLOQUE: TIPO DEL FORMULARIO ===
 type TransferFormValues = {
   recipientSearch: string;
   amount: string;
 };
 
-// ─── Mock player list for offline / demo mode ─────────────────────────────────
+// ─── Lista mock de jugadores para modo offline / demo ──────────────────────────
 const MOCK_PLAYERS: Pick<User, "id" | "name" | "avatar_url" | "fitcoins_balance">[] = [
   {
     id: "mock-1",
@@ -52,6 +64,8 @@ const MOCK_PLAYERS: Pick<User, "id" | "name" | "avatar_url" | "fitcoins_balance"
   },
 ];
 
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Modal para transferir FitCoins a otro jugador con búsqueda, selección y confirmación.
 export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalProps) {
   const currentUser = useAuthStore((s) => s.user);
   const isDemoMode =
@@ -70,17 +84,15 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
   > | null>(null);
   const [step, setStep] = useState<"select" | "confirm" | "success">("select");
 
-  // ── Load players ────────────────────────────────────────────────────────────
+  // ── Carga de jugadores ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     setStep("select");
     setSelectedPlayer(null);
-
     if (isDemoMode) {
       setPlayers(MOCK_PLAYERS);
       return;
     }
-
     setLoadingPlayers(true);
     apiClient.users
       .getLeaderboard()
@@ -88,13 +100,11 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
         const filtered = users.filter((u) => u.id !== currentUser?.id);
         setPlayers(filtered as Pick<User, "id" | "name" | "avatar_url" | "fitcoins_balance">[]);
       })
-      .catch(() => {
-        setPlayers(MOCK_PLAYERS);
-      })
+      .catch(() => setPlayers(MOCK_PLAYERS))
       .finally(() => setLoadingPlayers(false));
   }, [open, isDemoMode, currentUser?.id]);
 
-  // ── Form ───────────────────────────────────────────────────────────────────
+  // ── Formulario ───────────────────────────────────────────────────────────────
   const { values, handleChange, handleBlur, handleSubmit, errors, isSubmitting, setValues } =
     useStrictForm<TransferFormValues>({
       initialValues: { recipientSearch: "", amount: "" },
@@ -111,9 +121,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
       onSubmit: async (vals) => {
         if (!selectedPlayer || !currentUser) return;
         const amount = Number(vals.amount);
-
-        // ── Mock transfer ──────────────────────────────────────────────────
-        // Optimistic balance deduction
+        // Actualización optimista del saldo y transacciones.
         useWalletStore.setState((s) => ({
           balance: s.balance - amount,
           transactions: [
@@ -128,8 +136,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
             ...s.transactions,
           ],
         }));
-
-        // Notification for sender
+        // Notificación para el remitente.
         addNotification({
           id: `notif-transfer-${Date.now()}`,
           user_id: currentUser.id,
@@ -138,13 +145,12 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
           content: `Enviaste ${amount} FC a ${selectedPlayer.name}`,
           link: "/app/wallet/history",
         });
-
         setStep("success");
       },
-      successMessage: undefined, // handled via step
+      successMessage: undefined,
     });
 
-  // ── Filtered list ──────────────────────────────────────────────────────────
+  // ── Lista filtrada ──────────────────────────────────────────────────────────
   const filteredPlayers = (players || []).filter((p) =>
     p.name?.toLowerCase().includes(values.recipientSearch.toLowerCase()),
   );
@@ -161,7 +167,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           id="transfer-modal-overlay"
         >
-          {/* Backdrop */}
+          {/* Fondo oscuro */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -170,7 +176,6 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
             onClick={onClose}
           />
 
-          {/* Panel */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -179,7 +184,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
             className="relative w-full max-w-md bg-card border border-border rounded-3xl shadow-card overflow-hidden"
             id="transfer-modal"
           >
-            {/* Header */}
+            {/* Cabecera */}
             <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-border/50">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
@@ -201,9 +206,9 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
               </button>
             </div>
 
-            {/* Body */}
+            {/* Cuerpo */}
             <div className="px-6 py-5">
-              {/* ── STEP: success ─────────────────────────────────────────────── */}
+              {/* ── PASO: éxito ── */}
               {step === "success" && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
@@ -235,16 +240,15 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                 </motion.div>
               )}
 
-              {/* ── STEP: select + confirm ────────────────────────────────────── */}
+              {/* ── PASO: selección + confirmación ── */}
               {step !== "success" && (
                 <form onSubmit={handleSubmit} noValidate>
-                  {/* Recipient Search */}
+                  {/* Búsqueda de destinatario */}
                   <div className="mb-4">
                     <label className="block text-xs font-semibold text-foreground mb-1.5">
                       Destinatario
                     </label>
                     {selectedPlayer ? (
-                      /* Selected player chip */
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/8 border border-primary/30">
                         <img
                           src={selectedPlayer.avatar_url ?? ""}
@@ -271,7 +275,6 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                         </button>
                       </div>
                     ) : (
-                      /* Search input */
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <input
@@ -289,12 +292,11 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                     )}
                     {errors.recipientSearch && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.recipientSearch}
+                        <AlertCircle className="h-3 w-3" /> {errors.recipientSearch}
                       </p>
                     )}
 
-                    {/* Player list dropdown */}
+                    {/* Lista desplegable de jugadores */}
                     {!selectedPlayer && (
                       <AnimatePresence>
                         <motion.div
@@ -306,15 +308,14 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                         >
                           {loadingPlayers ? (
                             <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground text-sm">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Cargando jugadores...
+                              <Loader2 className="h-4 w-4 animate-spin" /> Cargando jugadores...
                             </div>
                           ) : filteredPlayers.length === 0 ? (
                             <div className="py-6 text-center text-xs text-muted-foreground">
                               No se encontraron jugadores.
                             </div>
                           ) : (
-                            (filteredPlayers || []).map((p) => (
+                            filteredPlayers.map((p) => (
                               <button
                                 key={p.id}
                                 type="button"
@@ -343,7 +344,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                     )}
                   </div>
 
-                  {/* Amount input */}
+                  {/* Campo de monto */}
                   <div className="mb-5">
                     <label
                       htmlFor="transfer-amount-input"
@@ -369,7 +370,6 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                             : "border-border focus:ring-primary/50 focus:border-primary"
                         }`}
                       />
-                      {/* Quick presets */}
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                         {[50, 100].map((preset) => (
                           <button
@@ -384,18 +384,14 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                       </div>
                     </div>
 
-                    {/* Balance bar */}
+                    {/* Barra de saldo */}
                     {parsedAmount > 0 && (
                       <div className="mt-2">
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                           <motion.div
-                            className={`h-full rounded-full transition-colors ${
-                              amountExceedsBalance ? "bg-destructive" : "bg-gradient-neon"
-                            }`}
+                            className={`h-full rounded-full transition-colors ${amountExceedsBalance ? "bg-destructive" : "bg-gradient-neon"}`}
                             initial={{ width: 0 }}
-                            animate={{
-                              width: `${Math.min((parsedAmount / balance) * 100, 100)}%`,
-                            }}
+                            animate={{ width: `${Math.min((parsedAmount / balance) * 100, 100)}%` }}
                             transition={{ duration: 0.3 }}
                           />
                         </div>
@@ -412,16 +408,14 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                         </div>
                       </div>
                     )}
-
                     {errors.amount && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        {errors.amount}
+                        <AlertCircle className="h-3 w-3" /> {errors.amount}
                       </p>
                     )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Botones de acción */}
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -439,13 +433,11 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
                     >
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Enviando...
+                          <Loader2 className="h-4 w-4 animate-spin" /> Enviando...
                         </>
                       ) : (
                         <>
-                          <Send className="h-4 w-4" />
-                          Transferir
+                          <Send className="h-4 w-4" /> Transferir
                         </>
                       )}
                     </button>

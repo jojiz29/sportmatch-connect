@@ -1,3 +1,8 @@
+# ============================================================
+# docker-compose.yml — Entorno de desarrollo local
+# Servicio web con Vite en modo dev, HMR con polling
+# ============================================================
+
 version: "3.8"
 
 services:

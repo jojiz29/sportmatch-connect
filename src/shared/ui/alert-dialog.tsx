@@ -1,3 +1,4 @@
+// shadcn/ui — Diálogo de Alerta (confirmación con acción destructiva)
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 

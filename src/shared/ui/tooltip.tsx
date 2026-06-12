@@ -1,3 +1,4 @@
+// shadcn/ui — Información Emergente (tooltip con Radix)
 "use client";
 
 import * as React from "react";

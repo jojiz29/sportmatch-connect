@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del login ===
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { useState } from "react";
@@ -14,10 +15,14 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 
+// === BLOQUE: Ruta /login — createFileRoute ===
 export const Route = createFileRoute("/login")({
   component: Login,
 });
 
+// === BLOQUE: Validación de email — Dominios y TLDs permitidos ===
+// Lista blanca de dominios de correo aceptados. Previene registros con
+// direcciones temporales o corporativas no deseadas.
 const ALLOWED_DOMAINS = [
   "gmail.com",
   "outlook.com",
@@ -31,6 +36,12 @@ const ALLOWED_DOMAINS = [
 
 const ALLOWED_TLDS = [".com", ".pe", ".edu", ".org", ".net", ".app"];
 
+// === BLOQUE: getEmailValidationError — Validación de formato y dominio ===
+// Retorna un mensaje de error traducido si el email no cumple con:
+//   1. Formato RFC 5322 básico (regex).
+//   2. TLD permitido (.com, .pe, .edu, .org, .net, .app).
+//   3. Dominio en lista blanca (ALLOWED_DOMAINS).
+// Retorna null si el email es válido o está vacío.
 function getEmailValidationError(email: string, t: (key: string) => string): string | null {
   if (!email) return null;
 
@@ -63,12 +74,20 @@ function getEmailValidationError(email: string, t: (key: string) => string): str
   return null;
 }
 
+// === BLOQUE: Login — Componente principal ===
+// Formulario de inicio de sesión con:
+//   - Validación estricta de email (formato + dominio).
+//   - Campo de contraseña con toggle de visibilidad.
+//   - Botón de Google OAuth (signInWithGoogle).
+//   - Modal de demo con selección de rol (PLAYER / BUSINESS).
+//   - Redirección post-login según user_role.
 function Login() {
   const { t } = useTranslation();
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
+  // === BLOQUE: useStrictForm — Manejador de formulario con validación ===
   const { values, handleChange, handleBlur, handleSubmit, isSubmitting } = useStrictForm({
     initialValues: { email: "", password: "" },
     validate: (vals) => {
@@ -102,8 +121,13 @@ function Login() {
     emailError === null &&
     passwordError === null;
 
+  // === BLOQUE: Demo modal state ===
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
+  // === BLOQUE: handleDemoLogin — Autenticación de demostración ===
+  // Usa cuentas mock predefinidas según el rol seleccionado:
+  //   - BUSINESS → megatlon@sportmatch.app
+  //   - PLAYER   → ejuniorfloress@gmail.com
   const handleDemoLogin = async (role: "PLAYER" | "BUSINESS") => {
     try {
       setIsDemoModalOpen(false);
@@ -124,6 +148,7 @@ function Login() {
     }
   };
 
+  // === BLOQUE: handleGoogleLogin — Autenticación OAuth con Google ===
   const handleGoogleLogin = async () => {
     try {
       await signInWithGoogle();
@@ -134,14 +159,15 @@ function Login() {
     }
   };
 
+  // === BLOQUE: Renderizado — UI del formulario de login ===
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Ambient glows */}
-      <div className="absolute top-1/3 -left-48 w-96 h-96 rounded-full bg-[#39FF14]/5 blur-[120px] animate-float" />
-      <div className="absolute bottom-1/3 -right-48 w-96 h-96 rounded-full bg-[#FF6B35]/8 blur-[100px] animate-float-reverse" />
+      {/* Luces ambientales decorativas de fondo */}
+      <div className="absolute top-1/3 -left-48 w-96 h-96 rounded-full bg-primary/5 blur-[120px] animate-float" />
+      <div className="absolute bottom-1/3 -right-48 w-96 h-96 rounded-full bg-secondary/8 blur-[100px] animate-float-reverse" />
 
       <div className="relative w-full max-w-md animate-scale-in">
-        {/* Decorative top bar */}
+        {/* Barra decorativa superior */}
         <div className="neon-divider mb-8 w-24 mx-auto" />
 
         <div className="bg-gradient-card border border-border/60 rounded-3xl p-8 shadow-card backdrop-blur-md">
@@ -156,6 +182,7 @@ function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* === BLOQUE: Campo de email === */}
             <div className="floating-label-group">
               <input
                 type="email"
@@ -176,6 +203,7 @@ function Login() {
               )}
             </div>
 
+            {/* === BLOQUE: Campo de contraseña con toggle de visibilidad === */}
             <div className="floating-label-group">
               <input
                 type={showPassword ? "text" : "password"}
@@ -206,6 +234,7 @@ function Login() {
               )}
             </div>
 
+            {/* === BLOQUE: Botón de inicio de sesión === */}
             <button
               type="submit"
               disabled={!isFormValid || isSubmitting}
@@ -214,6 +243,7 @@ function Login() {
               {t("login.btn_signin")}
             </button>
 
+            {/* === BLOQUE: Botón de demo === */}
             <button
               type="button"
               onClick={() => setIsDemoModalOpen(true)}
@@ -222,6 +252,7 @@ function Login() {
               {t("login.btn_demo")}
             </button>
 
+            {/* === BLOQUE: Separador "O continúa con" === */}
             <div className="relative my-5 flex items-center justify-center">
               <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
               <span className="relative bg-card px-4 text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
@@ -229,10 +260,11 @@ function Login() {
               </span>
             </div>
 
+            {/* === BLOQUE: Botón de Google OAuth === */}
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#FF6B35]/40 text-white font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] group"
+              className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/40 text-white font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] group"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
                 <path
@@ -252,12 +284,13 @@ function Login() {
                   fill="#EA4335"
                 />
               </svg>
-              <span className="group-hover:text-[#FF6B35] transition-colors">
+              <span className="group-hover:text-primary transition-colors">
                 {t("auth.continue_with_google", "Continuar con Google")}
               </span>
             </button>
           </form>
 
+          {/* === BLOQUE: Enlace a registro === */}
           <div className="mt-6 text-center">
             <Link
               to="/app/register"
@@ -273,6 +306,7 @@ function Login() {
         </p>
       </div>
 
+      {/* === BLOQUE: Modal de selección de rol para demo === */}
       <Dialog open={isDemoModalOpen} onOpenChange={setIsDemoModalOpen}>
         <DialogContent className="sm:max-w-md bg-gradient-card border border-border/60 rounded-3xl p-6 backdrop-blur-md text-foreground">
           <DialogHeader className="text-center">
@@ -284,6 +318,7 @@ function Login() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* === BLOQUE: Botones de selección de rol === */}
           <div className="grid grid-cols-2 gap-4 mt-6">
             <button
               type="button"

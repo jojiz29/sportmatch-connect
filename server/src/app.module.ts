@@ -1,3 +1,8 @@
+// ============================================================
+// app.module.ts — Módulo raíz de la aplicación NestJS
+// Importa todos los módulos funcionales y expone HealthController
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { HealthController } from "./health/health.controller";
 import { AuthModule } from "./auth/auth.module";

@@ -1,19 +1,22 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import { Venue, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-// useTranslation removed as it is not used
+import { useThemeStore } from "@/features/theme/store";
 
-// Cache for Leaflet court icons to prevent memory leaks and GC overhead
+// === BLOQUE: CACHÉ DE ICONOS LEAFLET ===
+// Previene fugas de memoria y sobrecarga del GC al reutilizar iconos DivIcon.
 const courtIconCache = new Map<string, L.DivIcon>();
 
+// Crea un icono circular con emoji para canchas deportivas.
+// Usa anillo dorado si es sponsored, o morado/azul para las regulares.
 const createCourtIcon = (sport: string, isSponsored?: boolean) => {
   const cacheKey = `${sport}_${isSponsored}`;
-  if (courtIconCache.has(cacheKey)) {
-    return courtIconCache.get(cacheKey)!;
-  }
+  if (courtIconCache.has(cacheKey)) return courtIconCache.get(cacheKey)!;
+
   const getSportEmoji = (name: string) => {
     switch (name.toLowerCase()) {
       case "paddle":
@@ -42,8 +45,6 @@ const createCourtIcon = (sport: string, isSponsored?: boolean) => {
     }
   };
   const emoji = getSportEmoji(sport);
-
-  // Gold ring for sponsored courts, purple for regular
   const border = isSponsored ? "3px solid #fbbf24" : "2.5px solid #ffffff";
   const bg = isSponsored
     ? "linear-gradient(135deg, #f59e0b, #d97706)"
@@ -56,12 +57,7 @@ const createCourtIcon = (sport: string, isSponsored?: boolean) => {
     : "";
 
   const icon = L.divIcon({
-    html: `
-      <div style="position:relative;display:flex;width:40px;height:40px;align-items:center;justify-content:center;background:${bg};border:${border};border-radius:50%;box-shadow:${shadow};font-size:18px;">
-        ${emoji}
-        ${sponsorBadge}
-      </div>
-    `,
+    html: `<div style="position:relative;display:flex;width:40px;height:40px;align-items:center;justify-content:center;background:${bg};border:${border};border-radius:50%;box-shadow:${shadow};font-size:18px;">${emoji}${sponsorBadge}</div>`,
     className: `custom-court-marker-wrapper${isSponsored ? " animate-pulse" : ""}`,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
@@ -71,15 +67,12 @@ const createCourtIcon = (sport: string, isSponsored?: boolean) => {
   return icon;
 };
 
-// playerIcon removed as it is not used
-
 const businessIconCache = new Map<string, L.DivIcon>();
 
+// Crea un icono circular para negocios (patrocinadores, academias, etc.).
 const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
   const key = `${isSponsored}_${category}`;
-  if (businessIconCache.has(key)) {
-    return businessIconCache.get(key)!;
-  }
+  if (businessIconCache.has(key)) return businessIconCache.get(key)!;
 
   let emoji = "🥤";
   if (category === "Canchas") emoji = "🏟️";
@@ -101,32 +94,17 @@ const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
     : "linear-gradient(135deg, #10b981, #059669)";
 
   const icon = L.divIcon({
-    html: `
-      <div style="
-        display: flex;
-        width: 36px;
-        height: 36px;
-        align-items: center;
-        justify-content: center;
-        background: ${bg};
-        border: ${border};
-        border-radius: 50%;
-        box-shadow: ${shadow};
-        font-size: 16px;
-      ">
-        ${emoji}
-      </div>
-    `,
+    html: `<div style="display:flex;width:36px;height:36px;align-items:center;justify-content:center;background:${bg};border:${border};border-radius:50%;box-shadow:${shadow};font-size:16px;">${emoji}</div>`,
     className: `custom-business-marker-wrapper ${isSponsored ? "animate-pulse" : ""}`,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -18],
   });
-
   businessIconCache.set(key, icon);
   return icon;
 };
 
+// === BLOQUE: CONTENIDO DEL POPUP DE CANCHA ===
 interface PopupContentProps {
   venue: Venue;
   onBookCourt?: (venue: Venue) => void;
@@ -146,11 +124,10 @@ function PopupContent({
 }: PopupContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Previene que Leaflet cierre el popup al interactuar con sus elementos internos.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
-    // Prevent Leaflet from dragging/closing popup on container interaction
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
 
@@ -158,7 +135,6 @@ function PopupContent({
       const target = e.target as HTMLElement;
       const clickable = target.closest("[data-action]");
       if (!clickable) return;
-
       const action = clickable.getAttribute("data-action");
       if (action === "book") {
         e.preventDefault();
@@ -178,7 +154,6 @@ function PopupContent({
         onOpenVenueActivity?.(venue);
       }
     };
-
     el.addEventListener("click", handleNativeClick);
     return () => {
       el.removeEventListener("click", handleNativeClick);
@@ -278,6 +253,7 @@ function PopupContent({
   );
 }
 
+// === BLOQUE: POPUP DE NEGOCIO EN EL MAPA ===
 interface BusinessPopupProps {
   player: User;
   onViewCommercialSheet?: (business: User) => void;
@@ -290,15 +266,12 @@ function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
     L.DomEvent.disableClickPropagation(el);
     L.DomEvent.disableScrollPropagation(el);
-
     const handleNativeClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const btn = target.closest("button");
       if (!btn) return;
-
       const action = btn.getAttribute("data-action");
       if (action === "profile") {
         e.preventDefault();
@@ -306,11 +279,8 @@ function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
         onViewCommercialSheet?.(player);
       }
     };
-
     el.addEventListener("click", handleNativeClick);
-    return () => {
-      el.removeEventListener("click", handleNativeClick);
-    };
+    return () => el.removeEventListener("click", handleNativeClick);
   }, [player, onViewCommercialSheet]);
 
   return (
@@ -340,19 +310,19 @@ function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
   );
 }
 
+// === BLOQUE: CONTROLADOR DE MOVIMIENTO DEL MAPA ===
+// Vuela el mapa a una posición y zoom específicos con animación suave.
 function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    if (center) {
-      map.flyTo(center, zoom, {
-        animate: true,
-        duration: 1.5,
-      });
-    }
+    if (center) map.flyTo(center, zoom, { animate: true, duration: 1.5 });
   }, [map, center, zoom]);
   return null;
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL DEL MAPA ===
+// Mapa Leaflet con marcadores de canchas (venues) y negocios (players).
+// Incluye círculo de resaltado temporal al seleccionar un distrito.
 export function MapFeature({
   venues,
   players,
@@ -369,21 +339,27 @@ export function MapFeature({
   onOpenVenueActivity?: (venue: Venue) => void;
 }) {
   const navigate = useNavigate();
+  const theme = useThemeStore((s) => s.theme);
   const [mounted, setMounted] = useState(false);
-
-  // Temporary circle highlight state
   const [highlightCoords, setHighlightCoords] = useState<[number, number] | null>(null);
 
+  const getThemePrimaryColor = () => {
+    if (theme === "world-cup") return "#D4AF37";
+    if (theme === "dark-footballer") return "#39FF14";
+    return "#ff5722"; // light/default
+  };
+  const primaryColor = getThemePrimaryColor();
+
+  // Hidratación del lado del cliente (evita errores SSR con Leaflet).
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Resalta temporalmente el distrito seleccionado con un círculo animado (3s).
   useEffect(() => {
     if (selectedDistrictCenter) {
       setHighlightCoords(selectedDistrictCenter);
-      const timer = setTimeout(() => {
-        setHighlightCoords(null);
-      }, 3000); // 3 seconds visual highlight
+      const timer = setTimeout(() => setHighlightCoords(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [selectedDistrictCenter]);
@@ -395,6 +371,7 @@ export function MapFeature({
     [navigate],
   );
 
+  // Marcadores de canchas (venues), con popup que muestra info y acciones.
   const venueMarkers = useMemo(() => {
     return venues.map((c) => {
       const owner = players.find((p) => p.id === c.owner_id);
@@ -419,15 +396,13 @@ export function MapFeature({
     });
   }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet, onOpenVenueActivity]);
 
+  // Marcadores de negocios (players con rol BUSINESS).
   const matchMarkers = useMemo(() => {
     return players.map((m) => {
       if (!m.last_location_lat || !m.last_location_lng) return null;
-
       const isBusiness = m.user_role === "BUSINESS";
       if (!isBusiness) return null;
-
       const icon = createBusinessIcon(m.is_sponsored, m.business_category);
-
       return (
         <Marker key={m.id} position={[m.last_location_lat, m.last_location_lng]} icon={icon}>
           <Popup>
@@ -442,7 +417,6 @@ export function MapFeature({
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;
   }
 
-  // Adjust center/zoom based on selected district or default
   const mapCenter = selectedDistrictCenter || [-12.14, -76.995];
   const mapZoom = selectedDistrictCenter ? 14 : 13;
 
@@ -458,23 +432,20 @@ export function MapFeature({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-
         {selectedDistrictCenter && <MapController center={mapCenter} zoom={mapZoom} />}
-
         {highlightCoords && (
           <Circle
             center={highlightCoords}
             radius={700}
             pathOptions={{
-              color: "#39FF14",
-              fillColor: "#39FF14",
+              color: primaryColor,
+              fillColor: primaryColor,
               fillOpacity: 0.15,
               weight: 2.5,
               dashArray: "6, 6",
             }}
           />
         )}
-
         {matchMarkers}
         {venueMarkers}
       </MapContainer>

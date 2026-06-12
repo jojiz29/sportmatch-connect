@@ -1,3 +1,8 @@
+// ============================================================
+// register.dto.ts — DTO para registro de usuario
+// Valida email, password (6-50) y nombre opcional
+// ============================================================
+
 import { IsEmail, IsString, MinLength, MaxLength } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 

@@ -1,3 +1,9 @@
+// ============================================================
+// profiles.service.ts — Servicio de perfiles con verificación RENIEC
+// Consulta raw SQL (evita columnas faltantes) y verificación DNI
+// con normalización de nombres y límite de 3 intentos
+// ============================================================
+
 import {
   Injectable,
   NotFoundException,
@@ -95,7 +101,6 @@ export class ProfilesService {
 
       const hashedDni = crypto.createHash("sha256").update(dni).digest("hex");
 
-      // Verify that this DNI is not already verified on another profile
       const duplicate = await this.prisma.profiles.findFirst({
         where: {
           dni_hash: hashedDni,
@@ -105,7 +110,6 @@ export class ProfilesService {
       });
 
       if (duplicate) {
-        // Increment attempts on this user
         await this.prisma.profiles.update({
           where: { id: userId },
           data: {
@@ -123,14 +127,11 @@ export class ProfilesService {
       const isMockMode = process.env.VITE_USE_MOCKS === "true";
 
       if (isMockMode) {
-        // Mock RENIEC response
         if (dni === "99999999") {
-          // Force name mismatch
           apiNombres = "Juan";
           apiApePaterno = "Perez";
           apiApeMaterno = "Gomez";
         } else {
-          // Success mock matching user name
           const userParts = (profile.name || "Edwin Demo").split(" ");
           apiNombres = userParts[0] || "Edwin";
           apiApePaterno = userParts[1] || "Demo";
@@ -189,7 +190,6 @@ export class ProfilesService {
         );
       }
 
-      // Successful verification
       const updated = await this.prisma.profiles.update({
         where: { id: userId },
         data: {

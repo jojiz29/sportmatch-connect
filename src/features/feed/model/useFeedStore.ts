@@ -1,16 +1,22 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Post } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface FeedState {
   posts: Post[];
   addPost: (post: Post) => void;
 }
 
+// === BLOQUE: STORE DEL FEED SOCIAL ===
+// Almacena las publicaciones del feed social con datos semilla de demostración.
+// Se persiste en localStorage bajo la clave "sportmatch-feed".
 export const useFeedStore = create<FeedState>()(
   persist(
     (set, get) => ({
+      // Publicaciones iniciales de demostración con contenido variado
       posts: [
         {
           id: "post-puka-power-sponsor",
@@ -32,7 +38,7 @@ export const useFeedStore = create<FeedState>()(
           content:
             "¡Listo para el partido de Tenis de mañana en San Borja! ¿Quién se suma a entrenar hoy?",
           type: "TEXT",
-          created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(), // 2 hours ago
+          created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
           sport: "Tenis",
         },
         {
@@ -42,7 +48,7 @@ export const useFeedStore = create<FeedState>()(
           user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fabiola",
           content: "Completamos el partido de Pádel. ¡Gran juego y excelente nivel!",
           type: "MATCH_RESULT",
-          created_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(), // 1 day ago
+          created_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
           sport: "Pádel",
         },
       ],

@@ -1,9 +1,11 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { AppNotification } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { useAuthStore } from "@/entities/user/useAuth";
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface NotificationState {
   notifications: AppNotification[];
   initNotifications: () => void;
@@ -15,15 +17,19 @@ interface NotificationState {
   deleteNotification: (id: string) => void;
 }
 
+// === BLOQUE: STORE DE NOTIFICACIONES ===
+// Administra las notificaciones push/in-app: creación, lectura, marcado y eliminación.
+// Persistido en localStorage bajo "sportmatch-notifications".
 export const useNotificationStore = create<NotificationState>()(
   persist(
     (set) => ({
       notifications: [],
 
       initNotifications: () => {
-        // Hydrated from localStorage automatically, but we can do extra setup if needed
+        // Los datos se hidratan automáticamente desde localStorage
       },
 
+      // Agrega una notificación directamente (evita duplicados por ID)
       addNotificationDirectly: (notif) => {
         set((state) => {
           if (state.notifications.some((n) => n.id === notif.id)) return state;
@@ -31,6 +37,7 @@ export const useNotificationStore = create<NotificationState>()(
         });
       },
 
+      // Obtiene las notificaciones desde el servicio remoto
       fetchNotifications: async (userId) => {
         try {
           const { getNotifications } = await import("@/shared/api/notificationService");
@@ -41,6 +48,7 @@ export const useNotificationStore = create<NotificationState>()(
         }
       },
 
+      // Crea una nueva notificación con valores por defecto (no leída, timestamp actual)
       addNotification: (notif) => {
         const newNotif: AppNotification = {
           ...notif,
@@ -55,6 +63,7 @@ export const useNotificationStore = create<NotificationState>()(
         return newNotif;
       },
 
+      // Marca una notificación como leída (optimista + persistencia remota)
       markAsRead: async (id) => {
         set((state) => ({
           notifications: state.notifications.map((n) =>
@@ -69,6 +78,7 @@ export const useNotificationStore = create<NotificationState>()(
         }
       },
 
+      // Marca todas las notificaciones del usuario actual como leídas
       markAllAsRead: async () => {
         const user = useAuthStore.getState().user;
         if (!user) return;
@@ -85,6 +95,7 @@ export const useNotificationStore = create<NotificationState>()(
         }
       },
 
+      // Elimina una notificación del estado local
       deleteNotification: (id) => {
         set((state) => ({
           notifications: state.notifications.filter((n) => n.id !== id),

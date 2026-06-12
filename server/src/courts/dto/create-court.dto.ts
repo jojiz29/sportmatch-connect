@@ -1,3 +1,8 @@
+// ============================================================
+// create-court.dto.ts — DTOs de cancha (creación y actualización)
+// Validaciones completas con class-validator y documentación Swagger
+// ============================================================
+
 import {
   IsString,
   IsInt,

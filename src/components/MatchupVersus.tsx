@@ -72,13 +72,13 @@ export function MatchupVersus({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background/95 border-border/80 shadow-2xl rounded-3xl p-6 relative transition-colors duration-300">
         {/* Glow vector backdrops */}
         <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-red-500/10 blur-[80px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-64 h-64 rounded-full bg-[#39FF14]/10 blur-[80px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-64 h-64 rounded-full bg-primary/10 blur-[80px] pointer-events-none" />
 
         <DialogHeader className="text-center relative z-10 pb-4 border-b border-white/5">
           <DialogTitle className="font-heading text-3xl tracking-wider text-foreground flex items-center justify-center gap-2">
             <Swords className="h-6 w-6 text-red-500 animate-pulse" />
             Alineación del Enfrentamiento
-            <Zap className="h-6 w-6 text-[#39FF14] animate-bounce-slow" />
+            <Zap className="h-6 w-6 text-primary animate-bounce-slow" />
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1">
             Formación táctica para el formato {format} de la gran final
@@ -95,7 +95,7 @@ export function MatchupVersus({
                 className="h-10 w-10 rounded-xl bg-background border border-border"
               />
               <div className="min-w-0">
-                <h4 className="font-bold text-sm text-[#39FF14] truncate">{teamAName}</h4>
+                <h4 className="font-bold text-sm text-primary truncate">{teamAName}</h4>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                   Local
                 </p>
@@ -110,7 +110,7 @@ export function MatchupVersus({
                   initial={{ opacity: 0, x: -30 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.08, duration: 0.3, ease: "easeOut" }}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-white/5 hover:border-[#39FF14]/30 transition-all"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-white/5 hover:border-primary/30 transition-all"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <img
@@ -128,7 +128,7 @@ export function MatchupVersus({
                     </div>
                   </div>
                   <span
-                    className={`text-[8px] font-black px-2 py-0.5 rounded ${player.role === "Titular" ? "bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/20" : "bg-white/5 text-muted-foreground"}`}
+                    className={`text-[8px] font-black px-2 py-0.5 rounded ${player.role === "Titular" ? "bg-primary/15 text-primary border border-primary/20" : "bg-white/5 text-muted-foreground"}`}
                   >
                     {player.role}
                   </span>
@@ -148,7 +148,7 @@ export function MatchupVersus({
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">
                 Fase
               </span>
-              <span className="text-xs font-black text-[#D4AF37] block mt-0.5">FINAL</span>
+              <span className="text-xs font-black text-primary block mt-0.5">FINAL</span>
             </div>
           </div>
 

@@ -1,5 +1,9 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// Hook de estado para controlar el paso actual del formulario multi-paso.
 import { useState } from "react";
+// Framer Motion para animaciones de transición entre pasos y aparición del modal.
 import { motion, AnimatePresence } from "framer-motion";
+// Iconos de Lucide para los campos del formulario y acciones.
 import {
   MapPin,
   Calendar,
@@ -11,16 +15,23 @@ import {
   Loader2,
   Check,
 } from "lucide-react";
+// Store de partidos públicos para crear el partido en Supabase/API.
 import { usePublicMatchStore } from "@/features/matchmaking/usePublicMatchStore";
+// Hook personalizado para manejo estricto de formularios con validación.
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
+// Tipos compartidos: Sport (deporte) y Level (nivel de juego).
 import type { Sport, Level } from "@/entities/types";
+// Notificaciones toast para errores de validación y feedback al usuario.
 import { toast } from "sonner";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
 interface CreateMatchModalProps {
   open: boolean;
   onClose: () => void;
 }
 
+// === BLOQUE: TIPO DEL FORMULARIO ===
+// Define los campos del formulario multi-paso para crear un partido.
 type CreateMatchForm = {
   title: string;
   sport: string;
@@ -32,6 +43,8 @@ type CreateMatchForm = {
   maxPlayers: string;
 };
 
+// === BLOQUE: CONSTANTES ===
+// Catálogo de deportes disponibles con su emoji representativo.
 const SPORTS: { name: Sport; emoji: string }[] = [
   { name: "Fútbol", emoji: "⚽" },
   { name: "Básquet", emoji: "🏀" },
@@ -47,7 +60,9 @@ const SPORTS: { name: Sport; emoji: string }[] = [
   { name: "Ciclismo", emoji: "🚴" },
 ];
 
+// Niveles de juego disponibles.
 const LEVELS: Level[] = ["Principiante", "Intermedio", "Avanzado", "Elite"];
+// Colores asociados a cada nivel para las etiquetas visuales.
 const LEVEL_COLORS: Record<Level, string> = {
   Principiante: "border-neon/40 text-neon bg-neon/10",
   Intermedio: "border-electric/40 text-electric bg-electric/10",
@@ -55,14 +70,19 @@ const LEVEL_COLORS: Record<Level, string> = {
   Elite: "border-destructive/40 text-destructive bg-destructive/10",
 };
 
+// Pasos del formulario multi-paso.
 const STEPS = ["Deporte & Nivel", "Lugar & Fecha", "Configuración"];
 
+// Fecha de hoy en formato ISO (YYYY-MM-DD) para el atributo min del input date.
 const today = new Date().toISOString().split("T")[0];
 
+// === BLOQUE: COMPONENTE PRINCIPAL ===
+// Modal multi-paso para crear un nuevo partido público con deporte, lugar y configuración.
 export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
   const [step, setStep] = useState(0);
   const createMatch = usePublicMatchStore((s) => s.createMatch);
 
+  // Hook de formulario estricto con validación en submit.
   const { values, handleChange, handleBlur, setValues, isSubmitting } =
     useStrictForm<CreateMatchForm>({
       initialValues: {
@@ -76,7 +96,6 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
         maxPlayers: "10",
       },
       onSubmit: async (vals) => {
-        // Final validation
         if (
           !vals.sport ||
           !vals.level ||
@@ -111,7 +130,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
       },
     });
 
-  // Auto-suggest title from sport + courtName
+  // Título auto-generado a partir del deporte y nombre de cancha.
   const autoTitle =
     values.sport && values.courtName
       ? `${values.sport} · ${values.courtName}`
@@ -119,6 +138,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
         ? `Partido de ${values.sport}`
         : "";
 
+  // Avanza al siguiente paso con validación del paso actual.
   const handleNext = () => {
     if (step === 0 && (!values.sport || !values.level)) {
       toast.error("Selecciona un deporte y nivel.");
@@ -134,6 +154,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
     setStep((s) => s + 1);
   };
 
+  // Reinicia el paso al cerrar el modal.
   const handleClose = () => {
     setStep(0);
     onClose();
@@ -148,7 +169,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           id="create-match-overlay"
         >
-          {/* Backdrop */}
+          {/* Fondo oscuro con blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -157,7 +178,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
             onClick={handleClose}
           />
 
-          {/* Panel */}
+          {/* Panel del modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -166,7 +187,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
             className="relative w-full max-w-lg bg-card border border-border rounded-3xl shadow-card overflow-hidden"
             id="create-match-modal"
           >
-            {/* Header */}
+            {/* Cabecera */}
             <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-border/50">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl bg-gradient-neon grid place-items-center shadow-neon">
@@ -190,7 +211,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
               </button>
             </div>
 
-            {/* Step indicator */}
+            {/* Indicador de progreso por pasos */}
             <div className="px-6 py-3 flex items-center gap-2">
               {STEPS.map((label, i) => (
                 <div key={i} className="flex items-center gap-2 flex-1 last:flex-none">
@@ -222,10 +243,10 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
               ))}
             </div>
 
-            {/* Body */}
+            {/* Cuerpo del formulario por pasos */}
             <div className="px-6 pb-6 min-h-[320px] flex flex-col">
               <AnimatePresence mode="wait">
-                {/* ── STEP 0: Sport & Level ── */}
+                {/* ── PASO 0: Deporte y Nivel ── */}
                 {step === 0 && (
                   <motion.div
                     key="step0"
@@ -284,7 +305,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                   </motion.div>
                 )}
 
-                {/* ── STEP 1: Lugar & Fecha ── */}
+                {/* ── PASO 1: Lugar y Fecha ── */}
                 {step === 1 && (
                   <motion.div
                     key="step1"
@@ -378,7 +399,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                   </motion.div>
                 )}
 
-                {/* ── STEP 2: Configuración ── */}
+                {/* ── PASO 2: Configuración ── */}
                 {step === 2 && (
                   <motion.div
                     key="step2"
@@ -388,7 +409,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                     transition={{ duration: 0.2 }}
                     className="flex-1 flex flex-col gap-4"
                   >
-                    {/* Summary chip */}
+                    {/* Resumen visual de lo seleccionado */}
                     <div className="flex flex-wrap gap-2">
                       <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-medium">
                         {values.sport}
@@ -451,7 +472,7 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                 )}
               </AnimatePresence>
 
-              {/* Navigation buttons */}
+              {/* Botones de navegación: Atrás / Siguiente / Crear */}
               <div className="flex gap-2 mt-6">
                 {step > 0 && (
                   <button
@@ -480,7 +501,6 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
                     onClick={() => {
                       const finalTitle = values.title || autoTitle;
                       setValues((v) => ({ ...v, title: finalTitle }));
-                      // manually trigger submit
                       const maxP = Number(values.maxPlayers);
                       if (
                         !finalTitle ||

@@ -1,3 +1,4 @@
+// shadcn/ui — Avatar (imagen de perfil con fallback)
 "use client";
 
 import * as React from "react";

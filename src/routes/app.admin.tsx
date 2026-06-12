@@ -1,3 +1,8 @@
+// === BLOQUE: Ruta de Panel de Administración ===
+// Dashboard administrativo con KPIs de plataforma (usuarios, partidos,
+// ingresos, ocupación), gráficos de reservas semanales y distribución
+// por deporte, tabla de usuarios recientes con toggle de permisos admin,
+// y lista de canchas top. Acceso restringido al administrador principal.
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Court, User } from "@/entities/types";
@@ -11,20 +16,23 @@ import { supabase } from "@/shared/api/supabase";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin — SportMatch" }] }),
+  // === BLOQUE: Guardia de acceso ===
+  // Solo el administrador principal (email o nombre específico) puede
+  // acceder a esta ruta. Cualquier otro usuario es redirigido a /app.
   beforeLoad: () => {
     const user = useAuthStore.getState().user;
     const isAdmin =
       user?.email === "ejuniorfloress@gmail.com" || user?.name === "Edwin Flores" || user?.is_admin;
-    if (!isAdmin) {
-      throw redirect({ to: "/app" });
-    }
+    if (!isAdmin) throw redirect({ to: "/app" });
   },
   component: Admin,
 });
 
+// === BLOQUE: Constantes de UI ===
 const DAYS = ["L", "M", "M", "J", "V", "S", "D"];
 const COLORS = ["bg-violet", "bg-electric", "bg-neon", "bg-warning", "bg-muted-foreground"];
 
+// === BLOQUE: KPIs mock para el dashboard ===
 const ADMIN_KPI = {
   users: 12450,
   matchesToday: 342,
@@ -43,10 +51,12 @@ function Admin() {
   const [usersList, setUsersList] = useState<User[]>([]);
   const [courtsList, setCourtsList] = useState<Court[]>([]);
 
+  // === BLOQUE: Carga de datos ===
+  // Obtiene lista de canchas (backend → fallback Supabase) y
+  // lista de usuarios desde apiClient.
   useEffect(() => {
     let active = true;
 
-    // Try backend first for courts, fallback to Supabase
     backendApi.courts
       .getAll()
       .then((backendCourts) => {
@@ -73,6 +83,9 @@ function Admin() {
     };
   }, []);
 
+  // === BLOQUE: toggleAdmin ===
+  // Concede o revoca permisos de administrador a un usuario.
+  // No permite modificar al administrador principal.
   const toggleAdmin = async (userId: string) => {
     const targetUser = usersList.find((u) => u.id === userId);
     if (!targetUser) return;
@@ -83,19 +96,15 @@ function Admin() {
     }
 
     const updatedIsAdmin = !targetUser.is_admin;
-
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ is_admin: updatedIsAdmin })
         .eq("id", userId);
-
       if (error) throw error;
-
       setUsersList(
         usersList.map((u) => (u.id === userId ? { ...u, is_admin: updatedIsAdmin } : u)),
       );
-
       toast.success(
         `Acceso de administrador ${updatedIsAdmin ? "otorgado" : "revocado"} para ${targetUser.name}`,
       );
@@ -114,6 +123,7 @@ function Admin() {
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title="Dashboard administrativo" subtitle="Operación en tiempo real" />
 
+      {/* === BLOQUE: KPIs principales === */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KPI
           icon={<Users className="h-5 w-5" />}
@@ -142,6 +152,7 @@ function Admin() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
+        {/* === BLOQUE: Gráfico de reservas semanales === */}
         <div className="lg:col-span-2 bg-gradient-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Reservas semanales</h3>
@@ -161,6 +172,7 @@ function Admin() {
           </div>
         </div>
 
+        {/* === BLOQUE: Distribución por deporte === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">Distribución por deporte</h3>
           <div className="space-y-3">
@@ -181,6 +193,7 @@ function Admin() {
           </div>
         </div>
 
+        {/* === BLOQUE: Tabla de usuarios recientes === */}
         <div className="lg:col-span-2 bg-gradient-card border border-border rounded-2xl p-5 overflow-hidden">
           <h3 className="font-semibold mb-4">Usuarios recientes</h3>
           <div className="overflow-x-auto">
@@ -253,6 +266,7 @@ function Admin() {
           </div>
         </div>
 
+        {/* === BLOQUE: Top canchas === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">Top canchas</h3>
           <div className="space-y-3">
@@ -264,8 +278,7 @@ function Admin() {
                   <div className="text-xs text-muted-foreground">{c.reviews_count} reservas</div>
                 </div>
                 <div className="text-xs text-warning flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-warning" />
-                  {c.rating}
+                  <Star className="h-3 w-3 fill-warning" /> {c.rating}
                 </div>
               </div>
             ))}
@@ -276,6 +289,8 @@ function Admin() {
   );
 }
 
+// === BLOQUE: KPI ===
+// Componente reutilizable para indicador de métrica con ícono y delta.
 function KPI({
   icon,
   label,

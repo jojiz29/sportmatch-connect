@@ -1,3 +1,8 @@
+// ============================================================
+// playwright.config.ts — Configuración de Playwright E2E
+// Proyecto Chromium, servidor Vite en modo test con MOCKS=true
+// ============================================================
+
 import { defineConfig, devices } from "@playwright/test";
 
 const port = process.env.VITE_PORT || "5179";

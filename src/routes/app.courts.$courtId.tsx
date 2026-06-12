@@ -1,3 +1,8 @@
+// === BLOQUE: Ruta de Detalle de Cancha ===
+// Página individual de cada cancha con información detallada, selección
+// de horarios, temporizador de retención, flujo completo de pago
+// (Stripe/Yape/Plin/FitCoins) y confirmación con ticket QR.
+// NOTA: Actualmente redirige a /app (integrado en el dashboard).
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -32,11 +37,14 @@ export const Route = createFileRoute("/app/courts/$courtId")({
   beforeLoad: () => {
     throw redirect({ to: "/app" });
   },
+  // === BLOQUE: Validación de query params ===
+  // El parámetro `book=true` hace scroll automático a la sección de reserva.
   validateSearch: (search: Record<string, unknown>): { book?: boolean } => {
     return {
       book: search.book === "true" || search.book === true || undefined,
     };
   },
+  // === BLOQUE: Head tags dinámicos según la cancha ===
   head: ({ loaderData }: { loaderData?: Court }) => {
     if (!loaderData) {
       return {
@@ -53,12 +61,12 @@ export const Route = createFileRoute("/app/courts/$courtId")({
       ],
     };
   },
+  // === BLOQUE: Loader ===
+  // En modo demo busca en MOCK_COURTS; en producción consulta Supabase.
   loader: async ({ params }: { params: { courtId: string } }) => {
     if (useAuthStore.getState().isDemoMode) {
       const court = MOCK_COURTS.find((c) => c.id === params.courtId);
-      if (!court) {
-        throw new Error("Cancha no encontrada");
-      }
+      if (!court) throw new Error("Cancha no encontrada");
       return court;
     }
 
@@ -80,10 +88,11 @@ export const Route = createFileRoute("/app/courts/$courtId")({
 function CourtDetail() {
   const court = Route.useLoaderData() as Court;
   const user = useAuthStore((s) => s.user);
+
+  // === BLOQUE: Estado de reserva y pago ===
   const [slot, setSlot] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
@@ -96,22 +105,25 @@ function CourtDetail() {
   const { book } = Route.useSearch();
   const { isProcessing, transactionId, processPayment, resetPayment } = usePaymentGatewayStore();
 
+  // === BLOQUE: Auto-scroll a reserva si `book=true` ===
   useEffect(() => {
     if (book) {
       const timer = setTimeout(() => {
         const element = document.getElementById("booking-section");
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 300);
       return () => clearTimeout(timer);
     }
   }, [book]);
 
+  // === BLOQUE: Reset de pago al cambiar slot o cancha ===
   useEffect(() => {
     resetPayment();
   }, [slot, court.id, resetPayment]);
 
+  // === BLOQUE: Temporizador de retención del horario (5 min) ===
+  // Cuando el usuario selecciona un horario, se inicia un conteo
+  // regresivo de 5 minutos. Al vencer, se libera el slot.
   useEffect(() => {
     if (!slot) {
       setHoldExpiry(null);
@@ -140,17 +152,15 @@ function CourtDetail() {
     return () => window.clearInterval(interval);
   }, [holdExpiry]);
 
+  // === BLOQUE: Geolocalización ===
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
+          setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
         },
         (error) => {
-          console.warn("Geolocation API unavailable or permission denied.", error.message);
+          console.warn("Geolocation unavailable.", error.message);
         },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
@@ -165,6 +175,9 @@ function CourtDetail() {
     return null;
   }, [userCoords, user]);
 
+  // === BLOQUE: Carga de horarios reservados + suscripción Realtime ===
+  // Obtiene los slots ya reservados para hoy desde backend o Supabase,
+  // y se suscribe a cambios en la tabla bookings para actualización en vivo.
   useEffect(() => {
     if (!court || !user) return;
 
@@ -173,7 +186,6 @@ function CourtDetail() {
     async function fetchBookedSlots() {
       try {
         setLoadingBookings(true);
-        // Try backend first, fallback to Supabase
         const backendResult = await backendApi.bookings.getByCourtAndDate(court.id, todayStr);
         const booked = (backendResult.data as string[]) || [];
         setBookedSlots(booked);
@@ -190,25 +202,18 @@ function CourtDetail() {
     }
     fetchBookedSlots();
 
-    // Subscribe to Postgres changes for bookings of this court on today's date
     const channel = supabase
       .channel(`public:bookings:court_id=eq.${court.id}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "bookings",
-          filter: `court_id=eq.${court.id}`,
-        },
+        { event: "*", schema: "public", table: "bookings", filter: `court_id=eq.${court.id}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const newBooking = payload.new as { date: string; time_slot: string };
             if (newBooking.date === todayStr) {
-              setBookedSlots((prev) => {
-                if (prev.includes(newBooking.time_slot)) return prev;
-                return [...prev, newBooking.time_slot];
-              });
+              setBookedSlots((prev) =>
+                prev.includes(newBooking.time_slot) ? prev : [...prev, newBooking.time_slot],
+              );
             }
           } else if (payload.eventType === "DELETE") {
             const oldBooking = payload.old as { date: string; time_slot: string };
@@ -231,6 +236,7 @@ function CourtDetail() {
     );
   }
 
+  // === BLOQUE: Cálculo de costos ===
   const maxPlayers = court.max_players || 4;
   const baseCourtPrice = court.price_per_hour / maxPlayers;
   const commissionPercentage = 10;
@@ -238,6 +244,10 @@ function CourtDetail() {
   const totalCost = baseCourtPrice + commissionAmount;
   const pricePerPerson = totalCost;
 
+  // === BLOQUE: handlePaymentConfirm ===
+  // Procesa el pago completo: verifica disponibilidad, ejecuta el pago
+  // contra la pasarela (Stripe/Yape/Plin/FitCoins), crea la reserva en
+  // Supabase y (en demo) crea un partido asociado.
   const handlePaymentConfirm = async (
     selection: PaymentSelection,
     stripe?: Stripe | null,
@@ -294,22 +304,8 @@ function CourtDetail() {
         total_cobrado: totalCost,
       });
 
+      // En demo mode, crea también el partido en memoria
       if (useAuthStore.getState().isDemoMode) {
-        await apiClient.matches.create({
-          title: `Partido en ${court.name}`,
-          sport: court.sport,
-          court_id: court.id,
-          creator_id: user.id,
-          date: todayStr,
-          time: slot,
-          max_players: maxPlayers,
-          required_level: user.level || "Intermedio",
-        });
-      }
-
-      // 4. Create match in memory for local demo correctness
-      if (useAuthStore.getState().isDemoMode) {
-        // Try backend first, fallback to Supabase
         const backendResult = await backendApi.matches
           .create(user.id, {
             title: `Partido en ${court.name}`,
@@ -366,7 +362,7 @@ function CourtDetail() {
     }
   };
 
-  // Dynamic slots based on court metadata
+  // === BLOQUE: Slots dinámicos ===
   const slots = court.operating_hours || [
     "08:00",
     "10:00",
@@ -379,15 +375,13 @@ function CourtDetail() {
     "21:00",
   ];
 
-  // Dynamic players limit based on court metadata
-  // Variables (maxPlayers, pricePerPerson) defined above handlePaymentConfirm for closure scope correctness
-
   const holdPaymentDiscount = paymentSelection?.fitcoinsToUse ?? 0;
   const chargeAmount =
     paymentResult?.amountCharged ?? Math.max(0, Math.ceil(pricePerPerson) - holdPaymentDiscount);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
+      {/* === BLOQUE: Volver al mapa === */}
       <Link
         to="/app/map"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
@@ -396,6 +390,7 @@ function CourtDetail() {
       </Link>
 
       <div className="grid lg:grid-cols-2 gap-8">
+        {/* === BLOQUE: Información de la cancha === */}
         <div className="space-y-6">
           <div className="rounded-3xl overflow-hidden h-64 sm:h-96 relative shadow-card">
             <img
@@ -435,6 +430,7 @@ function CourtDetail() {
             </div>
           </div>
 
+          {/* === BLOQUE: Comodidades === */}
           <div className="bg-gradient-card border border-border rounded-2xl p-6 shadow-card">
             <h3 className="font-semibold mb-4">Comodidades</h3>
             <div className="flex flex-wrap gap-2">
@@ -447,6 +443,7 @@ function CourtDetail() {
           </div>
         </div>
 
+        {/* === BLOQUE: Sección de reserva y pago === */}
         <div>
           <div
             id="booking-section"
@@ -461,6 +458,7 @@ function CourtDetail() {
             </div>
 
             <div className="space-y-6">
+              {/* Fecha (hoy, fijo) */}
               <div>
                 <label className="text-sm font-semibold mb-2 flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4 text-primary" /> Fecha
@@ -478,6 +476,7 @@ function CourtDetail() {
                 </div>
               </div>
 
+              {/* Horarios disponibles */}
               <div>
                 <label className="text-sm font-semibold mb-3 flex items-center gap-2">
                   <Clock className="h-4 w-4 text-electric" /> Horarios disponibles
@@ -510,6 +509,7 @@ function CourtDetail() {
                 </div>
               </div>
 
+              {/* Temporizador de retención */}
               {slot && holdExpiry && (
                 <div className="rounded-2xl border border-warning/30 bg-warning/10 p-3 text-[12px] text-warning-foreground mb-4">
                   <strong>Horario pendiente:</strong> el horario seleccionado se mantiene bloqueado
@@ -517,6 +517,7 @@ function CourtDetail() {
                 </div>
               )}
 
+              {/* === BLOQUE: Checkout de pago === */}
               <PaymentCheckout
                 cost={Math.ceil(pricePerPerson)}
                 userBalance={user.fitcoins_balance}
@@ -528,9 +529,10 @@ function CourtDetail() {
           </div>
         </div>
 
+        {/* === BLOQUE: Confirmación con ticket QR === */}
         {confirmed && (
           <div className="bg-gradient-card border border-neon/40 rounded-3xl p-6 text-center shadow-neon mt-6 relative overflow-hidden font-sans">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full"></div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-1 bg-gradient-neon rounded-b-full" />
 
             <div className="h-12 w-12 mx-auto rounded-full bg-neon/20 grid place-items-center mb-3 mt-2">
               <Check className="h-6 w-6 text-neon" />
@@ -538,12 +540,12 @@ function CourtDetail() {
             <h3 className="text-lg font-bold text-foreground">¡Reserva Confirmada!</h3>
             <p className="text-xs text-muted-foreground">Tu ticket digital está listo</p>
 
-            {/* Ticket separator dashed line */}
             <div className="my-5 border-t-2 border-dashed border-border/60 relative">
-              <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full"></div>
-              <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full"></div>
+              <div className="absolute -left-8 -top-2 w-4 h-4 bg-background border-r border-neon/30 rounded-full" />
+              <div className="absolute -right-8 -top-2 w-4 h-4 bg-background border-l border-neon/30 rounded-full" />
             </div>
 
+            {/* Detalle de la transacción */}
             <div className="text-left space-y-3.5 text-sm bg-accent/30 p-4 rounded-2xl border border-border/50">
               <div className="flex justify-between items-center pb-2 border-b border-border/30">
                 <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
@@ -553,14 +555,12 @@ function CourtDetail() {
                   {transactionId || "TXN-DEMO123"}
                 </span>
               </div>
-
               <div className="space-y-1">
                 <div className="font-bold text-foreground text-sm">{court.name}</div>
                 <div className="text-[11px] text-muted-foreground leading-normal">
                   {court.address}
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4 pt-1">
                 <div>
                   <div className="text-[10px] text-muted-foreground font-semibold">Deporte</div>
@@ -574,6 +574,7 @@ function CourtDetail() {
                 </div>
               </div>
 
+              {/* Detalle del pago */}
               <div className="pt-3 border-t border-border/30 space-y-1.5">
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
                   Detalle del Pago
@@ -611,7 +612,7 @@ function CourtDetail() {
               </div>
             </div>
 
-            {/* QR Code section */}
+            {/* QR Code */}
             <div className="mt-5 space-y-3">
               <p className="text-[10px] text-muted-foreground">
                 Mostrá este QR de check-in al ingresar al club
@@ -630,10 +631,11 @@ function CourtDetail() {
         )}
       </div>
 
+      {/* === BLOQUE: Overlay de procesamiento de pago === */}
       {isProcessing && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex flex-col items-center justify-center space-y-6">
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-primary blur-xl opacity-50 animate-pulse"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-primary blur-xl opacity-50 animate-pulse" />
             <div className="relative bg-card border border-border p-6 rounded-full shadow-glow">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>

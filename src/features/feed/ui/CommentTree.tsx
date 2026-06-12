@@ -1,9 +1,17 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
+// Hooks de React para estado local y efectos.
 import React, { useState, useEffect } from "react";
+// Tipo CommentWithReplies para el árbol de comentarios anidados.
 import { CommentWithReplies } from "@/shared/api/commentService";
+// Tipo ReactionType para las reacciones emoji.
 import { ReactionType } from "@/entities/types";
+// Iconos de Lucide para acciones del comentario.
 import { Heart, Reply, Trash2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+// Framer Motion para animaciones del panel de reacciones y respuestas.
 import { motion, AnimatePresence } from "framer-motion";
+// Notificaciones toast para feedback visual.
 import { toast } from "sonner";
+// Servicios de reacciones y eliminación de comentarios.
 import {
   getUserReactionForComment,
   getReactionsByCommentId,
@@ -13,6 +21,8 @@ import {
   deleteComment,
 } from "@/shared/api/commentService";
 
+// === BLOQUE: CATÁLOGO DE REACCIONES ===
+// Define los tipos de reacción disponibles, su emoji y etiqueta en español.
 const REACTION_TYPES: { type: ReactionType; emoji: string; label: string }[] = [
   { type: "LIKE", emoji: "👍", label: "Me gusta" },
   { type: "DISLIKE", emoji: "👎", label: "No me gusta" },
@@ -24,16 +34,21 @@ const REACTION_TYPES: { type: ReactionType; emoji: string; label: string }[] = [
   { type: "🎉", emoji: "🎉", label: "Celebrar" },
 ];
 
+// === BLOQUE: INTERFAZ DE PROPS DEL ÁRBOL ===
+// Props del componente recursivo que renderiza comentarios anidados.
 interface CommentTreeProps {
   comments: CommentWithReplies[];
   currentUserId: string;
   onReply: (parentId: string) => void;
   onDelete: (commentId: string) => void;
-  depth?: number;
-  maxDepth?: number;
+  depth?: number; // Profundidad actual en el árbol (para indentación visual).
+  maxDepth?: number; // Límite de profundidad recursiva para prevenir desbordamiento.
   onReport?: (commentId: string, type: "comment") => void;
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL DEL ÁRBOL ===
+// Renderiza recursivamente la lista de comentarios, cada uno con sus respuestas.
+// Incluye condición de salida para evitar profundidad excesiva (QA Gate 1).
 export function CommentTree({
   comments,
   currentUserId,
@@ -43,7 +58,7 @@ export function CommentTree({
   maxDepth = 6,
   onReport,
 }: CommentTreeProps) {
-  // Exit condition (QA Gate 1 base-case exit logic) to prevent recursive max depth crash
+  // Condición de salida: si se supera la profundidad máxima, deja de renderizar.
   if (depth > maxDepth || !comments || comments.length === 0) {
     return null;
   }
@@ -66,6 +81,8 @@ export function CommentTree({
   );
 }
 
+// === BLOQUE: INTERFAZ DE PROPS DEL NODO DE COMENTARIO ===
+// Props para cada nodo individual del árbol de comentarios.
 interface CommentItemNodeProps {
   comment: CommentWithReplies;
   currentUserId: string;
@@ -76,6 +93,8 @@ interface CommentItemNodeProps {
   onReport?: (commentId: string, type: "comment") => void;
 }
 
+// === BLOQUE: COMPONENTE DE NODO DE COMENTARIO ===
+// Renderiza un comentario individual con avatar, contenido, reacciones y acciones.
 function CommentItemNode({
   comment,
   currentUserId,
@@ -85,16 +104,24 @@ function CommentItemNode({
   maxDepth,
   onReport,
 }: CommentItemNodeProps) {
+  // Reacción del usuario actual a este comentario (null si no ha reaccionado).
   const [userReaction, setUserReaction] = useState<ReactionType | null>(null);
+  // Resumen de todas las reacciones (tipo -> cantidad).
   const [reactionSummary, setReactionSummary] = useState<Record<ReactionType, number>>(
     {} as Record<ReactionType, number>,
   );
+  // Controla la visibilidad del panel de selección de reacciones.
   const [showReactions, setShowReactions] = useState(false);
+  // Controla la visibilidad de las respuestas anidadas.
   const [showReplies, setShowReplies] = useState(true);
+  // Controla si se ha revelado contenido sensible.
   const [showSensitiveContent, setShowSensitiveContent] = useState(false);
 
+  // Determina si el comentario está marcado como sensible o reportado.
   const isSensitive = !!(comment.sensitive || comment.flagged);
 
+  // === BLOQUE: CARGA DE REACCIONES ===
+  // Al montar, carga la reacción del usuario y el resumen general.
   useEffect(() => {
     if (!comment.id) return;
     const loadReaction = async () => {
@@ -110,9 +137,12 @@ function CommentItemNode({
     loadReaction();
   }, [comment.id, currentUserId]);
 
+  // === BLOQUE: MANEJADOR DE REACCIONES ===
+  // Agrega o quita una reacción con toggle. Si ya hay otra, la reemplaza.
   const handleReaction = async (type: ReactionType) => {
     try {
       if (userReaction === type) {
+        // Si ya tiene esta reacción, la quita.
         await removeReaction(comment.id, currentUserId, type);
         setUserReaction(null);
         setReactionSummary((prev) => ({
@@ -120,6 +150,7 @@ function CommentItemNode({
           [type]: Math.max(0, (prev[type] || 0) - 1),
         }));
       } else {
+        // Si tenía otra reacción diferente, la quita primero.
         if (userReaction) {
           await removeReaction(comment.id, currentUserId, userReaction);
           setReactionSummary((prev) => ({
@@ -127,6 +158,7 @@ function CommentItemNode({
             [userReaction]: Math.max(0, (prev[userReaction] || 0) - 1),
           }));
         }
+        // Agrega la nueva reacción.
         await addReaction(comment.id, currentUserId, type);
         setUserReaction(type);
         setReactionSummary((prev) => ({
@@ -140,6 +172,8 @@ function CommentItemNode({
     }
   };
 
+  // === BLOQUE: MANEJADOR DE ELIMINACIÓN ===
+  // Elimina el comentario en el servidor y notifica al padre.
   const handleDelete = async () => {
     try {
       await deleteComment(comment.id, currentUserId);
@@ -154,6 +188,7 @@ function CommentItemNode({
   const timeAgo = getTimeAgo(comment.created_at);
   const totalReactions = Object.values(reactionSummary).reduce((a, b) => a + b, 0);
 
+  // === BLOQUE: RENDERIZADO DEL NODO ===
   return (
     <div
       className={`flex flex-col gap-1 ${depth > 0 ? "ml-4 md:ml-6 pl-3 border-l border-border/40" : ""}`}
@@ -183,7 +218,7 @@ function CommentItemNode({
             )}
           </div>
 
-          {/* Sensitivity Filter Overlay */}
+          {/* ── Filtro de contenido sensible ── */}
           {isSensitive && !showSensitiveContent ? (
             <div className="mt-1.5 p-2 rounded-xl bg-destructive/10 border border-destructive/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
@@ -203,13 +238,14 @@ function CommentItemNode({
             </p>
           )}
 
+          {/* ── Acciones: reacciones, responder, eliminar ── */}
           <div className="flex items-center gap-4 mt-2">
-            {/* Reaction Trigger */}
+            {/* Botón de reacción y panel flotante */}
             <div className="relative">
               <button
                 onClick={() => setShowReactions(!showReactions)}
                 className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${
-                  userReaction ? "text-[#39FF14]" : "text-muted-foreground hover:text-foreground"
+                  userReaction ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {userReaction ? (
@@ -222,6 +258,7 @@ function CommentItemNode({
                 {totalReactions > 0 && <span className="text-[10px]">{totalReactions}</span>}
               </button>
 
+              {/* Panel flotante de selección de reacción */}
               <AnimatePresence>
                 {showReactions && (
                   <motion.div
@@ -249,7 +286,7 @@ function CommentItemNode({
               </AnimatePresence>
             </div>
 
-            {/* Reply Button */}
+            {/* Botón de responder */}
             <button
               onClick={() => onReply(comment.id)}
               className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -258,7 +295,7 @@ function CommentItemNode({
               Responder
             </button>
 
-            {/* Delete button */}
+            {/* Botón de eliminar (solo visible para el autor) */}
             {comment.user_id === currentUserId && (
               <button
                 onClick={handleDelete}
@@ -272,12 +309,12 @@ function CommentItemNode({
         </div>
       </div>
 
-      {/* Recursive Render (Base-case exit condition is at the top of the Parent tree function) */}
+      {/* ── Respuestas anidadas (renderizado recursivo) ── */}
       {comment.replies && comment.replies.length > 0 && (
         <div className="mt-1">
           <button
             onClick={() => setShowReplies(!showReplies)}
-            className="flex items-center gap-1 text-[10px] font-bold text-[#39FF14] hover:text-[#39FF14]/80 transition-colors ml-9"
+            className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary/80 transition-colors ml-9"
           >
             {showReplies ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {comment.replies.length} {comment.replies.length === 1 ? "respuesta" : "respuestas"}
@@ -309,6 +346,9 @@ function CommentItemNode({
   );
 }
 
+// ── Helpers ─────────────────────────────────────────────────────────────────────
+
+// Calcula el tiempo transcurrido desde una fecha ISO hasta ahora, en formato breve.
 function getTimeAgo(isoDate: string): string {
   const now = Date.now();
   const then = new Date(isoDate).getTime();

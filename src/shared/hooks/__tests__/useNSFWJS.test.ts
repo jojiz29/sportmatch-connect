@@ -1,3 +1,8 @@
+// ============================================================
+// useNSFWJS.test.ts — Tests del hook de moderación NSFW
+// Verifica detección de contenido explícito en imágenes
+// ============================================================
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { renderHook, act } from "@testing-library/react";
 import { useNSFWJS } from "../useNSFWJS";

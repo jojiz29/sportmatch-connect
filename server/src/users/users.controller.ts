@@ -1,3 +1,8 @@
+// ============================================================
+// users.controller.ts — Controlador de usuarios
+// GET /users — Lista de perfiles, GET /users/leaderboard — Top FitCoins
+// ============================================================
+
 import { Controller, Get } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { UsersService } from "./users.service";

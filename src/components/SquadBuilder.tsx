@@ -50,7 +50,7 @@ const PitchSlot = React.memo(({ player, index }: { player: PlayerSlot; index: nu
     <div
       className={`flex flex-col items-center justify-center p-2 rounded-2xl w-20 md:w-24 text-center transition-all border duration-300 relative ${
         player.isFilled
-          ? "bg-[#0b132b]/95 border-[#39FF14]/40 shadow-[0_0_15px_rgba(57,255,20,0.15)] scale-100 hover:scale-105"
+          ? "bg-card/95 border-primary/40 shadow-glow scale-100 hover:scale-105"
           : "border-dashed border-white/20 bg-black/40 text-white/50 hover:border-primary/40"
       }`}
     >
@@ -68,7 +68,7 @@ const PitchSlot = React.memo(({ player, index }: { player: PlayerSlot; index: nu
           <span className="text-[9px] md:text-[10px] font-bold text-white mt-1.5 truncate w-full">
             {player.name.split(" ")[0]}
           </span>
-          <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/20 mt-1 tracking-wider uppercase font-bold">
+          <span className="text-[7px] md:text-[8px] px-1 py-0.5 rounded bg-primary/15 text-primary border border-primary/20 mt-1 tracking-wider uppercase font-bold">
             {player.position}
           </span>
         </>
@@ -397,10 +397,10 @@ export function SquadBuilder() {
           </span>
         </div>
         <div className="bg-background/45 border border-border/60 rounded-2xl p-3 flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] text-[#39FF14] uppercase font-bold tracking-wider">
+          <span className="text-[10px] text-primary uppercase font-bold tracking-wider">
             Completados
           </span>
-          <span className="text-lg font-black text-[#39FF14] mt-1">
+          <span className="text-lg font-black text-primary mt-1">
             {filledSlotsCount} / {totalSlotsCount}
           </span>
         </div>

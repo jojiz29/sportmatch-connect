@@ -1,3 +1,4 @@
+// shadcn/ui — Campo OTP (ingreso de código de un solo uso)
 import * as React from "react";
 import { OTPInput, OTPInputContext } from "input-otp";
 import { Minus } from "lucide-react";

@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTS — Dependencias del perfil público de otro usuario ===
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/app/profile/$userId")({
   component: UserProfile,
 });
 
+// === BLOQUE: BADGES — Definición de logros visibles para otros usuarios ===
 const BADGES = [
   {
     id: 1,
@@ -66,35 +68,44 @@ const BADGES = [
   },
 ];
 
+// === BLOQUE: UserProfile — Vista pública del perfil de otro usuario ===
+// Carga el perfil desde Supabase (o MOCK_USERS en modo demo).
+// Muestra estadísticas, logros, historial de partidos y acciones sociales
+// (seguir/dejar de seguir, valorar, reportar).
 function UserProfile() {
   const { userId } = Route.useParams();
   const { t } = useTranslation();
   const currentUser = useAuthStore((s) => s.user);
-
   const [profile, setProfile] = useState<User | null>(null);
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [barWidth, setBarWidth] = useState(0);
+
+  useEffect(() => {
+    if (profile) {
+      const timer = setTimeout(() => {
+        setBarWidth(profile.trust_score || 0);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-
   const getAverageRating = usePublicMatchStore((s) => s.getAverageRating);
   const averageRating = getAverageRating(userId);
-
   const relationships = useSocialStore((state) => state.relationships);
   const follow = useSocialStore((state) => state.follow);
   const unfollow = useSocialStore((state) => state.unfollow);
-
   const isMe = currentUser?.id === userId;
-
   const isFollowing = useMemo(() => {
     if (!currentUser) return false;
     return relationships.some((r) => r.followerId === currentUser.id && r.followingId === userId);
   }, [relationships, currentUser, userId]);
 
+  // === BLOQUE: Carga de datos del perfil público ===
   useEffect(() => {
     let active = true;
     setIsLoading(true);
-
     async function loadData() {
       try {
         let userProfile: User | null = null;
@@ -103,37 +114,32 @@ function UserProfile() {
           userProfile = MOCK_USERS.find((u) => u.id === userId) || null;
         } else {
           const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-          if (data) {
-            userProfile = data as User;
-          }
+          if (data) userProfile = data as User;
         }
-
         if (active) {
           setProfile(userProfile);
           if (userProfile) {
-            // Try backend first, fallback to Supabase
             const backendMatches = await backendApi.matches.getAll().catch(() => null);
-            const matchesData = backendMatches
-              ? (backendMatches as Match[]).filter((m) => m.creator_id === userId)
-              : await apiClient.matches.getUserMatches(userId);
+            const matchesData =
+              backendMatches && Array.isArray(backendMatches.data)
+                ? backendMatches.data.filter((m) => m.creator_id === userId)
+                : await apiClient.matches.getUserMatches(userId);
             setUserMatches(matchesData);
           }
         }
       } catch (err) {
         console.error("Error loading public profile:", err);
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
-
     loadData();
     return () => {
       active = false;
     };
   }, [userId]);
 
+  // === BLOQUE: handleFollowToggle — Seguir / Dejar de seguir ===
   const handleFollowToggle = async () => {
     if (!currentUser) return;
     try {
@@ -151,10 +157,9 @@ function UserProfile() {
         );
       } else {
         if (!useAuthStore.getState().isDemoMode) {
-          await supabase.from("followers").insert({
-            follower_id: currentUser.id,
-            following_id: userId,
-          });
+          await supabase
+            .from("followers")
+            .insert({ follower_id: currentUser.id, following_id: userId });
         }
         follow(currentUser.id, userId);
         toast.success(
@@ -166,19 +171,16 @@ function UserProfile() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
     );
-  }
-
-  if (!profile) {
+  if (!profile)
     return (
       <div className="container mx-auto px-4 lg:px-8 py-8 text-center text-muted-foreground">
         {t("profile.user_not_found", { defaultValue: "Usuario no encontrado." })}
       </div>
     );
-  }
 
   const trustLevel =
     (profile.trust_score || 0) >= 90
@@ -186,7 +188,6 @@ function UserProfile() {
       : (profile.trust_score || 0) >= 70
         ? t("profile.trust_level_good")
         : t("profile.trust_level_risk");
-
   const trustColor =
     (profile.trust_score || 0) >= 90
       ? "text-neon"
@@ -198,6 +199,7 @@ function UserProfile() {
     <div className="container mx-auto px-4 lg:px-8 py-8">
       <PageHeader title={profile.name} />
 
+      {/* === Tarjeta principal del perfil público === */}
       <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card relative overflow-hidden">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-gradient-primary opacity-15 blur-3xl" />
         <div className="flex flex-wrap md:flex-nowrap items-start gap-6 relative">
@@ -241,11 +243,7 @@ function UserProfile() {
             <div className="shrink-0 flex gap-2 flex-wrap">
               <button
                 onClick={handleFollowToggle}
-                className={`px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all hover:shadow-glow cursor-pointer ${
-                  isFollowing
-                    ? "bg-accent text-accent-foreground border border-border hover:bg-accent/80"
-                    : "bg-gradient-neon text-neon-foreground hover:shadow-neon"
-                }`}
+                className={`px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all hover:shadow-glow cursor-pointer ${isFollowing ? "bg-accent text-accent-foreground border border-border hover:bg-accent/80" : "bg-gradient-neon text-neon-foreground hover:shadow-neon"}`}
               >
                 {isFollowing ? (
                   <>
@@ -258,8 +256,6 @@ function UserProfile() {
                   </>
                 )}
               </button>
-
-              {/* Review button */}
               <button
                 onClick={() => setReviewOpen(true)}
                 className="px-3 py-2 rounded-xl glass border border-border flex items-center gap-1.5 text-sm font-semibold hover:bg-accent transition-colors cursor-pointer"
@@ -269,8 +265,6 @@ function UserProfile() {
                 <Star className="h-4 w-4 text-warning" />
                 {averageRating > 0 ? `${averageRating}★` : "Valorar"}
               </button>
-
-              {/* Report button */}
               <button
                 onClick={() => setReportOpen(true)}
                 className="px-3 py-2 rounded-xl glass border border-border flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
@@ -325,6 +319,7 @@ function UserProfile() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mt-6">
+        {/* Trust Score y verificación de identidad */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold flex items-center gap-2">
             <Shield className="h-4 w-4 text-neon" /> {t("profile.trust_score")}
@@ -333,8 +328,13 @@ function UserProfile() {
             <div className="text-5xl font-bold text-gradient">{profile.trust_score}</div>
             <div className={`text-sm font-semibold mt-1 ${trustColor}`}>{trustLevel}</div>
           </div>
-          <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-gradient-neon" style={{ width: `${profile.trust_score}%` }} />
+          <div
+            className={`mt-4 h-3 rounded-full bg-muted overflow-hidden ${profile.trust_score >= 80 ? "animate-pulse shadow-glow" : ""}`}
+          >
+            <div
+              className="h-full bg-gradient-neon transition-all duration-1000 ease-out"
+              style={{ width: `${barWidth}%` }}
+            />
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <Metric label={t("profile.punctuality")} value={98} />
@@ -342,8 +342,6 @@ function UserProfile() {
             <Metric label={t("profile.cancellations")} value={88} />
             <Metric label={t("profile.behavior")} value={92} />
           </div>
-
-          {/* DNI Identity Verification Status Cue */}
           <div className="mt-6 pt-4 border-t border-border/60">
             {profile.dni_verificado ? (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
@@ -365,6 +363,7 @@ function UserProfile() {
           </div>
         </div>
 
+        {/* Logros visibles */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">{t("profile.achievements")}</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -373,15 +372,15 @@ function UserProfile() {
               const name = t(`profile.badge_${b.key}_name`);
               const description = t(`profile.badge_${b.key}_desc`);
               const progressText = b.progress(profile, t);
-
               return (
                 <div
                   key={b.id}
-                  className={`text-center p-3 rounded-xl transition-all cursor-default flex flex-col justify-between items-center ${
+                  className={`text-center p-3 rounded-xl cursor-default flex flex-col justify-between items-center ${
                     isUnlocked
-                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50"
-                      : "bg-muted/15 border border-border/40 grayscale opacity-45 hover:opacity-75 transition-opacity"
+                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50 transition-all"
+                      : "bg-muted/15 border border-border/40 opacity-40 grayscale transition-all duration-300 hover:grayscale-0 hover:opacity-100"
                   }`}
+                  title={!isUnlocked ? "Juega más para desbloquear" : undefined}
                 >
                   <div className="flex flex-col items-center">
                     <div className="text-3xl">{b.emoji}</div>
@@ -407,6 +406,7 @@ function UserProfile() {
           </div>
         </div>
 
+        {/* Historial de partidos */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">{t("profile.recent_history")}</h3>
           <div className="space-y-3">
@@ -430,13 +430,7 @@ function UserProfile() {
                       +{20 + Math.floor(Math.random() * 30)} FC
                     </span>
                     <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                        m.status === "Finished"
-                          ? "bg-muted text-muted-foreground"
-                          : m.status === "IN_PROGRESS"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-primary/20 text-primary-foreground border border-primary/30"
-                      }`}
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${m.status === "Finished" ? "bg-muted text-muted-foreground" : m.status === "IN_PROGRESS" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-primary/20 text-primary-foreground border border-primary/30"}`}
                     >
                       {m.status === "Finished"
                         ? t("profile.status_finished", { defaultValue: "Finalizado" })
@@ -456,7 +450,6 @@ function UserProfile() {
         </div>
       </div>
 
-      {/* Review Modal */}
       {profile && !isMe && (
         <ReviewModal
           open={reviewOpen}
@@ -466,8 +459,6 @@ function UserProfile() {
           targetUserAvatar={profile.avatar_url}
         />
       )}
-
-      {/* Report Modal */}
       {profile && !isMe && (
         <ReportModal
           isOpen={reportOpen}

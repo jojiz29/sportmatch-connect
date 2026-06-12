@@ -1,8 +1,10 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Squad, SquadMember } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
+// === BLOQUE: INTERFAZ DEL ESTADO ===
 interface SquadState {
   squads: Squad[];
   memberships: SquadMember[];
@@ -13,9 +15,14 @@ interface SquadState {
   getMembersCount: (squadId: string) => number;
 }
 
+// === BLOQUE: STORE DE ESCUADRAS ===
+// Gestiona grupos/equipos deportivos y sus membresías.
+// Los datos semilla incluyen dos escuadras de demostración.
+// Persistido en localStorage bajo "sportmatch-squads".
 export const useSquadStore = create<SquadState>()(
   persist(
     (set, get) => ({
+      // Escuadras de demostración predefinidas
       squads: [
         {
           id: "squad-1",
@@ -35,10 +42,13 @@ export const useSquadStore = create<SquadState>()(
           avatar_url: "https://api.dicebear.com/7.x/identicon/svg?seed=PadelSurco",
         },
       ],
+      // Membresías iniciales: Fabiola pertenece a ambas escuadras
       memberships: [
         { squad_id: "squad-1", user_id: "user-fabiola", joined_at: new Date().toISOString() },
         { squad_id: "squad-2", user_id: "user-fabiola", joined_at: new Date().toISOString() },
       ],
+
+      // Crea una nueva escuadra y agrega al creador como primer miembro
       createSquad: (squad) => {
         set({
           squads: [...get().squads, squad],
@@ -48,6 +58,8 @@ export const useSquadStore = create<SquadState>()(
           ],
         });
       },
+
+      // Agrega un usuario a una escuadra (evita duplicados)
       joinSquad: (squadId, userId) => {
         const current = get().memberships;
         const exists = current.some((m) => m.squad_id === squadId && m.user_id === userId);
@@ -60,6 +72,8 @@ export const useSquadStore = create<SquadState>()(
           });
         }
       },
+
+      // Remueve un usuario de una escuadra
       leaveSquad: (squadId, userId) => {
         set({
           memberships: get().memberships.filter(
@@ -67,9 +81,13 @@ export const useSquadStore = create<SquadState>()(
           ),
         });
       },
+
+      // Verifica si un usuario pertenece a una escuadra
       isMember: (squadId, userId) => {
         return get().memberships.some((m) => m.squad_id === squadId && m.user_id === userId);
       },
+
+      // Cuenta los miembros actuales de una escuadra
       getMembersCount: (squadId) => {
         return get().memberships.filter((m) => m.squad_id === squadId).length;
       },

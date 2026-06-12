@@ -1,3 +1,8 @@
+// ============================================================
+// sports.module.ts — Módulo de catálogo de deportes
+// Consulta de deportes disponibles en la plataforma
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { SportsController } from "./sports.controller";
 import { SportsService } from "./sports.service";

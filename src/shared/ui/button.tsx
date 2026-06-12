@@ -1,3 +1,4 @@
+// shadcn/ui — Botón (componente base con variantes CVA)
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps } from "class-variance-authority";

@@ -1,3 +1,4 @@
+// shadcn/ui — Hoja Lateral (panel deslizable desde los bordes con Radix)
 "use client";
 
 import * as React from "react";

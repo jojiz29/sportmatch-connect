@@ -1,3 +1,4 @@
+// shadcn/ui — Pestañas (navegación por pestañas con Radix)
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 

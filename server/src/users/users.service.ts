@@ -1,3 +1,8 @@
+// ============================================================
+// users.service.ts — Servicio de usuarios
+// Raw queries para listar perfiles y leaderboard (evita columnas faltantes)
+// ============================================================
+
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 

@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import { useState, useRef, useEffect } from "react";
 import {
   Bell,
@@ -18,32 +19,33 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/shared/api/supabase";
 import type { AppNotification } from "@/entities/types";
 
-// Global variables to implement a reference counting pattern for the realtime subscription.
-// Since multiple instances of NotificationBell are mounted concurrently (desktop and mobile),
-// they share the same channel to avoid colliding or throwing "cannot add postgres_changes callbacks after subscribe()".
+// === BLOQUE: CONTADOR DE REFERENCIAS PARA SUSCRIPCIÓN REALTIME COMPARTIDA ===
+// Como pueden montarse múltiples instancias de NotificationBell simultáneamente
+// (escritorio y móvil), comparten un mismo canal Realtime para evitar colisiones
+// y el error "cannot add postgres_changes callbacks after subscribe()".
 let activeChannel: ReturnType<typeof supabase.channel> | null = null;
 let activeChannelUserId: string | null = null;
 let activeCount = 0;
 
+// === BLOQUE: SONIDO DE SILBATO ===
+// Reproduce un doble pitido (1200Hz + 1500Hz) usando la Web Audio API al recibir
+// una nueva notificación, simulando el silbato de un árbitro.
 function playRefWhistle() {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    // Beep 1: Frequency = 1200Hz, duration = 0.15s
+    const AudioCtx = window.AudioContext ?? (window.webkitAudioContext as typeof AudioContext);
+    const audioCtx = new AudioCtx();
+    // Primer pitido: 1200Hz, 0.15s
     const osc1 = audioCtx.createOscillator();
     const gain1 = audioCtx.createGain();
     osc1.type = "sine";
     osc1.frequency.setValueAtTime(1200, audioCtx.currentTime);
     gain1.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-
     osc1.connect(gain1);
     gain1.connect(audioCtx.destination);
     osc1.start();
     osc1.stop(audioCtx.currentTime + 0.15);
-
-    // Beep 2: Frequency = 1500Hz, duration = 0.25s
+    // Segundo pitido: 1500Hz, 0.25s
     const osc2 = audioCtx.createOscillator();
     const gain2 = audioCtx.createGain();
     osc2.type = "sine";
@@ -51,7 +53,6 @@ function playRefWhistle() {
     gain2.gain.setValueAtTime(0, audioCtx.currentTime);
     gain2.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.15);
     gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-
     osc2.connect(gain2);
     gain2.connect(audioCtx.destination);
     osc2.start(audioCtx.currentTime + 0.15);
@@ -61,6 +62,8 @@ function playRefWhistle() {
   }
 }
 
+// === BLOQUE: MAPA DE ICONOS POR TIPO DE NOTIFICACIÓN ===
+// Asigna un icono de Lucide con color a cada tipo de notificación.
 const ICON_MAP: Record<AppNotification["type"], React.ReactNode> = {
   FOLLOW: <UserPlus className="h-4 w-4 text-electric" />,
   SQUAD_INVITE: <ShoppingBag className="h-4 w-4 text-violet-foreground" />,
@@ -70,6 +73,7 @@ const ICON_MAP: Record<AppNotification["type"], React.ReactNode> = {
   SQUAD_MESSAGE: <MessageSquare className="h-4 w-4 text-primary" />,
 };
 
+// Colores de fondo/borde para cada tipo de notificación.
 const TYPE_COLORS: Record<AppNotification["type"], string> = {
   FOLLOW: "bg-electric/10 border-electric/20",
   SQUAD_INVITE: "bg-violet/10 border-violet/30",
@@ -79,6 +83,7 @@ const TYPE_COLORS: Record<AppNotification["type"], string> = {
   SQUAD_MESSAGE: "bg-primary/10 border-primary/20",
 };
 
+// Calcula el tiempo transcurrido desde una fecha ISO hasta ahora.
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const past = new Date(dateStr).getTime();
@@ -88,14 +93,11 @@ function timeAgo(dateStr: string): string {
   if (diffMins < 60) return `${diffMins}m`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d`;
+  return `${Math.floor(diffHours / 24)}d`;
 }
 
-// ─── Tab definitions ────────────────────────────────────────────────────────
-
+// ─── Definición de pestañas ────────────────────────────────────────────────────
 type TabKey = "TODAS" | "INVITE" | "RESERVE" | "ALERT";
-
 const INVITE_TYPES: AppNotification["type"][] = ["FOLLOW", "SQUAD_INVITE"];
 const RESERVE_TYPES: AppNotification["type"][] = ["TRANSACTION_SUCCESS"];
 const ALERT_TYPES: AppNotification["type"][] = ["AD_IMPRESSION", "MATCH_ALERT", "SQUAD_MESSAGE"];
@@ -115,14 +117,14 @@ function filterByTab(notifs: AppNotification[], tab: TabKey): AppNotification[] 
       return notifs.filter((n) => (RESERVE_TYPES as string[]).includes(n.type));
     case "ALERT":
       return notifs.filter((n) => (ALERT_TYPES as string[]).includes(n.type));
-    case "TODAS":
     default:
       return notifs;
   }
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Componente principal ──────────────────────────────────────────────────────
 
+// Campana de notificaciones con panel desplegable, pestañas y suscripción Realtime.
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("TODAS");
@@ -134,19 +136,17 @@ export function NotificationBell() {
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
 
+  // Carga inicial de notificaciones al montar o cambiar de usuario.
   useEffect(() => {
-    if (user) {
-      fetchNotifications(user.id);
-    }
+    if (user) fetchNotifications(user.id);
   }, [user, fetchNotifications]);
 
+  // Suscripción Realtime para notificaciones en vivo (con contador de referencias).
   useEffect(() => {
     if (!user) return;
-
     const isDemo = useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
     if (isDemo) return;
 
-    // Reset if user mismatch
     if (activeChannel && activeChannelUserId !== user.id) {
       supabase.removeChannel(activeChannel);
       activeChannel = null;
@@ -162,11 +162,9 @@ export function NotificationBell() {
         const existing = supabase
           .getChannels()
           .find((c) => c.topic === `realtime:${channelName}` || c.topic === channelName);
-        if (existing) {
-          supabase.removeChannel(existing);
-        }
+        if (existing) supabase.removeChannel(existing);
       } catch (err) {
-        console.warn("Failed to clean up existing notification channel from Supabase cache:", err);
+        console.warn("Failed to clean up existing notification channel:", err);
       }
 
       activeChannelUserId = user.id;
@@ -182,14 +180,10 @@ export function NotificationBell() {
           },
           (payload) => {
             const newNotif = payload.new as AppNotification;
-
-            // Add notification to Zustand store if not already present
             useNotificationStore.setState((state) => {
               if (state.notifications.some((n) => n.id === newNotif.id)) return state;
               return { notifications: [newNotif, ...state.notifications] };
             });
-
-            // Play the referee whistle sound
             playRefWhistle();
           },
         )
@@ -214,7 +208,6 @@ export function NotificationBell() {
 
   const unreadCount = userNotifs.filter((n) => !n.is_read).length;
 
-  // Per-category unread counts for tab badges
   const unreadByTab: Record<TabKey, number> = {
     TODAS: unreadCount,
     INVITE: userNotifs.filter((n) => !n.is_read && (INVITE_TYPES as string[]).includes(n.type))
@@ -227,16 +220,12 @@ export function NotificationBell() {
 
   const visibleNotifs = filterByTab(userNotifs, activeTab).slice(0, 30);
 
-  // Close panel on click outside
+  // Cierra el panel al hacer clic fuera de él.
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-    }
+    if (open) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
@@ -252,7 +241,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={panelRef}>
-      {/* Bell Button */}
+      {/* Botón de la campana */}
       <button
         onClick={() => setOpen(!open)}
         className="relative h-10 w-10 rounded-xl glass border border-border grid place-items-center hover:bg-accent transition-colors cursor-pointer"
@@ -276,7 +265,7 @@ export function NotificationBell() {
         </AnimatePresence>
       </button>
 
-      {/* Notification Panel */}
+      {/* Panel de notificaciones */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -287,7 +276,7 @@ export function NotificationBell() {
             className="absolute right-0 left-auto top-14 w-[290px] min-[375px]:w-[340px] sm:w-[360px] max-h-[520px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right lg:left-0 lg:right-auto lg:origin-top-left"
             id="notification-panel"
           >
-            {/* Header */}
+            {/* Cabecera */}
             <div className="px-4 py-3 flex items-center justify-between border-b border-border/50">
               <h3 className="font-bold text-sm text-foreground">Notificaciones</h3>
               <div className="flex items-center gap-2">
@@ -309,7 +298,7 @@ export function NotificationBell() {
               </div>
             </div>
 
-            {/* Tab Bar */}
+            {/* Barra de pestañas */}
             <div className="flex border-b border-border/50 px-2 gap-1" role="tablist">
               {TABS.map((tab) => {
                 const isActive = activeTab === tab.key;
@@ -320,12 +309,11 @@ export function NotificationBell() {
                     role="tab"
                     aria-selected={isActive}
                     onClick={() => setActiveTab(tab.key)}
-                    className={[
-                      "relative flex items-center gap-1 px-2 py-2.5 text-[11px] font-medium whitespace-nowrap transition-colors cursor-pointer",
+                    className={`relative flex items-center gap-1 px-2 py-2.5 text-[11px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
                       isActive
                         ? "border-b-2 border-primary text-foreground font-semibold"
-                        : "text-muted-foreground hover:text-foreground border-b-2 border-transparent",
-                    ].join(" ")}
+                        : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                    }`}
                   >
                     {tab.label}
                     {badgeCount > 0 && (
@@ -333,12 +321,11 @@ export function NotificationBell() {
                         key={`tab-badge-${tab.key}-${badgeCount}`}
                         initial={{ scale: 0.6, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className={[
-                          "inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold leading-none",
+                        className={`inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold leading-none ${
                           isActive
                             ? "bg-primary text-primary-foreground"
-                            : "bg-accent text-muted-foreground",
-                        ].join(" ")}
+                            : "bg-accent text-muted-foreground"
+                        }`}
                       >
                         {badgeCount > 99 ? "99+" : badgeCount}
                       </motion.span>
@@ -348,7 +335,7 @@ export function NotificationBell() {
               })}
             </div>
 
-            {/* Notification List — animated on tab change */}
+            {/* Lista de notificaciones */}
             <div className="flex-1 overflow-y-auto overscroll-contain" id="notification-list">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -377,9 +364,7 @@ export function NotificationBell() {
                         }}
                       >
                         <div
-                          className={`shrink-0 h-9 w-9 rounded-xl border grid place-items-center mt-0.5 ${
-                            TYPE_COLORS[notif.type]
-                          }`}
+                          className={`shrink-0 h-9 w-9 rounded-xl border grid place-items-center mt-0.5 ${TYPE_COLORS[notif.type]}`}
                         >
                           {ICON_MAP[notif.type]}
                         </div>

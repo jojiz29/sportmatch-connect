@@ -1,13 +1,19 @@
+// === BLOQUE: IMPORTACIONES ===
+// Dependencias: estado local (useState), iconos Lucide, internacionalización (react-i18next) y tipos de preferencias deportivas
 import { useState } from "react";
 import { Check, Zap, Award, Flame } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SportPreferences } from "@/entities/types";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Recibe callbacks para completar el onboarding (con datos de preferencias) o retroceder al paso anterior
 interface OnboardingWizardProps {
   onComplete: (data: SportPreferences) => void;
   onBack: () => void;
 }
 
+// === BLOQUE: INTERFAZ INTERNA DE TARJETA DE DEPORTE ===
+// Define la estructura de datos para cada deporte en el catálogo local del wizard
 interface SportCardData {
   id: string;
   name: string;
@@ -18,25 +24,31 @@ interface SportCardData {
   isExtra?: boolean;
 }
 
+// === BLOQUE: COMPONENTE PRINCIPAL DEL ONBOARDING WIZARD ===
+// Flujo de 2 pasos: (1) selección de disciplinas deportivas con niveles, (2) ajuste de horas semanales de dedicación
+// Incluye catálogo de 36 deportes (18 tradicionales + 18 e-sports) con selección por clics y acordeones expandibles
 export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
 
-  // Decoupled per-sport matrix state
+  // === BLOQUE: ESTADO DE MATRIZ DE DEPORTES ===
+  // Almacena por cada deporte seleccionado su nivel (Amateur/Intermediate/Advanced/Pro) y peso numérico
   const [sportsMatrix, setSportsMatrix] = useState<
     Record<string, { level: "Amateur" | "Intermediate" | "Advanced" | "Pro"; weight: number }>
   >({});
 
-  // Accordion expansion states
+  // Estados de expansión de acordeones para categorías "Ver más"
   const [isTraditionalExpanded, setIsTraditionalExpanded] = useState(false);
   const [isEsportsExpanded, setIsEsportsExpanded] = useState(false);
 
-  // Step 2: Intent & Weekly Hours states
+  // Estado del Paso 2: horas semanales de dedicación deportiva
   const [weeklyHours, setWeeklyHours] = useState<number>(6);
 
+  // === BLOQUE: CATÁLOGO DE DEPORTES ===
+  // 36 deportes divididos en 18 tradicionales y 18 e-sports, cada uno con 6 base + 12 extra (cola larga)
   const sportsData: SportCardData[] = [
-    // === DEPORTES TRADICIONALES ===
-    // Baseline (6 cards for perfect 3x2 grid)
+    // --- DEPORTES TRADICIONALES ---
+    // Base (6 tarjetas para cuadrícula 3x2)
     {
       id: "Fútbol",
       name: t("sports.futbol.name", "Fútbol"),
@@ -91,7 +103,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         "bg-gradient-to-br from-orange-700 via-red-800 to-amber-950 border-orange-500/30 relative",
       description: t("sports.running.desc", "Carreras, sprints y fondo en pista de atletismo."),
     },
-    // Long-Tail Extra (12 cards to complete exactly 18 Traditional Sports)
+    // Cola larga extra (12 tarjetas para completar 18 deportes tradicionales)
     {
       id: "Rugby",
       name: t("sports.rugby.name", "Rugby"),
@@ -218,9 +230,8 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
       description: t("sports.automovilismo.desc", "Velocidad sobre ruedas, karts y carreras."),
       isExtra: true,
     },
-
-    // === E-SPORTS & GAMING ===
-    // Baseline (6 cards)
+    // --- E-SPORTS & GAMING ---
+    // Base (6 tarjetas)
     {
       id: "EA Sports FC",
       name: t("sports.ea_fc.name", "EA Sports FC"),
@@ -275,7 +286,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         "bg-gradient-to-br from-yellow-600 via-amber-900 to-red-950 border-yellow-500/50 shadow-[inset_0_0_15px_rgba(234,179,8,0.25)] relative",
       description: t("sports.brawl_stars.desc", "Batallas Arcade dinámicas multijugador."),
     },
-    // Long-Tail Extra (12 cards to complete exactly 18 E-Sports)
+    // Cola larga extra (12 tarjetas para completar 18 e-sports)
     {
       id: "Counter-Strike 2",
       name: t("sports.cs2.name", "Counter-Strike 2"),
@@ -422,6 +433,8 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
     },
   ];
 
+  // === BLOQUE: MANEJADORES DE SELECCIÓN ===
+  // Alterna la selección de un deporte (agrega con nivel predeterminado Intermediate o elimina)
   const handleToggleSport = (sportId: string) => {
     setSportsMatrix((prev) => {
       const next = { ...prev };
@@ -434,6 +447,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
     });
   };
 
+  // Cambia el nivel de un deporte seleccionado (con propagación detenida para no alternar selección)
   const handleSetSportLevel = (
     sportId: string,
     level: "Amateur" | "Intermediate" | "Advanced" | "Pro",
@@ -441,29 +455,24 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
     e: React.MouseEvent,
   ) => {
     e.stopPropagation();
-    setSportsMatrix((prev) => ({
-      ...prev,
-      [sportId]: { level, weight },
-    }));
+    setSportsMatrix((prev) => ({ ...prev, [sportId]: { level, weight } }));
   };
 
+  // === BLOQUE: NAVEGACIÓN ENTRE PASOS ===
+  // Avanza al siguiente paso o completa el onboarding si está en el paso 2
   const handleNextStep = () => {
-    if (step === 1 && Object.keys(sportsMatrix).length === 0) {
-      return;
-    }
+    if (step === 1 && Object.keys(sportsMatrix).length === 0) return;
     if (step < 2) {
       setStep((prev) => (prev + 1) as 1 | 2);
     } else {
       onComplete({
         sports_matrix: sportsMatrix,
-        behavioral_intent: {
-          weekly_hours: weeklyHours,
-          intent: "Recreativo",
-        },
+        behavioral_intent: { weekly_hours: weeklyHours, intent: "Recreativo" },
       });
     }
   };
 
+  // Retrocede al paso anterior o sale del wizard
   const handlePrevStep = () => {
     if (step > 1) {
       setStep((prev) => (prev - 1) as 1 | 2);
@@ -472,6 +481,8 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
     }
   };
 
+  // === BLOQUE: RENDERIZADOR DE TARJETA DE DEPORTE ===
+  // Construye una tarjeta visual con emoji, nombre, descripción, decoraciones de fondo y controles de nivel
   const renderSportCard = (sport: SportCardData) => {
     const isSelected = !!sportsMatrix[sport.id];
     const selectedLevel = sportsMatrix[sport.id]?.level || "Intermediate";
@@ -482,12 +493,12 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         onClick={() => handleToggleSport(sport.id)}
         className={`p-4 border rounded-2xl cursor-pointer select-none transition-all duration-150 group relative ${sport.styleClass} ${
           isSelected
-            ? "border-[#39FF14] scale-105 shadow-[0_0_15px_rgba(57,255,20,0.4)]"
+            ? "border-primary scale-105 shadow-glow"
             : "hover:scale-[1.02] border-white/10 hover:border-white/20"
         }`}
         id={`sport-card-${sport.id.replace(/\s+/g, "-").replace(/\//g, "-")}`}
       >
-        {/* Background layout wrapper to prevent bleed while letting tooltips pop out */}
+        {/* Decoraciones de fondo específicas por deporte (líneas de cancha, redes, pistas) */}
         <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
           {sport.id === "Fútbol" && (
             <div className="absolute inset-0 opacity-5 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px]" />
@@ -522,10 +533,11 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
           )}
         </div>
 
+        {/* Contenido principal: emoji, check de selección, nombre y descripción */}
         <div className="flex justify-between items-start relative z-10">
           <span className="text-3xl">{sport.emoji}</span>
           {isSelected && (
-            <div className="h-5 w-5 rounded-full bg-[#39FF14] grid place-items-center">
+            <div className="h-5 w-5 rounded-full bg-primary grid place-items-center">
               <Check className="h-3 w-3 text-black font-black" />
             </div>
           )}
@@ -535,6 +547,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
           {sport.description}
         </p>
 
+        {/* Selector de nivel (visible solo cuando el deporte está seleccionado) */}
         {isSelected && (
           <div
             className="mt-4 pt-3 border-t border-white/10 flex flex-col gap-2 relative z-20"
@@ -597,16 +610,12 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                           e,
                         )
                       }
-                      className={`w-full py-1 text-[10px] font-black rounded-lg border transition-all cursor-pointer ${
-                        isPillSelected
-                          ? `${pill.color} border-transparent`
-                          : `bg-white/5 border-white/10 ${pill.hoverColor}`
-                      }`}
+                      className={`w-full py-1 text-[10px] font-black rounded-lg border transition-all cursor-pointer ${isPillSelected ? `${pill.color} border-transparent` : `bg-white/5 border-white/10 ${pill.hoverColor}`}`}
                       data-level={pill.level}
                     >
                       {pill.label}
                     </button>
-                    {/* Tooltip */}
+                    {/* Tooltip informativo al hacer hover sobre el nivel */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-black/95 border border-white/10 text-white text-[9px] rounded-lg opacity-0 pointer-events-none group-hover/pill:opacity-100 transition-opacity duration-200 shadow-xl z-30 font-medium leading-normal text-center">
                       {t(pill.tooltipKey, pill.defaultTooltip)}
                     </div>
@@ -624,7 +633,8 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
 
   return (
     <div className="w-full space-y-6">
-      {/* Step Indicators */}
+      {/* === BLOQUE: INDICADORES DE PASO === */}
+      {/* Barra de progreso con dos segmentos y texto "Paso X de 2" */}
       <div className="flex justify-between items-center px-2">
         <span className="text-[10px] uppercase tracking-wider font-extrabold text-muted-foreground">
           {t("onboarding.step_indicator", "Paso {{step}} de 2", { step })}
@@ -639,8 +649,10 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         </div>
       </div>
 
+      {/* === BLOQUE: PASO 1 — SELECCIÓN DE DISCIPLINAS === */}
       {step === 1 && (
         <div className="space-y-5 animate-fade-in">
+          {/* Encabezado */}
           <div>
             <h2 className="text-xl font-bold text-foreground">
               {t("onboarding.step1_title", "Elige tus disciplinas")}
@@ -653,20 +665,17 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
             </p>
           </div>
 
-          {/* Traditional Category */}
+          {/* Categoría Deportes Tradicionales */}
           <div className="space-y-3">
             <h3 className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 flex items-center gap-1.5">
               <Flame className="h-3.5 w-3.5 text-orange-500" />{" "}
               {t("onboarding.traditional_sports", "Deportes Tradicionales")}
             </h3>
-            {/* Baseline 3x2 grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {sportsData
                 .filter((s) => s.category === "traditional" && !s.isExtra)
                 .map((sport) => renderSportCard(sport))}
             </div>
-
-            {/* Ver más button */}
             <div className="flex justify-center pt-2">
               <button
                 type="button"
@@ -678,14 +687,8 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                   : t("onboarding.ver_mas", "Ver más ↓")}
               </button>
             </div>
-
-            {/* Expandable accordion */}
             <div
-              className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                isTraditionalExpanded
-                  ? "max-h-[2000px] opacity-100 mt-2"
-                  : "max-h-0 opacity-0 pointer-events-none"
-              }`}
+              className={`transition-all duration-500 ease-in-out overflow-hidden ${isTraditionalExpanded ? "max-h-[2000px] opacity-100 mt-2" : "max-h-0 opacity-0 pointer-events-none"}`}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
                 {sportsData
@@ -695,20 +698,17 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
             </div>
           </div>
 
-          {/* Esports Category */}
+          {/* Categoría E-Sports */}
           <div className="space-y-3 pt-2">
             <h3 className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5 text-yellow-500" />{" "}
               {t("onboarding.esports_gaming", "E-Sports & Gaming Core")}
             </h3>
-            {/* Baseline 3x2 grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {sportsData
                 .filter((s) => s.category === "esports" && !s.isExtra)
                 .map((sport) => renderSportCard(sport))}
             </div>
-
-            {/* Ver más button */}
             <div className="flex justify-center pt-2">
               <button
                 type="button"
@@ -720,14 +720,8 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                   : t("onboarding.ver_mas", "Ver más ↓")}
               </button>
             </div>
-
-            {/* Expandable accordion */}
             <div
-              className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                isEsportsExpanded
-                  ? "max-h-[2000px] opacity-100 mt-2"
-                  : "max-h-0 opacity-0 pointer-events-none"
-              }`}
+              className={`transition-all duration-500 ease-in-out overflow-hidden ${isEsportsExpanded ? "max-h-[2000px] opacity-100 mt-2" : "max-h-0 opacity-0 pointer-events-none"}`}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
                 {sportsData
@@ -739,6 +733,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         </div>
       )}
 
+      {/* === BLOQUE: PASO 2 — DEDICACIÓN SEMANAL === */}
       {step === 2 && (
         <div className="space-y-6 animate-fade-in">
           <div>
@@ -753,7 +748,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
             </p>
           </div>
 
-          {/* Weekly Hours Slider */}
+          {/* Slider de horas semanales (1-20) */}
           <div className="bg-gradient-card border border-border rounded-2xl p-5 space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-1">
@@ -767,7 +762,6 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                   : t("onboarding.weekly_hour_plur", "horas")}
               </span>
             </div>
-
             <div className="relative pt-2 pb-1">
               <input
                 type="range"
@@ -775,14 +769,13 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                 max="20"
                 value={weeklyHours}
                 onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#39FF14]"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-primary"
                 style={{
-                  background: `linear-gradient(to right, #39FF14 ${((weeklyHours - 1) / 19) * 100}%, #1e293b ${((weeklyHours - 1) / 19) * 100}%)`,
+                  background: `linear-gradient(to right, hsl(var(--primary)) ${((weeklyHours - 1) / 19) * 100}%, hsl(var(--muted)) ${((weeklyHours - 1) / 19) * 100}%)`,
                 }}
                 id="hours-slider"
               />
             </div>
-
             <div className="flex justify-between text-[10px] text-muted-foreground font-semibold pt-1">
               <span>{t("onboarding.weekly_min", "Mínimo (1h)")}</span>
               <span>{t("onboarding.weekly_default", "Predeterminado (6h)")}</span>
@@ -792,7 +785,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         </div>
       )}
 
-      {/* Navigation Buttons */}
+      {/* === BLOQUE: BOTONES DE NAVEGACIÓN === */}
       <div className="flex gap-3 pt-4">
         <button
           type="button"

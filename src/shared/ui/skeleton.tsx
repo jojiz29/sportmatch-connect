@@ -1,3 +1,4 @@
+// shadcn/ui — Esqueleto (placeholder animado de carga)
 import { cn } from "@/lib/utils";
 
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

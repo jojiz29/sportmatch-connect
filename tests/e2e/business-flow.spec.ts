@@ -1,3 +1,8 @@
+// ============================================================
+// business-flow.spec.ts — E2E: Portal B2B y marketplace
+// Verifica catálogo de negocios, patrocinios y compras
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("B2B Portal and Marketplace E2E Flow", () => {
@@ -10,7 +15,7 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     test.setTimeout(120000);
     // 1. Go to register page
     await page.goto(`${targetURL}/app/register`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("h1").first()).toContainText("Crear Cuenta", { timeout: 15000 });
 
     // 2. Select "Empresa" role
@@ -31,7 +36,7 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`));
 
     // Sidebar should contain "Mi Negocio"
-    const businessNav = page.locator("aside >> text=Mi Negocio");
+    const businessNav = page.locator("#sidebar-nav-business");
     await expect(businessNav).toBeVisible();
     await businessNav.click();
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/business`));
@@ -39,6 +44,9 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     // Verify initial metrics (0 balance, 0 sales)
     await expect(page.locator("#business-balance-display")).toContainText("0 FC");
     await expect(page.locator("#business-sales-display")).toContainText("0");
+
+    // Go to catalog tab
+    await page.click("#business-tab-catalog");
 
     // 5. Create a new catalog item
     await page.fill("#catalog-item-name", "Bebida Energética Puka");
@@ -68,8 +76,8 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     await page.click('button[type="submit"]');
 
     // Verify Edwin is logged in and starts with 3500 FitCoins
-    await expect(page.locator("h1").first()).toContainText("Edwin");
-    const sidebarBalance = page.locator("aside .text-neon");
+    await expect(page.locator("h1", { hasText: "Edwin" }).first()).toBeVisible({ timeout: 10000 });
+    const sidebarBalance = page.locator("#sidebar-user-balance");
     await expect(sidebarBalance).toContainText("3500 FC");
 
     // Verify Map has the business marker loaded
@@ -79,7 +87,7 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
     // Verify "SportStore Surco" exists on map or side list (it displays on map markers)
     // We can also buy the product from the wallet page
     await page.goto(`${targetURL}/app/wallet`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // 8. Purchase B2B catalog item
     const purchaseBtn = page.locator("#purchase-btn-puka-power-bottle"); // Puka Power official beverage pre-loaded
@@ -124,11 +132,14 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
 
     // Go to "Mi Negocio" dashboard
     await page.goto(`${targetURL}/app/business`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Verify Business account now has 150 FitCoins balance and 1 Sale
     await expect(page.locator("#business-balance-display")).toContainText("150 FC");
     await expect(page.locator("#business-sales-display")).toContainText("1");
+
+    // Go to catalog tab to view recent sales
+    await page.click("#business-tab-catalog");
 
     // Verify Sales record is logged
     await expect(page.locator("text=Bebida Energética Puka").first()).toBeVisible();

@@ -1,3 +1,8 @@
+// ============================================================
+// profiles.module.ts — Módulo de perfiles
+// Consulta y actualización de perfiles con verificación DNI/RENIEC
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { ProfilesController } from "./profiles.controller";
 import { ProfilesService } from "./profiles.service";

@@ -1,3 +1,8 @@
+// ============================================================
+// auth.service.ts — Servicio de autenticación
+// Valida tokens JWT de Supabase y gestiona perfiles
+// ============================================================
+
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { SupabaseAuthService } from "./supabase-auth.service";
 

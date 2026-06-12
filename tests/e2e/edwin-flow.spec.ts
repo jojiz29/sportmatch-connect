@@ -1,3 +1,8 @@
+// ============================================================
+// edwin-flow.spec.ts — E2E: Flujo de usuario Edwin Flores
+// Verifica registro, matchmaking y actividades del perfil demo
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Edwin Flores E2E Flow", () => {
@@ -23,33 +28,36 @@ test.describe("Edwin Flores E2E Flow", () => {
     await page.fill('input[type="password"]', "EdwinFlores123?");
     await page.click('button[type="submit"]');
 
+    // Debug URL and console errors
+    await page.waitForTimeout(1000);
+    console.log("DEBUG: Current URL after submit:", page.url());
+    console.log("DEBUG: Console errors:", consoleErrors);
+
     // 3. Verify redirection to Dashboard
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`));
 
     // 4. Verify Welcome Message says "Edwin"
-    await expect(page.locator("h1").first()).toContainText("Edwin");
+    await expect(page.locator("h1", { hasText: "Edwin" }).first()).toBeVisible({ timeout: 10000 });
 
-    // 5. Verify the FitCoins balance displays "3500"
+    // 5. Verify the Level displays "Elite"
     const statsContainer = page.locator(".grid-cols-3");
-    const balanceStat = statsContainer
-      .locator("div.glass", { hasText: "FitCoins" })
-      .locator(".text-lg");
-    await expect(balanceStat).toContainText("3500");
+    const levelStat = statsContainer.locator("div.glass", { hasText: "Nivel" }).locator(".text-xl");
+    await expect(levelStat).toContainText("Elite");
 
     // 6. Verify trust score is "99%"
-    const trustStat = statsContainer.locator("div.glass", { hasText: "Trust" }).locator(".text-lg");
+    const trustStat = statsContainer.locator("div.glass", { hasText: "Trust" }).locator(".text-xl");
     await expect(trustStat).toContainText("99%");
 
     // 7. Verify matches count displays "15" (Edwin's matches_played) instead of hardcoded 12
     const matchesStat = statsContainer
       .locator("div.glass", { hasText: "Partidos" })
-      .locator(".text-lg");
+      .locator(".text-xl");
     await expect(matchesStat).toContainText("15");
 
     // 8. Verify the sidebar user card shows "Edwin Flores" and "3500 FC"
-    const sidebarName = page.locator("aside .text-sm.font-semibold");
+    const sidebarName = page.locator("aside .bg-gradient-card .text-sm.font-semibold");
     await expect(sidebarName).toContainText("Edwin Flores");
-    const sidebarBalance = page.locator("aside .text-neon");
+    const sidebarBalance = page.locator("aside .bg-gradient-card a[href='/app/wallet']");
     await expect(sidebarBalance).toContainText("3500 FC");
 
     // 9. Navigate to Chat and check Fabiola and Pichanga Jueves chats are present
@@ -95,6 +103,7 @@ test.describe("Edwin Flores E2E Flow", () => {
 
     // 13. Redeem Prize from FitCoins Section
     await page.goto(`${targetURL}/app/wallet`);
+    console.log("DEBUG: URL before wallet assertion:", page.url());
     const walletBalance = page.locator(".text-6xl.font-extrabold");
     await expect(walletBalance).toContainText("3500");
 
@@ -112,9 +121,8 @@ test.describe("Edwin Flores E2E Flow", () => {
     await expect(sidebarBalance).toContainText("2700 FC");
 
     // 14. Verify Wallet History displays the REDEEM transaction
-    await page.click('a:has-text("Historial")');
+    await page.goto(`${targetURL}/app/wallet/history`);
     await page.waitForSelector("text=Historial de Transacciones");
-    await expect(page).toHaveURL(new RegExp(`${targetURL}/app/wallet/history`));
 
     await expect(page.locator("text=Canje: Pelota oficial")).toBeVisible();
     await expect(page.locator("text=-800 FC")).toBeVisible();

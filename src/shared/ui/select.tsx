@@ -1,3 +1,4 @@
+// shadcn/ui — Selector (menú desplegable con Radix)
 "use client";
 
 import * as React from "react";

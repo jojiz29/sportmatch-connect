@@ -1,3 +1,8 @@
+// ============================================================
+// notify-squad-msg — Edge Function de Supabase
+// Envía notificaciones push (OneSignal) + DB cuando se publica un mensaje en un squad
+// ============================================================
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 

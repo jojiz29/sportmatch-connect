@@ -1,3 +1,8 @@
+// ============================================================
+// check_images.js — Script de verificación de imágenes
+// Comprueba que las URLs de imágenes de deportes sean accesibles
+// ============================================================
+
 // Using native global fetch in Node v22
 
 const urls = [

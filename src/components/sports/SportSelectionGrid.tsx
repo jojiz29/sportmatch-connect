@@ -1,33 +1,45 @@
+// === BLOQUE: IMPORTACIONES ===
+// Dependencias: estado local, iconos Lucide, internacionalización y configuración de deportes del catálogo compartido
 import { useState } from "react";
 import { Check, Flame, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SPORTS_CATALOG, SportCardData } from "@/shared/config/sports";
 
+// === BLOQUE: INTERFAZ DE PROPS ===
+// Recibe el estado actual de la matriz de deportes (sportId -> nivel 1/2/3) y un callback para modificarlo
 interface SportSelectionGridProps {
   sportsMatrix: Record<string, 1 | 2 | 3>;
   onSportChange: (sportId: string, level: 1 | 2 | 3 | undefined) => void;
 }
 
+// === BLOQUE: COMPONENTE DE CUADRÍCULA DE SELECCIÓN DE DEPORTES ===
+// Grid de tarjetas de deportes con selección por clics progresivos (3 niveles: Aficionado/Experimentado/Competitivo)
+// Organizado en dos categorías: Deportes Tradicionales y E-Sports, cada una con acordeón expandible "Ver más"
 export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelectionGridProps) {
   const { t } = useTranslation();
 
-  // Accordion expansion states
+  // === BLOQUE: ESTADOS DE EXPANSIÓN DE ACORDEÓN ===
+  // Controlan si las secciones "extra" (deportes de cola larga) están visibles
   const [isTraditionalExpanded, setIsTraditionalExpanded] = useState(false);
   const [isEsportsExpanded, setIsEsportsExpanded] = useState(false);
 
+  // === BLOQUE: MANEJADOR DE CLIC EN TARJETA ===
+  // Ciclo de 4 estados: no seleccionado -> Aficionado(1) -> Experimentado(2) -> Competitivo(3) -> no seleccionado
   const handleCardClick = (sportId: string) => {
     const current = sportsMatrix[sportId];
     if (!current) {
-      onSportChange(sportId, 1); // Unselected -> Aficionado (1)
+      onSportChange(sportId, 1); // No seleccionado -> Aficionado
     } else if (current === 1) {
-      onSportChange(sportId, 2); // Aficionado -> Experimentado (2)
+      onSportChange(sportId, 2); // Aficionado -> Experimentado
     } else if (current === 2) {
-      onSportChange(sportId, 3); // Experimentado -> Competitivo (3)
+      onSportChange(sportId, 3); // Experimentado -> Competitivo
     } else {
-      onSportChange(sportId, undefined); // Competitivo -> Unselected
+      onSportChange(sportId, undefined); // Competitivo -> no seleccionado
     }
   };
 
+  // === BLOQUE: INSIGNIA DE NIVEL ===
+  // Renderiza la etiqueta del nivel con estilo de color según el estado actual (verde/naranja/rojo)
   const getLevelBadge = (level: 1 | 2 | 3) => {
     if (level === 1) {
       return (
@@ -50,6 +62,8 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
     );
   };
 
+  // === BLOQUE: ESTILOS DE BORDE SEGÚN NIVEL ===
+  // Define el borde y sombra de la tarjeta según el nivel de selección
   const getCardBorderClass = (level: 1 | 2 | 3 | undefined) => {
     if (level === 1) {
       return "border-[#3CAC3B] scale-105 shadow-[0_0_15px_rgba(60,172,59,0.4)]";
@@ -63,6 +77,8 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
     return "border-white/10 hover:border-white/20 hover:scale-[1.02]";
   };
 
+  // === BLOQUE: RENDERIZADOR DE TARJETA DE DEPORTE ===
+  // Construye la tarjeta visual para un deporte con emoji, nombre, descripción y decoraciones de cancha de fondo
   const renderSportCard = (sport: SportCardData) => {
     const level = sportsMatrix[sport.id];
     const isSelected = level !== undefined;
@@ -76,7 +92,8 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
         )}`}
         id={`sport-card-${sport.id.replace(/\s+/g, "-").replace(/\//g, "-")}`}
       >
-        {/* Visual court layouts overlay */}
+        {/* === BLOQUE: DECORACIONES DE FONDO POR DEPORTE === */}
+        {/* Overlays visuales que simulan el diseño de la cancha (líneas de campo, red, pista, etc.) */}
         <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
           {sport.id === "Fútbol" && (
             <div className="absolute inset-0 opacity-5 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px]" />
@@ -99,6 +116,7 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
           )}
         </div>
 
+        {/* === BLOQUE: CONTENIDO PRINCIPAL DE LA TARJETA === */}
         <div className="flex justify-between items-start relative z-10">
           <span className="text-3xl">{sport.emoji}</span>
           <div className="flex gap-1.5 items-center">
@@ -127,20 +145,20 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
 
   return (
     <div className="space-y-6">
-      {/* Traditional Category */}
+      {/* === BLOQUE: CATEGORÍA DEPORTES TRADICIONALES === */}
       <div className="space-y-3">
         <h3 className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 flex items-center gap-1.5">
           <Flame className="h-3.5 w-3.5 text-orange-500" />{" "}
           {t("onboarding.traditional_sports", "Deportes Tradicionales")}
         </h3>
-        {/* Baseline 3x2 grid */}
+        {/* Grid base 3x2 con los 6 deportes principales */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {SPORTS_CATALOG.filter((s) => s.category === "traditional" && !s.isExtra).map((sport) =>
             renderSportCard(sport),
           )}
         </div>
 
-        {/* Ver más button */}
+        {/* Botón "Ver más" para expandir deportes de cola larga */}
         <div className="flex justify-center pt-2">
           <button
             type="button"
@@ -153,7 +171,7 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
           </button>
         </div>
 
-        {/* Expandable accordion */}
+        {/* Acordeón expandible con deportes extra (12 disciplinas adicionales) */}
         <div
           className={`transition-all duration-500 ease-in-out overflow-hidden ${
             isTraditionalExpanded
@@ -169,20 +187,20 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
         </div>
       </div>
 
-      {/* Esports Category */}
+      {/* === BLOQUE: CATEGORÍA E-SPORTS === */}
       <div className="space-y-3 pt-2">
         <h3 className="text-xs font-extrabold tracking-wider uppercase text-muted-foreground/80 flex items-center gap-1.5">
           <Zap className="h-3.5 w-3.5 text-yellow-500" />{" "}
           {t("onboarding.esports_gaming", "E-Sports & Gaming Core")}
         </h3>
-        {/* Baseline 3x2 grid */}
+        {/* Grid base 3x2 con los 6 esports principales */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {SPORTS_CATALOG.filter((s) => s.category === "esports" && !s.isExtra).map((sport) =>
             renderSportCard(sport),
           )}
         </div>
 
-        {/* Ver más button */}
+        {/* Botón "Ver más" para expandir esports de cola larga */}
         <div className="flex justify-center pt-2">
           <button
             type="button"
@@ -195,7 +213,7 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
           </button>
         </div>
 
-        {/* Expandable accordion */}
+        {/* Acordeón expandible con esports extra (12 títulos adicionales) */}
         <div
           className={`transition-all duration-500 ease-in-out overflow-hidden ${
             isEsportsExpanded

@@ -1,3 +1,8 @@
+// ============================================================
+// schema.prisma — Esquema de base de datos SportMatch
+// 16 modelos con dual-URL (pooler + directo) para Supabase us-west-2
+// ============================================================
+
 generator client {
   provider = "prisma-client-js"
 }

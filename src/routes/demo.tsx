@@ -1,24 +1,33 @@
+// === BLOQUE: IMPORTS — Dependencias de la página de demostración ===
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
 import { User as UserIcon, Store, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
+// === BLOQUE: Ruta /demo — createFileRoute ===
 export const Route = createFileRoute("/demo")({
   component: DemoPage,
 });
 
+// === BLOQUE: DemoPage — Página de selección de rol para modo demo ===
+// Permite al usuario elegir entre dos roles predefinidos:
+//   - PLAYER: explora matchmaking, mapa, feeds y squads.
+//   - BUSINESS: gestiona anuncios, perfil comercial y analíticas.
+// Activa isDemoMode=true en el store antes de autenticar con la cuenta mock.
 function DemoPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { signIn } = useAuth();
 
+  // === BLOQUE: handleDemoLogin — Autenticación mock según rol ===
   const handleDemoLogin = async (role: "PLAYER" | "BUSINESS") => {
     try {
-      // 1. Enable Demo Mode
+      // Habilita el modo demo para que el resto de la app sepa que
+      // las operaciones son simuladas (sin sesión real de Supabase).
       useAuthStore.setState({ isDemoMode: true });
 
-      // 2. Determine target mock email
+      // Selecciona la cuenta mock según el rol elegido.
       const targetEmail =
         role === "BUSINESS" ? "megatlon@sportmatch.app" : "ejuniorfloress@gmail.com";
       await signIn(targetEmail);
@@ -37,14 +46,15 @@ function DemoPage() {
     }
   };
 
+  // === BLOQUE: Renderizado — UI de la página de demo ===
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden text-foreground">
-      {/* Ambient glows */}
-      <div className="absolute top-1/4 -left-48 w-96 h-96 rounded-full bg-[#39FF14]/5 blur-[120px] animate-float" />
-      <div className="absolute bottom-1/4 -right-48 w-96 h-96 rounded-full bg-[#FF6B35]/8 blur-[100px] animate-float-reverse" />
+      {/* Luces ambientales decorativas */}
+      <div className="absolute top-1/4 -left-48 w-96 h-96 rounded-full bg-primary/5 blur-[120px] animate-float" />
+      <div className="absolute bottom-1/4 -right-48 w-96 h-96 rounded-full bg-secondary/8 blur-[100px] animate-float-reverse" />
 
       <div className="relative w-full max-w-2xl animate-scale-in">
-        {/* Decorative divider */}
+        {/* Divisor decorativo neón */}
         <div className="neon-divider mb-8 w-24 mx-auto" />
 
         <div className="bg-gradient-card border border-border/60 rounded-3xl p-8 md:p-10 shadow-card backdrop-blur-md">
@@ -57,8 +67,9 @@ function DemoPage() {
             </p>
           </div>
 
+          {/* === BLOQUE: Grid de selección de rol === */}
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Player option card */}
+            {/* Opción: Jugador Deportivo */}
             <button
               type="button"
               onClick={() => handleDemoLogin("PLAYER")}
@@ -76,7 +87,7 @@ function DemoPage() {
               </p>
             </button>
 
-            {/* Business option card */}
+            {/* Opción: Empresa / Comercio */}
             <button
               type="button"
               onClick={() => handleDemoLogin("BUSINESS")}
@@ -95,6 +106,7 @@ function DemoPage() {
             </button>
           </div>
 
+          {/* === BLOQUE: Enlace de regreso al inicio === */}
           <div className="mt-10 text-center">
             <Link
               to="/"

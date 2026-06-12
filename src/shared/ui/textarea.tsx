@@ -1,3 +1,4 @@
+// shadcn/ui — Área de Texto (campo multilínea)
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

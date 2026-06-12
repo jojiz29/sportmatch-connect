@@ -1,3 +1,4 @@
+// === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   X,
@@ -24,7 +25,7 @@ import { supabase } from "@/shared/api/supabase";
 import { backendApi } from "@/shared/api/backendApi";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import { toast } from "sonner";
-import { rankMatchCandidates, MatchRecommendation } from "./matchmakingScore";
+import { rankMatchCandidates } from "./matchmakingScore";
 import { calculateDistance } from "@/shared/api/geoService";
 import {
   PlayerChallenge,
@@ -33,12 +34,10 @@ import {
   createPlayerChallenge,
   respondToPlayerChallenge,
 } from "@/shared/api/challengeService";
-import {
-  getPlayerConnections,
-  createPlayerConnection,
-  PlayerConnection,
-} from "@/shared/api/connectionService";
+import { getPlayerConnections, createPlayerConnection } from "@/shared/api/connectionService";
 
+// === BLOQUE: COMPONENTE PRINCIPAL DE MATCHMAKING ===
+// Carrusel de recomendaciones de jugadores con swipe, conexión y desafío.
 export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -57,49 +56,53 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const [resolvingChallengeId, setResolvingChallengeId] = useState<string | null>(null);
   const [contactedUserIds, setContactedUserIds] = useState<string[]>([]);
 
+  // === BLOQUE: CARGA DE PARTIDOS DEL USUARIO INSPECCIONADO ===
+  // Cuando se abre el perfil de un candidato, carga sus partidos desde backend o Supabase.
   useEffect(() => {
     let active = true;
     if (!inspectedUser) {
       setInspectedUserMatches([]);
       return;
     }
-
     setIsLoadingMatches(true);
-
-    // Try backend first for user matches, fallback to Supabase
     backendApi.matches
       .getAll()
-      .then((backendMatches) => {
+      .then((res) => {
         if (active) {
-          const userMatches = (backendMatches as Match[]).filter(
-            (m) => m.creator_id === inspectedUser.id,
-          );
-          setInspectedUserMatches(userMatches);
+          if (res && Array.isArray(res.data)) {
+            const userMatches = res.data.filter((m) => m.creator_id === inspectedUser.id);
+            setInspectedUserMatches(userMatches);
+          } else {
+            apiClient.matches
+              .getUserMatches(inspectedUser.id)
+              .then((list) => {
+                if (active) setInspectedUserMatches(list);
+              })
+              .catch(() => {
+                if (active) setInspectedUserMatches([]);
+              });
+          }
         }
       })
       .catch(() => {
         apiClient.matches
           .getUserMatches(inspectedUser.id)
-          .then((data) => {
-            if (active) {
-              setInspectedUserMatches(data);
-            }
+          .then((list) => {
+            if (active) setInspectedUserMatches(list);
           })
-          .catch((err) => {
-            console.error("Error loading inspected user matches:", err);
+          .catch(() => {
+            if (active) setInspectedUserMatches([]);
           });
       })
       .finally(() => {
-        if (active) {
-          setIsLoadingMatches(false);
-        }
+        if (active) setIsLoadingMatches(false);
       });
-
     return () => {
       active = false;
     };
   }, [inspectedUser]);
 
+  // Hook personalizado que maneja la lógica de swipe y el stack de candidatos.
   const { stack, isLoading, swipe } = useMatchmaking(initialStack, (user) => {
     setMatchedUser(user);
   });
@@ -107,45 +110,34 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const preferredSports = currentUser?.preferred_sports || ["Fútbol"];
   const [activeSport, setActiveSport] = useState<string>("Todos");
 
+  // === BLOQUE: FILTRO Y RANKING DE CANDIDATOS ===
+  // Filtra los candidatos que ya fueron contactados y por deporte activo.
   const filteredStack = useMemo(() => {
-    // Cuando el usuario ya envió una acción de conexión, retiramos ese candidato
-    // del carrusel para continuar con la siguiente recomendación.
     const availableStack = (stack || []).filter(
       (candidate) => !contactedUserIds.includes(candidate.id),
     );
     if (activeSport === "Todos") return availableStack;
-
     return availableStack.filter((p) => {
       const matrix = p.sport_preferences?.sports_matrix;
-      if (matrix) {
-        return !!matrix[activeSport];
-      }
+      if (matrix) return !!matrix[activeSport];
       return (p.preferred_sports || []).includes(activeSport as Sport);
     });
   }, [stack, activeSport, contactedUserIds]);
 
+  // Geolocalización del usuario actual.
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.warn(
-            "Geolocation API unavailable or permission denied for matchmaking.",
-            error.message,
-          );
-        },
+        (position) =>
+          setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude }),
+        (error) => console.warn("Geolocation unavailable:", error.message),
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 },
       );
     }
   }, []);
 
+  // Ubicación base: geolocalización o última ubicación conocida del perfil.
   const baseLocation = useMemo(() => {
     if (userCoords) return userCoords;
     if (currentUser && currentUser.last_location_lat && currentUser.last_location_lng) {
@@ -154,8 +146,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     return null;
   }, [userCoords, currentUser]);
 
-  // Recalculate after the sport or location changes so the visible order always reflects
-  // the same compatibility values shown in the card and detail panel.
+  // Ranking de compatibilidad: recalcula al cambiar deporte, ubicación o filtro.
   const rankedStack = useMemo(
     () =>
       currentUser
@@ -169,40 +160,27 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
   const topRecommendation = rankedStack[0];
   const challengeSport =
-    rankedStack.find(
-      (recommendation: MatchRecommendation) => recommendation.user.id === challengeTarget?.id,
-    )?.matchedSport ??
+    rankedStack.find((r) => r.user.id === challengeTarget?.id)?.matchedSport ??
     (activeSport === "Todos" ? challengeTarget?.preferred_sports?.[0] : activeSport);
+
+  // === BLOQUE: CARGA DE DESAFÍOS ENVIADOS Y RECIBIDOS ===
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
-
-    // Restauramos pendientes del deporte activo para mantener el estado entre recargas.
     getPendingChallengesSent(currentUser.id)
-      .then((challenges: PlayerChallenge[]) => {
+      .then((challenges) => {
         if (active) {
           setPendingChallengeUserIds(
-            (challenges || [])
-              .filter(
-                (challenge: PlayerChallenge) =>
-                  activeSport === "Todos" || challenge.sport === activeSport,
-              )
-              .map((challenge: PlayerChallenge) => challenge.challenged_id),
+            challenges
+              .filter((c) => activeSport === "Todos" || c.sport === activeSport)
+              .map((c) => c.challenged_id),
           );
           setContactedUserIds((current) =>
-            Array.from(
-              new Set([
-                ...current,
-                ...(challenges || []).map((challenge: PlayerChallenge) => challenge.challenged_id),
-              ]),
-            ),
+            Array.from(new Set([...current, ...challenges.map((c) => c.challenged_id)])),
           );
         }
       })
-      .catch((error: Error) => {
-        console.error("Error al cargar desafíos pendientes:", error);
-      });
-
+      .catch((error) => console.error("Error al cargar desafíos pendientes:", error));
     return () => {
       active = false;
     };
@@ -211,23 +189,21 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
-
-    // La bandeja muestra únicamente solicitudes que todavía requieren respuesta.
     getPendingChallengesReceived(currentUser.id)
-      .then((challenges: PlayerChallenge[]) => {
+      .then((challenges) => {
         if (active) setReceivedChallenges(challenges || []);
       })
-      .catch((error: Error) => console.error("Error al cargar desafíos recibidos:", error));
-
+      .catch((error) => console.error("Error al cargar desafíos recibidos:", error));
     return () => {
       active = false;
     };
   }, [currentUser]);
 
+  // === BLOQUE: SUSCRIPCIÓN REALTIME A CONEXIONES MUTUAS ===
+  // Escucha insercciones en player_connections; si el otro usuario conectó primero,
+  // muestra el modal de match para que el primero también lo vea.
   useEffect(() => {
     if (!currentUser || useAuthStore.getState().isDemoMode) return;
-
-    // El primer usuario también recibe el modal cuando la otra persona completa el match.
     const channel = supabase
       .channel(`mutual-matches-${currentUser.id}`)
       .on(
@@ -247,13 +223,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
             .eq("connected_user_id", incomingUserId)
             .maybeSingle();
           if (!ownConnection) return;
-
           await supabase.rpc("create_direct_conversation", { other_user_id: incomingUserId });
           const matched =
-            stack.find((candidate) => candidate.id === incomingUserId) ||
-            (await apiClient.users.getMatches()).find(
-              (candidate) => candidate.id === incomingUserId,
-            );
+            stack.find((c) => c.id === incomingUserId) ||
+            (await apiClient.users.getMatches()).find((c) => c.id === incomingUserId);
           if (matched) {
             setMatchedUser(matched);
             setMatchMessage("");
@@ -261,45 +234,35 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentUser, stack]);
 
+  // === BLOQUE: CARGA DE CONEXIONES EXISTENTES ===
+  // Excluye del carrusel a usuarios con los que ya se conectó antes.
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
-
-    // Las conexiones guardadas no vuelven a mostrarse en el carrusel después de recargar.
     getPlayerConnections(currentUser.id)
-      .then((connections: PlayerConnection[]) => {
+      .then((connections) => {
         if (active) {
           setContactedUserIds((current) =>
-            Array.from(
-              new Set([
-                ...current,
-                ...(connections || []).map(
-                  (connection: PlayerConnection) => connection.connected_user_id,
-                ),
-              ]),
-            ),
+            Array.from(new Set([...current, ...connections.map((c) => c.connected_user_id)])),
           );
         }
       })
-      .catch((error: Error) => console.error("Error al cargar conexiones deportivas:", error));
-
+      .catch((error) => console.error("Error al cargar conexiones deportivas:", error));
     return () => {
       active = false;
     };
   }, [currentUser]);
 
+  // === BLOQUE: CONEXIÓN CON OTRO JUGADOR ===
+  // Envía solicitud de conexión; si es mutua, abre modal de match.
   const handleConnect = async (target: User) => {
     if (!currentUser || isSavingConnection) return;
-    const recommendation = rankedStack.find(
-      (item: MatchRecommendation) => item.user.id === target.id,
-    );
-
+    const recommendation = rankedStack.find((item) => item.user.id === target.id);
     try {
       setIsSavingConnection(true);
       const result = await createPlayerConnection({
@@ -310,8 +273,6 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
           (activeSport === "Todos" ? target.preferred_sports?.[0] : activeSport),
         compatibilityScore: recommendation?.score ?? null,
       });
-
-      // Retirar la tarjeta produce el avance inmediato al siguiente recomendado.
       setContactedUserIds((current) =>
         current.includes(target.id) ? current : [...current, target.id],
       );
@@ -328,21 +289,20 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
       }
     } catch (error) {
       console.error("Error al guardar conexión deportiva:", error);
-      const description =
-        error instanceof Error && error.message.includes("límite")
-          ? "Supabase no respondió a tiempo. Recarga la página e inténtalo nuevamente."
-          : "No se pudo guardar la conexión con tu sesión actual.";
       toast.error("No se pudo guardar la conexión", {
-        description,
+        description:
+          error instanceof Error && error.message.includes("límite")
+            ? "Supabase no respondió a tiempo. Recarga la página e inténtalo nuevamente."
+            : "No se pudo guardar la conexión con tu sesión actual.",
       });
     } finally {
       setIsSavingConnection(false);
     }
   };
 
+  // === BLOQUE: ENVÍO DE DESAFÍO ===
   const handleSendChallenge = async () => {
     if (!challengeTarget || !currentUser || !challengeSport) return;
-
     try {
       setIsSendingChallenge(true);
       await createPlayerChallenge({
@@ -372,19 +332,18 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     }
   };
 
+  // === BLOQUE: RESPUESTA A DESAFÍO RECIBIDO ===
+  // Acepta o rechaza un desafío; si acepta, crea chat y redirige.
   const handleChallengeResponse = async (
     challenge: PlayerChallenge,
     decision: "accepted" | "rejected",
   ) => {
     if (!currentUser) return;
-
     try {
       setResolvingChallengeId(challenge.id);
       await respondToPlayerChallenge(challenge.id, currentUser.id, decision);
       setReceivedChallenges((current) => current.filter((item) => item.id !== challenge.id));
-
       if (decision === "accepted") {
-        // Aceptar conecta a ambos jugadores inmediatamente para que puedan coordinar.
         const chatStore = useChatStore.getState();
         const chatId = await chatStore.createChat(challenge.challenger_id);
         await chatStore.sendMessage(
@@ -407,9 +366,10 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     }
   };
 
+  // === BLOQUE: RENDERIZADO PRINCIPAL ===
   return (
     <div className="grid lg:grid-cols-3 gap-8">
-      {/* Sport Selector Tabs */}
+      {/* ── Selector de deportes ── */}
       <div className="lg:col-span-3 flex flex-wrap gap-2 mb-2 p-1.5 bg-background/40 border border-border/60 rounded-2xl animate-fade-in">
         {Array.from(new Set(["Todos", ...preferredSports])).map((sport) => {
           const isFilterActive = activeSport === sport;
@@ -419,7 +379,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               onClick={() => setActiveSport(sport)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                 isFilterActive
-                  ? "bg-[#39FF14] text-black border-transparent shadow-[0_0_10px_rgba(57,255,20,0.3)]"
+                  ? "bg-primary text-primary-foreground border-transparent shadow-glow"
                   : "bg-muted border border-border text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
             >
@@ -429,6 +389,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         })}
       </div>
 
+      {/* ── Carrusel de tarjetas swipe ── */}
       <div className="lg:col-span-2 flex justify-center">
         <div className="relative w-full max-w-md h-[560px]">
           {isLoading ? (
@@ -478,30 +439,20 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                       exit={{ x: isTop ? 200 : 0, opacity: 0, transition: { duration: 0.2 } }}
                       whileDrag={{ rotate: 5, scale: 1.05 }}
                     >
-                      {/* ── HEADER BADGES ── */}
+                      {/* Badges del encabezado */}
                       <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
-                        {/* Top-Left: Green glassmorphic MATCH badge */}
-                        <span className="px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black uppercase tracking-widest font-mono shadow-[0_0_8px_rgba(57,255,20,0.25)]">
+                        <span className="px-3 py-1.5 rounded-lg bg-primary/15 border border-primary/35 text-primary text-[11px] font-black uppercase tracking-widest font-mono shadow-glow">
                           {Math.round(70 + (p.user.trust_score || 0) * 0.28)}% MATCH
                         </span>
-                        {/* Top-Right: Grey Trust Score badge */}
                         <span className="px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground text-[10px] font-semibold backdrop-blur-sm">
                           {p.user.trust_score || 0}% Trust Score
                         </span>
                       </div>
 
-                      {/* ── AVATAR with World Cup gradient ring & status dot ── */}
+                      {/* Avatar con anillo degradado y punto de estado */}
                       <div className="flex justify-center items-center py-4 relative z-10">
-                        {/* Gradient aura glow */}
-                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-[#FF007F] to-[#7B2CBF] opacity-30 blur-lg pointer-events-none" />
-                        {/* Thick gradient ring */}
-                        <div
-                          className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center"
-                          style={{
-                            background: "linear-gradient(135deg, #FF007F, #FF6B35, #7B2CBF)",
-                          }}
-                        >
-                          {/* Inner avatar */}
+                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-primary/30 to-primary-foreground/10 opacity-30 blur-lg pointer-events-none" />
+                        <div className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center bg-gradient-to-br from-primary via-primary/60 to-primary-foreground/20">
                           <div className="h-full w-full rounded-full overflow-hidden border-2 border-background bg-muted">
                             <Link
                               to="/app/profile/$userId"
@@ -515,19 +466,14 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                               />
                             </Link>
                           </div>
-                          {/* Glowing active status dot */}
-                          <span
-                            className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-[#39FF14] border-[3px] border-[#0D152D] flex items-center justify-center"
-                            style={{ boxShadow: "0 0 6px 2px rgba(57,255,20,0.6)" }}
-                          >
+                          <span className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-primary border-[3px] border-card flex items-center justify-center shadow-glow">
                             <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                           </span>
                         </div>
                       </div>
 
-                      {/* ── PROFILE INFO ── */}
+                      {/* Información del perfil: nombre, edad, deporte, nivel, ubicación */}
                       <div className="px-5 pb-2 space-y-2 z-10 relative">
-                        {/* Name + age */}
                         <div className="flex items-baseline justify-center gap-2 text-center">
                           <h2 className="text-xl font-black text-foreground flex items-center justify-center gap-1.5">
                             {p.user.company_name || p.user.name || t("matchmaking.user_default")}
@@ -540,7 +486,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           )}
                         </div>
 
-                        {/* Sport / Level / Distance capsule badges */}
+                        {/* Badges de deporte, nivel y distancia */}
                         {(() => {
                           const matrix = p.user.sport_preferences?.sports_matrix;
                           const sportLevel = matrix?.[activeSport]?.level || p.user.level;
@@ -556,14 +502,14 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                                     : sportLevel;
                           return (
                             <div className="flex flex-wrap justify-center gap-1.5">
-                              <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
+                              <span className="px-2.5 py-1 rounded-md bg-secondary/15 border border-secondary/30 text-secondary text-[10px] font-extrabold uppercase tracking-wide">
                                 {p.matchedSport || activeSport}
                               </span>
                               <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
                                 {displayLevel}
                               </span>
                               <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5 text-[#39FF14]" />{" "}
+                                <MapPin className="h-2.5 w-2.5 text-primary" />{" "}
                                 {dist == null
                                   ? p.user.city || "Sin ubicación"
                                   : `${dist.toFixed(1)} km`}
@@ -572,17 +518,16 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           );
                         })()}
 
-                        {/* Bio italic */}
                         {p.user.bio && (
                           <p className="text-xs text-muted-foreground leading-relaxed italic text-center line-clamp-2 px-2">
                             "{p.user.bio}"
                           </p>
                         )}
 
-                        {/* Hashtag pills from trust_score tiers */}
+                        {/* Hashtags según trust_score */}
                         <div className="flex flex-wrap justify-center gap-1 pt-0.5">
                           {(p.user.trust_score || 0) >= 90 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded bg-[#39FF14]/10 border border-[#39FF14]/15 text-[#39FF14]/80 font-semibold">
+                            <span className="text-[9px] px-2 py-0.5 rounded bg-primary/10 border border-primary/15 text-primary/80 font-semibold">
                               #Confiable
                             </span>
                           )}
@@ -597,10 +542,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         </div>
                       </div>
 
-                      {/* ── ACTION BUTTONS (always shown for top card) ── */}
+                      {/* Botones de acción: swipe, info, conectar */}
                       {isTop && (
                         <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
-                          {/* Dislike / Pass */}
                           <button
                             onClick={() => swipe(p.user.id, "pass")}
                             className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
@@ -608,7 +552,6 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           >
                             <X className="h-6 w-6" />
                           </button>
-                          {/* Info / View Profile */}
                           <button
                             onClick={() => setInspectedUser(p.user)}
                             className="h-10 w-10 rounded-full border border-border bg-muted/80 hover:bg-muted active:scale-95 text-foreground/75 flex items-center justify-center transition-all duration-200 cursor-pointer"
@@ -619,7 +562,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           <button
                             onClick={() => void handleConnect(p.user)}
                             disabled={isSavingConnection}
-                            className="h-14 px-5 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
+                            className="h-14 px-5 rounded-full border border-primary/35 bg-primary/10 hover:bg-primary/20 active:scale-90 text-primary flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-glow"
                             aria-label={`Conectar con ${p.user.name}`}
                           >
                             <Users className="h-5 w-5" />
@@ -635,6 +578,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         </div>
       </div>
 
+      {/* ── Panel lateral de compatibilidad y desafíos ── */}
       <div className="space-y-4">
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold flex items-center gap-2">
@@ -657,7 +601,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
           )}
         </div>
 
-        {/* La bandeja solo ocupa espacio cuando existe una solicitud que responder. */}
+        {/* Bandeja de desafíos recibidos */}
         {receivedChallenges.length > 0 && (
           <div className="bg-gradient-card border border-border rounded-2xl p-5">
             <div className="flex items-center justify-between gap-3">
@@ -668,14 +612,11 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                 {receivedChallenges.length}
               </span>
             </div>
-
             <div className="mt-4 space-y-3">
               {(receivedChallenges || []).map((challenge) => {
                 const challenger =
-                  challenge.challenger ||
-                  stack.find((candidate) => candidate.id === challenge.challenger_id);
+                  challenge.challenger || stack.find((c) => c.id === challenge.challenger_id);
                 const isResolving = resolvingChallengeId === challenge.id;
-
                 return (
                   <div
                     key={challenge.id}
@@ -696,13 +637,11 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         </div>
                       </div>
                     </div>
-
                     {challenge.message && (
                       <p className="mt-3 text-xs text-muted-foreground italic leading-relaxed">
                         “{challenge.message}”
                       </p>
                     )}
-
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <button
                         onClick={() => handleChallengeResponse(challenge, "rejected")}
@@ -732,7 +671,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         )}
       </div>
 
-      {/* Vista previa del desafío. La persistencia real se agregará en la siguiente etapa. */}
+      {/* ── Modal de envío de desafío ── */}
       <AnimatePresence>
         {challengeTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -756,7 +695,6 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               >
                 <X className="h-4 w-4" />
               </button>
-
               <div className="flex items-center gap-3 pr-10">
                 <div className="h-12 w-12 rounded-2xl bg-primary/15 border border-primary/30 grid place-items-center">
                   <Swords className="h-6 w-6 text-primary" />
@@ -768,7 +706,6 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   <h2 className="text-xl font-bold">Desafiar a {challengeTarget.name}</h2>
                 </div>
               </div>
-
               <div className="mt-5 rounded-2xl border border-border bg-background/50 p-4 flex items-center gap-3">
                 <img
                   src={challengeTarget.avatar_url}
@@ -787,12 +724,11 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     : challengeSport}
                 </span>
               </div>
-
               <label className="block mt-5">
                 <span className="text-xs font-semibold">Mensaje opcional</span>
                 <textarea
                   value={challengeMessage}
-                  onChange={(event) => setChallengeMessage(event.target.value)}
+                  onChange={(e) => setChallengeMessage(e.target.value)}
                   maxLength={240}
                   rows={3}
                   placeholder={`Hola ${challengeTarget.name}, ¿jugamos ${challengeSport}?`}
@@ -802,7 +738,6 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   {challengeMessage.length}/240
                 </span>
               </label>
-
               <div className="grid grid-cols-2 gap-3 mt-5">
                 <button
                   onClick={() => setChallengeTarget(null)}
@@ -831,7 +766,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         )}
       </AnimatePresence>
 
-      {/* Match Overlay Modal */}
+      {/* ── Modal de Match (conexión mutua) ── */}
       <AnimatePresence>
         {matchedUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -848,19 +783,15 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               exit={{ scale: 0.9, opacity: 0, y: 50 }}
               className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-8 text-center shadow-card overflow-hidden z-10"
             >
-              {/* Background glows */}
               <div className="absolute -right-20 -top-20 h-48 w-48 rounded-full bg-neon/20 blur-3xl" />
               <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
-
               <div className="text-neon text-xs font-bold uppercase tracking-wider mb-2 animate-pulse">
                 {t("matchmaking.its_a_match")}
               </div>
               <h2 className="text-3xl font-extrabold bg-gradient-neon bg-clip-text text-transparent mb-6">
                 {t("matchmaking.sport_connection")}
               </h2>
-
               <div className="flex items-center justify-center gap-6 mb-8 relative">
-                {/* Current User Avatar */}
                 <div className="relative">
                   <img
                     src={currentUser?.avatar_url}
@@ -871,13 +802,9 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     {t("matchmaking.me")}
                   </span>
                 </div>
-
-                {/* Las espadas representan una conexión para competir o jugar juntos. */}
                 <div className="relative z-10 h-12 w-12 rounded-full bg-gradient-neon flex items-center justify-center shadow-neon animate-pulse">
                   <Swords className="h-6 w-6 text-neon-foreground" />
                 </div>
-
-                {/* Matched User Avatar */}
                 <div className="relative">
                   <img
                     src={matchedUser.avatar_url}
@@ -889,27 +816,23 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   </span>
                 </div>
               </div>
-
               <p className="text-sm text-muted-foreground mb-6">
                 {t("matchmaking.match_desc", {
                   name: matchedUser.name,
                   sport: matchedUser.preferred_sports?.[0] || t("matchmaking.sport_default"),
                 })}
               </p>
-
               <textarea
                 value={matchMessage}
-                onChange={(event) => setMatchMessage(event.target.value)}
+                onChange={(e) => setMatchMessage(e.target.value)}
                 maxLength={240}
                 rows={3}
                 placeholder={`Hola ${matchedUser.name}, ¿coordinamos para jugar?`}
                 className="relative z-10 mb-3 w-full resize-none rounded-xl border border-border bg-background/70 px-3 py-2 text-sm text-left focus:outline-none focus:border-neon"
               />
-
               <div className="flex flex-col gap-2">
                 <button
                   onClick={async () => {
-                    // El match mutuo comparte una única conversación persistente.
                     try {
                       const chatStore = useChatStore.getState();
                       const chatId = await chatStore.createChat(matchedUser.id);
@@ -961,7 +884,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
         )}
       </AnimatePresence>
 
-      {/* Inspected User Profile Modal */}
+      {/* ── Modal de perfil de usuario inspeccionado ── */}
       <AnimatePresence>
         {inspectedUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -978,17 +901,14 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               exit={{ scale: 0.9, opacity: 0, y: 50 }}
               className="relative w-full max-w-2xl bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card overflow-y-auto max-h-[90vh] z-10 worldcup-card"
             >
-              {/* Background glows */}
               <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
               <div className="absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-neon/10 blur-3xl" />
-
               <button
                 onClick={() => setInspectedUser(null)}
                 className="absolute top-4 right-4 p-2 rounded-full glass hover:bg-accent transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5 text-muted-foreground" />
               </button>
-
               <div className="flex flex-wrap md:flex-nowrap items-start gap-6 relative mb-6">
                 <div className="relative shrink-0">
                   <img
@@ -1024,8 +944,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   </div>
                 </div>
               </div>
-
-              {/* Metrics Grid */}
+              {/* Grid de métricas: partidos, trust score, seguidores, seguidos */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <Stat
                   icon={<TrendingUp className="h-4 w-4 text-electric" />}
@@ -1048,8 +967,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                   value={inspectedUser.following_count ?? 0}
                 />
               </div>
-
-              {/* Trust Score & Sports History */}
+              {/* Trust Score e historial de partidos */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="glass rounded-2xl p-4">
                   <h3 className="font-semibold flex items-center gap-2 text-sm mb-3">
@@ -1074,7 +992,6 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     <Metric label={t("profile.behavior")} value={92} />
                   </div>
                 </div>
-
                 <div className="glass rounded-2xl p-4">
                   <h3 className="font-semibold text-sm mb-3">{t("profile.recent_history")}</h3>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
@@ -1130,6 +1047,8 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     </div>
   );
 }
+
+// ─── Subcomponentes ─────────────────────────────────────────────────────────────
 
 function Stat({
   icon,

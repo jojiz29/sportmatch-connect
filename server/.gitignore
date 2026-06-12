@@ -1,3 +1,7 @@
+# ============================================================
+# .gitignore — Archivos ignorados por Git (servidor NestJS)
+# ============================================================
+
 node_modules/
 dist/
 .env

@@ -1,6 +1,9 @@
+// === BLOQUE: IMPORTS — Dependencias del ruta raíz ===
 import type { QueryClient } from "@tanstack/react-query";
 import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 
+// === BLOQUE: NotFoundComponent — Página 404 personalizada ===
+// Se muestra cuando ninguna ruta coincide con la URL solicitada.
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -23,6 +26,9 @@ function NotFoundComponent() {
   );
 }
 
+// === BLOQUE: ErrorComponent — Fallback de errores en tiempo de ejecución ===
+// Captura excepciones no controladas durante el renderizado de rutas hijas.
+// Ofrece "Reintentar" (invalida el router y resetea el error) o "Volver al inicio".
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
@@ -57,6 +63,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+// === BLOQUE: RootComponent — Layout principal con animaciones de transición ===
+// Envuelve todas las rutas hijas con:
+//   - AnimatePresence para animar la salida de la ruta anterior.
+//   - motion.div con fade + slide horizontal (20px) en 200ms easeOut.
+//   - Toaster (sonner) para notificaciones toast globales.
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "@/shared/ui/sonner";
 
@@ -83,6 +94,11 @@ function RootComponent() {
   );
 }
 
+// === BLOQUE: Ruta raíz — createRootRouteWithContext ===
+// Expone queryClient en el contexto del router para que las rutas hijas
+// puedan usar TanStack Query sin necesidad de importar el cliente manualmente.
+// notFoundComponent: página 404 cuando ninguna ruta coincide.
+// errorComponent: fallback genérico de errores de renderizado.
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

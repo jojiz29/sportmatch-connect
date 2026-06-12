@@ -1,3 +1,8 @@
+// ============================================================
+// onboarding-wizard.spec.ts — E2E: Flujo completo de onboarding
+// Verifica selección de deportes, creación de perfil y avatar
+// ============================================================
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Onboarding Wizard E2E Flow", () => {
@@ -7,7 +12,7 @@ test.describe("Onboarding Wizard E2E Flow", () => {
   test("should register a player and complete onboarding wizard successfully", async ({ page }) => {
     // 1. Go to register page
     await page.goto(`${targetURL}/app/register`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await expect(page.locator("h1").first()).toContainText("Crear Cuenta", { timeout: 15000 });
 
     // 2. Select Player Role
@@ -96,7 +101,7 @@ test.describe("Onboarding Wizard E2E Flow", () => {
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/?`), { timeout: 10000 });
 
     // Verify User name appears in the sidebar
-    const sidebarName = page.locator("aside .text-sm.font-semibold");
+    const sidebarName = page.locator("#sidebar-user-name");
     await expect(sidebarName).toContainText("Edwin Onboarding Tester");
 
     // 12. Check localStorage: verify the new user_sports JSONB structure is persisted correctly

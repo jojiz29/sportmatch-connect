@@ -1,3 +1,9 @@
+// ============================================================
+// vite.config.ts — Configuración de Vite
+// Plugins: React, TanStack Router, Tailwind v4, PWA, visualizer
+// Servidor en puerto 5178 con alias @ y modo analyze
+// ============================================================
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";

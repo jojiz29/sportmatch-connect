@@ -1,3 +1,4 @@
+// shadcn/ui — Panel Redimensionable (divisores ajustables con react-resizable-panels)
 import { GripVertical } from "lucide-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 

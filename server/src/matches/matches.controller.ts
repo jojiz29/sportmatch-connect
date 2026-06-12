@@ -1,3 +1,8 @@
+// ============================================================
+// matches.controller.ts — Controlador de partidos
+// CRUD + unirse/salir de partidos con autenticación
+// ============================================================
+
 import {
   Controller,
   Get,

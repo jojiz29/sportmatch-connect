@@ -1,3 +1,8 @@
+// ============================================================
+// bookings.controller.ts — Controlador de reservas
+// Endpoints: GET (por cancha y fecha), POST (crear reserva)
+// ============================================================
+
 import { Controller, Get, Post, Query, Body, UseGuards } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { BookingsService } from "./bookings.service";

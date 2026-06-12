@@ -1,3 +1,8 @@
+// ============================================================
+// courts.module.ts — Módulo de canchas deportivas
+// CRUD de canchas con autenticación opcional según el endpoint
+// ============================================================
+
 import { Module } from "@nestjs/common";
 import { CourtsController } from "./courts.controller";
 import { CourtsService } from "./courts.service";

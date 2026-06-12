@@ -1,3 +1,4 @@
+// === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
@@ -6,7 +7,9 @@ import { useNotificationStore } from "@/features/notifications/model/useNotifica
 import type { Sport, Level } from "@/entities/types";
 import { toast } from "sonner";
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// ─── INTERFACES ───────────────────────────────────────────────────────────────
+
+// === PARTICIPANTE DE PARTIDO PÚBLICO ===
 export interface PublicMatchParticipant {
   userId: string;
   name: string;
@@ -14,6 +17,9 @@ export interface PublicMatchParticipant {
   joinedAt: string;
 }
 
+// === PARTIDO PÚBLICO ===
+// Partido visible para todos los usuarios, con datos de cancha, ubicación,
+// participantes y estado (abierto, completo, finalizado o cancelado).
 export interface PublicMatch {
   id: string;
   creatorId: string;
@@ -34,6 +40,7 @@ export interface PublicMatch {
   createdAt: string;
 }
 
+// === VALORACIÓN DE USUARIO ===
 export interface UserReview {
   id: string;
   reviewerId: string;
@@ -46,6 +53,7 @@ export interface UserReview {
   createdAt: string;
 }
 
+// === REPORTE DE USUARIO ===
 export interface UserReport {
   id: string;
   reporterId: string;
@@ -58,12 +66,13 @@ export interface UserReport {
   createdAt: string;
 }
 
+// === INTERFAZ DEL ESTADO ===
 interface MatchesState {
   publicMatches: PublicMatch[];
   reviews: UserReview[];
   reports: UserReport[];
 
-  // Match actions
+  // Acciones de partidos
   createMatch: (
     data: Omit<
       PublicMatch,
@@ -74,13 +83,13 @@ interface MatchesState {
   kickParticipant: (matchId: string, userId: string) => void;
   cancelMatch: (matchId: string) => void;
 
-  // Review actions
+  // Acciones de valoraciones
   submitReview: (
     data: Omit<UserReview, "id" | "createdAt" | "reviewerId" | "reviewerName" | "reviewerAvatar">,
   ) => void;
   getAverageRating: (userId: string) => number;
 
-  // Moderation actions
+  // Acciones de moderación
   submitReport: (
     data: Omit<UserReport, "id" | "status" | "createdAt" | "reporterId" | "reporterName">,
   ) => void;
@@ -88,7 +97,8 @@ interface MatchesState {
   sanctionUser: (reportId: string) => void;
 }
 
-// ─── Mock Seed Data ────────────────────────────────────────────────────────────
+// ─── DATOS SEMILLA ────────────────────────────────────────────────────────────
+// Partidos públicos de demostración con diversos deportes y niveles
 const SEED_MATCHES: PublicMatch[] = [
   {
     id: "pm-1",
@@ -206,6 +216,7 @@ const SEED_MATCHES: PublicMatch[] = [
   },
 ];
 
+// Valoraciones de demostración
 const SEED_REVIEWS: UserReview[] = [
   {
     id: "rv-1",
@@ -229,6 +240,7 @@ const SEED_REVIEWS: UserReview[] = [
   },
 ];
 
+// Reportes de demostración
 const SEED_REPORTS: UserReport[] = [
   {
     id: "rpt-1",
@@ -243,7 +255,9 @@ const SEED_REPORTS: UserReport[] = [
   },
 ];
 
-// ─── Store ─────────────────────────────────────────────────────────────────────
+// ─── STORE ─────────────────────────────────────────────────────────────────────
+// Store de matchmaking público con persistencia en localStorage.
+// Gestiona creación/unión/cancelación de partidos, valoraciones y reportes.
 export const usePublicMatchStore = create<MatchesState>()(
   persist(
     (set, get) => ({
@@ -251,7 +265,8 @@ export const usePublicMatchStore = create<MatchesState>()(
       reviews: SEED_REVIEWS,
       reports: SEED_REPORTS,
 
-      // ── Create match ──────────────────────────────────────────────────────
+      // ── CREAR PARTIDO ────────────────────────────────────────────────────
+      // Crea un nuevo partido y toma los datos del usuario desde useAuthStore.
       createMatch: (data) => {
         const user = useAuthStore.getState().user;
         if (!user) throw new Error("Not authenticated");
@@ -279,7 +294,9 @@ export const usePublicMatchStore = create<MatchesState>()(
         return newMatch;
       },
 
-      // ── Join match ────────────────────────────────────────────────────────
+      // ── UNIRSE A PARTIDO ─────────────────────────────────────────────────
+      // Agrega al usuario actual como participante. Valida duplicados y capacidad máxima.
+      // Notifica al creador del partido mediante el store de notificaciones.
       joinMatch: (matchId) => {
         const user = useAuthStore.getState().user;
         if (!user) return;
@@ -319,7 +336,7 @@ export const usePublicMatchStore = create<MatchesState>()(
 
         toast.success(`¡Te uniste al partido "${match.title}"! 🎉`);
 
-        // Notify creator
+        // Notifica al creador del partido
         useNotificationStore.getState().addNotification({
           id: `notif-join-${Date.now()}`,
           user_id: match.creatorId,
@@ -330,7 +347,8 @@ export const usePublicMatchStore = create<MatchesState>()(
         });
       },
 
-      // ── Kick participant ──────────────────────────────────────────────────
+      // ── EXPULSAR PARTICIPANTE ────────────────────────────────────────────
+      // Solo el creador del partido puede expulsar. No se permite auto-expulsión.
       kickParticipant: (matchId, userId) => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) return;
@@ -357,7 +375,8 @@ export const usePublicMatchStore = create<MatchesState>()(
         toast.success(`${kicked?.name ?? "Participante"} fue expulsado del partido.`);
       },
 
-      // ── Cancel match ──────────────────────────────────────────────────────
+      // ── CANCELAR PARTIDO ─────────────────────────────────────────────────
+      // Cambia el estado del partido a "Cancelled". Solo el creador puede cancelar.
       cancelMatch: (matchId) => {
         const user = useAuthStore.getState().user;
         if (!user) return;
@@ -370,7 +389,9 @@ export const usePublicMatchStore = create<MatchesState>()(
         toast.success("Partido cancelado.");
       },
 
-      // ── Reviews ───────────────────────────────────────────────────────────
+      // ── VALORACIONES ─────────────────────────────────────────────────────
+      // Envía una valoración de 1-5 estrellas a otro usuario.
+      // Evita valoraciones duplicadas del mismo revisor hacia el mismo usuario.
       submitReview: (data) => {
         const user = useAuthStore.getState().user;
         if (!user) return;
@@ -396,6 +417,7 @@ export const usePublicMatchStore = create<MatchesState>()(
         toast.success("¡Valoración enviada! ⭐");
       },
 
+      // Calcula el promedio de valoraciones de un usuario
       getAverageRating: (userId) => {
         const userReviews = get().reviews.filter((r) => r.targetUserId === userId);
         if (!userReviews.length) return 0;
@@ -403,7 +425,8 @@ export const usePublicMatchStore = create<MatchesState>()(
         return Math.round((sum / userReviews.length) * 10) / 10;
       },
 
-      // ── Reports ───────────────────────────────────────────────────────────
+      // ── REPORTES ─────────────────────────────────────────────────────────
+      // Envía un reporte contra otro usuario. Notifica al administrador.
       submitReport: (data) => {
         const user = useAuthStore.getState().user;
         if (!user) return;
@@ -420,7 +443,7 @@ export const usePublicMatchStore = create<MatchesState>()(
         set((s) => ({ reports: [report, ...s.reports] }));
         toast.success("Reporte enviado. Un moderador lo revisará pronto. 🛡️");
 
-        // Notify all admins via the notification store
+        // Notifica a los administradores
         useNotificationStore.getState().addNotification({
           id: `notif-report-${Date.now()}`,
           user_id: "ADMIN",
@@ -431,6 +454,7 @@ export const usePublicMatchStore = create<MatchesState>()(
         });
       },
 
+      // Marca un reporte como ignorado
       ignoreReport: (reportId) => {
         set((s) => ({
           reports: s.reports.map((r) => (r.id === reportId ? { ...r, status: "IGNORED" } : r)),
@@ -438,6 +462,7 @@ export const usePublicMatchStore = create<MatchesState>()(
         toast.success("Reporte ignorado.");
       },
 
+      // Aplica sanción al usuario reportado
       sanctionUser: (reportId) => {
         set((s) => ({
           reports: s.reports.map((r) => (r.id === reportId ? { ...r, status: "SANCTIONED" } : r)),

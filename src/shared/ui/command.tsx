@@ -1,3 +1,4 @@
+// shadcn/ui — Paleta de Comandos (buscador tipo cmd+k con cmdk)
 "use client";
 
 import * as React from "react";

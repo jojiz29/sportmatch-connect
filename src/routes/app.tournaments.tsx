@@ -1,3 +1,6 @@
+// === BLOQUE: Ruta de Torneos Relámpago ===
+// Página que renderiza el componente TournamentHub envuelto en
+// un ErrorBoundary para manejo de errores.
 import { createFileRoute } from "@tanstack/react-router";
 import { TournamentHub } from "@/components/TournamentHub";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
@@ -16,4 +19,5 @@ function TournamentsPage() {
     </div>
   );
 }
+
 export default TournamentsPage;

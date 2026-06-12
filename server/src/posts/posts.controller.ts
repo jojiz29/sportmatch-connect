@@ -1,3 +1,8 @@
+// ============================================================
+// posts.controller.ts — Controlador de publicaciones
+// CRUD de posts + comentarios anidados + reacciones toggle
+// ============================================================
+
 import {
   Controller,
   Get,

@@ -1,3 +1,8 @@
+// ============================================================
+// publicMatchStore.test.ts — Tests de la store de matchmaking público
+// Verifica reportes, reseñas y matchmaking
+// ============================================================
+
 import { describe, it, expect, beforeEach } from "vitest";
 import { usePublicMatchStore } from "../usePublicMatchStore";
 import { useAuthStore } from "@/entities/user/useAuth";

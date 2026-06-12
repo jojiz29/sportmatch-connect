@@ -1,3 +1,8 @@
+// ============================================================
+// supabase-auth.guard.ts — Guard de autenticación con Supabase
+// Valida el token Bearer contra Supabase Auth y asigna el payload a request.user
+// ============================================================
+
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from "@nestjs/common";
 import { SupabaseAuthService } from "../supabase-auth.service";
 

@@ -1,3 +1,8 @@
+// ============================================================
+// matchmaking.test.ts — Tests de lógica de matchmaking
+// Verifica algoritmo de compatibilidad entre jugadores
+// ============================================================
+
 import { describe, expect, it } from "vitest";
 import { User } from "@/entities/types";
 import {
