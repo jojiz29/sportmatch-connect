@@ -134,6 +134,7 @@ interface PopupContentProps {
   owner?: User;
   onViewCommercialSheet?: (business: User) => void;
   onOpenVenueActivity?: (venue: Venue) => void;
+  onViewVenueDetails?: (venue: Venue) => void;
 }
 
 function PopupContent({
@@ -143,6 +144,7 @@ function PopupContent({
   owner,
   onViewCommercialSheet,
   onOpenVenueActivity,
+  onViewVenueDetails,
 }: PopupContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -176,6 +178,10 @@ function PopupContent({
         e.preventDefault();
         e.stopPropagation();
         onOpenVenueActivity?.(venue);
+      } else if (action === "venue-details") {
+        e.preventDefault();
+        e.stopPropagation();
+        onViewVenueDetails?.(venue);
       }
     };
 
@@ -183,7 +189,15 @@ function PopupContent({
     return () => {
       el.removeEventListener("click", handleNativeClick);
     };
-  }, [venue, onBookCourt, onViewCourt, owner, onViewCommercialSheet, onOpenVenueActivity]);
+  }, [
+    venue,
+    onBookCourt,
+    onViewCourt,
+    owner,
+    onViewCommercialSheet,
+    onOpenVenueActivity,
+    onViewVenueDetails,
+  ]);
 
   return (
     <div ref={containerRef} className="p-1 min-w-[200px] max-w-[240px] font-sans text-left">
@@ -244,6 +258,13 @@ function PopupContent({
       )}
 
       <div className="flex gap-2">
+        <button
+          type="button"
+          data-action="venue-details"
+          className="flex-1 text-center py-1.5 rounded-lg bg-accent text-foreground text-[10px] font-bold cursor-pointer border-0"
+        >
+          VER DETALLES
+        </button>
         <button
           type="button"
           data-action="activity"
@@ -360,6 +381,7 @@ export function MapFeature({
   selectedDistrictCenter,
   onViewCommercialSheet,
   onOpenVenueActivity,
+  onViewVenueDetails,
 }: {
   venues: Venue[];
   players: User[];
@@ -367,6 +389,7 @@ export function MapFeature({
   selectedDistrictCenter?: [number, number] | null;
   onViewCommercialSheet?: (business: User) => void;
   onOpenVenueActivity?: (venue: Venue) => void;
+  onViewVenueDetails?: (venue: Venue) => void;
 }) {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
@@ -412,12 +435,21 @@ export function MapFeature({
               owner={owner}
               onViewCommercialSheet={onViewCommercialSheet}
               onOpenVenueActivity={onOpenVenueActivity}
+              onViewVenueDetails={onViewVenueDetails}
             />
           </Popup>
         </Marker>
       );
     });
-  }, [venues, players, onBookCourt, onViewCourt, onViewCommercialSheet, onOpenVenueActivity]);
+  }, [
+    venues,
+    players,
+    onBookCourt,
+    onViewCourt,
+    onViewCommercialSheet,
+    onOpenVenueActivity,
+    onViewVenueDetails,
+  ]);
 
   const matchMarkers = useMemo(() => {
     return players.map((m) => {
