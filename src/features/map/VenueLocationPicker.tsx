@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useThemeStore } from "@/features/theme/store";
 
 interface VenueLocationPickerProps {
   lat: number | "";
@@ -19,6 +20,13 @@ function LocationSelection({
   lng: number | "";
   onChange: (lat: number, lng: number) => void;
 }) {
+  const theme = useThemeStore((s) => s.theme);
+  const getThemePrimaryColor = () => {
+    if (theme === "world-cup") return "#D4AF37";
+    if (theme === "dark-footballer") return "#39FF14";
+    return "#ff5722"; // light/default
+  };
+  const primaryColor = getThemePrimaryColor();
   const map = useMapEvents({
     click(event) {
       // Guardamos internamente las coordenadas escogidas sin exigir que la empresa las escriba.
@@ -44,7 +52,7 @@ function LocationSelection({
     <CircleMarker
       center={[lat, lng]}
       radius={10}
-      pathOptions={{ color: "#ffffff", fillColor: "#39FF14", fillOpacity: 1, weight: 3 }}
+      pathOptions={{ color: "#ffffff", fillColor: primaryColor, fillOpacity: 1, weight: 3 }}
     />
   );
 }

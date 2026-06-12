@@ -493,7 +493,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         onClick={() => handleToggleSport(sport.id)}
         className={`p-4 border rounded-2xl cursor-pointer select-none transition-all duration-150 group relative ${sport.styleClass} ${
           isSelected
-            ? "border-[#39FF14] scale-105 shadow-[0_0_15px_rgba(57,255,20,0.4)]"
+            ? "border-primary scale-105 shadow-glow"
             : "hover:scale-[1.02] border-white/10 hover:border-white/20"
         }`}
         id={`sport-card-${sport.id.replace(/\s+/g, "-").replace(/\//g, "-")}`}
@@ -537,7 +537,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         <div className="flex justify-between items-start relative z-10">
           <span className="text-3xl">{sport.emoji}</span>
           {isSelected && (
-            <div className="h-5 w-5 rounded-full bg-[#39FF14] grid place-items-center">
+            <div className="h-5 w-5 rounded-full bg-primary grid place-items-center">
               <Check className="h-3 w-3 text-black font-black" />
             </div>
           )}
@@ -769,9 +769,9 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
                 max="20"
                 value={weeklyHours}
                 onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#39FF14]"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-primary"
                 style={{
-                  background: `linear-gradient(to right, #39FF14 ${((weeklyHours - 1) / 19) * 100}%, #1e293b ${((weeklyHours - 1) / 19) * 100}%)`,
+                  background: `linear-gradient(to right, hsl(var(--primary)) ${((weeklyHours - 1) / 19) * 100}%, hsl(var(--muted)) ${((weeklyHours - 1) / 19) * 100}%)`,
                 }}
                 id="hours-slider"
               />

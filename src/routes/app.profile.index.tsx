@@ -91,6 +91,16 @@ function Profile() {
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
+  const [barWidth, setBarWidth] = useState(0);
+
+  useEffect(() => {
+    if (profile) {
+      const timer = setTimeout(() => {
+        setBarWidth(profile.trust_score || 0);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
 
   const { analyzeImage } = useNSFWJS();
   const [isAnalyzingAvatar, setIsAnalyzingAvatar] = useState(false);
@@ -342,11 +352,16 @@ function Profile() {
       });
       backendApi.matches
         .getAll()
-        .then((backendMatches) => {
-          const userMatches = (backendMatches as Match[]).filter(
-            (m) => m.creator_id === profile.id,
-          );
-          setUserMatches(userMatches);
+        .then((res) => {
+          if (res && Array.isArray(res.data)) {
+            const userMatches = res.data.filter((m) => m.creator_id === profile.id);
+            setUserMatches(userMatches);
+          } else {
+            apiClient.matches
+              .getUserMatches(profile.id)
+              .then(setUserMatches)
+              .catch(() => setUserMatches([]));
+          }
         })
         .catch(() => {
           apiClient.matches
@@ -500,7 +515,7 @@ function Profile() {
                     style={{ animation: "pulseBorder 2s infinite ease-in-out" }}
                   >
                     <style>{`@keyframes pulseBorder { 0% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); } 50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px 4px rgba(239, 68, 68, 0.5); } 100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); } }`}</style>
-                    <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+                    <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                       🛡️ Escaneando...
                     </span>
@@ -721,8 +736,13 @@ function Profile() {
             <div className="text-5xl font-bold text-gradient">{profile.trust_score}</div>
             <div className={`text-sm font-semibold mt-1 ${trustColor}`}>{trustLevel}</div>
           </div>
-          <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-gradient-neon" style={{ width: `${profile.trust_score}%` }} />
+          <div
+            className={`mt-4 h-3 rounded-full bg-muted overflow-hidden ${profile.trust_score >= 80 ? "animate-pulse shadow-glow" : ""}`}
+          >
+            <div
+              className="h-full bg-gradient-neon transition-all duration-1000 ease-out"
+              style={{ width: `${barWidth}%` }}
+            />
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <Metric label={t("profile.punctuality")} value={98} />
@@ -853,7 +873,12 @@ function Profile() {
               return (
                 <div
                   key={b.id}
-                  className={`text-center p-3 rounded-xl transition-all cursor-default flex flex-col justify-between items-center ${isUnlocked ? "glass border-primary/30 hover:ring-glow hover:border-primary/50" : "bg-muted/15 border border-border/40 grayscale opacity-45 hover:opacity-75 transition-opacity"}`}
+                  className={`text-center p-3 rounded-xl cursor-default flex flex-col justify-between items-center ${
+                    isUnlocked
+                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50 transition-all"
+                      : "bg-muted/15 border border-border/40 opacity-40 grayscale transition-all duration-300 hover:grayscale-0 hover:opacity-100"
+                  }`}
+                  title={!isUnlocked ? "Juega más para desbloquear" : undefined}
                 >
                   <div className="flex flex-col items-center">
                     <div className="text-3xl">{b.emoji}</div>

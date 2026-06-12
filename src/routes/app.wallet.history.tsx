@@ -2,7 +2,7 @@
 // Muestra el historial completo de transacciones de FitCoins del usuario,
 // con indicador visual de tipo (EARN/SPEND/PENALTY), saldo actual
 // y resumen mensual (ingresos, egresos, neto).
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { ArrowLeft, ArrowUpRight, ArrowDownRight, TrendingUp, Trophy } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -10,9 +10,6 @@ import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/app/wallet/history")({
-  beforeLoad: () => {
-    throw redirect({ to: "/app" });
-  },
   head: () => ({ meta: [{ title: "Historial de FitCoins — SportMatch" }] }),
   component: WalletHistory,
 });

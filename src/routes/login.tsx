@@ -163,8 +163,8 @@ function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
       {/* Luces ambientales decorativas de fondo */}
-      <div className="absolute top-1/3 -left-48 w-96 h-96 rounded-full bg-[#39FF14]/5 blur-[120px] animate-float" />
-      <div className="absolute bottom-1/3 -right-48 w-96 h-96 rounded-full bg-[#FF6B35]/8 blur-[100px] animate-float-reverse" />
+      <div className="absolute top-1/3 -left-48 w-96 h-96 rounded-full bg-primary/5 blur-[120px] animate-float" />
+      <div className="absolute bottom-1/3 -right-48 w-96 h-96 rounded-full bg-secondary/8 blur-[100px] animate-float-reverse" />
 
       <div className="relative w-full max-w-md animate-scale-in">
         {/* Barra decorativa superior */}
@@ -264,7 +264,7 @@ function Login() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#FF6B35]/40 text-white font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] group"
+              className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/40 text-white font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] group"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
                 <path
@@ -284,7 +284,7 @@ function Login() {
                   fill="#EA4335"
                 />
               </svg>
-              <span className="group-hover:text-[#FF6B35] transition-colors">
+              <span className="group-hover:text-primary transition-colors">
                 {t("auth.continue_with_google", "Continuar con Google")}
               </span>
             </button>

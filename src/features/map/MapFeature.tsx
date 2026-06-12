@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-le
 import { Venue, User } from "@/entities/types";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { useThemeStore } from "@/features/theme/store";
 
 // === BLOQUE: CACHÉ DE ICONOS LEAFLET ===
 // Previene fugas de memoria y sobrecarga del GC al reutilizar iconos DivIcon.
@@ -338,8 +339,16 @@ export function MapFeature({
   onOpenVenueActivity?: (venue: Venue) => void;
 }) {
   const navigate = useNavigate();
+  const theme = useThemeStore((s) => s.theme);
   const [mounted, setMounted] = useState(false);
   const [highlightCoords, setHighlightCoords] = useState<[number, number] | null>(null);
+
+  const getThemePrimaryColor = () => {
+    if (theme === "world-cup") return "#D4AF37";
+    if (theme === "dark-footballer") return "#39FF14";
+    return "#ff5722"; // light/default
+  };
+  const primaryColor = getThemePrimaryColor();
 
   // Hidratación del lado del cliente (evita errores SSR con Leaflet).
   useEffect(() => {
@@ -429,8 +438,8 @@ export function MapFeature({
             center={highlightCoords}
             radius={700}
             pathOptions={{
-              color: "#39FF14",
-              fillColor: "#39FF14",
+              color: primaryColor,
+              fillColor: primaryColor,
               fillOpacity: 0.15,
               weight: 2.5,
               dashArray: "6, 6",

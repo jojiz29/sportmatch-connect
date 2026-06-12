@@ -185,7 +185,7 @@ export function TournamentHub() {
       const chatId = existingChat ? existingChat.id : await chatStore.createChat(targetUser.id);
       await chatStore.sendMessage(chatId, inviteMsg);
       toast.success(`¡Invitación enviada con éxito a ${targetUser.name} por el Chat!`, {
-        icon: <MessageSquare className="h-4 w-4 text-[#39FF14]" />,
+        icon: <MessageSquare className="h-4 w-4 text-primary" />,
       });
     } catch (err) {
       console.error("Error sending chat invite:", err);
@@ -380,7 +380,7 @@ export function TournamentHub() {
       {/* === BLOQUE: PANEL DE ENCABEZADO === */}
       {/* Banner principal con badge "Mundial SportMatch 2026", título y selector de pestañas */}
       <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card relative overflow-hidden">
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#D4AF37]/10 blur-3xl" />
+        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
           <div>
             <span className="text-[10px] text-neon uppercase font-black tracking-widest bg-neon/15 px-3 py-1 rounded-full border border-neon/20">
@@ -541,7 +541,7 @@ export function TournamentHub() {
             {/* Control de código de torneo */}
             <div className="bg-gradient-card border border-border/70 p-5 rounded-3xl shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="text-left">
-                <span className="text-[9px] bg-amber-500/20 text-[#D4AF37] border border-amber-500/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                <span className="text-[9px] bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
                   Código de Torneo
                 </span>
                 <h4 className="text-sm font-black text-foreground mt-1.5 flex items-center gap-1.5 font-mono">
@@ -568,7 +568,7 @@ export function TournamentHub() {
             {/* Barra de control de simulación */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-card border border-border/70 p-5 rounded-3xl shadow-card">
               <div className="text-left">
-                <p className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
+                <p className="text-xs font-bold text-primary uppercase tracking-wider">
                   Controlador de Eliminatoria
                 </p>
                 <h4 className="text-sm font-semibold text-foreground mt-0.5">
@@ -590,7 +590,7 @@ export function TournamentHub() {
                 {simulationStep === "semis" && (
                   <button
                     onClick={() => setIsVersusOpen(true)}
-                    className="px-4 py-2.5 rounded-xl border-2 border-[#39FF14] text-[#39FF14] bg-[#39FF14]/5 text-xs font-bold hover:bg-[#39FF14]/15 transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.15)] animate-pulse"
+                    className="px-4 py-2.5 rounded-xl border-2 border-primary text-primary bg-primary/5 text-xs font-bold hover:bg-primary/15 transition-all flex items-center gap-1.5 cursor-pointer shadow-glow animate-pulse"
                   >
                     <Swords className="h-4 w-4" /> Ver Enfrentamiento (VS)
                   </button>
@@ -632,7 +632,7 @@ export function TournamentHub() {
                 {/* Semifinales */}
                 <div className="flex-1 space-y-16">
                   <div className="text-center pb-2 border-b border-border/20">
-                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-widest">
+                    <span className="text-[10px] uppercase font-bold text-primary tracking-widest">
                       Semifinales
                     </span>
                   </div>
@@ -652,16 +652,17 @@ export function TournamentHub() {
                   </div>
                   <MatchCard match={brackets.finals[0]} />
                   {champion && (
-                    <div className="mt-8 animate-scale-in flex flex-col items-center p-5 bg-[#D4AF37]/10 border border-[#D4AF37]/50 rounded-2xl shadow-[0_0_20px_rgba(212,175,55,0.25)] text-center relative overflow-hidden">
+                    <div className="mt-8 animate-scale-in flex flex-col items-center p-5 bg-primary/10 border border-primary/50 rounded-2xl shadow-glow text-center relative overflow-hidden">
                       <div
                         className="absolute inset-0 pointer-events-none opacity-[0.05]"
                         style={{
-                          backgroundImage: "radial-gradient(circle, #D4AF37 1px, transparent 1px)",
+                          backgroundImage:
+                            "radial-gradient(circle, var(--color-primary) 1px, transparent 1px)",
                           backgroundSize: "16px 16px",
                         }}
                       />
-                      <Trophy className="h-10 w-10 text-[#D4AF37] drop-shadow-[0_0_10px_rgba(212,175,55,0.7)] animate-bounce" />
-                      <span className="text-[9px] uppercase font-black text-[#D4AF37] tracking-widest mt-2 block">
+                      <Trophy className="h-10 w-10 text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.7)] animate-bounce" />
+                      <span className="text-[9px] uppercase font-black text-primary tracking-widest mt-2 block">
                         Campeón del Torneo
                       </span>
                       <h5 className="text-sm font-black text-white mt-1 truncate max-w-[200px]">
@@ -678,7 +679,7 @@ export function TournamentHub() {
           <div className="col-span-1 bg-gradient-card border border-border rounded-3xl p-4 shadow-card space-y-4">
             <div className="pb-2 border-b border-white/5 text-left">
               <h3 className="font-heading text-lg tracking-wide text-foreground flex items-center gap-2">
-                <UserPlus className="h-4.5 w-4.5 text-neon" /> Reclutar por Chat
+                <UserPlus className="h-4.5 w-4.5 text-primary" /> Reclutar por Chat
               </h3>
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 Invita a deportistas directamente a tu escuadra
@@ -718,7 +719,7 @@ export function TournamentHub() {
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleAddMemberToSquad(u)}
-                      className="p-1.5 rounded-lg bg-neon/15 text-neon hover:bg-neon/25 transition-colors cursor-pointer border-0"
+                      className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer border-0"
                       title="Agregar directo"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -784,7 +785,7 @@ function MatchCard({ match }: { match: MatchNode }) {
           </div>
           {match.teamA.score !== undefined ? (
             <span
-              className={`text-xs font-black px-2 py-0.5 rounded-lg ${match.teamA.isWinner ? "bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/25" : "bg-muted text-muted-foreground"}`}
+              className={`text-xs font-black px-2 py-0.5 rounded-lg ${match.teamA.isWinner ? "bg-primary/15 text-primary border border-primary/25" : "bg-muted text-muted-foreground"}`}
             >
               {match.teamA.score}
             </span>
@@ -811,7 +812,7 @@ function MatchCard({ match }: { match: MatchNode }) {
           </div>
           {match.teamB.score !== undefined ? (
             <span
-              className={`text-xs font-black px-2 py-0.5 rounded-lg ${match.teamB.isWinner ? "bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/25" : "bg-muted text-muted-foreground"}`}
+              className={`text-xs font-black px-2 py-0.5 rounded-lg ${match.teamB.isWinner ? "bg-primary/15 text-primary border border-primary/25" : "bg-muted text-muted-foreground"}`}
             >
               {match.teamB.score}
             </span>

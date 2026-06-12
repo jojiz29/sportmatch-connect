@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { VenueLocationPicker } from "@/features/map/VenueLocationPicker";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { useThemeStore } from "@/features/theme/store";
 import { useState, useEffect, useMemo } from "react";
 import {
   getCatalogItems,
@@ -52,6 +53,8 @@ import {
   Megaphone,
   MousePointer,
   MapPin,
+  ShoppingBag,
+  Heart,
 } from "lucide-react";
 import {
   AreaChart,
@@ -106,6 +109,7 @@ export const Route = createFileRoute("/app/business")({
 });
 
 function BusinessPage() {
+  const theme = useThemeStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate({ from: "/app/business" });
   const sales = useBusinessStore((s) => s.sales);
@@ -154,12 +158,12 @@ function BusinessPage() {
 
   const reachData = useMemo(
     () => [
-      { name: "< 1km", value: 35, color: "#39FF14" },
+      { name: "< 1km", value: 35, color: theme === "world-cup" ? "#D4AF37" : "#39FF14" },
       { name: "1-3km", value: 40, color: "#00E5FF" },
       { name: "3-5km", value: 20, color: "#E040FB" },
       { name: "> 5km", value: 5, color: "#475569" },
     ],
-    [],
+    [theme],
   );
 
   // === BLOQUE: Estados de formularios ===
@@ -761,12 +765,27 @@ function BusinessPage() {
       />
 
       {/* === BLOQUE: Banner de métricas === */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         <MetricCard
+          id="business-balance-display"
           label="Saldo FitCoins"
           value={`${user.fitcoins_balance ?? 0} FC`}
           icon={<DollarSign className="h-5 w-5" />}
           accentClass="text-neon bg-neon/10 border-neon/20"
+        />
+        <MetricCard
+          id="business-sales-display"
+          label="Ventas Realizadas"
+          value={String(sales?.length ?? 0)}
+          icon={<ShoppingBag className="h-5 w-5" />}
+          accentClass="text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+        />
+        <MetricCard
+          id="business-followers-display"
+          label="Seguidores"
+          value={String(followersCount)}
+          icon={<Heart className="h-5 w-5" />}
+          accentClass="text-pink-500 bg-pink-500/10 border-pink-500/20"
         />
         <MetricCard
           label="Anuncios Activos"
@@ -1467,6 +1486,7 @@ function BusinessPage() {
                   <input
                     type="text"
                     required
+                    id="catalog-item-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
@@ -1476,6 +1496,7 @@ function BusinessPage() {
                 <div>
                   <label className="text-xs font-semibold mb-1 block">Descripción</label>
                   <textarea
+                    id="catalog-item-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm resize-none h-16"
@@ -1489,6 +1510,7 @@ function BusinessPage() {
                       type="number"
                       required
                       min="0"
+                      id="catalog-item-price"
                       value={price}
                       onChange={(e) =>
                         setPrice(e.target.value === "" ? "" : Number(e.target.value))
@@ -1500,6 +1522,7 @@ function BusinessPage() {
                   <div>
                     <label className="text-xs font-semibold mb-1 block">Tipo</label>
                     <select
+                      id="catalog-item-type"
                       value={type}
                       onChange={(e) => setType(e.target.value as "PRODUCT" | "SERVICE")}
                       className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:ring-1 focus:ring-primary outline-none text-sm"
@@ -1520,6 +1543,7 @@ function BusinessPage() {
                 </div>
                 <button
                   type="submit"
+                  id="catalog-item-submit"
                   disabled={submitting}
                   className="w-full py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
                 >
@@ -1919,14 +1943,19 @@ function MetricCard({
   value,
   icon,
   accentClass,
+  id,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
   accentClass: string;
+  id?: string;
 }) {
   return (
-    <div className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card relative overflow-hidden">
+    <div
+      id={id}
+      className="bg-gradient-card border border-border rounded-2xl p-5 shadow-card relative overflow-hidden"
+    >
       <div
         className="absolute right-0 top-0 translate-x-4 -translate-y-4 h-20 w-20 rounded-full opacity-20 blur-2xl"
         style={{ background: "currentColor" }}

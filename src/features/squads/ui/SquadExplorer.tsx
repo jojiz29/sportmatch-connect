@@ -130,11 +130,20 @@ export function SquadExplorer() {
     setLoadingCourts(true);
     backendApi.courts
       .getAll()
-      .then((courtsList) => setSquadCourts(courtsList as Court[]))
+      .then((res) => {
+        if (res && Array.isArray(res.data)) {
+          setSquadCourts(res.data);
+        } else {
+          apiClient.courts
+            .getAll()
+            .then((list) => setSquadCourts(list))
+            .catch((err) => console.error("Error fetching courts:", err));
+        }
+      })
       .catch(() => {
         apiClient.courts
           .getAll()
-          .then((courtsList) => setSquadCourts(courtsList))
+          .then((list) => setSquadCourts(list))
           .catch((err) => console.error("Error fetching courts:", err));
       })
       .finally(() => setLoadingCourts(false));

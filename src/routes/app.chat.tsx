@@ -157,7 +157,16 @@ function Chats() {
 
     backendApi.matches
       .getAll()
-      .then((list) => setSystemMatches(list as Match[]))
+      .then((res) => {
+        if (res && Array.isArray(res.data)) {
+          setSystemMatches(res.data);
+        } else {
+          apiClient.matches
+            .getAll()
+            .then((list) => setSystemMatches(list))
+            .catch((err) => console.warn("Failed to load active matches for attachments:", err));
+        }
+      })
       .catch(() => {
         apiClient.matches
           .getAll()

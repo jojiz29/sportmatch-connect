@@ -227,6 +227,7 @@ function RegisterPage() {
         <div className="flex bg-background/50 border border-border rounded-xl p-1 mb-6">
           <button
             type="button"
+            id="register-role-player"
             onClick={() => setRole("PLAYER")}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${role === "PLAYER" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:text-foreground"}`}
           >
@@ -234,6 +235,7 @@ function RegisterPage() {
           </button>
           <button
             type="button"
+            id="register-role-business"
             onClick={() => setRole("BUSINESS")}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${role === "BUSINESS" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:text-foreground"}`}
           >
@@ -251,6 +253,7 @@ function RegisterPage() {
                 <input
                   type="text"
                   required
+                  id="register-fullname-input"
                   name="fullName"
                   value={values.fullName}
                   onChange={handleChange}
@@ -272,6 +275,7 @@ function RegisterPage() {
                   <input
                     type="text"
                     required
+                    id="register-company-name"
                     name="companyName"
                     value={values.companyName}
                     onChange={handleChange}
@@ -287,6 +291,7 @@ function RegisterPage() {
                 </label>
                 <select
                   name="category"
+                  id="register-business-category"
                   value={values.category}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
@@ -316,6 +321,7 @@ function RegisterPage() {
                       type="number"
                       step="any"
                       required
+                      id="register-business-lat"
                       value={lat || ""}
                       onChange={(e) => setLat(parseFloat(e.target.value))}
                       className="w-full px-4 py-2 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
@@ -330,6 +336,7 @@ function RegisterPage() {
                       type="number"
                       step="any"
                       required
+                      id="register-business-lng"
                       value={lng || ""}
                       onChange={(e) => setLng(parseFloat(e.target.value))}
                       className="w-full px-4 py-2 bg-background/50 border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
@@ -349,6 +356,7 @@ function RegisterPage() {
               <input
                 type="email"
                 required
+                id="register-email-input"
                 name="email"
                 value={values.email}
                 onChange={handleChange}
@@ -370,6 +378,7 @@ function RegisterPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                id="register-password-input"
                 name="password"
                 value={values.password}
                 onChange={handleChange}
@@ -464,6 +473,7 @@ function RegisterPage() {
           {/* === BLOQUE: Botón de registro === */}
           <button
             type="submit"
+            id={role === "PLAYER" ? "register-player-next-btn" : "register-submit-btn"}
             disabled={(role === "PLAYER" ? !isPlayerStep1Valid : !isFormValid) || isSubmitting}
             className="w-full py-4 mt-4 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 text-primary-foreground font-bold rounded-xl shadow-glow transition-all cursor-pointer"
           >
@@ -482,7 +492,7 @@ function RegisterPage() {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full py-3 bg-white text-black border-2 border-[#39FF14]/50 font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer hover:border-[#FF6B35] transition-all duration-300 shadow-sm hover:scale-[1.01]"
+            className="w-full py-3 bg-white text-black border-2 border-primary/50 font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer hover:border-secondary transition-all duration-300 shadow-sm hover:scale-[1.01]"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
               <path

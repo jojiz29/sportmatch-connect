@@ -50,8 +50,8 @@ function DemoPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden text-foreground">
       {/* Luces ambientales decorativas */}
-      <div className="absolute top-1/4 -left-48 w-96 h-96 rounded-full bg-[#39FF14]/5 blur-[120px] animate-float" />
-      <div className="absolute bottom-1/4 -right-48 w-96 h-96 rounded-full bg-[#FF6B35]/8 blur-[100px] animate-float-reverse" />
+      <div className="absolute top-1/4 -left-48 w-96 h-96 rounded-full bg-primary/5 blur-[120px] animate-float" />
+      <div className="absolute bottom-1/4 -right-48 w-96 h-96 rounded-full bg-secondary/8 blur-[100px] animate-float-reverse" />
 
       <div className="relative w-full max-w-2xl animate-scale-in">
         {/* Divisor decorativo neón */}

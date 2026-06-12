@@ -146,7 +146,7 @@ export const MOCK_USERS: User[] = [
     last_location_lat: -12.1067,
     last_location_lng: -76.9989,
     user_role: "BUSINESS",
-    company_name: "Megatlon Club",
+    company_name: "Megatlon Center",
     business_category: "Gym",
     is_sponsored: true,
     address: "Av. San Borja Sur 789",

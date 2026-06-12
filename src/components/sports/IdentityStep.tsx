@@ -213,7 +213,7 @@ export function IdentityStep({
   const getGenderGlowClass = () => {
     if (gender === "Masculino") return "border-[#FF6B35] shadow-[0_0_15px_rgba(255,107,53,0.3)]";
     if (gender === "Femenino") return "border-[#D946EF] shadow-[0_0_15px_rgba(217,70,239,0.3)]";
-    return "border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3)]";
+    return "border-primary shadow-[0_0_15px_hsl(var(--primary)/0.3)]";
   };
 
   // === BLOQUE: AVATAR FALLBACK POR GÉNERO ===
@@ -239,7 +239,7 @@ export function IdentityStep({
     }
     // Mixto: trofeo abstracto
     return (
-      <div className="absolute inset-0 bg-gradient-to-br from-[#39FF14] to-[#1E3A1E] flex items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/20 flex items-center justify-center">
         <svg
           className="w-14 h-14 text-white/90"
           viewBox="0 0 24 24"
@@ -294,7 +294,7 @@ export function IdentityStep({
                   100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
                 }
               `}</style>
-              <div className="h-5 w-5 rounded-full border-2 border-[#FF6B35] border-t-transparent animate-spin" />
+              <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
               <span className="text-[9px] font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 🛡️ Escaneando...
               </span>
@@ -354,7 +354,7 @@ export function IdentityStep({
             {
               value: "Mixto",
               label: "⚡ Mixto",
-              activeClass: "bg-[#39FF14] text-black shadow-[0_0_10px_rgba(57,255,20,0.4)]",
+              activeClass: "bg-primary text-primary-foreground shadow-glow",
             },
           ].map((item) => (
             <button
@@ -424,9 +424,9 @@ export function IdentityStep({
             max="20"
             value={weeklyHours}
             onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-[#39FF14]"
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-primary"
             style={{
-              background: `linear-gradient(to right, #39FF14 ${((weeklyHours - 1) / 19) * 100}%, #1e293b ${((weeklyHours - 1) / 19) * 100}%)`,
+              background: `linear-gradient(to right, hsl(var(--primary)) ${((weeklyHours - 1) / 19) * 100}%, hsl(var(--muted)) ${((weeklyHours - 1) / 19) * 100}%)`,
             }}
             id="hours-slider"
           />

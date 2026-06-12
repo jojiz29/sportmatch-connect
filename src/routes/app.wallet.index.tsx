@@ -3,7 +3,7 @@
 // Incluye: saldo animado, desafíos gamificados (challenges), recompensas
 // (rewards), marketplace B2B, tabla de líderes (leaderboard) y modal
 // de transferencia de FitCoins.
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Trophy,
@@ -31,9 +31,6 @@ import { Reward } from "@/services/walletService";
 import { TransferFitCoinsModal } from "@/features/wallet/ui/TransferFitCoinsModal";
 
 export const Route = createFileRoute("/app/wallet/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/app" });
-  },
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     buyItem: (search.buyItem as string) || undefined,
@@ -75,8 +72,21 @@ function Wallet() {
     let active = true;
     backendApi.users
       .getLeaderboard()
-      .then((backendUsers) => {
-        if (active) setLeaderboardUsers(backendUsers as User[]);
+      .then((res) => {
+        if (active) {
+          if (res && Array.isArray(res.data)) {
+            setLeaderboardUsers(res.data);
+          } else {
+            apiClient.users
+              .getLeaderboard()
+              .then((users) => {
+                if (active) setLeaderboardUsers(users);
+              })
+              .catch((err) => {
+                if (import.meta.env.DEV) console.error("Error loading leaderboard:", err);
+              });
+          }
+        }
       })
       .catch(() => {
         apiClient.users
@@ -435,6 +445,7 @@ function Wallet() {
                       <div className="text-xs font-bold text-neon mt-0.5">{item.price} FC</div>
                     </div>
                     <button
+                      id={`purchase-btn-${item.id}`}
                       onClick={() => setSelectedItem(item)}
                       className="px-3 py-1.5 rounded-lg bg-gradient-neon text-neon-foreground text-xs font-semibold hover:scale-105 transition-transform shrink-0 cursor-pointer"
                     >
@@ -592,6 +603,7 @@ function Wallet() {
               </p>
               <div className="flex flex-col gap-2">
                 <button
+                  id="confirm-purchase-btn"
                   onClick={() => handlePurchase(selectedItem)}
                   disabled={purchasing}
                   className="w-full py-3 rounded-xl bg-gradient-neon text-neon-foreground font-semibold hover:shadow-neon transition-shadow cursor-pointer"

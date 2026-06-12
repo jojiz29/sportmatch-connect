@@ -79,6 +79,16 @@ function UserProfile() {
   const [profile, setProfile] = useState<User | null>(null);
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [barWidth, setBarWidth] = useState(0);
+
+  useEffect(() => {
+    if (profile) {
+      const timer = setTimeout(() => {
+        setBarWidth(profile.trust_score || 0);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const getAverageRating = usePublicMatchStore((s) => s.getAverageRating);
@@ -110,9 +120,10 @@ function UserProfile() {
           setProfile(userProfile);
           if (userProfile) {
             const backendMatches = await backendApi.matches.getAll().catch(() => null);
-            const matchesData = backendMatches
-              ? (backendMatches as Match[]).filter((m) => m.creator_id === userId)
-              : await apiClient.matches.getUserMatches(userId);
+            const matchesData =
+              backendMatches && Array.isArray(backendMatches.data)
+                ? backendMatches.data.filter((m) => m.creator_id === userId)
+                : await apiClient.matches.getUserMatches(userId);
             setUserMatches(matchesData);
           }
         }
@@ -317,8 +328,13 @@ function UserProfile() {
             <div className="text-5xl font-bold text-gradient">{profile.trust_score}</div>
             <div className={`text-sm font-semibold mt-1 ${trustColor}`}>{trustLevel}</div>
           </div>
-          <div className="mt-4 h-3 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-gradient-neon" style={{ width: `${profile.trust_score}%` }} />
+          <div
+            className={`mt-4 h-3 rounded-full bg-muted overflow-hidden ${profile.trust_score >= 80 ? "animate-pulse shadow-glow" : ""}`}
+          >
+            <div
+              className="h-full bg-gradient-neon transition-all duration-1000 ease-out"
+              style={{ width: `${barWidth}%` }}
+            />
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <Metric label={t("profile.punctuality")} value={98} />
@@ -359,7 +375,12 @@ function UserProfile() {
               return (
                 <div
                   key={b.id}
-                  className={`text-center p-3 rounded-xl transition-all cursor-default flex flex-col justify-between items-center ${isUnlocked ? "glass border-primary/30 hover:ring-glow hover:border-primary/50" : "bg-muted/15 border border-border/40 grayscale opacity-45 hover:opacity-75 transition-opacity"}`}
+                  className={`text-center p-3 rounded-xl cursor-default flex flex-col justify-between items-center ${
+                    isUnlocked
+                      ? "glass border-primary/30 hover:ring-glow hover:border-primary/50 transition-all"
+                      : "bg-muted/15 border border-border/40 opacity-40 grayscale transition-all duration-300 hover:grayscale-0 hover:opacity-100"
+                  }`}
+                  title={!isUnlocked ? "Juega más para desbloquear" : undefined}
                 >
                   <div className="flex flex-col items-center">
                     <div className="text-3xl">{b.emoji}</div>

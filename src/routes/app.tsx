@@ -21,9 +21,12 @@ export const Route = createFileRoute("/app")({
     }
     const user = useAuthStore.getState().user;
 
-    // Guard por rol: BUSINESS solo puede acceder a /app/business.
+    // Guard por rol: BUSINESS solo puede acceder a /app/business y /app/feed.
     if (user && user.user_role === "BUSINESS") {
-      if (!location.pathname.startsWith("/app/business")) {
+      if (
+        !location.pathname.startsWith("/app/business") &&
+        !location.pathname.startsWith("/app/feed")
+      ) {
         throw redirect({ to: "/app/business" });
       }
     }

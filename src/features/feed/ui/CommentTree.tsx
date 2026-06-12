@@ -245,7 +245,7 @@ function CommentItemNode({
               <button
                 onClick={() => setShowReactions(!showReactions)}
                 className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${
-                  userReaction ? "text-[#39FF14]" : "text-muted-foreground hover:text-foreground"
+                  userReaction ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {userReaction ? (
@@ -314,7 +314,7 @@ function CommentItemNode({
         <div className="mt-1">
           <button
             onClick={() => setShowReplies(!showReplies)}
-            className="flex items-center gap-1 text-[10px] font-bold text-[#39FF14] hover:text-[#39FF14]/80 transition-colors ml-9"
+            className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary/80 transition-colors ml-9"
           >
             {showReplies ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {comment.replies.length} {comment.replies.length === 1 ? "respuesta" : "respuestas"}

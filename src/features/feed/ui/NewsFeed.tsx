@@ -398,7 +398,7 @@ export function NewsFeed() {
                   onClick={() => setShowImageDropzone(!showImageDropzone)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     showImageDropzone || mediaUrl
-                      ? "bg-[#00e676]/10 text-[#00e676] border-[#00e676]/30 shadow-neon"
+                      ? "bg-primary/10 text-primary border-primary/30 shadow-neon"
                       : "bg-muted border-border/45 text-foreground hover:bg-accent"
                   }`}
                 >
@@ -450,7 +450,7 @@ export function NewsFeed() {
                             100% { border-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
                           }
                         `}</style>
-                        <Loader2 className="h-6 w-6 text-[#FF6B35] animate-spin" />
+                        <Loader2 className="h-6 w-6 text-primary animate-spin" />
                         <span className="text-xs font-black text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                           🛡️ Escaneando contenido...
                         </span>
@@ -485,7 +485,7 @@ export function NewsFeed() {
                     onClick={() => fileInputRef.current?.click()}
                     className={`mt-2 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1 ${
                       isDragging
-                        ? "border-[#39FF14] bg-[#39FF14]/5 text-[#39FF14]"
+                        ? "border-primary bg-primary/5 text-primary"
                         : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -609,7 +609,7 @@ export function NewsFeed() {
                             onClick={() =>
                               setExpandedPostId(expandedPostId === post.id ? null : post.id)
                             }
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#39FF14] transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                           >
                             <MessageCircle className="h-3.5 w-3.5" />
                             <span>Comentar</span>

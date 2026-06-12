@@ -44,6 +44,16 @@ import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Inicio — SportMatch" }] }),
   loader: async () => {
+    if (useAuthStore.getState().isDemoMode) {
+      const [matches, users, courts, sports] = await Promise.all([
+        apiClient.matches.getAll().catch(() => []),
+        apiClient.users.getMatches(useAuthStore.getState().user?.id).catch(() => []),
+        apiClient.courts.getAll().catch(() => []),
+        apiClient.sports.getAll().catch(() => []),
+      ]);
+      return { matches, users, courts, sports };
+    }
+
     const timeout = (ms: number) =>
       new Promise<null>((_, reject) =>
         setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms),
@@ -489,15 +499,28 @@ function Dashboard() {
       .getAll(matchSport || undefined)
       .then((res) => {
         if (active) {
-          setFilteredCourts(res as Court[]);
+          if (res && Array.isArray(res.data)) {
+            setFilteredCourts(res.data);
+          } else {
+            apiClient.courts
+              .getAll(matchSport || undefined)
+              .then((resVal) => {
+                if (active) {
+                  setFilteredCourts(resVal);
+                }
+              })
+              .catch((err) => {
+                console.error("Error loading filtered courts:", err);
+              });
+          }
         }
       })
       .catch(() => {
         apiClient.courts
           .getAll(matchSport || undefined)
-          .then((res) => {
+          .then((resVal) => {
             if (active) {
-              setFilteredCourts(res);
+              setFilteredCourts(resVal);
             }
           })
           .catch((err) => {
@@ -1340,8 +1363,8 @@ function MatchCard({ match }: { match: Match }) {
               Lleno
             </span>
           ) : (
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/30 font-semibold flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#39FF14]" />
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-semibold flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               Buscando
             </span>
           )}

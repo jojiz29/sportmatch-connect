@@ -30,6 +30,6 @@ test.describe("Core User Flow (Happy Path)", () => {
     await page.goto(`${targetURL}/app/map`);
     // Verifica que el mapa cargó algo (el canvas de leaflet)
     await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 15000 });
-    await expect(page.locator("h1")).toContainText("Mapa en vivo");
+    await expect(page.locator("h1")).toContainText("Mapa Comercial");
   });
 });

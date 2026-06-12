@@ -67,21 +67,32 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
     setIsLoadingMatches(true);
     backendApi.matches
       .getAll()
-      .then((backendMatches) => {
+      .then((res) => {
         if (active) {
-          const userMatches = (backendMatches as Match[]).filter(
-            (m) => m.creator_id === inspectedUser.id,
-          );
-          setInspectedUserMatches(userMatches);
+          if (res && Array.isArray(res.data)) {
+            const userMatches = res.data.filter((m) => m.creator_id === inspectedUser.id);
+            setInspectedUserMatches(userMatches);
+          } else {
+            apiClient.matches
+              .getUserMatches(inspectedUser.id)
+              .then((list) => {
+                if (active) setInspectedUserMatches(list);
+              })
+              .catch(() => {
+                if (active) setInspectedUserMatches([]);
+              });
+          }
         }
       })
       .catch(() => {
         apiClient.matches
           .getUserMatches(inspectedUser.id)
-          .then((data) => {
-            if (active) setInspectedUserMatches(data);
+          .then((list) => {
+            if (active) setInspectedUserMatches(list);
           })
-          .catch((err) => console.error("Error loading inspected user matches:", err));
+          .catch(() => {
+            if (active) setInspectedUserMatches([]);
+          });
       })
       .finally(() => {
         if (active) setIsLoadingMatches(false);
@@ -440,13 +451,8 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
 
                       {/* Avatar con anillo degradado y punto de estado */}
                       <div className="flex justify-center items-center py-4 relative z-10">
-                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-[#FF007F] to-[#7B2CBF] opacity-30 blur-lg pointer-events-none" />
-                        <div
-                          className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center"
-                          style={{
-                            background: "linear-gradient(135deg, #FF007F, #FF6B35, #7B2CBF)",
-                          }}
-                        >
+                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-primary/30 to-primary-foreground/10 opacity-30 blur-lg pointer-events-none" />
+                        <div className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center bg-gradient-to-br from-primary via-primary/60 to-primary-foreground/20">
                           <div className="h-full w-full rounded-full overflow-hidden border-2 border-background bg-muted">
                             <Link
                               to="/app/profile/$userId"
@@ -496,7 +502,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                                     : sportLevel;
                           return (
                             <div className="flex flex-wrap justify-center gap-1.5">
-                              <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-[10px] font-extrabold uppercase tracking-wide">
+                              <span className="px-2.5 py-1 rounded-md bg-secondary/15 border border-secondary/30 text-secondary text-[10px] font-extrabold uppercase tracking-wide">
                                 {p.matchedSport || activeSport}
                               </span>
                               <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">

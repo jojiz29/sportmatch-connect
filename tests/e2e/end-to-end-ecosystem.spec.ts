@@ -21,7 +21,7 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await page.fill('input[type="email"]', "ejuniorfloress@gmail.com");
     await page.fill('input[type="password"]', "EdwinFlores123?");
     await page.click('button[type="submit"]');
-    await expect(page.locator("h1").first()).toContainText("Edwin");
+    await expect(page.locator("h1", { hasText: "Edwin" }).first()).toBeVisible({ timeout: 10000 });
 
     // Navigate directly to Puka Power's public profile
     // (Puka Power is BUSINESS role and does not appear in the PLAYER matchmaking list)
@@ -48,7 +48,7 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await page.click('button[type="submit"]');
 
     // Navigate to Mi Negocio
-    await page.click("aside >> text=Mi Negocio");
+    await page.click("#sidebar-nav-business");
     await page.waitForTimeout(500);
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/business`));
 
@@ -96,7 +96,7 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await page.fill('input[type="email"]', "ejuniorfloress@gmail.com");
     await page.fill('input[type="password"]', "EdwinFlores123?");
     await page.click('button[type="submit"]');
-    await expect(page.locator("h1").first()).toContainText("Edwin");
+    await expect(page.locator("h1", { hasText: "Edwin" }).first()).toBeVisible({ timeout: 10000 });
 
     // Check the notification bell is visible
     const bellBtn = page.locator("#notification-bell-btn").first();
@@ -125,7 +125,7 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/wallet\\?buyItem=.*`));
 
     // Verify Edwin's initial balance
-    const sidebarBalance = page.locator("aside .text-neon");
+    const sidebarBalance = page.locator("#sidebar-user-balance");
     await expect(sidebarBalance).toContainText("FC");
 
     // Click confirm in the purchase modal (already auto-opened via buyItem param)

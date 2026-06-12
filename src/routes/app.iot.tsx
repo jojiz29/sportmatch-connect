@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { supabase } from "@/shared/api/supabase";
 import { useTranslation } from "react-i18next";
+import { useThemeStore } from "@/features/theme/store";
 
 export const Route = createFileRoute("/app/iot")({
   beforeLoad: () => {
@@ -33,7 +34,15 @@ export const Route = createFileRoute("/app/iot")({
 
 function IoT() {
   const { t } = useTranslation();
+  const theme = useThemeStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
+
+  const getThemePrimaryColor = () => {
+    if (theme === "world-cup") return "#D4AF37";
+    if (theme === "dark-footballer") return "#39FF14";
+    return "#ff5722"; // light/default
+  };
+  const primaryColor = getThemePrimaryColor();
 
   // === BLOQUE: Estado de racha deportiva y asistencia ===
   const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
@@ -354,8 +363,8 @@ function IoT() {
                         width="10"
                         height="10"
                         rx="2"
-                        fill={isAttended ? "#39FF14" : "#1e293b"}
-                        stroke={isAttended ? "#39FF14" : "rgba(255,255,255,0.05)"}
+                        fill={isAttended ? primaryColor : "#1e293b"}
+                        stroke={isAttended ? primaryColor : "rgba(255,255,255,0.05)"}
                         strokeWidth="0.5"
                         className="transition-all duration-300 hover:stroke-white hover:stroke-[1.5px]"
                       >
@@ -370,8 +379,12 @@ function IoT() {
                   "onboarding.streak_footer_prefix",
                   "Los días con asistencia verificada se iluminan en",
                 )}{" "}
-                <span className="text-[#39FF14] font-bold">
-                  {t("onboarding.streak_footer_color", "Verde Neón")}
+                <span className="text-primary font-bold">
+                  {theme === "world-cup"
+                    ? t("onboarding.color_gold", "Dorado")
+                    : theme === "dark-footballer"
+                      ? t("onboarding.color_neon", "Verde Neón")
+                      : t("onboarding.color_orange", "Naranja")}
                 </span>
                 .
               </p>
