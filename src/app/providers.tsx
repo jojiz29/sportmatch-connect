@@ -236,6 +236,7 @@ function ThemeInitializer({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     root.classList.remove("light", "dark", "dark-footballer", "world-cup");
     root.classList.add(theme);
+    root.setAttribute("data-theme", theme);
   }, [theme]);
 
   useEffect(() => {

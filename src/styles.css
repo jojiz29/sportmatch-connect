@@ -27,14 +27,14 @@
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
-  --color-background: var(--background);
+  --color-background: hsl(var(--background));
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
+  --color-card: hsl(var(--card));
   --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-popover: hsl(var(--popover));
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -45,7 +45,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-ring: hsl(var(--ring));
   --color-neon: var(--neon);
   --color-neon-foreground: var(--neon-foreground);
   --color-electric: var(--electric);
@@ -61,163 +61,124 @@
   --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --shadow-glow: 0 0 25px -4px hsl(var(--glow-shadow) / 0.45);
 }
 
-:root {
+:root, [data-theme='world-cup'], .world-cup {
   --radius: 1rem;
 
-  /* Rebranded to Deep Night Blue & Neon Adrenaline */
-  --background: #0b132b;
-  --foreground: #f5f7fa; /* Off-White */
+  /* Premium World Cup Theme (Default) */
+  --background: 222 47% 11%; /* #0D152D Deep Navy */
+  --card: 222 50% 15%; /* Slightly lighter navy for cards */
+  --primary: 43 74% 49%; /* #D4AF37 Metallic Gold */
+  --primary-foreground: 0 0% 0%; /* Black text on gold buttons */
+  --glow-shadow: 43 74% 49%; /* Gold glow */
 
-  --card: #121e3d;
+  --foreground: #f5f7fa; /* Off-White */
   --card-foreground: #f5f7fa;
 
-  --popover: #121e3d;
+  --popover: 222 50% 15%;
   --popover-foreground: #f5f7fa;
 
-  --primary: #ff6b35; /* Electric Orange */
-  --primary-foreground: #0b132b;
-
-  --secondary: #39ff14; /* Neon Green */
-  --secondary-foreground: #0b132b;
+  --secondary: #fbbf24;
+  --secondary-foreground: #000000;
 
   --muted: #1b2644;
-  --muted-foreground: #b2b8c2; /* Ash Grey */
+  --muted-foreground: #b2b8c2;
 
   --accent: #1c2b54;
   --accent-foreground: #f5f7fa;
 
-  --destructive: #ff3b30; /* Red - Full */
+  --destructive: #ff3b30;
   --destructive-foreground: #ffffff;
 
   --border: rgba(255, 255, 255, 0.1);
-  --input: #121e3d;
-  --ring: #39ff14; /* Neon Green Focus Glow */
+  --input: 222 50% 15%;
+  --ring: 43 74% 49%;
 
-  /* Custom brand tokens */
-  --neon: #39ff14;
-  --neon-foreground: #0b132b;
-  --electric: #ff6b35;
-  --electric-foreground: #0b132b;
+  --neon: #fbbf24;
+  --neon-foreground: #000000;
+  --electric: #e4e4e7;
+  --electric-foreground: #000000;
   --violet: #8b5cf6;
   --violet-foreground: #ffffff;
-  --success: #39ff14; /* Green - Seeking */
-  --warning: #ffd60a; /* Yellow - Starting */
+  --success: #fbbf24;
+  --warning: #ffd60a;
 
-  --gradient-primary: linear-gradient(135deg, #ff6b35, #ff8e53);
-  --gradient-neon: linear-gradient(135deg, #39ff14, #00ff7f);
+  --gradient-primary: linear-gradient(135deg, hsl(43 74% 49%), #f3e5ab);
+  --gradient-neon: linear-gradient(135deg, hsl(43 74% 49%), #aa7c11);
   --gradient-hero:
-    radial-gradient(at 10% 10%, rgba(61, 27, 93, 0.3), transparent 60%),
-    radial-gradient(at 90% 90%, rgba(217, 4, 41, 0.2), transparent 60%),
-    radial-gradient(at 50% 50%, rgba(57, 255, 20, 0.12), transparent 70%);
+    radial-gradient(at 10% 10%, rgba(251, 191, 36, 0.1), transparent 60%),
+    radial-gradient(at 90% 90%, rgba(24, 24, 27, 0.2), transparent 60%),
+    radial-gradient(at 50% 50%, rgba(251, 191, 36, 0.05), transparent 70%);
   --gradient-card: linear-gradient(135deg, #1a1f3d 0%, #11152c 60%, #080b18 100%);
 
-  --shadow-glow: 0 0 25px -4px rgba(255, 107, 53, 0.45);
-  --shadow-neon: 0 0 25px -4px rgba(57, 255, 20, 0.55);
+  --shadow-neon: 0 0 25px -4px rgba(251, 191, 36, 0.45);
   --shadow-card: 0 15px 40px -15px rgba(0, 0, 0, 0.85);
 
-  --chart-1: #ff6b35;
-  --chart-2: #39ff14;
+  --chart-1: #fbbf24;
+  --chart-2: #e4e4e7;
   --chart-3: #8b5cf6;
   --chart-4: #ffd60a;
   --chart-5: #ff3b30;
 
   --sidebar: #090f22;
   --sidebar-foreground: #b2b8c2;
-  --sidebar-primary: #ff6b35;
-  --sidebar-primary-foreground: #0b132b;
+  --sidebar-primary: 43 74% 49%;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent: #121e3d;
   --sidebar-accent-foreground: #f5f7fa;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #39ff14;
+  --sidebar-ring: 43 74% 49%;
 }
 
 .dark {
-  --background: #0b132b;
+  --background: 222 47% 11%;
   --foreground: #f5f7fa;
 }
 
-.dark-footballer {
-  --background: #0b0f19; /* Cyber-Pitch Deep Night Navy background */
-  --foreground: #f8fafc; /* Crisp White text */
-  --card: #111827; /* Dark Gray 900 card surface */
+[data-theme='dark-footballer'], .dark-footballer {
+  /* Urban Neon Theme (Alternative) */
+  --background: 240 10% 4%; /* Pitch Black/Dark Gray */
+  --card: 240 10% 8%;
+  --primary: 105 100% 50%; /* #39FF14 Neon Green */
+  --primary-foreground: 0 0% 0%;
+  --glow-shadow: 105 100% 50%; /* Neon green glow */
+
+  --foreground: #f8fafc;
   --card-foreground: #f8fafc;
-  --popover: #111827;
+  --popover: 240 10% 8%;
   --popover-foreground: #f8fafc;
-  --primary: #39ff14; /* Neon Green / Volt primary */
-  --primary-foreground: #0b0f19;
-  --secondary: #3b82f6; /* Cold blue secondary */
+  --secondary: #3b82f6;
   --secondary-foreground: #ffffff;
   --muted: #1f2937;
-  --muted-foreground: #cbd5e1; /* Crisp light gray/white text for maximum contrast in dark */
+  --muted-foreground: #cbd5e1;
   --accent: #1e1e1a;
   --accent-foreground: #f8fafc;
   --border: rgba(255, 255, 255, 0.08);
-  --input: #1f2937;
-  --ring: #39ff14; /* Neon green ring */
+  --input: 240 10% 8%;
+  --ring: 105 100% 50%;
   --neon: #39ff14;
   --neon-foreground: #0b0f19;
   --electric: #3b82f6;
   --electric-foreground: #ffffff;
-  --gradient-primary: linear-gradient(135deg, #39ff14, #00ff7f);
-  --gradient-neon: linear-gradient(135deg, #39ff14, #00ff7f);
-  --shadow-glow: 0 0 25px -4px rgba(57, 255, 20, 0.45);
-  --shadow-neon: 0 0 25px -4px rgba(57, 255, 20, 0.45);
+  --gradient-primary: linear-gradient(135deg, hsl(105 100% 50%), #00ff7f);
+  --gradient-neon: linear-gradient(135deg, hsl(105 100% 50%), #00ff7f);
+  --shadow-neon: 0 0 25px -4px hsl(105 100% 50% / 0.45);
   --sidebar: #090d16;
-  --sidebar-foreground: #e2e8f0; /* Crisp light gray/white text for maximum contrast in dark */
-  --sidebar-primary: #39ff14;
-  --sidebar-primary-foreground: #0b0f19;
-  --sidebar-accent: #111827;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: 105 100% 50%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 240 10% 8%;
   --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: rgba(255, 255, 255, 0.05);
-  --sidebar-ring: #39ff14;
-}
-
-.world-cup {
-  --background: #000000; /* Pure Pitch Black background */
-  --foreground: #f4f4f5; /* Crisp White text */
-  --card: #18181b; /* Zinc 900 card surface */
-  --card-foreground: #f4f4f5;
-  --popover: #18181b;
-  --popover-foreground: #f4f4f5;
-  --primary: #fbbf24; /* Amber / Champion Gold primary */
-  --primary-foreground: #000000;
-  --secondary: #e4e4e7; /* Light zinc secondary */
-  --secondary-foreground: #000000;
-  --muted: #27272a;
-  --muted-foreground: #e4e4e7; /* Crisp white text for maximum contrast in dark */
-  --accent: #2e2e33;
-  --accent-foreground: #f4f4f5;
-  --border: rgba(255, 255, 255, 0.06);
-  --input: #27272a;
-  --ring: #fbbf24;
-  --neon: #fbbf24;
-  --neon-foreground: #000000;
-  --electric: #e4e4e7;
-  --electric-foreground: #000000;
-  --gradient-primary: linear-gradient(135deg, #fbbf24, #f3e5ab);
-  --gradient-neon: linear-gradient(135deg, #fbbf24, #aa7c11);
-  --gradient-hero:
-    radial-gradient(at 10% 10%, rgba(251, 191, 36, 0.1), transparent 60%),
-    radial-gradient(at 90% 90%, rgba(24, 24, 27, 0.2), transparent 60%),
-    radial-gradient(at 50% 50%, rgba(251, 191, 36, 0.05), transparent 70%);
-  --shadow-glow: 0 0 25px -4px rgba(251, 191, 36, 0.45);
-  --shadow-neon: 0 0 25px -4px rgba(251, 191, 36, 0.45);
-  --sidebar: #121214;
-  --sidebar-foreground: #e4e4e7; /* Crisp white text for maximum contrast in dark */
-  --sidebar-primary: #fbbf24;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #18181b;
-  --sidebar-accent-foreground: #f4f4f5;
-  --sidebar-border: rgba(255, 255, 255, 0.04);
-  --sidebar-ring: #fbbf24;
+  --sidebar-ring: 105 100% 50%;
 }
 
 .light {

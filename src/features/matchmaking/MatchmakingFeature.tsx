@@ -368,7 +368,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
               onClick={() => setActiveSport(sport)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                 isFilterActive
-                  ? "bg-[#39FF14] text-black border-transparent shadow-[0_0_10px_rgba(57,255,20,0.3)]"
+                  ? "bg-primary text-primary-foreground border-transparent shadow-glow"
                   : "bg-muted border border-border text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
             >
@@ -430,7 +430,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                     >
                       {/* Badges del encabezado */}
                       <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
-                        <span className="px-3 py-1.5 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black uppercase tracking-widest font-mono shadow-[0_0_8px_rgba(57,255,20,0.25)]">
+                        <span className="px-3 py-1.5 rounded-lg bg-primary/15 border border-primary/35 text-primary text-[11px] font-black uppercase tracking-widest font-mono shadow-glow">
                           {Math.round(70 + (p.user.trust_score || 0) * 0.28)}% MATCH
                         </span>
                         <span className="px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground text-[10px] font-semibold backdrop-blur-sm">
@@ -460,10 +460,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                               />
                             </Link>
                           </div>
-                          <span
-                            className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-[#39FF14] border-[3px] border-[#0D152D] flex items-center justify-center"
-                            style={{ boxShadow: "0 0 6px 2px rgba(57,255,20,0.6)" }}
-                          >
+                          <span className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-primary border-[3px] border-card flex items-center justify-center shadow-glow">
                             <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                           </span>
                         </div>
@@ -506,7 +503,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                                 {displayLevel}
                               </span>
                               <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5 text-[#39FF14]" />{" "}
+                                <MapPin className="h-2.5 w-2.5 text-primary" />{" "}
                                 {dist == null
                                   ? p.user.city || "Sin ubicación"
                                   : `${dist.toFixed(1)} km`}
@@ -524,7 +521,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         {/* Hashtags según trust_score */}
                         <div className="flex flex-wrap justify-center gap-1 pt-0.5">
                           {(p.user.trust_score || 0) >= 90 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded bg-[#39FF14]/10 border border-[#39FF14]/15 text-[#39FF14]/80 font-semibold">
+                            <span className="text-[9px] px-2 py-0.5 rounded bg-primary/10 border border-primary/15 text-primary/80 font-semibold">
                               #Confiable
                             </span>
                           )}
@@ -559,7 +556,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                           <button
                             onClick={() => void handleConnect(p.user)}
                             disabled={isSavingConnection}
-                            className="h-14 px-5 rounded-full border border-[#39FF14]/35 bg-[#39FF14]/10 hover:bg-[#39FF14]/22 active:scale-90 text-[#39FF14] flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(57,255,20,0.25)]"
+                            className="h-14 px-5 rounded-full border border-primary/35 bg-primary/10 hover:bg-primary/20 active:scale-90 text-primary flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-glow"
                             aria-label={`Conectar con ${p.user.name}`}
                           >
                             <Users className="h-5 w-5" />

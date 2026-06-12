@@ -13,17 +13,18 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: "dark-footballer",
-      setTheme: (theme) => set({ theme }),
+      theme: "world-cup",
+      setTheme: (theme) => {
+        if (typeof document !== "undefined") {
+          document.documentElement.setAttribute("data-theme", theme);
+        }
+        set({ theme });
+      },
       toggleTheme: () =>
         set((state) => {
-          let nextTheme: Theme = "light";
-          if (state.theme === "light") {
-            nextTheme = "dark-footballer";
-          } else if (state.theme === "dark-footballer" || (state.theme as string) === "dark") {
-            nextTheme = "world-cup";
-          } else {
-            nextTheme = "light";
+          const nextTheme: Theme = state.theme === "world-cup" ? "dark-footballer" : "world-cup";
+          if (typeof document !== "undefined") {
+            document.documentElement.setAttribute("data-theme", nextTheme);
           }
           return { theme: nextTheme };
         }),
@@ -34,7 +35,7 @@ export const useThemeStore = create<ThemeState>()(
       migrate: (persistedState: unknown) => {
         const state = persistedState as { theme?: string } | null;
         if (state && (state.theme === "dark" || !state.theme)) {
-          state.theme = "dark-footballer";
+          state.theme = "world-cup";
         }
         return state;
       },

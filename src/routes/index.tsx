@@ -11,36 +11,17 @@ import {
   MessageSquare,
   DollarSign,
   Clock,
-  Heart,
-  X,
-  Sparkles,
   Check,
   ChevronRight,
   Coins,
   CheckCircle2,
-  Info,
+  Moon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/shared/api/supabase";
-import { buttonVariants } from "@/shared/ui/button-variants";
-import { WorldCupBackground } from "@/components/WorldCupBackground";
 
-// === BLOQUE: Tipos — Perfil mock para el emulador de swipe ===
-interface SwipeProfile {
-  name: string;
-  age: number;
-  sport: string;
-  level: string;
-  district: string;
-  matchRate: string;
-  imageColor: string;
-  avatarText: string;
-  bio: string;
-  trustScore: string;
-  tags: string[];
-  avatarUrl: string;
-}
+import { useThemeStore } from "@/features/theme/store";
 
 // === BLOQUE: Ruta raíz / — createFileRoute con meta tags SEO ===
 // Incluye etiquetas head (title, description, Open Graph) para
@@ -75,6 +56,7 @@ export const Route = createFileRoute("/")({
 //   - Estadísticas en vivo desde Supabase (profiles, courts, matches).
 function Landing() {
   const { t } = useTranslation();
+  const { theme, toggleTheme } = useThemeStore();
   const [stats, setStats] = useState([
     { k: "12.4K", l: "Jugadores activos" },
     { k: "850+", l: "Canchas conectadas" },
@@ -82,13 +64,7 @@ function Landing() {
     { k: "93%", l: "Match exitoso" },
   ]);
 
-  // Estados del emulador de swipe gamificado
   const [fitcoins, setFitcoins] = useState(1450);
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showMatchOverlay, setShowMatchOverlay] = useState(false);
-  const [matchedProfile, setMatchedProfile] = useState<SwipeProfile | null>(null);
 
   // Estados del simulador de split billing
   const [totalBookingCost, setTotalBookingCost] = useState(60);
@@ -134,52 +110,6 @@ function Landing() {
     },
   ]);
 
-  // === BLOQUE: mockProfiles — Perfiles de ejemplo para el swipe emulator ===
-  const mockProfiles = [
-    {
-      name: "Fabiola Rivas",
-      age: 24,
-      sport: "Pádel",
-      level: "Intermedio",
-      district: "Surco",
-      matchRate: "98% Match",
-      imageColor: "from-[#FF007F] to-[#7B2CBF]",
-      avatarText: "FR",
-      bio: "Buscando dupla competitiva para el torneo de este fin de semana en Pádel Center. ¡Tengo buena volea!",
-      trustScore: "99% Trust Score",
-      tags: ["Puntual", "Buen nivel", "Gran compañera"],
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=Fabiola",
-    },
-    {
-      name: "Erick Torres",
-      age: 28,
-      sport: "Tenis",
-      level: "Avanzado",
-      district: "San Borja",
-      matchRate: "95% Match",
-      imageColor: "from-[#00E5FF] to-[#005F9E]",
-      avatarText: "ET",
-      bio: "Singles los martes y jueves por la noche. Busco peloteo intenso. Llevo bolas nuevas.",
-      trustScore: "97% Trust Score",
-      tags: ["Competitivo", "Bolas nuevas", "Puntual"],
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=Erick",
-    },
-    {
-      name: "Juan Mendoza",
-      age: 31,
-      sport: "Fútbol",
-      level: "Medio",
-      district: "Miraflores",
-      matchRate: "92% Match",
-      imageColor: "from-[#39FF14] to-[#007F5F]",
-      avatarText: "JM",
-      bio: "Falta un arquero o defensa para pichanga de 8 hoy a las 9pm en Sede 1. ¡Tercer tiempo asegurado!",
-      trustScore: "95% Trust Score",
-      tags: ["Recreativo", "Tercer tiempo", "Comprometido"],
-      avatarUrl: "https://api.dicebear.com/7.x/adventurer/svg?seed=Juan",
-    },
-  ];
-
   // === BLOQUE: districtMapData — Datos mock de sedes por distrito ===
   // Cada distrito contiene venues con coordenadas relativas (x%, y%)
   // para posicionar marcadores en el mapa visual.
@@ -214,32 +144,6 @@ function Landing() {
       ],
       centerLabel: "Miraflores - Costa Verde Sede",
     },
-  };
-
-  // === BLOQUE: handleLike — Animación de swipe hacia la derecha (Like) ===
-  const handleLike = () => {
-    if (isTransitioning) return;
-    setSwipeDirection("right");
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setMatchedProfile(mockProfiles[activeCardIndex]);
-      setShowMatchOverlay(true);
-      setActiveCardIndex((prev) => (prev + 1) % mockProfiles.length);
-      setSwipeDirection(null);
-      setIsTransitioning(false);
-    }, 300);
-  };
-
-  // === BLOQUE: handleDislike — Animación de swipe hacia la izquierda (Dislike) ===
-  const handleDislike = () => {
-    if (isTransitioning) return;
-    setSwipeDirection("left");
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setActiveCardIndex((prev) => (prev + 1) % mockProfiles.length);
-      setSwipeDirection(null);
-      setIsTransitioning(false);
-    }, 300);
   };
 
   // === BLOQUE: handleAdvanceChallenge — Avanza el progreso de un reto ===
@@ -313,260 +217,73 @@ function Landing() {
     fetchStats();
   }, []);
 
-  const currentProfile = mockProfiles[activeCardIndex];
-
   // === BLOQUE: Renderizado — UI completa de la landing page ===
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden relative transition-colors duration-300">
-      <WorldCupBackground />
+      {/* === MONUMENTAL HERO: Fondo dinámico + CTA + Toggle de Tema === */}
+      <section className="min-h-screen relative flex items-center justify-center overflow-hidden w-full">
+        {/* Background Layer */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/images/sports/fondo_sportmatch.webp')" }}
+        />
+        {/* Glassmorphism Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/60 to-background/95 backdrop-blur-[2px]" />
 
-      {/* === HEADER: Navegación principal === */}
-      <header className="relative z-20 w-full bg-background/60 backdrop-blur-md border-b border-border/40 py-4 sm:py-6 px-4 md:px-8 xl:px-16">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
-              <Zap className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-heading text-2xl sm:text-3xl tracking-wide text-foreground">
-              SportMatch
-            </span>
+        {/* Dynamic Theme Toggle Button: Sleek, floating glassmorphic button in the top-right corner */}
+        <div className="absolute top-6 right-6 z-20">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-foreground hover:bg-white/20 active:scale-95 transition-all text-xs font-bold cursor-pointer"
+          >
+            {theme === "world-cup" ? (
+              <>
+                <Moon className="h-4 w-4 text-primary" />
+                <span>Cambiar Tema</span>
+              </>
+            ) : (
+              <>
+                <Trophy className="h-4 w-4 text-primary" />
+                <span>Cambiar Tema</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Brand logo at top-left corner */}
+        <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
+            <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          {/* Navegación de escritorio con enlaces a secciones */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-10 text-xs xl:text-sm font-medium text-muted-foreground">
-            <a
-              href="#matchmaking"
-              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[140px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
+          <span className="font-heading text-2xl tracking-wide text-foreground">SportMatch</span>
+        </div>
+
+        {/* Content Container (z-10) */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center flex flex-col items-center justify-center">
+          {/* Main Title: Massive, bold font */}
+          <h1 className="font-heading text-6xl sm:text-8xl md:text-9xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-primary to-white uppercase font-black drop-shadow-lg leading-none">
+            SportMatch
+          </h1>
+          {/* Subtitle */}
+          <p className="mt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed">
+            Conecta con jugadores de tu nivel, reserva canchas en segundos, gana FitCoins y domina
+            la cancha en tu distrito.
+          </p>
+          {/* Main CTA Button & Login link */}
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+            <Link
+              to="/demo"
+              className="bg-primary text-primary-foreground font-black px-10 py-4 rounded-full shadow-glow hover:scale-105 active:scale-95 transition-all text-base tracking-wide flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
             >
-              {t("landing.matchmaking_title")}
-            </a>
-            <a
-              href="#squads"
-              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[140px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
-            >
-              {t("landing.squads_title")}
-            </a>
-            <a
-              href="#map"
-              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[150px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
-            >
-              {t("landing.map_title")}
-            </a>
-            <a
-              href="#challenges"
-              className="hover:text-primary transition-colors duration-200 relative text-center leading-tight max-w-[140px] flex items-center justify-center after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-px after:bg-primary after:transition-all after:duration-300 hover:after:w-full"
-            >
-              {t("landing.challenges_title")}
-            </a>
-          </nav>
-          <div className="flex items-center gap-3">
+              <span>{t("landing.empezar")}</span>
+              <ArrowRight className="h-5 w-5" />
+            </Link>
             <Link
               to="/login"
-              className={
-                buttonVariants({ variant: "outline", size: "sm" }) +
-                " text-foreground border-border hover:border-primary/50 text-xs sm:text-sm"
-              }
+              className="px-8 py-4 rounded-full border border-border/40 bg-background/40 backdrop-blur-md text-foreground font-bold hover:bg-background/80 transition-all text-base text-center w-full sm:w-auto"
             >
               {t("login.title_signin")}
             </Link>
-            <Link
-              to="/demo"
-              className={
-                buttonVariants({ variant: "default", size: "sm" }) +
-                " shadow-glow text-primary-foreground font-bold text-xs sm:text-sm"
-              }
-            >
-              {t("login.btn_demo")}
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* === HERO: Emulador de swipe + CTA principal === */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16 pt-16 md:pt-24 lg:pt-32 pb-24 lg:pb-36 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-        <div className="lg:col-span-7 xl:col-span-6 flex flex-col justify-center">
-          {/* Badge de estado Beta */}
-          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-background/50 border border-border/40 text-xs text-[#00e676] mb-8 w-fit shadow-neon">
-            <span className="h-2 w-2 rounded-full bg-[#00e676] animate-ping" />
-            Beta · Lima 2026 Active Venues Mapped
-          </span>
-          <h1 className="font-heading text-5xl sm:text-7xl md:text-8xl xl:text-9xl leading-[0.9] tracking-wide text-foreground">
-            Tu próximo
-            <br />
-            <span className="text-gradient text-glow">partido</span>
-            <br />
-            está a un swipe.
-          </h1>
-          <p className="mt-8 text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-            Matchmaking inteligente para deportistas amateur. Encontrá gente compatible, reservá
-            canchas y subí tu Trust Score con cada partido jugado en tu distrito.
-          </p>
-          {/* Botones CTA */}
-          <div className="mt-10 flex flex-wrap gap-4 items-center">
-            <Link
-              to="/demo"
-              className="relative inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl bg-gradient-primary text-primary-foreground font-black text-base shadow-glow hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
-            >
-              <span className="absolute -inset-1 rounded-2xl bg-primary/25 blur opacity-75 animate-pulse pointer-events-none" />
-              <span className="relative flex items-center gap-2">
-                {t("landing.empezar")} <ArrowRight className="h-5 w-5" />
-              </span>
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 px-8 py-4.5 rounded-2xl border border-border/45 bg-background/50 backdrop-blur-md text-foreground font-bold text-base hover:bg-background/80 transition-all duration-300"
-            >
-              {t("landing.crear_cuenta")}
-            </Link>
-          </div>
-          {/* Indicadores sociales */}
-          <div className="mt-14 flex items-center gap-8 text-sm sm:text-base text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 fill-[#FFD60A] text-[#FFD60A]" />
-              <span className="font-bold text-foreground">4.9</span> · App Store
-            </div>
-            <div className="h-4 w-[1px] bg-border/30" />
-            <div>
-              <span className="font-bold text-foreground">200K+</span> partidos jugados
-            </div>
-          </div>
-        </div>
-
-        {/* === Emulador de swipe dentro del Hero === */}
-        <div className="lg:col-span-5 xl:col-span-6 flex justify-center items-center w-full relative">
-          <div className="absolute -inset-10 bg-gradient-primary opacity-15 blur-3xl rounded-full pointer-events-none" />
-
-          {/* Frame principal simulando un teléfono */}
-          <div className="relative w-full max-w-[380px] sm:max-w-[400px] aspect-[3/4.2] rounded-[36px] bg-gradient-to-b from-[#121E3D]/90 to-[#090F22]/95 border-2 border-white/10 p-5 md:p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between overflow-hidden">
-            {/* Muesca simulada de cámara/speaker */}
-            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-4.5 rounded-full bg-[#0B132B] border border-white/5 flex items-center justify-center">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500/80 mr-2" />
-              <span className="w-10 h-1 rounded-full bg-white/10" />
-            </div>
-
-            {/* === Perfil swipable === */}
-            <div className="relative flex-1 mt-3 flex flex-col justify-between">
-              {/* Tarjetas de fondo para efecto de profundidad */}
-              <div className="absolute inset-x-2 bottom-0 top-3 rounded-2xl bg-white/5 border border-white/5 transform translate-y-2.5 scale-95 pointer-events-none -z-10" />
-              <div className="absolute inset-x-4 bottom-0 top-6 rounded-2xl bg-white/5 border border-white/5 transform translate-y-5 scale-90 pointer-events-none -z-20" />
-
-              {/* Tarjeta principal swipable con animación de transición */}
-              <div
-                className={`w-full h-full rounded-2xl bg-gradient-to-b from-[#1A2544] to-[#0D152D] border border-white/10 p-5 flex flex-col justify-between transition-all duration-300 transform shadow-xl relative overflow-hidden ${
-                  isTransitioning
-                    ? swipeDirection === "right"
-                      ? "translate-x-full rotate-12 opacity-0"
-                      : "-translate-x-full -rotate-12 opacity-0"
-                    : "translate-x-0 rotate-0 opacity-100"
-                }`}
-              >
-                {/* Etiqueta de compatibilidad */}
-                <div className="flex justify-between items-center z-10">
-                  <span className="px-3 py-1 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black uppercase tracking-wider font-mono">
-                    {currentProfile.matchRate}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-white text-[11px] font-semibold">
-                    {currentProfile.trustScore}
-                  </span>
-                </div>
-
-                {/* Avatar con gradiente y borde neón */}
-                <div className="flex justify-center items-center my-4 relative">
-                  <div
-                    className={`h-32 w-32 rounded-full bg-gradient-to-br ${currentProfile.imageColor} border-4 border-[#39FF14]/20 p-1 flex items-center justify-center relative shadow-glow-neon`}
-                  >
-                    {currentProfile.avatarUrl ? (
-                      <img
-                        src={currentProfile.avatarUrl}
-                        alt={currentProfile.name}
-                        className="h-full w-full object-cover rounded-full"
-                      />
-                    ) : (
-                      <span className="text-4xl font-black text-white">
-                        {currentProfile.avatarText}
-                      </span>
-                    )}
-                  </div>
-                  {/* Indicador de actividad */}
-                  <span className="absolute bottom-1 right-[35%] h-5 w-5 rounded-full bg-[#39FF14] border-4 border-[#0B132B] flex items-center justify-center">
-                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                  </span>
-                </div>
-
-                {/* Información del perfil */}
-                <div className="space-y-2.5 z-10">
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="text-xl sm:text-2xl font-black text-white">
-                      {currentProfile.name}
-                    </h3>
-                    <span className="text-sm font-bold text-[#B2B8C2]">
-                      {currentProfile.age} años
-                    </span>
-                  </div>
-
-                  {/* Badges de deporte, nivel y distrito */}
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="px-2.5 py-1 rounded-md bg-[#FF6B35]/15 border border-[#FF6B35]/30 text-[#FF6B35] text-xs font-extrabold uppercase">
-                      {currentProfile.sport}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-white text-xs font-semibold">
-                      {currentProfile.level}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[#B2B8C2] text-xs font-medium flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-white" />
-                      {currentProfile.district}
-                    </span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-[#B2B8C2] leading-relaxed italic min-h-[40px]">
-                    "{currentProfile.bio}"
-                  </p>
-
-                  {/* Tags del perfil */}
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {currentProfile.tags.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/5 text-white/75 font-semibold"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* === Botones de control interactivos === */}
-            <div className="flex items-center justify-center gap-5 mt-6 pt-4 border-t border-white/5">
-              {/* Botón Dislike (X) */}
-              <button
-                onClick={handleDislike}
-                disabled={isTransitioning}
-                className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/5 hover:bg-red-500/20 active:scale-90 text-red-500 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg hover:shadow-red-500/10"
-                aria-label="Dislike"
-              >
-                <X className="h-6 w-6" />
-              </button>
-
-              {/* Botón de información */}
-              <Link
-                to="/demo"
-                className="h-10 w-10 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-[#B2B8C2] flex items-center justify-center transition-all duration-200"
-                title="Ver Perfil Detallado"
-              >
-                <Info className="h-5 w-5 text-white/80" />
-              </Link>
-
-              {/* Botón Like (corazón) */}
-              <button
-                onClick={handleLike}
-                disabled={isTransitioning}
-                className="h-14 w-14 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/5 hover:bg-[#39FF14]/20 active:scale-90 text-[#39FF14] flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg hover:shadow-[#39FF14]/10"
-                aria-label="Like"
-              >
-                <Heart className="h-6 w-6 fill-current" />
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -1141,88 +858,6 @@ function Landing() {
         </div>
         © 2026 SportMatch-Connect · Made for high-performance athletes
       </footer>
-
-      {/* === OVERLAY DE MATCH === */}
-      {showMatchOverlay && matchedProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B132B]/85 backdrop-blur-md p-4 transition-all duration-300">
-          <div className="relative max-w-md w-full p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-[#121E3D] to-[#090F22] border-2 border-[#39FF14]/50 shadow-neon-green text-center overflow-hidden">
-            {/* Luces neón decorativas */}
-            <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#39FF14]/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[#FF6B35]/15 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10">
-              <div className="inline-flex items-center justify-center p-3 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/30 mb-5 animate-bounce">
-                <Sparkles className="h-8 w-8 text-[#39FF14]" />
-              </div>
-              <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                {t("matchmaking.its_a_match", "¡Es un Match! 🎉")}
-              </h3>
-              <p className="mt-3 text-sm text-[#B2B8C2]">
-                A ti y a <strong className="text-white">{matchedProfile.name}</strong> les interesa
-                el <strong className="text-[#39FF14]">{matchedProfile.sport}</strong>. ¡Empiecen a
-                chatear ahora!
-              </p>
-
-              {/* Avatares enfrentados (Tú vs Match) */}
-              <div className="flex items-center justify-center gap-4 sm:gap-6 my-8 relative">
-                <div className="relative">
-                  <div className="h-16 sm:h-20 w-16 sm:w-20 rounded-full border-4 border-[#39FF14] overflow-hidden bg-gradient-to-br from-[#FF6B35] to-[#FF8C00] flex items-center justify-center shadow-lg">
-                    <span className="text-xl sm:text-2xl font-black text-white">EF</span>
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full bg-[#39FF14] text-[#0B132B] text-[8px] font-black uppercase">
-                    Tú
-                  </span>
-                </div>
-
-                <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-                  <span className="text-white font-extrabold text-xs">VS</span>
-                </div>
-
-                <div className="relative">
-                  <div
-                    className={`h-16 sm:h-20 w-16 sm:w-20 rounded-full border-4 border-[#39FF14] overflow-hidden bg-gradient-to-br ${matchedProfile.imageColor} flex items-center justify-center shadow-lg`}
-                  >
-                    {matchedProfile.avatarUrl ? (
-                      <img
-                        src={matchedProfile.avatarUrl}
-                        alt={matchedProfile.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-xl sm:text-2xl font-black text-white">
-                        {matchedProfile.avatarText}
-                      </span>
-                    )}
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full bg-[#39FF14] text-[#0B132B] text-[8px] font-black uppercase">
-                    {matchedProfile.level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Botones del overlay */}
-              <div className="space-y-3">
-                <Link
-                  to="/demo"
-                  className="w-full py-3.5 bg-[#39FF14] hover:bg-[#2bff00] text-[#0B132B] font-black text-sm rounded-2xl shadow-glow transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <MessageSquare className="h-4.5 w-4.5" />
-                  {t("matchmaking.send_message", "Enviar Mensaje")}
-                </Link>
-                <button
-                  onClick={() => {
-                    setShowMatchOverlay(false);
-                    setMatchedProfile(null);
-                  }}
-                  className="w-full py-3.5 border border-white/10 hover:bg-white/5 text-white font-bold text-sm rounded-2xl transition-all duration-200"
-                >
-                  {t("matchmaking.keep_swiping", "Seguir Deslizando")}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

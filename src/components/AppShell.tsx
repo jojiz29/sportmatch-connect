@@ -12,7 +12,6 @@ import {
   LogOut,
   Rss,
   Shield,
-  Sun,
   Moon,
   Megaphone,
   TrendingUp,
@@ -41,27 +40,16 @@ function ThemeToggle() {
 
   const getThemeDetails = () => {
     switch (theme) {
-      case "light":
-        return {
-          title: "Modo Futbolista Oscuro",
-          icon: <Sun className="h-5 w-5 text-amber-500 hover:scale-110 transition-transform" />,
-        };
       case "dark-footballer":
         return {
-          title: "Modo Claro",
-          icon: <Moon className="h-5 w-5 text-[#39FF14] hover:scale-110 transition-transform" />,
+          title: "Cambiar a Copa del Mundo",
+          icon: <Trophy className="h-5 w-5 text-primary hover:scale-110 transition-transform" />,
         };
       case "world-cup":
-        return {
-          title: "Modo Claro",
-          icon: (
-            <Trophy className="h-5 w-5 text-[#D4AF37] hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(212,175,55,0.7)]" />
-          ),
-        };
       default:
         return {
-          title: "Cambiar Tema",
-          icon: <Moon className="h-5 w-5" />,
+          title: "Cambiar a Neón Urbano",
+          icon: <Moon className="h-5 w-5 text-primary hover:scale-110 transition-transform" />,
         };
     }
   };
