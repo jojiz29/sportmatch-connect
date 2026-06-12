@@ -179,11 +179,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
             { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
             { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
+            { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
           ],
-        },
-        {
-          titleKey: "nav.groups.analytics",
-          items: [{ to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy }],
         },
       ];
 
