@@ -102,14 +102,23 @@ export class AiService {
   }
 
   /**
-   * Extrae sugerencias contextuales de la respuesta.
-   * Estrategia simple: si la IA termina con una pregunta o
-   * menciona acciones específicas, las extrae como sugerencias.
+   * Extrae sugerencias contextuales de la respuesta del LLM.
+   * Estrategia: si el modelo devolvió texto JSON con un campo "suggestions",
+   * lo usa. Si no, devuelve un set genérico de acciones deportivas.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private extractSuggestions(_reply: string): string[] {
-    // Implementación simple: 3 sugerencias genéricas
-    // TODO: Mejorar con extracción semántica de la respuesta
+  private extractSuggestions(reply: string): string[] {
+    // Intenta parsear la respuesta como JSON estructurado (formato opcional)
+    try {
+      const trimmed = reply.trim();
+      if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+        const parsed = JSON.parse(trimmed) as { suggestions?: unknown };
+        if (Array.isArray(parsed?.suggestions)) {
+          return parsed.suggestions.filter((s): s is string => typeof s === "string").slice(0, 4);
+        }
+      }
+    } catch {
+      // No era JSON; caer al set genérico
+    }
     return ["Buscar canchas cerca", "Ver mi racha", "Recomiéndame un partido"];
   }
 }

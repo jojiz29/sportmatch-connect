@@ -58,6 +58,7 @@ export default defineConfig(({ mode }) => ({
       },
     }),
     mode === "analyze" && visualizer({ open: false, filename: "dist/stats.html", gzipSize: true }),
+    validateProductionApiUrl(),
   ],
   resolve: {
     alias: {
@@ -104,3 +105,40 @@ export default defineConfig(({ mode }) => ({
       }
     : {},
 }));
+
+// ============================================================
+//  Guardarraíl: valida VITE_API_URL en build de producción
+// ------------------------------------------------------------
+//  - FAIL: si VITE_API_URL apunta al frontend de Vercel (*.vercel.app)
+//    → bug real visto en producción el 13-jun-2026.
+//  - FAIL: si VITE_API_URL es localhost en build de producción.
+//  - WARN: si VITE_API_URL no está definida (permite builds locales
+//    sin entorno, pero avisa al desarrollador).
+// ============================================================
+function validateProductionApiUrl() {
+  return {
+    name: "validate-production-api-url",
+    configResolved(config: { command: string; mode: string }) {
+      if (config.command !== "build") return;
+      if (config.mode === "development") return;
+      const apiUrl = process.env.VITE_API_URL;
+      if (apiUrl?.includes(".vercel.app")) {
+        throw new Error(
+          `❌ VITE_API_URL="${apiUrl}" apunta al frontend de Vercel. Debe ser la URL del BACKEND NestJS (e.g. https://sportmatch-api.onrender.com). Corrige la variable en Vercel Dashboard → Settings → Environment Variables.`,
+        );
+      }
+      if (apiUrl?.startsWith("http://localhost")) {
+        throw new Error(
+          `❌ VITE_API_URL="${apiUrl}" apunta a localhost. En producción, debe ser la URL pública del backend NestJS.`,
+        );
+      }
+      if (!apiUrl) {
+        console.warn(
+          "[vite] ⚠️  VITE_API_URL no está definida. El frontend intentará conectarse a http://localhost:3000. Define la variable en Vercel Dashboard antes de hacer deploy.",
+        );
+        return;
+      }
+      console.log(`[vite] ✓ VITE_API_URL validado: ${apiUrl}`);
+    },
+  };
+}
