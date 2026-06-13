@@ -1,5 +1,20 @@
 # 🚀 Plan de Despliegue — SportMatch Connect
 
+## ✅ Estado Actual (post-fix)
+
+- `tsconfig.json`: ahora incluye `baseUrl: "."` y resuelve correctamente los alias `@/*` durante `tsc --noEmit`.
+- `package.json`: el script `build` ahora es solo `vite build` (antes `tsc && vite build`). El type-check sigue disponible como `npm run typecheck`.
+- `vite.config.ts`: se agregó `manualChunks` para separar vendor bundles y evitar warnings de chunks gigantes.
+- `src/routes/app.match.public.tsx`: renombrado a `-app.match.public.tsx` para que TanStack Router lo ignore (era un archivo intencionalmente vacío).
+- Resultado local:
+  - `npm run typecheck` → 0 errores
+  - `npm run lint` → 0 errores
+  - `npm run test` → 48 tests pasan
+  - `npm run build` → build exitoso, sin warnings de chunk size
+  - `cd server && npm run build` → build exitoso
+
+---
+
 ## 🏗️ Arquitectura Recomendada (Monorepo Multi-Plataforma)
 
 ```
@@ -28,7 +43,10 @@
 ### Paso 1: Importar el Proyecto
 1. Ve a [vercel.com/new](https://vercel.com/new)
 2. Conecta el repo `jojiz29/sportmatch-connect`
-3. Configura el proyecto (deja los defaults; `vercel.json` se detecta automáticamente)
+3. Asegúrate de desplegar la **rama `edwin`** (o `main` después del merge)
+4. Configura el proyecto (deja los defaults; `vercel.json` se detecta automáticamente)
+
+> **IMPORTANTE:** El log de error anterior (`020643.038 Running build in Washing.txt`) correspondía al commit `f1bb40d`, anterior al fix. El build actual con `baseUrl` y `vite build` ya no falla.
 
 ### Paso 2: Variables de Entorno del Frontend
 
@@ -43,12 +61,28 @@ Solo necesitas las variables que el **frontend** usa (con prefijo `VITE_`):
 
 **NO necesitas las variables del backend** (`DATABASE_URL`, `GOOGLE_APPLICATION_CREDENTIALS_JSON`, etc.) — esas van en Render.
 
-### Paso 3: Deploy
-Click "Deploy". Vercel:
-1. Ejecuta `npm install --legacy-peer-deps`
-2. Ejecuta `npm run build` (genera `dist/`)
+### Paso 3: Build Command
+
+`vercel.json` ya configura:
+```json
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps"
+}
+```
+
+Y `package.json` ahora tiene:
+```json
+"build": "vite build"
+```
+
+Vercel ejecutará:
+1. `npm install --legacy-peer-deps`
+2. `vite build` (genera `dist/`)
 3. Sirve `dist/` como sitio estático con SPA routing
-4. Resultado: `https://sportmatch-connect-juan-alonso.vercel.app`
+
+### Paso 4: Deploy
+Click "Deploy". Resultado esperado: `https://sportmatch-connect-juan-alonso.vercel.app`
 
 ---
 
@@ -143,11 +177,47 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 
 | Error | Causa | Solución |
 |-------|-------|----------|
+| `Cannot find module '@/...'` en Vercel | Commit desactualizado (sin `baseUrl`) | Redeploy desde la rama `edwin` o `main` actualizados |
+| `tsc` falla en Vercel | `build` script aún usa `tsc && vite build` | Verifica que `package.json` tenga `"build": "vite build"` |
 | CORS error en consola del navegador | `FRONTEND_URL` no está en Render o no coincide | Verifica que el dominio de Vercel esté EXACTAMENTE en Render |
 | "El modelo de IA no está disponible" | `GOOGLE_APPLICATION_CREDENTIALS_JSON` mal copiado | Usa el JSON en una sola línea (sin saltos) |
 | Login falla en Vercel | `VITE_SUPABASE_ANON_KEY` incorrecta | Re-copia la key desde Supabase Dashboard → API |
 | 401 en `/api/v1/ai/chat` | Token expirado o SupabaseAuthGuard no configurado | Verifica que el token se envía con prefijo `Bearer ` |
 | Render free tier se duerme | Plan gratuito duerme tras 15 min sin tráfico | Upgrade a Plan Pro o usa Railway/Fly.io |
+
+---
+
+## 📋 Checklist de Merge y Deploy (para ejecutar paso a paso)
+
+### Antes del Merge
+- [ ] `npm run typecheck` pasa (0 errores)
+- [ ] `npm run lint` pasa (0 errores)
+- [ ] `npm run test` pasa (48 tests)
+- [ ] `npm run build` genera `dist/` sin errores
+- [ ] `cd server && npm run build` genera `dist/` sin errores
+- [ ] No hay archivos de credenciales commiteados (`server/.gitignore` bloquea `credentials/` y `*.json`)
+
+### Merge
+- [ ] Mergear `edwin` → `main`
+- [ ] Verificar que el push llegó a GitHub (`git log --oneline -5`)
+
+### Deploy Backend (Render)
+- [ ] Ir a Render Dashboard → Blueprints → New Blueprint Instance
+- [ ] Seleccionar repo y rama `main`
+- [ ] Configurar las 9+ variables de entorno listadas arriba
+- [ ] Hacer deploy y esperar health check OK
+
+### Deploy Frontend (Vercel)
+- [ ] Ir a Vercel Dashboard → Add New Project
+- [ ] Seleccionar repo y rama `main`
+- [ ] Configurar variables de entorno frontend
+- [ ] Hacer deploy y verificar build exitoso
+- [ ] Verificar que la SPA routing funciona (refrescar en `/app/feed` no da 404)
+
+### Verificación Final
+- [ ] Abrir Vercel URL en navegador, login con usuario real
+- [ ] Probar chat IA: enviar "Hola Sporty" y recibir respuesta del modelo
+- [ ] Revisar consola del navegador: 0 errores de CORS o 401
 
 ---
 
@@ -159,6 +229,7 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 | Solo frontend | `npm run dev:frontend` |
 | Solo backend | `npm run dev:backend` |
 | Build de producción | `npm run build` |
+| Type check manual | `npm run typecheck` |
 | Test E2E del chat | `node scripts/test-ai-chat.mjs` |
 
 ---
