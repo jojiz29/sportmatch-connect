@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build && cd server && npm install --legacy-peer-deps && npm run build",
+  "buildCommand": "npm run build",
   "installCommand": "npm install --legacy-peer-deps",
   "builds": [
     {
@@ -9,34 +9,18 @@
       "config": {
         "distDir": "dist"
       }
-    },
-    {
-      "src": "api/[...path].ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/dist/**", "server/credentials/**", "server/package.json"],
-        "maxLambdaSize": "50mb"
-      }
     }
   ],
   "rewrites": [
-    { "source": "/api/v1/(.*)", "destination": "/api/[...path].ts" },
-    { "source": "/docs", "destination": "/api/[...path].ts" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
   ]
