@@ -4,6 +4,18 @@ import { safeLocalStorage } from "@/shared/lib/safeStorage";
 
 export type Theme = "light" | "dark-footballer" | "world-cup";
 
+// Orden de rotación para toggleTheme: cobre premium → neón urbano → claro deportivo
+const ROTATION: Theme[] = ["world-cup", "dark-footballer", "light"];
+
+function applyTheme(theme: Theme) {
+  if (typeof document !== "undefined") {
+    document.documentElement.setAttribute("data-theme", theme);
+    // Asegura que .light y .world-cup se activen en cualquier ancla superior
+    document.documentElement.classList.remove("light", "dark-footballer", "world-cup");
+    document.documentElement.classList.add(theme);
+  }
+}
+
 interface ThemeState {
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -12,26 +24,29 @@ interface ThemeState {
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: "world-cup",
       setTheme: (theme) => {
-        if (typeof document !== "undefined") {
-          document.documentElement.setAttribute("data-theme", theme);
-        }
+        applyTheme(theme);
         set({ theme });
       },
-      toggleTheme: () =>
-        set((state) => {
-          const nextTheme: Theme = state.theme === "world-cup" ? "dark-footballer" : "world-cup";
-          if (typeof document !== "undefined") {
-            document.documentElement.setAttribute("data-theme", nextTheme);
-          }
-          return { theme: nextTheme };
-        }),
+      toggleTheme: () => {
+        const current = get().theme;
+        const idx = ROTATION.indexOf(current);
+        const nextTheme = ROTATION[(idx + 1) % ROTATION.length] ?? "world-cup";
+        applyTheme(nextTheme);
+        set({ theme: nextTheme });
+      },
     }),
     {
       name: "sportmatch-theme",
       storage: createJSONStorage(() => safeLocalStorage),
+      onRehydrateStorage: () => (state) => {
+        // Aplica el tema persistido al árbol DOM al cargar la app
+        if (state?.theme) {
+          applyTheme(state.theme);
+        }
+      },
       migrate: (persistedState: unknown) => {
         const state = persistedState as { theme?: string } | null;
         if (state && (state.theme === "dark" || !state.theme)) {

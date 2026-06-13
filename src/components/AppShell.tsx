@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { JuryTour } from "@/components/JuryTour";
 import { useTourStore } from "@/shared/hooks/useTourStore";
+import { AIAvatarButton } from "@/features/ai-assistant/ui/AIAvatarButton";
 
 const ACCOUNT_ITEMS = [
   { to: "/app/profile", labelKey: "nav.perfil", icon: User },
@@ -455,6 +456,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <JuryTour />
       <TourTriggerButton />
+      <AIAvatarButton />
     </div>
   );
 }
@@ -475,7 +477,7 @@ function TourTriggerButton() {
   return (
     <button
       onClick={() => startTour()}
-      className="fixed bottom-20 lg:bottom-6 right-4 z-[49] px-4 py-2.5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-xs tracking-wider shadow-[0_0_15px_rgba(255,87,34,0.6)] border border-orange-400 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+      className="fixed bottom-20 lg:bottom-6 right-4 z-[49] px-4 py-2.5 rounded-full bg-gradient-primary text-primary-foreground font-bold text-xs tracking-wider shadow-glow border border-primary/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
     >
       <Zap className="h-4 w-4 animate-pulse" />
       <span>{run ? "Tour Activo 🛡️" : "Iniciar Tour Jurado"}</span>
