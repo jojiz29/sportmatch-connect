@@ -10,7 +10,7 @@
     },
     {
       "src": "server/src/main.ts",
-      "use": "@vercel/node",
+      "use": "@vercel/nestjs",
       "config": {
         "includeFiles": ["server/dist/**", "server/credentials/**"],
         "maxLambdaSize": "50mb"
@@ -36,9 +36,5 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
       ]
     }
-  ],
-  "env": {
-    "FRONTEND_URL": "@production_url",
-    "VITE_API_URL": "@production_url"
-  }
+  ]
 }

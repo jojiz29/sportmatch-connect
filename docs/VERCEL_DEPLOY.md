@@ -7,7 +7,19 @@ SportMatch Connect requiere un despliegue en **dos partes** en Vercel:
 1. **Frontend** (SPA estática) — directorio raíz `/`
 2. **Backend** (NestJS API) — directorio `/server`
 
-Vercel permite gestionar ambos con un solo repositorio mediante un `vercel.json` que enruta por path.
+Vercel permite gestionar ambos con un solo repositorio mediante `vercel.json` que enruta por path.
+
+---
+
+## ⚠️ Error Común que YA RESOLVÍ
+
+Si ves este error en el deploy:
+
+```
+Environment Variable "FRONTEND_URL" references Secret "production_url", which does not exist.
+```
+
+**Causa:** El `@` prefijo en `vercel.json` (`@production_url`) le dice a Vercel que la variable referencia un **Secret** que debe existir en el dashboard. Esto ya fue corregido — ahora las variables se setean directamente en el dashboard sin necesidad de secrets.
 
 ---
 
@@ -23,7 +35,7 @@ Vercel permite gestionar ambos con un solo repositorio mediante un `vercel.json`
                   │                               │
         ┌─────────▼─────────┐         ┌───────────▼──────────┐
         │  /  →  Frontend   │         │  /api/v1/*  → API   │
-        │  (Vite SPA)       │         │  (NestJS Lambda)    │
+        │  (Vite SPA)       │         │  (NestJS Serverless) │
         │  dist/ estática   │         │  server/src/main.ts │
         └───────────────────┘         └──────────┬──────────┘
                                                    │
@@ -37,128 +49,102 @@ Vercel permite gestionar ambos con un solo repositorio mediante un `vercel.json`
 
 ---
 
-## ⚙️ Configuración Paso a Paso
+## ⚙️ Configuración Paso a Paso (EN ORDEN)
 
-### 1. Preparar el Repositorio
+### PASO 1: Crear el proyecto en Vercel
 
-El repositorio ya tiene la configuración lista:
+1. Ve a [vercel.com/new](https://vercel.com/new)
+2. Selecciona el repositorio `jojiz29/sportmatch-connect`
+3. En la sección "Environment Variables", **añade las variables listadas abajo** (PASO 2) ANTES de hacer deploy
+4. Click "Deploy" — el primer deploy fallará, pero luego podrás reintentarlo con las variables
 
-- `vercel.json` en la raíz con rewrites por path
-- `server/` con el código NestJS
-- Variables de entorno documentadas en `server/.env`
+### PASO 2: Variables de Entorno en Vercel Dashboard
 
-### 2. Variables de Entorno en Vercel Dashboard
+Ve a: **Vercel → Tu Proyecto → Settings → Environment Variables**
 
-Configura las siguientes variables en **Vercel → Project Settings → Environment Variables**:
+Añade las siguientes variables (clic en "Add Another" para cada una):
 
-#### 🔐 Secrets Críticos (Encrypt: ON)
+#### 🔐 Variables CRÍTICAS (Encrypt: ON) — Sensitive
 
-| Variable                              | Descripción                                                                                             | Ejemplo                                                        |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Contenido completo del JSON de Service Account (NO la ruta al archivo, sino el JSON inline como string) | `{"type":"service_account","project_id":"sportmach-core",...}` |
-| `SUPABASE_JWT_SECRET`                 | JWT secret de Supabase                                                                                  | (de Supabase Dashboard)                                        |
-| `JWT_SECRET`                          | Secret para tokens propios de la API                                                                    | (generar uno aleatorio)                                        |
+| Variable                              | Valor                                                                                 | Environments        |
+| ------------------------------------- | ------------------------------------------------------------------------------------- | ------------------- |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Contenido completo del JSON de Service Account en **una línea** (sin saltos de línea) | Production, Preview |
+| `SUPABASE_JWT_SECRET`                 | Tu JWT secret de Supabase (Dashboard → Settings → API → JWT Secret)                   | Production, Preview |
+| `DATABASE_URL`                        | Tu connection string de Supabase Postgres                                             | Production, Preview |
+| `JWT_SECRET`                          | Genera uno: `openssl rand -base64 32`                                                 | Production, Preview |
 
-#### 🔓 Variables Públicas (Encrypt: OFF)
+#### 🔓 Variables Públicas (Encrypt: OFF) — No Sensitive
 
-| Variable                 | Descripción                             | Ejemplo                                             |
-| ------------------------ | --------------------------------------- | --------------------------------------------------- |
-| `VITE_SUPABASE_URL`      | URL pública de Supabase                 | `https://gzyoxfhzuxknqacplapi.supabase.co`          |
-| `VITE_SUPABASE_ANON_KEY` | Anon key pública de Supabase            | `sb_publishable_...`                                |
-| `VITE_API_URL`           | URL de la API en Vercel (mismo dominio) | `https://sportmatch-connect-juan-alonso.vercel.app` |
-| `FRONTEND_URL`           | URL del frontend (para CORS)            | `https://sportmatch-connect-juan-alonso.vercel.app` |
-| `GOOGLE_CLOUD_PROJECT`   | ID del proyecto GCP                     | `sportmach-core`                                    |
-| `VERTEX_AI_LOCATION`     | Región de Vertex AI                     | `us-west1`                                          |
-| `VERTEX_AI_MODEL_ID`     | Modelo Gemini                           | `gemini-1.5-pro-002`                                |
-| `VERTEX_AI_MAX_TOKENS`   | Límite de tokens                        | `1024`                                              |
-| `VERTEX_AI_TEMPERATURE`  | Temperatura del modelo                  | `0.7`                                               |
+| Variable                          | Valor                                                      | Environments        |
+| --------------------------------- | ---------------------------------------------------------- | ------------------- |
+| `VITE_SUPABASE_URL`               | `https://gzyoxfhzuxknqacplapi.supabase.co`                 | Production, Preview |
+| `VITE_SUPABASE_ANON_KEY`          | Tu anon key de Supabase (empieza con `sb_publishable_...`) | Production, Preview |
+| `VITE_API_URL`                    | `https://sportmatch-connect-juan-alonso.vercel.app`        | Production, Preview |
+| `FRONTEND_URL`                    | `https://sportmatch-connect-juan-alonso.vercel.app`        | Production, Preview |
+| `GOOGLE_CLOUD_PROJECT`            | `sportmach-core`                                           | Production, Preview |
+| `VERTEX_AI_LOCATION`              | `us-central1`                                              | Production, Preview |
+| `VERTEX_AI_MODEL_ID`              | `gemini-2.5-flash`                                         | Production, Preview |
+| `VERTEX_AI_MAX_TOKENS`            | `1024`                                                     | Production, Preview |
+| `VERTEX_AI_TEMPERATURE`           | `0.7`                                                      | Production, Preview |
+| `VERTEX_AI_MAX_RETRIES`           | `3`                                                        | Production, Preview |
+| `VERTEX_AI_TIMEOUT_MS`            | `30000`                                                    | Production, Preview |
+| `VERTEX_AI_RATE_LIMIT_PER_MINUTE` | `20`                                                       | Production, Preview |
+| `PORT`                            | `3000`                                                     | Production, Preview |
+| `NODE_ENV`                        | `production`                                               | Production, Preview |
 
-> ⚠️ **Crítico para Vertex AI:** Vercel NO tiene sistema de archivos persistente en serverless, por lo que **NO puedes usar `GOOGLE_APPLICATION_CREDENTIALS` como ruta a un archivo**. En su lugar, el código de producción debe leer el JSON desde la variable de entorno `GOOGLE_APPLICATION_CREDENTIALS_JSON` (string).
+### PASO 3: Convertir el JSON de Service Account a una sola línea
 
-### 3. Refactor Necesario para Producción Serverless
-
-El `AiConfigService` actual busca el archivo en disco. Para Vercel serverless, hay que agregar fallback para leer desde variable de entorno.
-
----
-
-## 🔧 Refactor Recomendado: `ai-config.service.ts`
-
-```typescript
-// En AiConfigService.onModuleInit():
-const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-
-// Caso 1: Producción serverless (Vercel) — el JSON viene como string
-if (credentialsJson) {
-  // El SDK de @google/genai acepta credenciales como objeto JSON directamente
-  this.config = {
-    credentialsJson: JSON.parse(credentialsJson),
-    // ...
-  };
-}
-// Caso 2: Desarrollo local — el JSON está en el sistema de archivos
-else if (credentialsPath) {
-  // Validar que existe, leer el archivo, etc.
-}
-```
-
-Esto requiere actualizar `VertexAiService` para pasar el objeto JSON al SDK:
-
-```typescript
-this.genAi = new GoogleGenAI({
-  vertexai: true,
-  project: this.config.projectId,
-  location: this.config.location,
-  googleAuthOptions: this.config.credentialsJson
-    ? { credentials: this.config.credentialsJson }
-    : { keyFile: this.config.credentialsPath },
-});
-```
-
----
-
-## 📦 Despliegue de un Clic
-
-### Opción A: Vercel Dashboard (Recomendado)
-
-1. Conecta el repo `jojiz29/sportmatch-connect` en [vercel.com](https://vercel.com/new)
-2. Configura las variables de entorno (tabla arriba)
-3. Vercel detecta automáticamente el `vercel.json` y configura los builds
-4. Click "Deploy"
-
-### Opción B: CLI
+⚠️ **Crítico:** El JSON de credenciales NO se sube como archivo. Vercel serverless no tiene sistema de archivos persistente.
 
 ```bash
-npm i -g vercel
-vercel login
-vercel --prod
+# En PowerShell:
+$json = Get-Content "server/credentials/google-cloud-credentials.json" -Raw | ConvertFrom-Json | ConvertTo-Json -Compress
+Write-Host $json
 ```
+
+Copia el output (sin saltos de línea) y pégalo en el campo "Value" de la variable `GOOGLE_APPLICATION_CREDENTIALS_JSON` en Vercel.
+
+El resultado será algo como:
+
+```json
+{
+  "type": "service_account",
+  "project_id": "sportmach-core",
+  "private_key_id": "...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n",
+  "client_email": "sportmatch-core@sportmach-core.iam.gserviceaccount.com",
+  "client_id": "...",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sportmatch-core%40sportmach-core.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+```
+
+> 🔐 **IMPORTANTE:** Marca "Sensitive" para que Vercel encripte el valor.
+
+### PASO 4: Configurar el proyecto
+
+Una vez que todas las variables estén configuradas:
+
+1. Ve a **Settings → General → Build & Development Settings**
+2. **Build Command:** `npm run build` (ya está en `vercel.json`)
+3. **Install Command:** `npm install --legacy-peer-deps` (ya está en `vercel.json`)
+4. **Output Directory:** `dist` (se infiere de `builds[0].config.distDir`)
+
+### PASO 5: Re-deploy
+
+Después de configurar todas las variables:
+
+1. Ve a **Deployments** tab
+2. Click en los 3 puntos del último deploy fallido → "Redeploy"
+3. ✅ Marca "Use existing Build Cache" para ahorrar tiempo
+4. Click "Redeploy"
 
 ---
 
-## 🔒 Secrets: Service Account de Google Cloud
-
-### Paso Crítico: Convertir JSON a Variable de Entorno
-
-El JSON del Service Account **NO se sube como archivo** a Vercel. Se inyecta como string:
-
-```bash
-# 1. Lee el JSON y minifícalo a una línea
-cat server/credentials/google-cloud-credentials.json | jq -c . > credentials-min.json
-
-# 2. En Vercel Dashboard:
-#    Settings → Environment Variables → Add
-#    Key:   GOOGLE_APPLICATION_CREDENTIALS_JSON
-#    Value: (pega el contenido de credentials-min.json)
-#    Environment: Production, Preview, Development
-#    Encrypt: ON
-```
-
-⚠️ **NUNCA** commitees el JSON al repositorio. El `.gitignore` ya lo bloquea, pero es buena práctica verificar.
-
----
-
-## 🧪 Testing Post-Despliegue
+## 🔍 Verificación Post-Deploy
 
 ### 1. Health Check
 
@@ -166,89 +152,93 @@ cat server/credentials/google-cloud-credentials.json | jq -c . > credentials-min
 curl https://sportmatch-connect-juan-alonso.vercel.app/api/v1/health
 ```
 
-Debe retornar `{"status":"ok"}` o similar.
+Debe retornar: `{"status":"ok",...}`
 
-### 2. AI Chat (requiere token de Supabase)
+### 2. Swagger (si está habilitado)
 
-```bash
-curl -X POST https://sportmatch-connect-juan-alonso.vercel.app/api/v1/ai/chat \
-  -H "Authorization: Bearer <supabase_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Hola Sporty, ¿qué deportes me recomiendas?"}'
+```
+https://sportmatch-connect-juan-alonso.vercel.app/docs
 ```
 
-### 3. Swagger
+### 3. AI Chat con Token Real
 
-Visita: `https://sportmatch-connect-juan-alonso.vercel.app/docs`
+```bash
+# Primero obtén un token de Supabase
+curl -X POST https://gzyoxfhzuxknqacplapi.supabase.co/auth/v1/token?grant_type=password \
+  -H "Content-Type: application/json" \
+  -H "apikey: sb_publishable_RWQAc4K1J0zI3RZKRDXHYw_QRIF30D9" \
+  -d '{"email":"tu@email.com","password":"tu_password"}'
+
+# Luego usa el token para chatear con la IA
+curl -X POST https://sportmatch-connect-juan-alonso.vercel.app/api/v1/ai/chat \
+  -H "Authorization: Bearer <TOKEN_AQUI>" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Hola Sporty, ¿qué deportes recomiendas?"}'
+```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Error: "Module not found" en Vercel
-
-- Verifica que `package.json` (raíz) tenga `@google/genai` como dependencia
-- Si el backend lo necesita, agrégalo también en `server/package.json`
-
-### Error: "Cannot find credentials file"
-
-- En Vercel serverless no hay archivos. Usa `GOOGLE_APPLICATION_CREDENTIALS_JSON` como string
-
-### Error CORS
-
-- Verifica que `FRONTEND_URL` apunte al dominio correcto de Vercel
-- La lógica actual de CORS permite automáticamente el dominio de Vercel si está en `.env`
-
-### Lambda timeout (30s)
-
-- Vertex AI puede tardar 5-15s en responder
-- Considera aumentar `maxDuration` en `vercel.json` (requiere plan Pro)
+| Error                                            | Causa                                              | Solución                                                                                             |
+| ------------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `Environment Variable "X" references Secret "X"` | Usaste `@` prefix en `vercel.json`                 | ❌ NO uses `@` prefix. Configura las vars en el dashboard                                            |
+| `Cannot find credentials file`                   | Vercel es serverless, no tiene sistema de archivos | Usa `GOOGLE_APPLICATION_CREDENTIALS_JSON` (string) en vez de `GOOGLE_APPLICATION_CREDENTIALS` (ruta) |
+| `Module not found: @google/genai`                | El backend no tiene la dependencia                 | Agrégala en `server/package.json` y al `dependencies` del `package.json` raíz                        |
+| `CORS policy: Origin not allowed`                | El dominio de Vercel no está en la lista           | Agrega `https://sportmatch-connect-juan-alonso.vercel.app` a `FRONTEND_URL`                          |
+| `FUNCTION_INVOCATION_TIMEOUT`                    | Vertex AI puede tardar 10-15s                      | Actualiza a Vercel Pro (60s timeout) o implementa streaming                                          |
 
 ---
 
-## 📊 Límites de Vercel (Plan Hobby)
+## 📊 Límites de Vercel
 
-| Recurso                         | Límite                 |
-| ------------------------------- | ---------------------- |
-| Function execution time         | 10s (Hobby), 60s (Pro) |
-| Function size                   | 50 MB                  |
-| Bandwidth                       | 100 GB/mes             |
-| Serverless function invocations | 1M/mes                 |
+| Recurso                 | Plan Hobby | Plan Pro |
+| ----------------------- | ---------- | -------- |
+| Function execution time | 10s        | 60s      |
+| Function size           | 50 MB      | 50 MB    |
+| Bandwidth               | 100 GB/mes | 1 TB/mes |
+| Serverless invocations  | 1M/mes     | 1M/mes   |
 
-Para el chat de IA, **recomendamos plan Pro** para tener 60s de timeout. Alternativamente, implementar streaming de respuesta con Server-Sent Events (SSE) para que la primera respuesta llegue en <10s.
+**Recomendación:** Para el chat de IA, usar **plan Pro** para 60s de timeout.
+
+---
+
+## 📋 Checklist Pre-Deploy
+
+- [ ] Repositorio conectado a Vercel
+- [ ] **TODAS** las variables de entorno del PASO 2 configuradas
+- [ ] `GOOGLE_APPLICATION_CREDENTIALS_JSON` con el JSON en una sola línea y marcado como "Sensitive"
+- [ ] `vercel.json` commiteado (sin `@` prefixes)
+- [ ] Build local exitoso: `npm run build`
+- [ ] Dev local funciona: `npm run dev` (con `server/.env` configurado)
+- [ ] CORS permite el dominio de Vercel
+
+---
+
+## 🚀 Workflow de Desarrollo
+
+| Entorno                   | Comando                         | URL                                               |
+| ------------------------- | ------------------------------- | ------------------------------------------------- |
+| Local dev (todo el stack) | `npm run dev`                   | http://localhost:5173                             |
+| Solo frontend             | `npm run dev:frontend`          | http://localhost:5173                             |
+| Solo backend              | `npm run dev:backend`           | http://localhost:3000                             |
+| Test E2E del chat         | `node scripts/test-ai-chat.mjs` | (requiere user real)                              |
+| Build de producción       | `npm run build`                 | (genera dist/ para Vercel)                        |
+| Deploy a Vercel           | (auto en push a main)           | https://sportmatch-connect-juan-alonso.vercel.app |
 
 ---
 
 ## 🔄 CI/CD Automático
 
-Cada `git push` a `main` o `edwin` dispara un deploy automático en Vercel.
-
-Para deshabilitar previews de PRs no deseados:
-
-```json
-// vercel.json
-"github": {
-  "silent": false,
-  "autoAlias": true
-}
-```
+- **Push a `main`** → Deploy a producción
+- **Push a `edwin` u otras ramas** → Deploy a preview
+- Cada PR abre un deploy preview único con URL propia
 
 ---
 
-## ✅ Checklist Pre-Deploy
+## 🆘 Soporte Rápido
 
-- [ ] JSON de credenciales Vertex AI disponible
-- [ ] Variables de entorno configuradas en Vercel Dashboard
-- [ ] Refactor de `AiConfigService` para soportar `GOOGLE_APPLICATION_CREDENTIALS_JSON`
-- [ ] `vercel.json` commiteado en la raíz
-- [ ] `npm run dev` funciona localmente
-- [ ] Tests E2E pasando (`npm run test:e2e`)
-- [ ] Build local exitoso (`npm run build`)
-
----
-
-## 📞 Soporte
-
-- Vercel Docs: https://vercel.com/docs
-- Google Gen AI: https://www.npmjs.com/package/@google/genai
-- Supabase: https://supabase.com/docs
+- **Vercel Docs**: https://vercel.com/docs
+- **Google Gen AI**: https://www.npmjs.com/package/@google/genai
+- **Supabase**: https://supabase.com/docs
+- **Logs en Vercel**: Project → Deployments → Click en deploy → "Functions" tab → Ver logs de cada lambda
