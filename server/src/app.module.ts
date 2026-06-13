@@ -15,6 +15,7 @@ import { WalletModule } from "./wallet/wallet.module";
 import { SportsModule } from "./sports/sports.module";
 import { BookingsModule } from "./bookings/bookings.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { AiModule } from "./ai/ai.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     WalletModule,
     SportsModule,
     BookingsModule,
+    AiModule,
   ],
   controllers: [HealthController],
 })

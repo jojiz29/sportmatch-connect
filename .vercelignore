@@ -1,0 +1,72 @@
+# .vercelignore — Files NOT to upload to Vercel
+# Reduces deployment size and time
+
+# Dependencies (Vercel runs installCommand)
+node_modules
+**/node_modules
+**/node_modules/**
+
+# Source TypeScript files (only compiled JS is needed)
+server/src/
+**/*.ts
+!server/dist/**/*.js
+!api/**
+
+# Test files
+**/*.spec.ts
+**/*.test.ts
+**/__tests__/
+
+# Documentation
+**/*.md
+docs/
+**/README.md
+
+# Build artifacts (frontend)
+node_modules/
+dist/
+build/
+
+# Local env files (NEVER upload credentials)
+.env
+.env.local
+.env.*.local
+server/.env
+server/.env.local
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Tests e2e
+tests/
+playwright-report/
+test-results/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Prisma generated client (not needed at runtime, Vercel uses DATABASE_URL directly)
+server/node_modules/.prisma
+server/node_modules/@prisma/client/runtime
+
+# Python (none in this project)
+__pycache__/
+*.pyc
+
+# Temporary
+tmp/
+temp/

@@ -21,7 +21,9 @@ export interface AiMessage {
 // === BLOQUE: INTERFAZ DEL ESTADO ===
 
 interface AiAssistantState {
-  /** Historial completo de la conversación (incluye mensaje de bienvenida) */
+  /** Historial completo de la conversación. Vacío al inicio: la primera
+   *  interacción la genera el propio usuario. Esto permite validar
+   *  la conexión real con Vertex AI sin respuestas pre-fabricadas. */
   messages: AiMessage[];
   /** Indicador de "escribiendo..." para la UI */
   isTyping: boolean;
@@ -39,21 +41,14 @@ interface AiAssistantState {
   dismissError: () => void;
 }
 
-// === BLOQUE: MENSAJE DE BIENVENIDA ===
-// Quemado en el store para garantizar render inmediato sin latencia de red.
-const WELCOME_MESSAGE: AiMessage = {
-  id: "welcome",
-  role: "assistant",
-  text: "¡Hola! Soy Sporty, tu asistente deportivo ⚡\n\nHe visto que hay canchas cerca de ti. ¿Te ayudo a encontrar un partido o reservar una cancha?",
-  timestamp: new Date().toISOString(),
-  suggestions: ["Buscar canchas cerca", "Recomiéndame un partido", "Ver mi racha"],
-};
-
 // === BLOQUE: STORE ZUSTAND ===
 // Administra el estado del chat: mensajes, typing, visibilidad.
 // NO usa persist (consistente con useChatStore: sesión efímera).
+// NO contiene un WELCOME_MESSAGE quemado: el chat inicia vacío para
+// poder verificar de forma transparente que la primera respuesta viene
+// realmente del backend (Vertex AI) y no de un catálogo local.
 export const useAiAssistantStore = create<AiAssistantState>((set) => ({
-  messages: [WELCOME_MESSAGE],
+  messages: [],
   isTyping: false,
   isOpen: false,
   error: null,
@@ -91,15 +86,23 @@ export const useAiAssistantStore = create<AiAssistantState>((set) => ({
       };
       set((s) => ({ messages: [...s.messages, aiMsg], isTyping: false }));
     } catch (err) {
-      // Red de seguridad: sendMessageToAI no debería lanzar (siempre retorna fallback),
-      // pero si lo hace (p.ej. al conectar el backend real), capturamos aquí.
-      set({
+      // Muestra el error como una burbuja visible para que el usuario
+      // sepa exactamente qué falló (red, 401, 429, 5xx, etc.).
+      const errorText = err instanceof Error ? err.message : "Error desconocido";
+      const errorMsg: AiMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        text: `⚠️ ${errorText}`,
+        timestamp: new Date().toISOString(),
+      };
+      set((s) => ({
+        messages: [...s.messages, errorMsg],
         isTyping: false,
-        error: err instanceof Error ? err.message : "Unknown error",
-      });
+        error: errorText,
+      }));
     }
   },
 
-  clearMessages: () => set({ messages: [WELCOME_MESSAGE], error: null }),
+  clearMessages: () => set({ messages: [], error: null }),
   dismissError: () => set({ error: null }),
 }));

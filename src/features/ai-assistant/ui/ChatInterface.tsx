@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Zap, MapPin, Loader2 } from "lucide-react";
+import { Send, Bot, User, Zap, Loader2 } from "lucide-react";
 import { useAiAssistantStore } from "../model/useAiAssistantStore";
 
 interface ChatInterfaceProps {
@@ -81,6 +81,25 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
 
           {/* Messages */}
           <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth">
+            {messages.length === 0 && !isTyping && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col items-center justify-center h-full text-center px-4"
+              >
+                <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center shadow-glow mb-3">
+                  <Bot className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <p className="text-sm font-semibold text-chat-surface-foreground">
+                  ¡Hola! Soy Sporty
+                </p>
+                <p className="text-xs text-[color:var(--color-chat-typing-text)] mt-1 max-w-[260px]">
+                  Tu asistente deportivo. Pregúntame sobre canchas, partidos o cualquier tema
+                  deportivo.
+                </p>
+              </motion.div>
+            )}
             {messages.map((msg) => {
               const isUser = msg.role === "user";
               return (
@@ -155,18 +174,17 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
               </button>
             </div>
             <div className="flex gap-3 mt-2 px-1">
-              <button
-                onClick={() => setInput("Buscar canchas cerca")}
-                className="flex items-center gap-1 text-[10px] font-semibold text-[color:var(--color-chat-suggestion-fg)] hover:text-primary bg-[color:var(--color-chat-suggestion-bg)] hover:bg-[color:var(--color-chat-suggestion-hover)] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-              >
-                <MapPin className="h-3 w-3" /> Canchas cerca
-              </button>
-              <button
-                onClick={() => setInput("Recomiéndame un deporte")}
-                className="flex items-center gap-1 text-[10px] font-semibold text-[color:var(--color-chat-suggestion-fg)] hover:text-primary bg-[color:var(--color-chat-suggestion-bg)] hover:bg-[color:var(--color-chat-suggestion-hover)] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-              >
-                <Zap className="h-3 w-3" /> Recomiéndame
-              </button>
+              {messages.length > 0 && (
+                <button
+                  onClick={() => {
+                    useAiAssistantStore.getState().clearMessages();
+                    setInput("");
+                  }}
+                  className="flex items-center gap-1 text-[10px] font-semibold text-[color:var(--color-chat-suggestion-fg)] hover:text-primary bg-[color:var(--color-chat-suggestion-bg)] hover:bg-[color:var(--color-chat-suggestion-hover)] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                >
+                  <Zap className="h-3 w-3" /> Limpiar chat
+                </button>
+              )}
             </div>
           </div>
         </motion.div>

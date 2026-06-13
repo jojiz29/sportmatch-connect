@@ -65,6 +65,30 @@ export default defineConfig(({ mode }) => ({
       buffer: "buffer",
     },
   },
+  build: {
+    chunkSizeWarningLimit: 6000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          router: ["@tanstack/react-router", "@tanstack/react-query"],
+          ui: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-tabs",
+            "class-variance-authority",
+            "clsx",
+            "tailwind-merge",
+          ],
+          forms: ["react-hook-form", "@hookform/resolvers", "zod"],
+          charts: ["recharts"],
+          maps: ["leaflet", "react-leaflet"],
+          ml: ["@tensorflow/tfjs", "nsfwjs"],
+          i18n: ["i18next", "react-i18next", "i18next-browser-languagedetector"],
+        },
+      },
+    },
+  },
   server: {
     host: "::",
     port: 5178,

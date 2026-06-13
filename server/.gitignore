@@ -1,5 +1,5 @@
 # ============================================================
-# .gitignore — Archivos ignorados por Git (servidor NestJS)
+# server/.gitignore — Archivos ignorados por Git (servidor NestJS)
 # ============================================================
 
 node_modules/
@@ -10,3 +10,31 @@ dist/
 *.log
 coverage/
 .vercel
+
+# ============================================================
+# CREDENCIALES SENSIBLES (Vertex AI, Google Cloud, etc.)
+# Bloqueo defensivo: CUALQUIER archivo .json se ignora,
+# EXCEPTO los archivos de configuración legítimos del proyecto.
+# ============================================================
+
+# Carpetas dedicadas a secretos
+credentials/
+secrets/
+
+# Bloqueo por extensión (defensa en profundidad)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.build.json
+!tsconfig.spec.json
+!nest-cli.json
+!jest.config.js
+!eslint.config.js
+
+# Certificados y claves privadas
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
