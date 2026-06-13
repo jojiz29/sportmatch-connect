@@ -12,9 +12,10 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "dev:frontend": "vite",
+    "dev:frontend": "vite --port 5173 --strictPort",
+    "dev:backend:install": "cd server && npm install --silent",
     "dev:backend": "cd server && npm run dev",
-    "dev": "concurrently -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "node scripts/dev-stack.mjs",
     "build": "tsc && vite build",
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",

@@ -2,11 +2,13 @@
  * ===================================================================
  * ARCHIVO: src/features/ai-assistant/api/sportyAiAPI.ts
  * PROPÓSITO: Capa de servicio para el Asistente Deportivo IA ("Sporty").
- *            Aísla la lógica de red de los componentes de UI.
- *            Cuando el backend Node.js + Vertex AI esté disponible,
- *            solo se reemplaza el cuerpo de sendMessageToAI().
+ *            Realiza la llamada HTTP al endpoint /api/v1/ai/chat del
+ *            backend NestJS, el cual orquesta Vertex AI con las
+ *            credenciales seguras del Service Account.
  * ===================================================================
  */
+
+import { supabase } from "@/shared/api/supabase";
 
 // ==============================================================
 // TIPOS PÚBLICOS DEL CONTRATO LLM
@@ -17,7 +19,7 @@ export interface AiChatRequest {
   message: string;
 }
 
-/** Payload de salida (lo que el backend / mock retorna) */
+/** Payload de salida del backend (debe coincidir con ChatResponseDto) */
 export interface AiChatResponse {
   reply: string;
   suggestions: string[];
@@ -29,26 +31,11 @@ export interface AiChatResponse {
 }
 
 // ==============================================================
-// CATÁLOGO MOCK (se elimina cuando el backend real esté listo)
+// CONFIGURACIÓN
 // ==============================================================
 
-const SPORTY_RESPONSES: string[] = [
-  "¡Genial! Veo 3 canchas de fútbol 7 disponibles a menos de 2 km. ¿Te reservo una?",
-  "Tienes 2 partidos abiertos de pádel esta tarde. ¿Quieres unirte?",
-  "Según tu nivel Avanzado en fútbol, te recomiendo la Liga Élite que empieza este sábado.",
-  "Hay una promoción en FitCenter: 20% de descuento en reservas hechas antes de las 6 PM.",
-  "¿Prefieres jugar al vóley? Hay 4 jugadores buscando equipo en tu zona ahora mismo.",
-  "Tu racha actual es de 3 días seguidos. ¡Sigue así y ganarás 500 FitCoins extra!",
-  "He detectado que hace buen clima para correr. ¿Quieres que te muestre rutas cerca de tu casa?",
-];
-
-const FALLBACK_REPLY = "Lo siento, tuve un problema al procesar eso. ¿Puedes repetirlo?";
-
-const DEFAULT_SUGGESTIONS: string[] = [
-  "Buscar canchas cerca",
-  "Ver mi racha",
-  "Recomiéndame un partido",
-];
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/ai/chat`;
 
 // ==============================================================
 // FUNCIÓN PRINCIPAL
@@ -57,57 +44,56 @@ const DEFAULT_SUGGESTIONS: string[] = [
 /**
  * sendMessageToAI(): Envía un mensaje del usuario al backend de IA.
  * ------------------------------------------------------------------
- *  - En modo mock: simula latencia 800-2000ms y retorna una respuesta
- *    aleatoria del catálogo SPORTY_RESPONSES.
- *  - En modo real (futuro): hace POST a ${VITE_API_URL}/api/v1/ai/chat
- *    con el cuerpo { message } y espera un AiChatResponse.
+ * El backend NestJS (protegido por SupabaseAuthGuard) se encarga de:
+ *  1. Validar el token del usuario.
+ *  2. Aplicar rate limiting por userId.
+ *  3. Inyectar el system prompt y delegar a Vertex AI.
+ *  4. Devolver { reply, suggestions, metadata }.
  *
- *  IMPORTANTE: Esta función NUNCA lanza excepciones. En caso de
- *  error, retorna un objeto con un mensaje amigable para que la UI
- *  siempre tenga algo que renderizar.
+ * Si la petición falla por red, timeout o 5xx, se lanza un error
+ * para que el store pueda mostrar un mensaje contextual al usuario.
  */
 export async function sendMessageToAI(message: string): Promise<AiChatResponse> {
-  // Construye URL del endpoint (se usará cuando se conecte el backend real).
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const url = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/ai/chat`;
-  // Mantiene la firma del contrato: cuando se conecte el backend real,
-  // `message` se usará en el body del POST.
-  void message;
-
-  try {
-    // --- MOCK IMPLEMENTATION (reemplazar con fetch real cuando exista el backend) ---
-    const delay = 800 + Math.random() * 1200;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-
-    const idx = Math.floor(Math.random() * SPORTY_RESPONSES.length);
-    return {
-      reply: SPORTY_RESPONSES[idx],
-      suggestions: DEFAULT_SUGGESTIONS,
-      metadata: {
-        tokens: 42 + Math.floor(Math.random() * 30),
-        model: "vertex-ai-gemini-pro-mock",
-        latencyMs: Math.round(delay),
-      },
-    };
-
-    // --- CÓDIGO REAL (descomentar cuando el endpoint exista) ---
-    // const response = await fetch(url, {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({ message } satisfies AiChatRequest),
-    // });
-    //
-    // if (!response.ok) {
-    //   throw new Error(`AI service responded with HTTP ${response.status}`);
-    // }
-    //
-    // return (await response.json()) as AiChatResponse;
-  } catch (err) {
-    console.error("[sportyAiAPI] sendMessageToAI failed:", err);
-    return {
-      reply: FALLBACK_REPLY,
-      suggestions: [],
-      metadata: { tokens: 0, latencyMs: 0 },
-    };
+  const trimmed = message.trim();
+  if (!trimmed) {
+    throw new Error("El mensaje no puede estar vacío");
   }
+
+  // 1. Obtener el Bearer token de la sesión actual de Supabase
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+  }
+
+  // 2. Llamada HTTP al backend NestJS
+  const response = await fetch(CHAT_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message: trimmed } satisfies AiChatRequest),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("No autorizado. Por favor, inicia sesión de nuevo.");
+    }
+    if (response.status === 429) {
+      throw new Error("Has enviado demasiados mensajes. Espera un momento.");
+    }
+    // Intenta extraer el mensaje de error del backend
+    const errorPayload = await response
+      .json()
+      .catch(() => ({ message: `HTTP ${response.status}` }));
+    throw new Error(
+      errorPayload.message || `Error al contactar con el asistente (HTTP ${response.status})`,
+    );
+  }
+
+  return (await response.json()) as AiChatResponse;
 }

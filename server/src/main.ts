@@ -30,24 +30,65 @@ import { ValidationPipe } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
+/**
+ * Lista maestra de orígenes permitidos en CORS.
+ * Combina los declarados en FRONTEND_URL con los puertos de desarrollo
+ * local de Vite para evitar bloqueos durante el hot-reload.
+ */
+function buildAllowedOrigins(): string[] {
+  const fromEnv = (process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean);
+
+  // Puertos por defecto que Vite usa para hot-reload
+  const viteDevPorts = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:5176",
+    "http://localhost:5177",
+    "http://localhost:5178",
+    "http://localhost:5179",
+    "http://localhost:5180",
+  ];
+
+  const merged = new Set<string>([...fromEnv, ...viteDevPorts]);
+
+  // Auto-permitir cualquier puerto 51xx (rango de Vite) en desarrollo
+  if (process.env.NODE_ENV !== "production") {
+    for (let p = 5100; p <= 5200; p++) {
+      merged.add(`http://localhost:${p}`);
+    }
+  }
+
+  return Array.from(merged);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // === CORS CONFIGURATION ===
-  // Permite orígenes definidos en FRONTEND_URL o los defaults locales
-  const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:5178")
-    .split(",")
-    .map((url) => url.trim());
+  const allowedOrigins = buildAllowedOrigins();
+  console.log(`[CORS AUDIT] Allowed origins: ${allowedOrigins.join(", ")}`);
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Permitir peticiones sin origin (curl, Postman, server-to-server)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn(`[CORS] Blocked origin: ${origin}`);
         callback(new Error(`Origin ${origin} not allowed by CORS policy`));
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   });
 
   // === VALIDACIÓN GLOBAL ===
@@ -77,7 +118,9 @@ async function bootstrap() {
   // === INICIO DEL SERVIDOR ===
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`Application running on port ${port}`);
+  console.log(`[SERVER] Application running on port ${port}`);
+  console.log(`[SERVER] Swagger docs: http://localhost:${port}/docs`);
+  console.log(`[SERVER] AI endpoint: http://localhost:${port}/api/v1/ai/chat`);
 }
 
 bootstrap();
