@@ -69,6 +69,32 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: hsl(var(--sidebar-ring));
   --shadow-glow: 0 0 25px -4px hsl(var(--glow-shadow) / 0.45);
+
+  /* AI Chat semantic tokens (theme-aware) */
+  --color-chat-surface: var(--chat-surface);
+  --color-chat-surface-foreground: var(--chat-surface-foreground);
+  --color-chat-border: var(--chat-border);
+  --color-chat-bubble-user: var(--chat-bubble-user);
+  --color-chat-bubble-user-foreground: var(--chat-bubble-user-foreground);
+  --color-chat-bubble-ai: var(--chat-bubble-ai);
+  --color-chat-bubble-ai-foreground: var(--chat-bubble-ai-foreground);
+  --color-chat-input-bg: var(--chat-input-bg);
+  --color-chat-input-border: var(--chat-input-border);
+  --color-chat-typing-text: var(--chat-typing-text);
+  --color-chat-suggestion-bg: var(--chat-suggestion-bg);
+  --color-chat-suggestion-fg: var(--chat-suggestion-fg);
+  --color-chat-suggestion-hover: var(--chat-suggestion-hover);
+  --color-chat-glow: var(--chat-glow);
+  --color-chat-header-bg: var(--chat-header-bg);
+  --color-chat-close-bg: var(--chat-close-bg);
+
+  /* Sports tag tokens (bronze/silver/gold) theme-aware */
+  --color-tag-bronze-bg: var(--tag-bronze-bg);
+  --color-tag-bronze-fg: var(--tag-bronze-fg);
+  --color-tag-silver-bg: var(--tag-silver-bg);
+  --color-tag-silver-fg: var(--tag-silver-fg);
+  --color-tag-gold-bg: var(--tag-gold-bg);
+  --color-tag-gold-fg: var(--tag-gold-fg);
 }
 
 :root,
@@ -140,6 +166,32 @@
   --sidebar-accent-foreground: #f5f7fa;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: 43 74% 49%;
+
+  /* AI Chat tokens — World Cup (Deep Navy + Gold) */
+  --chat-surface: rgba(11, 20, 36, 0.95);
+  --chat-surface-foreground: #f5f7fa;
+  --chat-border: rgba(212, 175, 55, 0.3);
+  --chat-bubble-user: rgba(212, 175, 55, 0.18);
+  --chat-bubble-user-foreground: #f5f7fa;
+  --chat-bubble-ai: rgba(255, 255, 255, 0.05);
+  --chat-bubble-ai-foreground: #e2e8f0;
+  --chat-input-bg: rgba(255, 255, 255, 0.05);
+  --chat-input-border: rgba(255, 255, 255, 0.1);
+  --chat-typing-text: #94a3b8;
+  --chat-suggestion-bg: rgba(212, 175, 55, 0.1);
+  --chat-suggestion-fg: rgba(212, 175, 55, 0.75);
+  --chat-suggestion-hover: rgba(212, 175, 55, 0.2);
+  --chat-glow: rgba(212, 175, 55, 0.15);
+  --chat-header-bg: linear-gradient(90deg, rgba(212, 175, 55, 0.2) 0%, transparent 100%);
+  --chat-close-bg: rgba(255, 255, 255, 0.05);
+
+  /* Sports tag tokens — World Cup (premium look) */
+  --tag-bronze-bg: rgba(205, 127, 50, 0.1);
+  --tag-bronze-fg: #cd7f32;
+  --tag-silver-bg: rgba(192, 192, 192, 0.1);
+  --tag-silver-fg: #c0c0c0;
+  --tag-gold-bg: rgba(212, 175, 55, 0.15);
+  --tag-gold-fg: #d4af37;
 }
 
 .dark {
@@ -195,6 +247,32 @@
   --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: rgba(255, 255, 255, 0.05);
   --sidebar-ring: 105 100% 50%;
+
+  /* AI Chat tokens — Dark Footballer (Pitch Black + Neon Green) */
+  --chat-surface: rgba(9, 12, 22, 0.95);
+  --chat-surface-foreground: #f8fafc;
+  --chat-border: rgba(57, 255, 20, 0.3);
+  --chat-bubble-user: rgba(57, 255, 20, 0.18);
+  --chat-bubble-user-foreground: #f8fafc;
+  --chat-bubble-ai: rgba(255, 255, 255, 0.05);
+  --chat-bubble-ai-foreground: #e2e8f0;
+  --chat-input-bg: rgba(255, 255, 255, 0.05);
+  --chat-input-border: rgba(255, 255, 255, 0.1);
+  --chat-typing-text: #94a3b8;
+  --chat-suggestion-bg: rgba(57, 255, 20, 0.1);
+  --chat-suggestion-fg: rgba(57, 255, 20, 0.75);
+  --chat-suggestion-hover: rgba(57, 255, 20, 0.2);
+  --chat-glow: rgba(57, 255, 20, 0.15);
+  --chat-header-bg: linear-gradient(90deg, rgba(57, 255, 20, 0.2) 0%, transparent 100%);
+  --chat-close-bg: rgba(255, 255, 255, 0.05);
+
+  /* Sports tag tokens — Dark Footballer */
+  --tag-bronze-bg: rgba(205, 127, 50, 0.12);
+  --tag-bronze-fg: #df9a65;
+  --tag-silver-bg: rgba(192, 192, 192, 0.12);
+  --tag-silver-fg: #e2e8f0;
+  --tag-gold-bg: rgba(212, 175, 55, 0.18);
+  --tag-gold-fg: #f3e5ab;
 }
 
 .light {
@@ -248,6 +326,32 @@
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #cbd5e1;
   --sidebar-ring: #ff5722;
+
+  /* AI Chat tokens — Light (Clean White + Fiery Orange) */
+  --chat-surface: rgba(255, 255, 255, 0.97);
+  --chat-surface-foreground: #0f172a;
+  --chat-border: rgba(255, 87, 34, 0.3);
+  --chat-bubble-user: rgba(255, 87, 34, 0.1);
+  --chat-bubble-user-foreground: #0f172a;
+  --chat-bubble-ai: #f8fafc;
+  --chat-bubble-ai-foreground: #1e293b;
+  --chat-input-bg: #ffffff;
+  --chat-input-border: #cbd5e1;
+  --chat-typing-text: #64748b;
+  --chat-suggestion-bg: rgba(255, 87, 34, 0.08);
+  --chat-suggestion-fg: #ff5722;
+  --chat-suggestion-hover: rgba(255, 87, 34, 0.18);
+  --chat-glow: rgba(255, 87, 34, 0.18);
+  --chat-header-bg: linear-gradient(90deg, rgba(255, 87, 34, 0.12) 0%, transparent 100%);
+  --chat-close-bg: rgba(15, 23, 42, 0.05);
+
+  /* Sports tag tokens — Light */
+  --tag-bronze-bg: rgba(205, 127, 50, 0.12);
+  --tag-bronze-fg: #8c521f;
+  --tag-silver-bg: rgba(100, 116, 139, 0.12);
+  --tag-silver-fg: #475569;
+  --tag-gold-bg: rgba(212, 175, 55, 0.15);
+  --tag-gold-fg: #856404;
 }
 
 .light .glass {

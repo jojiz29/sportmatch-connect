@@ -145,22 +145,25 @@ export function BadgeEngine({ sports_matrix, size = "md" }: BadgeEngineProps) {
         let levelTagClass = "";
 
         if (isAM) {
-          // Bronze UI - Warm coppers, subtle bronze border
+          // Bronze UI — tokens temáticos (--color-tag-bronze-*)
           containerClass +=
-            "bg-[#CD7F32]/10 border-[#CD7F32]/40 text-[#8C521F] dark:text-[#df9a65]";
-          levelTagClass = "bg-[#CD7F32]/20 text-[#8C521F] dark:text-[#CD7F32]";
+            "bg-[color:var(--color-tag-bronze-bg)] border-[color:var(--color-tag-bronze-fg)]/40 text-[color:var(--color-tag-bronze-fg)]";
+          levelTagClass =
+            "bg-[color:var(--color-tag-bronze-bg)] text-[color:var(--color-tag-bronze-fg)]";
           badgeLevelText = "BRONCE";
         } else if (isINT) {
-          // Silver/Steel UI - Metallic greys, clean steel border
+          // Silver/Steel UI — tokens temáticos
           containerClass +=
-            "bg-slate-400/10 border-slate-400/40 text-slate-700 dark:text-slate-300";
-          levelTagClass = "bg-slate-400/20 text-slate-800 dark:text-slate-300";
+            "bg-[color:var(--color-tag-silver-bg)] border-[color:var(--color-tag-silver-fg)]/40 text-[color:var(--color-tag-silver-fg)]";
+          levelTagClass =
+            "bg-[color:var(--color-tag-silver-bg)] text-[color:var(--color-tag-silver-fg)]";
           badgeLevelText = "PLATA";
         } else if (isADV) {
-          // Gold UI - Glowing golds, drop shadow
+          // Gold UI — tokens temáticos con shadow temático
           containerClass +=
-            "bg-[#D4AF37]/15 border-[#D4AF37]/50 text-[#856404] dark:text-[#F3E5AB] shadow-[0_0_12px_rgba(212,175,55,0.25)]";
-          levelTagClass = "bg-[#D4AF37]/25 text-[#856404] dark:text-[#D4AF37]";
+            "bg-[color:var(--color-tag-gold-bg)] border-[color:var(--color-tag-gold-fg)]/50 text-[color:var(--color-tag-gold-fg)] shadow-glow";
+          levelTagClass =
+            "bg-[color:var(--color-tag-gold-bg)] text-[color:var(--color-tag-gold-fg)]";
           badgeLevelText = "ORO";
         } else if (isPRO) {
           // Pro UI - Electric animated borders
