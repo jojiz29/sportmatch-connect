@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "npm run build && cd server && npm install --legacy-peer-deps && npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
   "builds": [
     {
       "src": "package.json",
@@ -9,19 +11,17 @@
       }
     },
     {
-      "src": "server/src/main.ts",
-      "use": "@vercel/nestjs",
+      "src": "api/[...path].ts",
+      "use": "@vercel/node",
       "config": {
-        "includeFiles": ["server/dist/**", "server/credentials/**"],
+        "includeFiles": ["server/dist/**", "server/credentials/**", "server/package.json"],
         "maxLambdaSize": "50mb"
       }
     }
   ],
-  "buildCommand": "npm run build",
-  "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
-    { "source": "/api/v1/(.*)", "destination": "/server/src/main.ts" },
-    { "source": "/docs", "destination": "/server/src/main.ts" },
+    { "source": "/api/v1/(.*)", "destination": "/api/[...path].ts" },
+    { "source": "/docs", "destination": "/api/[...path].ts" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -33,7 +33,10 @@
           "key": "Access-Control-Allow-Methods",
           "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With"
+        }
       ]
     }
   ]

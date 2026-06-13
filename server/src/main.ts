@@ -1,6 +1,8 @@
 // ============================================================
-// main.ts — Punto de entrada del backend NestJS
-// Carga variable de entorno, configura CORS, Swagger y ValidationPipe
+// server/src/main.ts — Punto de entrada del backend NestJS
+// Compatible con:
+//   - Servidor standalone (NestJS CLI / dev): npm run dev → app.listen()
+//   - Vercel serverless: el handler en /api/index.ts reusa createApp()
 // ============================================================
 
 import * as dotenv from "dotenv";
@@ -8,6 +10,7 @@ import * as path from "path";
 
 // === RESOLUCIÓN DE ENTORNO (Dual-URL Prisma) ===
 // Carga el .env raíz primero (contiene DATABASE_URL real) y luego el del servidor
+// En Vercel serverless estos archivos no existen; las env vars vienen del dashboard.
 const serverEnvPath = path.resolve(process.cwd(), ".env");
 const rootEnvPath = path.resolve(process.cwd(), "../.env");
 
@@ -41,7 +44,6 @@ function buildAllowedOrigins(): string[] {
     .map((url) => url.trim())
     .filter(Boolean);
 
-  // Puertos por defecto que Vite usa para hot-reload
   const viteDevPorts = [
     "http://localhost:5173",
     "http://localhost:5174",
@@ -55,7 +57,6 @@ function buildAllowedOrigins(): string[] {
 
   const merged = new Set<string>([...fromEnv, ...viteDevPorts]);
 
-  // Auto-permitir cualquier puerto 51xx (rango de Vite) en desarrollo
   if (process.env.NODE_ENV !== "production") {
     for (let p = 5100; p <= 5200; p++) {
       merged.add(`http://localhost:${p}`);
@@ -65,7 +66,10 @@ function buildAllowedOrigins(): string[] {
   return Array.from(merged);
 }
 
-async function bootstrap() {
+// ============================================================
+// Bootstrap reutilizable (exportado para el handler de Vercel)
+// ============================================================
+export async function createApp() {
   const app = await NestFactory.create(AppModule);
 
   // === CORS CONFIGURATION ===
@@ -74,7 +78,6 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Permitir peticiones sin origin (curl, Postman, server-to-server)
       if (!origin) {
         callback(null, true);
         return;
@@ -92,7 +95,6 @@ async function bootstrap() {
   });
 
   // === VALIDACIÓN GLOBAL ===
-  // Whitelist elimina campos no decorados, transform convierte tipos
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -104,18 +106,28 @@ async function bootstrap() {
   // === PREFIJO GLOBAL ===
   app.setGlobalPrefix("api/v1");
 
-  // === SWAGGER ===
-  const config = new DocumentBuilder()
-    .setTitle("SportMatch API")
-    .setDescription("SportMatch 2026 Backend API")
-    .setVersion("1.0")
-    .addBearerAuth()
-    .build();
+  // === SWAGGER (solo si no es serverless para evitar overhead) ===
+  if (process.env.NODE_ENV !== "production" || process.env.ENABLE_SWAGGER === "true") {
+    const config = new DocumentBuilder()
+      .setTitle("SportMatch API")
+      .setDescription("SportMatch 2026 Backend API")
+      .setVersion("1.0")
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("docs", app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup("docs", app, document);
+  }
 
-  // === INICIO DEL SERVIDOR ===
+  await app.init();
+  return app;
+}
+
+// ============================================================
+// Modo standalone: escuchar puerto (npm run dev, ts-node, etc.)
+// ============================================================
+async function bootstrap() {
+  const app = await createApp();
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`[SERVER] Application running on port ${port}`);
@@ -123,4 +135,8 @@ async function bootstrap() {
   console.log(`[SERVER] AI endpoint: http://localhost:${port}/api/v1/ai/chat`);
 }
 
-bootstrap();
+// Solo arrancar el listener si NO estamos en serverless
+// (Vercel invoca createApp() a través del handler en /api/[...path].ts)
+if (!process.env.SERVERLESS && process.env.VERCEL !== "1") {
+  bootstrap();
+}
