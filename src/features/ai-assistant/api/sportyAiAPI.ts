@@ -5,6 +5,15 @@
  *            Realiza la llamada HTTP al endpoint /api/v1/ai/chat del
  *            backend NestJS, el cual orquesta Vertex AI con las
  *            credenciales seguras del Service Account.
+ *
+ * ⚠️  IMPORTANTE: Esta capa NO contiene respuestas hardcodeadas ni
+ * mocks. Todas las respuestas provienen EXCLUSIVAMENTE de Vertex AI
+ * a través del backend NestJS. Si el backend falla, el error se
+ * propaga al store y la UI lo muestra como burbuja de error visible.
+ *
+ * Flujo:  [Chat UI] → [sendMessageToAI] → [/api/v1/ai/chat (NestJS)]
+ *        → [VertexAiService] → [Google Gen AI (gemini-2.5-flash)]
+ *        → respuesta natural del LLM al usuario.
  * ===================================================================
  */
 
@@ -34,8 +43,33 @@ export interface AiChatResponse {
 // CONFIGURACIÓN
 // ==============================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
-const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/ai/chat`;
+// Lista explícita de hosts permitidos. Bloquea llamadas accidentales a
+// páginas estáticas (e.g. el propio frontend de Vercel) que devolverían
+// HTML en vez de JSON, confundiendo al usuario con respuestas vacías.
+const ALLOWED_HOST_PATTERNS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/[a-z0-9-]+\.onrender\.com$/,
+  /^https?:\/\/[a-z0-9-]+\.render\.com$/,
+  /^https?:\/\/[a-z0-9-]+\.fly\.dev$/,
+  /^https?:\/\/[a-z0-9-]+\.railway\.app$/,
+  /^https?:\/\/api\.[a-z0-9-]+\.(com|dev|app)$/,
+];
+
+function isAllowedApiHost(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_HOST_PATTERNS.some((pattern) => pattern.test(parsed.origin));
+  } catch {
+    return false;
+  }
+}
+
+function getApiBaseUrl(): string {
+  // Se evalúa en cada llamada para que los tests puedan sobreescribir
+  // import.meta.env.VITE_API_URL y para que la config en runtime surta
+  // efecto sin reiniciar el bundle.
+  return import.meta.env.VITE_API_URL || "http://localhost:3000";
+}
 
 // ==============================================================
 // FUNCIÓN PRINCIPAL
@@ -50,14 +84,31 @@ const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/ai/chat`;
  *  3. Inyectar el system prompt y delegar a Vertex AI.
  *  4. Devolver { reply, suggestions, metadata }.
  *
- * Si la petición falla por red, timeout o 5xx, se lanza un error
- * para que el store pueda mostrar un mensaje contextual al usuario.
+ * Esta función SIEMPRE lanza un Error si la petición falla.
+ * NO hace fallback a respuestas hardcodeadas: el usuario debe ver
+ * el error real y poder reportarlo, en lugar de recibir texto
+ * incoherente que no responde a su mensaje.
  */
 export async function sendMessageToAI(message: string): Promise<AiChatResponse> {
   const trimmed = message.trim();
   if (!trimmed) {
     throw new Error("El mensaje no puede estar vacío");
   }
+
+  // 0. Validación de configuración: evita llamadas a hosts no permitidos
+  //    (caso típico: VITE_API_URL apunta al frontend de Vercel en lugar
+  //    del backend de Render).
+  const apiBaseUrl = getApiBaseUrl();
+  if (!isAllowedApiHost(apiBaseUrl)) {
+    const errorMessage =
+      `Configuración inválida: VITE_API_URL="${apiBaseUrl}" no apunta a un backend válido. ` +
+      `Verifica la variable de entorno en tu archivo .env o en el dashboard de Vercel. ` +
+      `Debe ser la URL del backend NestJS (e.g. https://sportmatch-api.onrender.com).`;
+    console.error("[sportyAiAPI]", errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  const chatEndpoint = `${apiBaseUrl}/api/v1/ai/chat`;
 
   // 1. Obtener el Bearer token de la sesión actual de Supabase
   const {
@@ -70,14 +121,23 @@ export async function sendMessageToAI(message: string): Promise<AiChatResponse> 
   }
 
   // 2. Llamada HTTP al backend NestJS
-  const response = await fetch(CHAT_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ message: trimmed } satisfies AiChatRequest),
-  });
+  let response: Response;
+  try {
+    response = await fetch(chatEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message: trimmed } satisfies AiChatRequest),
+    });
+  } catch (err) {
+    // Error de red (sin conexión, DNS, CORS preflight, etc.)
+    const networkError = err instanceof Error ? err.message : "Error de red desconocido";
+    throw new Error(
+      `No se pudo contactar al asistente. Verifica tu conexión o inténtalo más tarde. (${networkError})`,
+    );
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -95,5 +155,17 @@ export async function sendMessageToAI(message: string): Promise<AiChatResponse> 
     );
   }
 
-  return (await response.json()) as AiChatResponse;
+  // Validar que la respuesta es JSON con la forma esperada
+  let data: AiChatResponse;
+  try {
+    data = (await response.json()) as AiChatResponse;
+  } catch {
+    throw new Error("La respuesta del asistente no es JSON válido.");
+  }
+
+  if (typeof data?.reply !== "string" || data.reply.trim().length === 0) {
+    throw new Error("El asistente devolvió una respuesta vacía.");
+  }
+
+  return data;
 }

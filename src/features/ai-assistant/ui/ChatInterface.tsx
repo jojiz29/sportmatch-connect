@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Zap, Loader2 } from "lucide-react";
+import { Send, Bot, User, Zap, Loader2, AlertTriangle } from "lucide-react";
 import { useAiAssistantStore } from "../model/useAiAssistantStore";
 
 interface ChatInterfaceProps {
@@ -102,6 +102,7 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
             )}
             {messages.map((msg) => {
               const isUser = msg.role === "user";
+              const isSystem = msg.role === "system";
               return (
                 <motion.div
                   key={msg.id}
@@ -112,11 +113,17 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
                 >
                   <div
                     className={`mt-1 h-7 w-7 shrink-0 rounded-full grid place-items-center ${
-                      isUser ? "bg-primary/20 border border-primary/30" : "bg-gradient-primary"
+                      isUser
+                        ? "bg-primary/20 border border-primary/30"
+                        : isSystem
+                          ? "bg-destructive/15 border border-destructive/30"
+                          : "bg-gradient-primary"
                     }`}
                   >
                     {isUser ? (
                       <User className="h-3.5 w-3.5 text-primary" />
+                    ) : isSystem ? (
+                      <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                     ) : (
                       <Bot className="h-3.5 w-3.5 text-primary-foreground" />
                     )}
@@ -125,7 +132,9 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
                     className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                       isUser
                         ? "bg-[color:var(--color-chat-bubble-user)] border border-primary/20 text-[color:var(--color-chat-bubble-user-foreground)] rounded-tr-md"
-                        : "bg-[color:var(--color-chat-bubble-ai)] border border-border text-[color:var(--color-chat-bubble-ai-foreground)] rounded-tl-md"
+                        : isSystem
+                          ? "bg-destructive/10 border border-destructive/30 text-destructive rounded-tl-md"
+                          : "bg-[color:var(--color-chat-bubble-ai)] border border-border text-[color:var(--color-chat-bubble-ai-foreground)] rounded-tl-md"
                     }`}
                   >
                     {msg.text}
