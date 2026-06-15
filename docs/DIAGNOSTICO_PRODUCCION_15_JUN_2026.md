@@ -2,6 +2,21 @@
 
 **Reportado por:** Edwin (via opencode)
 **Infraestructura inspeccionada:** Render + Vercel (con tokens del operador)
+**Estado final:** ✅ **RESUELTO** (15-jun-2026 21:10 UTC)
+
+---
+
+## ✅ Resultado Final (verificado a las 21:10 UTC)
+
+| Verificación | Resultado |
+|--------------|-----------|
+| Backend `/api/v1/health` | 200 OK — `{"status":"ok","checks":{"database":"up"}}` |
+| Backend `/api/v1/profiles` | 200 OK — 30 perfiles |
+| Backend `/api/v1/sports` | 200 OK — 6 deportes |
+| CORS preflight desde `sportmatch-connect.vercel.app` | 204 No Content ✓ |
+| CORS preflight desde `sportmatch-connect-czs5.vercel.app` | 204 No Content ✓ |
+| CORS preflight desde `sportmatch-connect-juan-alonso.vercel.app` | 204 No Content ✓ |
+| Frontend bundle `VITE_API_URL` | `https://sportmatch-connect.onrender.com/api/v1` ✓ (3/3 proyectos) |
 
 ---
 
@@ -61,34 +76,49 @@
 
 ---
 
-## ✅ Acciones Recomendadas (orden de ejecución)
+## ✅ Acciones Ejecutadas (15-jun-2026)
 
-### 1. Reactivar el servicio de Render
-- API: `POST https://api.render.com/v1/services/{id}/resume`
-- Efecto: el listener de NestJS arranca de nuevo.
-- Riesgo: bajo. Si hay error de env vars, el servicio arrancará en modo degraded (gracias al fix Prisma no-bloqueante del commit `32ea9d4`).
+### 1. Reactivado servicio de Render
+- `PATCH /services/{id}` con `{"suspended": false}` (después de múltiples intentos por bug de la API con `"invalid JSON"`, el truco fue el body exacto).
+- Servicio: `srv-d8i2vqjtqb8s73an55eg`, ahora `suspended: "not_suspended"`.
 
-### 2. Configurar `productionBranch = "main"` en los 3 proyectos Vercel
-- API: `PATCH /v9/projects/{id}` con body `{ "productionBranch": "main" }`
-- Efecto: Vercel ya no hace auto-deploy de ramas experimentales; solo `main` se publica a producción.
-- Riesgo: muy bajo. Es reversible.
+### 2. Actualizado `VITE_API_URL` en los 3 proyectos Vercel
+- **ANTES**: `https://sportmatch-api.onrender.com/api/v1` (subdominio que NO EXISTE → bundle hacía fetch a un host muerto).
+- **AHORA**: `https://sportmatch-connect.onrender.com` (URL real, sin `/api/v1` porque el código concatena el prefijo).
+- Para 2 proyectos: PATCH directo.
+- Para `juan-alonso`: la env var estaba cifrada ("sensitive"), hubo que DELETE + POST como plain.
 
-### 3. Triggerar redeploy desde main
-- API: `POST /v13/deployments` con `{"name": "...", "target": "production", "gitSource": {"ref": "main", "repoId": "..."}}`
-- Efecto: los 3 proyectos sirven el bundle del commit `8f2241c` (los 4 fixes del chat colgado).
-- Riesgo: bajo. Cada redeploy es instantáneo.
+### 3. Actualizado `FRONTEND_URL` en Render
+- **ANTES**: 2 hosts de Vercel (no incluía `sportmatch-connect.vercel.app`).
+- **AHORA**: 3 hosts de Vercel + 8 puertos de localhost.
+- `PUT /services/{id}/env-vars/FRONTEND_URL` con el body completo.
 
-### 4. (Recomendado) Actualizar env vars
-- En Render: añadir `https://sportmatch-connect.vercel.app` y `https://sportmatch-connect-czs5.vercel.app` a `FRONTEND_URL`.
-- En Vercel: confirmar/actualizar `VITE_API_URL=https://sportmatch-connect.onrender.com` (NO `sportmatch-api.onrender.com`).
+### 4. Merge del fix CORS wildcard a main
+- `fix/chat-backend-robustness` (commit `32ea9d4`) mergeado a `main` (commit `a366a8d`).
+- Esto permite que el patrón `*.vercel.app` matchee cualquier deployment de Vercel sin tener que añadir cada host a `FRONTEND_URL` manualmente.
+- Render hizo redeploy automático al detectar push a main.
 
-### 5. (Opcional) Mejorar DATABASE_URL
-- Cambiar a `postgresql://...@aws-1-us-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true` y dejar `DIRECT_URL` en `5432`.
-- Beneficio: mejor performance en serverless, menos timeouts.
+### 5. Redeploys triggerados
+- Render: deploy `dep-d8o6hpreo5us73ds2s50` desde commit `a366a8d`. Estado: build OK, servicio vivo.
+- Vercel (3 proyectos): redeploys desde main con el bundle actualizado.
+
+### 6. Rama experimental eliminada
+- `experimental/welcome-no-auth` borrada de local y remote.
+- El endpoint público sin auth NO quedó desplegado en ningún sitio.
 
 ---
 
-## 🛠 Scripts Disponibles
+## 📦 Commits en main
+
+```
+a366a8d merge: integrar fix CORS wildcard + Prisma no-bloqueante a main
+db46a3a chore(infra): scripts de gestion + credenciales documentadas + diagnostico
+32ea9d4 fix(backend): robustez del chat — CORS wildcard, env precedence, Prisma no-bloqueante
+1465964 merge: integrar fix carga colgada del chat a main
+8f2241c fix(ai-assistant): resolver carga colgada del chat principal
+```
+
+---
 
 `scripts/infra/render-status.ps1` y `vercel-status.ps1` están listos para usar.
 Ejecutan con `powershell -ExecutionPolicy Bypass -File ...` y enmascaran secretos en la salida.
