@@ -42,6 +42,10 @@ model profiles {
   dni_hash             String?   @map("dni_hash")
   dni_intentos         Int?      @default(0) @map("dni_intentos")
   fecha_verificacion   DateTime? @map("fecha_verificacion")
+  dni_verification_version String? @map("dni_verification_version")
+  dni_document_path    String?   @map("dni_document_path")
+  dni_selfie_path      String?   @map("dni_selfie_path")
+  dni_ai_confidence    Float?    @map("dni_ai_confidence")
 
   posts                posts[]
   created_matches      matches[] @relation("match_creator")

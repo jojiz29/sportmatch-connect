@@ -14,6 +14,6 @@ import { VoiceModule } from "./voice/voice.module";
   imports: [AuthModule, VoiceModule],
   controllers: [AiController],
   providers: [AiConfigService, VertexAiService, AiService],
-  exports: [AiService, VoiceModule],
+  exports: [AiService, VoiceModule, VertexAiService],
 })
 export class AiModule {}

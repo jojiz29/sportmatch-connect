@@ -288,11 +288,14 @@ export const backendApi = {
       return fetchApi(`/profiles/user/${userId}`);
     },
 
-    async verifyDni(token: string, dni: string) {
+    async verifyDni(
+      token: string,
+      payload: { dni: string; documentPath?: string; selfiePath?: string },
+    ) {
       return fetchApi("/profiles/verify-dni", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ dni }),
+        body: JSON.stringify(payload),
       });
     },
   },

@@ -7,6 +7,7 @@ import { Controller, Get, Param, Patch, Body, UseGuards, Post, Request } from "@
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { ProfilesService } from "./profiles.service";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
+import { VerifyDniDto } from "./dto";
 
 @ApiTags("Profiles")
 @Controller("profiles")
@@ -39,8 +40,8 @@ export class ProfilesController {
   @Post("verify-dni")
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Verify identity with DNI" })
-  async verifyDni(@Request() req: { user: { userId: string } }, @Body() data: { dni: string }) {
-    return this.profilesService.verifyDni(req.user.userId, data.dni);
+  @ApiOperation({ summary: "Verify identity with DNI (v1 text-only or v2 with document + selfie)" })
+  async verifyDni(@Request() req: { user: { userId: string } }, @Body() data: VerifyDniDto) {
+    return this.profilesService.verifyDni(req.user.userId, data);
   }
 }

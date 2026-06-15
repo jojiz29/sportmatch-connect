@@ -126,6 +126,10 @@ export interface User {
   dni_hash?: string | null;
   dni_intentos?: number;
   fecha_verificacion?: string | null;
+  dni_verification_version?: string | null;
+  dni_document_path?: string | null;
+  dni_selfie_path?: string | null;
+  dni_ai_confidence?: number | null;
 }
 
 // === BLOQUE: SEDE / CANCHA DEPORTIVA ===

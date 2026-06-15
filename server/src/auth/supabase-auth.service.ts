@@ -79,4 +79,22 @@ export class SupabaseAuthService {
 
     return profile;
   }
+
+  async downloadStorageObject(
+    bucket: string,
+    path: string,
+  ): Promise<{ data: Buffer; mimeType: string }> {
+    if (!this.isConfigured) {
+      throw new UnauthorizedException("Supabase not configured");
+    }
+
+    const { data, error } = await this.supabaseAdmin.storage.from(bucket).download(path);
+    if (error || !data) {
+      throw new UnauthorizedException(`No se pudo descargar el archivo: ${path}`);
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+    const mimeType = data.type || "image/webp";
+    return { data: Buffer.from(arrayBuffer), mimeType };
+  }
 }

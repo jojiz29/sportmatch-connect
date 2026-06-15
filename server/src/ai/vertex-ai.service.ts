@@ -22,6 +22,11 @@ export interface VertexAiOptions {
   history?: ChatMessageDto[];
 }
 
+export interface VertexAiImageInput {
+  mimeType: string;
+  base64Data: string;
+}
+
 @Injectable()
 export class VertexAiService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(VertexAiService.name);
@@ -185,6 +190,59 @@ GÍRIAS BRASILEIRAS QUE VOCÊ CONHECE:
       })),
       { role: "user", parts: [{ text: userMessage }] },
     ];
+  }
+
+  /**
+   * Genera contenido multimodal (texto + imágenes) para validación documental.
+   */
+  async generateContentWithImages(
+    prompt: string,
+    images: VertexAiImageInput[],
+    options: Pick<VertexAiOptions, "temperature"> = {},
+  ): Promise<VertexAiGenerationResult> {
+    const startTime = Date.now();
+    const temperature = options.temperature ?? 0.1;
+
+    const imageParts = images.map((img) => ({
+      inlineData: {
+        mimeType: img.mimeType,
+        data: img.base64Data,
+      },
+    }));
+
+    try {
+      const response = await this.genAi.models.generateContent({
+        model: this.config.modelId,
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }, ...imageParts],
+          },
+        ],
+        config: {
+          maxOutputTokens: this.config.maxTokens,
+          temperature,
+          topP: 0.8,
+        },
+      });
+
+      const text = response.text ?? "";
+      const usage = (response as { usageMetadata?: { totalTokenCount?: number } }).usageMetadata;
+      const tokens = usage?.totalTokenCount ?? 0;
+      const latencyMs = Date.now() - startTime;
+
+      return {
+        text,
+        tokens,
+        model: this.config.modelId,
+        latencyMs,
+      };
+    } catch (err) {
+      this.logger.error(
+        `Gen AI multimodal generation failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
+      throw err;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
