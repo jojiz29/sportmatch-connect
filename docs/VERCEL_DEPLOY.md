@@ -257,6 +257,44 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 
 ---
 
+## 🚨 Diagnóstico deployments Render fallidos (15-jun-2026)
+
+**Síntoma**: El deploy de Render falla con `Exited with status 1` justo después de:
+```
+[Nest] LOG [InstanceLoader] PrismaModule dependencies initialized +308ms
+[Nest] ERROR [ExceptionHandler] Nest can't resolve dependencies of the
+      VoiceService (?, VertexAiService). Please make sure that the
+      argument AiConfigService at index [0] is available in the
+      VoiceModule context.
+```
+
+**Causa raíz:** El submódulo `VoiceModule` declara `VoiceService` como provider, pero este requiere en su constructor:
+- `AiConfigService` (index [0]) — solo declarado en `AiModule`
+- `VertexAiService` (index [1], con `@Optional()`) — solo declarado en `AiModule`
+
+NestJS no sube al módulo padre para buscar providers, así que `VoiceModule` no los encuentra.
+
+**Fix aplicado** (rama `fix/render-voice-correction`):
+1. Nuevo módulo `server/src/ai/ai-core.module.ts` marcado `@Global()` que provee `AiConfigService` y `VertexAiService`
+2. `ai.module.ts` importa `AiCoreModule` y elimina esos providers de su `providers` array
+3. `voice.module.ts` queda intacto (los providers ahora están disponibles globalmente)
+
+**Verificación del fix:**
+- Build OK con NestJS 11.1.27 (sin warnings de TypeScript)
+- Runtime OK: `[NestApplication] Nest application successfully started`
+- Health check: `GET /api/v1/health` → 200 OK con `{"status":"ok",...}`
+
+**Por qué actualizamos a NestJS 11:** Además del fix de DI, las versiones 10.x tienen 7 vulnerabilidades high (lodash, multer, glob, picomatch, tmp, webpack, qs) que solo se arreglan en NestJS 11. El upgrade es safe porque nuestro código solo usa APIs core (decoradores, módulos, guards) que no cambiaron.
+
+**Lecciones aprendidas:**
+- En NestJS, un provider es visible para un módulo SOLO si: (1) está en su `providers`, (2) está exportado por un módulo en sus `imports`, o (3) el módulo que lo provee está marcado `@Global()`
+- `@Global()` es el patrón idiomático para providers compartidos por múltiples módulos no relacionados (config, logger, db client, AI clients)
+- NO hacer `npm audit fix --force` sin validar — puede romper NestJS por cambios breaking
+
+**Acción manual NO requerida** — el fix es 100% en el código.
+
+---
+
 ## 🆘 Soporte Rápido
 
 - **Vercel Docs**: https://vercel.com/docs

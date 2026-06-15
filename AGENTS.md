@@ -38,3 +38,48 @@ If modifying environment variables or Prisma configuration, STRICTLY adhere to:
 - **PostgREST Cache:** If you change the DB schema directly in Supabase, run `NOTIFY pgrst, 'reload schema'` in the SQL Editor so the frontend client sees the changes.
 - **User ID typing:** Legacy tables might use `varchar` for user IDs, but `profiles.id` is `uuid`. Match them carefully.
 - **Mock Mode:** Offline dev is supported via `VITE_USE_MOCKS=true`.
+
+## 🧩 NestJS Dependency Injection — VoiceService Fallo Clásico (15-jun-2026)
+
+**Síntoma observado en Render:**
+```
+[Nest] LOG [InstanceLoader] PrismaModule dependencies initialized +308ms
+[Nest] ERROR [ExceptionHandler] Nest can't resolve dependencies of the
+      VoiceService (?, VertexAiService). Please make sure that the
+      argument AiConfigService at index [0] is available in the
+      VoiceModule context.
+```
+
+**Causa raíz:** `VoiceService` requiere `AiConfigService` y `VertexAiService` (segundo con `@Optional()`), pero `AiConfigService` y `VertexAiService` solo se declararon como providers en `AiModule`. Cuando `VoiceModule` se carga transitivamente, NestJS **no sube al módulo padre** para buscar providers — busca SOLO en su propio scope.
+
+**Regla de oro:** En NestJS, un provider es visible para un módulo SOLO si:
+1. Está declarado en `providers` de ese mismo módulo, **o**
+2. Está exportado por un módulo en sus `imports`, **o**
+3. Está marcado con `@Global()` en su módulo (visible en toda la app).
+
+**Solución aplicada en este repo (`server/src/ai/ai-core.module.ts`):**
+- `AiConfigService` y `VertexAiService` se movieron a un módulo `@Global()` llamado `AiCoreModule`.
+- `AiModule` y `VoiceModule` (y cualquier módulo futuro que use IA) lo importan.
+- Los providers se vuelven **visibles globalmente** sin necesidad de re-declararlos o re-exportarlos.
+
+**Anti-patrones a evitar:**
+- ❌ Declarar el mismo provider en 2+ módulos → genera 2 instancias, caché inconsistente
+- ❌ Importar el módulo padre en el submódulo (circular) → `Nest can't resolve dependencies of the XModule`
+- ❌ Crear wrappers de providers para "re-exponer" → boilerplate innecesario
+
+**Cuándo usar `@Global()`:** Solo para providers compartidos por **múltiples módulos no relacionados** (config, logger, db client, AI clients). NO abuses o terminarás con un grafo de DI difícil de testear.
+
+## 🔒 Seguridad — Vulnerabilidades y auditoría
+
+**Última auditoría:** 15-jun-2026
+**Versiones:** NestJS 11.1.27, @nestjs/* 11.x, @google/* últimas
+
+**Estado actual (producción):** 0 vulnerabilidades críticas. 20 moderate en `js-yaml<4.1.1` transitivo de devDependencies Jest/Babel/Istanbul — **no afecta producción**.
+
+**Cómo auditar:**
+```bash
+cd server && npm audit
+cd server && npm audit --production  # solo prod
+```
+
+**Política de actualización:** Cuando npm audit reporte vulns **high** o **critical** en deps de producción, abrir rama `fix/security-<fecha>` y actualizar a la versión patch (no breaking) o minor. NO usar `npm audit fix --force` directamente (puede romper NestJS por cambios breaking).
