@@ -17,14 +17,17 @@ fs.readFileSync(envLocalPath, "utf-8")
     if (trimmed && !trimmed.startsWith("#")) {
       const parts = trimmed.split("=");
       const key = parts[0].trim();
-      const val = parts.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      const val = parts
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
       env[key] = val;
     }
   });
 
 const auth =
-  "Basic " +
-  Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 // IDs fijos
 const PROJECT_KEY = "SCRUM";
@@ -116,7 +119,7 @@ for (const key of TO_DELETE) {
     // Primero, buscar la transición "Done" o similar para moverla antes de borrar
     const transitions = await getTransitions(key);
     const doneTransition = transitions.find(
-      (t) => /done|cerrar|complete|won't do|no se hará/i.test(t.name) || t.to?.id === "10001"
+      (t) => /done|cerrar|complete|won't do|no se hará/i.test(t.name) || t.to?.id === "10001",
     );
     if (doneTransition) {
       await transitionIssue(key, doneTransition.id);

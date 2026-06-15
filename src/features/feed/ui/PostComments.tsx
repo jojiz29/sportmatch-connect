@@ -15,6 +15,10 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 // Componente recursivo de árbol de comentarios anidados.
 import { CommentTree } from "./CommentTree";
+// Feature #2 — Sugerencias inteligentes de comentarios con Vertex AI
+import { CommentSuggestionsList } from "@/features/ai-text/ui/CommentSuggestionsList";
+// Feature #6 — Moderación de texto pre-envío
+import { usePostModeration } from "@/features/ai-text/model/usePostModeration";
 
 // === BLOQUE: INTERFAZ DE PROPS ===
 // Propiedades que recibe el componente de comentarios de un post.
@@ -60,13 +64,30 @@ export function PostComments({ postId }: PostCommentsProps) {
 
   // === BLOQUE: MANEJADOR DE CREACIÓN DE COMENTARIO ===
   // Envía un comentario nuevo (o respuesta) y refresca la lista.
+  // Feature #6: modera el texto antes de enviar. Si flagged, muestra toast
+  // de advertencia y no envía. Si el backend marca flagged, marca el
+  // mensaje en localStorage para revisión.
+  const { moderate } = usePostModeration();
   const handleCreateComment = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
     if (!currentUser || !newComment.trim()) return;
+    const textToSend = newComment.trim();
 
     try {
       setSubmitting(true);
-      await createComment(postId, currentUser.id, newComment.trim(), parentId);
+      // Pre-moderación: advertencia NO bloquea pero marca flagged
+      try {
+        const modRes = await moderate(textToSend, "comment");
+        if (modRes.flagged) {
+          toast.warning(
+            "Tu comentario puede contener contenido sensible. Se enviará marcado para revisión.",
+          );
+        }
+      } catch {
+        // Si la moderación falla, continuar (la moderación no debe bloquear UX)
+      }
+
+      await createComment(postId, currentUser.id, textToSend, parentId);
 
       // Recarga los comentarios para ver el nuevo incluido.
       const updatedComments = await getCommentsByPostId(postId);
@@ -120,21 +141,30 @@ export function PostComments({ postId }: PostCommentsProps) {
           alt=""
           className="h-8 w-8 rounded-full bg-muted object-cover flex-shrink-0"
         />
-        <div className="flex-1 flex gap-2">
-          <input
-            type="text"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Escribe un comentario..."
-            className="flex-1 bg-background/50 border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none placeholder:text-muted-foreground"
+        <div className="flex-1">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Escribe un comentario..."
+              className="flex-1 bg-background/50 border border-border rounded-xl px-3 py-2 text-sm focus:border-primary focus:outline-none placeholder:text-muted-foreground"
+            />
+            <button
+              type="submit"
+              disabled={submitting || !newComment.trim()}
+              className="px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
+            </button>
+          </div>
+          {/* Feature #2 — Sugerencias inteligentes mientras el usuario escribe */}
+          <CommentSuggestionsList
+            postContext={comments.length > 0 ? (comments[0]?.content ?? "") : ""}
+            partialText={newComment}
+            onSelect={(s) => setNewComment(s)}
+            minLength={3}
           />
-          <button
-            type="submit"
-            disabled={submitting || !newComment.trim()}
-            className="px-3 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-50 hover:scale-105 active:scale-95 transition-transform"
-          >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
-          </button>
         </div>
       </form>
 

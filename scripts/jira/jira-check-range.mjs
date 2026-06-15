@@ -8,10 +8,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 // Verificar cada ticket de la lista para confirmar cuáles existen
 const tickets = ["SCRUM-241", "SCRUM-242", "SCRUM-243", "SCRUM-244", "SCRUM-245"];

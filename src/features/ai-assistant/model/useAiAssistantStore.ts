@@ -1,6 +1,7 @@
 // === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
-import { sendMessageToAI, AiChatResponse } from "../api/sportyAiAPI";
+import { sendMessageToAI, AiChatResponse, ChatMessage } from "../api/sportyAiAPI";
+import i18n from "@/shared/i18n";
 
 // === BLOQUE: TIPOS DEL DOMINIO ===
 
@@ -22,6 +23,8 @@ export interface AiMessage {
 
 // === BLOQUE: INTERFAZ DEL ESTADO ===
 
+export type SupportedLanguage = "es" | "en" | "pt";
+
 interface AiAssistantState {
   /** Historial completo de la conversación. Vacío al inicio: la primera
    *  interacción la genera el propio usuario. Esto permite validar
@@ -33,18 +36,20 @@ interface AiAssistantState {
   isOpen: boolean;
   /** Último error de la API (si lo hubo) */
   error: string | null;
+  /** Idioma activo del usuario (SCRUM-341) */
+  language: SupportedLanguage;
 
   // --- Acciones ---
   openChat: () => void;
   closeChat: () => void;
   toggleChat: () => void;
   sendMessage: (text: string) => Promise<void>;
+  setLanguage: (lang: SupportedLanguage) => void;
   clearMessages: () => void;
   dismissError: () => void;
 }
 
 // === BLOQUE: UTILIDADES ===
-// UUID v4 simple compatible con navegadores antiguos y jsdom (entorno de tests).
 function generateId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -58,15 +63,17 @@ function generateId(): string {
 // NO contiene un WELCOME_MESSAGE quemado: el chat inicia vacío para
 // poder verificar de forma transparente que la primera respuesta viene
 // realmente del backend (Vertex AI) y no de un catálogo local.
-export const useAiAssistantStore = create<AiAssistantState>((set) => ({
+export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
   messages: [],
   isTyping: false,
   isOpen: false,
   error: null,
+  language: (i18n.language?.split("-")[0] as SupportedLanguage) ?? "es",
 
   openChat: () => set({ isOpen: true }),
   closeChat: () => set({ isOpen: false }),
   toggleChat: () => set((s) => ({ isOpen: !s.isOpen })),
+  setLanguage: (lang) => set({ language: lang }),
 
   // --- Acción principal: envía mensaje del usuario y gestiona ciclo IA ---
   sendMessage: async (text: string) => {
@@ -87,7 +94,19 @@ export const useAiAssistantStore = create<AiAssistantState>((set) => ({
     }));
 
     try {
-      const response: AiChatResponse = await sendMessageToAI(trimmed);
+      // Ventana deslizante: últimos 5 turnos (10 mensajes) para mantener contexto
+      // conversacional sin exceder el límite de tokens del LLM.
+      const currentMessages = get().messages;
+      const history: ChatMessage[] = currentMessages.slice(-10).map((m) => ({
+        role: m.role === "system" ? "user" : m.role,
+        text: m.text,
+      }));
+
+      const response: AiChatResponse = await sendMessageToAI(trimmed, {
+        language: get().language,
+        history,
+      });
+
       const aiMsg: AiMessage = {
         id: generateId(),
         role: "assistant",
@@ -97,9 +116,6 @@ export const useAiAssistantStore = create<AiAssistantState>((set) => ({
       };
       set((s) => ({ messages: [...s.messages, aiMsg], isTyping: false }));
     } catch (err) {
-      // Muestra el error como una burbuja visible (rol "system") para que
-      // el usuario sepa exactamente qué falló (red, 401, 429, 5xx, config
-      // incorrecta, etc.) y pueda reportarlo.
       const errorText = err instanceof Error ? err.message : "Error desconocido";
       const errorMsg: AiMessage = {
         id: generateId(),

@@ -10,13 +10,16 @@ fs.readFileSync(envLocalPath, "utf-8")
     const t = line.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
 
 const auth =
-  "Basic " +
-  Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 const url = `${env.JIRA_BASE_URL}/rest/api/3/search/jql?jql=${encodeURIComponent("project = SCRUM")}&maxResults=1`;
 const res = await fetch(url, { headers: { Authorization: auth, Accept: "application/json" } });

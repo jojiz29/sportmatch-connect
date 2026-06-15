@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Zap, Loader2, AlertTriangle } from "lucide-react";
 import { useAiAssistantStore } from "../model/useAiAssistantStore";
+import { VoiceControl } from "@/features/voice/ui/VoiceControl";
 
 interface ChatInterfaceProps {
   isOpen: boolean;
@@ -16,19 +17,77 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
 
   // Estado puramente transitorio de UI (no merece vivir en el store)
   const [input, setInput] = useState("");
+  // SCRUM-345 — Para activar TTS del último mensaje del asistente
+  const [lastAssistantMsg, setLastAssistantMsg] = useState<{ text: string; id: string } | null>(
+    null,
+  );
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
+    // Detectar último mensaje del asistente para TTS
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === "assistant" && lastMsg.id !== lastAssistantMsg?.id) {
+      setLastAssistantMsg({ text: lastMsg.text, id: lastMsg.id });
+    }
+  }, [messages, isTyping, lastAssistantMsg]);
 
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
     setInput("");
+    // Action Parsing: detectar intents de voz/texto para ejecutar acciones
+    if (tryExecuteAction(text)) return;
     await sendMessage(text);
+  };
+
+  // SCRUM-37 / FASE 2C — Action Parsing desde chat
+  // Detecta intents del usuario y ejecuta acciones sin pasar por el LLM
+  function tryExecuteAction(text: string): boolean {
+    const lower = text.toLowerCase();
+    // Intentar "reservar" + deporte
+    if (lower.includes("reservar") || lower.includes("reserva")) {
+      // Navegar al mapa de canchas
+      window.location.href =
+        "/app/map?intent=book&sport=" + encodeURIComponent(extractSport(lower));
+      return true;
+    }
+    if (lower.includes("buscar canchas") || lower.includes("ver canchas")) {
+      window.location.href = "/app/map";
+      return true;
+    }
+    if (lower.includes("ver mi racha") || lower.includes("mi actividad")) {
+      window.location.href = "/app/iot";
+      return true;
+    }
+    if (lower.includes("abrir chat") || lower.includes("nuevo chat")) {
+      window.location.href = "/app/chat";
+      return true;
+    }
+    return false;
+  }
+
+  function extractSport(text: string): string {
+    const sports: Array<[string, string]> = [
+      ["futbol", "Fútbol"],
+      ["padel", "Pádel"],
+      ["tenis", "Tenis"],
+      ["voley", "Vóley"],
+      ["basquet", "Básquet"],
+      ["basket", "Básquet"],
+      ["tenis de mesa", "Tenis de Mesa"],
+      ["natacion", "Natación"],
+    ];
+    for (const [key, value] of sports) {
+      if (text.includes(key)) return value;
+    }
+    return "Fútbol";
+  }
+
+  const handleVoiceTranscript = (text: string) => {
+    setInput(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -164,7 +223,7 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
 
           {/* Input */}
           <div className="shrink-0 border-t border-chat-border p-3 bg-[color:var(--color-chat-close-bg)]">
-            <div className="flex items-center gap-2 bg-[color:var(--color-chat-input-bg)] rounded-xl border border-[color:var(--color-chat-input-border)] pl-3 pr-1.5 py-1.5 focus-within:border-primary/40 transition-colors">
+            <div className="flex items-center gap-2 bg-[color:var(--color-chat-input-bg)] rounded-xl border border-[color:var(--color-chat-input-border)] pl-3 pr-1.5 py-1.5 focus-within:border-primary/40 transition-colors relative">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -172,6 +231,11 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
                 placeholder="Pregúntale a Sporty..."
                 aria-label="Escribe tu mensaje para Sporty"
                 className="flex-1 bg-transparent text-sm text-chat-surface-foreground placeholder:text-muted-foreground outline-none border-none"
+              />
+              <VoiceControl
+                onTranscript={handleVoiceTranscript}
+                textToSpeak={lastAssistantMsg?.text ?? ""}
+                textKey={lastAssistantMsg?.id ?? "idle"}
               />
               <button
                 onClick={handleSend}

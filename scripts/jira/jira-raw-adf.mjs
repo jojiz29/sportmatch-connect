@@ -8,10 +8,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 const res = await fetch(`${env.JIRA_BASE_URL}/rest/api/3/issue/SCRUM-338?fields=description`, {
   headers: { Authorization: auth, Accept: "application/json" },

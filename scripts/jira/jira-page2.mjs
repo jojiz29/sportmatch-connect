@@ -8,10 +8,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 let nextPageToken = null;
 let pageCount = 0;
@@ -31,8 +36,20 @@ while (true) {
   if (!data.issues) break;
   // Print one sample with all keys
   if (pageCount === 0) {
-    console.log("Sample issue keys:", Object.keys(data.issues[0].fields).filter(k => k.toLowerCase().includes("sprint") || k.toLowerCase().includes("custom")));
-    console.log("Sprint field sample:", JSON.stringify(data.issues[0].fields.customfield_10020 || data.issues[0].fields.sprint || "none", null, 2));
+    console.log(
+      "Sample issue keys:",
+      Object.keys(data.issues[0].fields).filter(
+        (k) => k.toLowerCase().includes("sprint") || k.toLowerCase().includes("custom"),
+      ),
+    );
+    console.log(
+      "Sprint field sample:",
+      JSON.stringify(
+        data.issues[0].fields.customfield_10020 || data.issues[0].fields.sprint || "none",
+        null,
+        2,
+      ),
+    );
   }
   totalIssues += data.issues.length;
   pageCount++;

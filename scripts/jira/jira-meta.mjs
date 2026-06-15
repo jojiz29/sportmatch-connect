@@ -8,19 +8,27 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 // Get issue types for SCRUM project
-const meta = await fetch(env.JIRA_BASE_URL + "/rest/api/3/issue/createmeta?projectKeys=SCRUM&maxResults=50", {
-  headers: { Authorization: auth, Accept: "application/json" },
-});
+const meta = await fetch(
+  env.JIRA_BASE_URL + "/rest/api/3/issue/createmeta?projectKeys=SCRUM&maxResults=50",
+  {
+    headers: { Authorization: auth, Accept: "application/json" },
+  },
+);
 const data = await meta.json();
 console.log("Issue types for SCRUM:");
 data.projects[0].issuetypes.forEach((t) =>
-  console.log(`  ${t.id} - ${t.name} (subtask: ${t.subtask})`)
+  console.log(`  ${t.id} - ${t.name} (subtask: ${t.subtask})`),
 );
 
 // Get Edwin's accountId

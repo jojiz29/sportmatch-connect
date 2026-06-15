@@ -14,10 +14,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 async function api(endpoint, options = {}) {
   const res = await fetch(`${env.JIRA_BASE_URL}${endpoint}`, {
@@ -71,7 +76,7 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Crear un asistente conversacional inteligente (Sporty) powered by Google Vertex AI, con capacidades de NLP, moderación, multilingüe, jerga local y voz bidireccional."
+          "Crear un asistente conversacional inteligente (Sporty) powered by Google Vertex AI, con capacidades de NLP, moderación, multilingüe, jerga local y voz bidireccional.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Smart Comment Suggestions"),
@@ -83,7 +88,9 @@ const NEW_EPICS = [
         adfBullet("Voice Output (TTS)"),
         adfBullet("Voice Context Memory"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("Vertex AI Text (gemini-2.5-flash) + Vertex AI Speech. Sistema unificado de prompts con system instructions localizadas. Defensa en profundidad con moderación client-side (tfjs+nsfwjs)."),
+        adfPara(
+          "Vertex AI Text (gemini-2.5-flash) + Vertex AI Speech. Sistema unificado de prompts con system instructions localizadas. Defensa en profundidad con moderación client-side (tfjs+nsfwjs).",
+        ),
       ],
     },
     labels: ["ai", "vertex-ai", "sporty", "edwin", "epic"],
@@ -96,14 +103,16 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Sistema completo de progresión y engagement: nivel de XP, alertas de subida, desafíos semanales dinámicos y recompensas que motivan la actividad continua."
+          "Sistema completo de progresión y engagement: nivel de XP, alertas de subida, desafíos semanales dinámicos y recompensas que motivan la actividad continua.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Indicador de nivel de XP y progreso al siguiente nivel"),
         adfBullet("Alerta visual y notificación al subir de nivel"),
         adfBullet("Desafíos semanales dinámicos (reemplazo de hardcoded)"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("Tabla user_xp, Edge Function generate-weekly-challenges, LevelUpModal con framer-motion confetti."),
+        adfPara(
+          "Tabla user_xp, Edge Function generate-weekly-challenges, LevelUpModal con framer-motion confetti.",
+        ),
       ],
     },
     labels: ["gamification", "engagement", "edwin", "epic"],
@@ -116,14 +125,16 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Convertir SportMatch en una Progressive Web App instalable, con experiencia fluida en móvil y soporte offline robusto."
+          "Convertir SportMatch en una Progressive Web App instalable, con experiencia fluida en móvil y soporte offline robusto.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Instalación como PWA desde el navegador"),
         adfBullet("Funcionamiento offline con cache de datos"),
         adfBullet("Carga en menos de 2 segundos en 4G (code splitting)"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("vite-plugin-pwa + Workbox + manualChunks + zustand persist + IndexedDB para cola de mutaciones offline."),
+        adfPara(
+          "vite-plugin-pwa + Workbox + manualChunks + zustand persist + IndexedDB para cola de mutaciones offline.",
+        ),
       ],
     },
     labels: ["pwa", "performance", "mobile", "edwin", "epic"],
@@ -136,7 +147,7 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Infraestructura completa de testing automatizado y documentación visual de componentes para mantener calidad consistente."
+          "Infraestructura completa de testing automatizado y documentación visual de componentes para mantener calidad consistente.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Tests E2E de onboarding y reservas (Playwright)"),
@@ -144,7 +155,9 @@ const NEW_EPICS = [
         adfBullet("Pipeline CI/CD con GitHub Actions"),
         adfBullet("Storybook con componentes UI documentados"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("Playwright + Vitest + GitHub Actions + Storybook 8.x + Chromatic para visual regression."),
+        adfPara(
+          "Playwright + Vitest + GitHub Actions + Storybook 8.x + Chromatic para visual regression.",
+        ),
       ],
     },
     labels: ["testing", "ci-cd", "storybook", "edwin", "epic"],
@@ -157,14 +170,16 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Soporte completo multi-idioma (ES/EN/PT) con formateo localizado de fechas, horas y monedas para mercados LATAM."
+          "Soporte completo multi-idioma (ES/EN/PT) con formateo localizado de fechas, horas y monedas para mercados LATAM.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Cambio de idioma (ES/EN) en configuración"),
         adfBullet("Formato local de fechas, horarios y montos LATAM"),
         adfBullet("Soporte para portugués brasileño (mercado de pádel #1)"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("i18next + date-fns/locale + Intl.NumberFormat. Detección automática por navegador + persistencia manual."),
+        adfPara(
+          "i18next + date-fns/locale + Intl.NumberFormat. Detección automática por navegador + persistencia manual.",
+        ),
       ],
     },
     labels: ["i18n", "l10n", "latam", "edwin", "epic"],
@@ -177,14 +192,16 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "SportMatch usable por personas con discapacidad visual o baja visión, cumpliendo estándar WCAG 2.2 AA/AAA."
+          "SportMatch usable por personas con discapacidad visual o baja visión, cumpliendo estándar WCAG 2.2 AA/AAA.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Navegación completa con lectores de pantalla"),
         adfBullet("Modo de alto contraste (WCAG AAA, ratio 7:1)"),
         adfBullet("Skip-links, focus management, ARIA labels"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("Shadcn/Radix UI (ARIA nativo) + @axe-core/playwright para auditoría. prefers-contrast media query."),
+        adfPara(
+          "Shadcn/Radix UI (ARIA nativo) + @axe-core/playwright para auditoría. prefers-contrast media query.",
+        ),
       ],
     },
     labels: ["accessibility", "wcag", "a11y", "edwin", "epic"],
@@ -197,14 +214,16 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Cumplir con GDPR y mejores prácticas de privacidad: control del usuario sobre sus datos y derecho al olvido."
+          "Cumplir con GDPR y mejores prácticas de privacidad: control del usuario sobre sus datos y derecho al olvido.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Control de visibilidad del perfil (público/amigos/privado)"),
         adfBullet("Eliminación de cuenta y datos (derecho al olvido)"),
         adfBullet("Anonimización post-período de gracia (30 días)"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("Soft-delete con timestamps, RLS respetuoso de privacidad, cron job de anonimización."),
+        adfPara(
+          "Soft-delete con timestamps, RLS respetuoso de privacidad, cron job de anonimización.",
+        ),
       ],
     },
     labels: ["gdpr", "privacy", "compliance", "edwin", "epic"],
@@ -217,7 +236,7 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Conectar SportMatch con el ecosistema del deportista: Strava, redes sociales, y reactivación automática de usuarios."
+          "Conectar SportMatch con el ecosistema del deportista: Strava, redes sociales, y reactivación automática de usuarios.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Compartir logros en redes sociales (Web Share API)"),
@@ -237,14 +256,16 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Documentación técnica actualizada que permita onboarding rápido de nuevos developers y mantenimiento eficiente de Edge Functions."
+          "Documentación técnica actualizada que permita onboarding rápido de nuevos developers y mantenimiento eficiente de Edge Functions.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("Documento de arquitectura con diagramas C4 y ER"),
         adfBullet("Documentación de Edge Functions con ejemplos"),
         adfBullet("ADRs (Architecture Decision Records) formales"),
         adfHeading(2, "🔧 Stack Técnico"),
-        adfPara("Markdown + Mermaid/PlantUML para diagramas. Convención ADR estándar (Michael Nygard)."),
+        adfPara(
+          "Markdown + Mermaid/PlantUML para diagramas. Convención ADR estándar (Michael Nygard).",
+        ),
       ],
     },
     labels: ["documentation", "architecture", "adr", "edwin", "epic"],
@@ -257,7 +278,7 @@ const NEW_EPICS = [
       content: [
         adfHeading(2, "🎯 Visión"),
         adfPara(
-          "Dashboard de métricas de uso para product owner con datos reales, no mocks, para tomar decisiones basadas en evidencia."
+          "Dashboard de métricas de uso para product owner con datos reales, no mocks, para tomar decisiones basadas en evidencia.",
         ),
         adfHeading(2, "📦 Alcance"),
         adfBullet("KPIs: DAU, MAU, retención D1/D7/D30, matches/día, revenue"),

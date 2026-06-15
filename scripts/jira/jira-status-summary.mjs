@@ -8,16 +8,23 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 const EDWIN_ID = "615b12b4289a54006a07b729";
 let nextPageToken = null;
 const all = [];
 while (true) {
-  let url = `${env.JIRA_BASE_URL}/rest/api/3/search/jql?jql=` + encodeURIComponent(`sprint = 42 AND assignee = ${EDWIN_ID}`);
+  let url =
+    `${env.JIRA_BASE_URL}/rest/api/3/search/jql?jql=` +
+    encodeURIComponent(`sprint = 42 AND assignee = ${EDWIN_ID}`);
   if (nextPageToken) url += `&nextPageToken=${nextPageToken}`;
   url += "&fields=summary,status,labels&maxResults=100";
   const res = await fetch(url, { headers: { Authorization: auth, Accept: "application/json" } });

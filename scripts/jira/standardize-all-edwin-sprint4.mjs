@@ -21,10 +21,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 async function api(endpoint, options = {}) {
   const res = await fetch(`${env.JIRA_BASE_URL}${endpoint}`, {
@@ -309,10 +314,7 @@ const TICKETS = {
     ],
     technical:
       "Nuevo tema `high-contrast` en `src/features/theme/store.ts` con tokens CSS en `src/styles.css`. Detector: `window.matchMedia('(prefers-contrast: more)')`.",
-    references: [
-      "Theme store: `src/features/theme/store.ts`.",
-      "CSS: `src/styles.css`.",
-    ],
+    references: ["Theme store: `src/features/theme/store.ts`.", "CSS: `src/styles.css`."],
     action: "OPEN",
   },
   "SCRUM-239": {
@@ -380,8 +382,7 @@ const TICKETS = {
   },
   "SCRUM-242": {
     newSummary: "Funcionar sin conexión a internet mostrando los últimos datos",
-    context:
-      "Los usuarios en canchas con mala señal no pueden acceder a la app.",
+    context: "Los usuarios en canchas con mala señal no pueden acceder a la app.",
     userStory:
       "Como usuario en una cancha con mala señal, quiero que la app funcione sin conexión a internet mostrando mis últimos datos, para no quedarme sin acceso a la información que necesito.",
     criteria: [
@@ -401,8 +402,7 @@ const TICKETS = {
   },
   "SCRUM-243": {
     newSummary: "Cargar la aplicación en menos de 2 segundos en conexiones 4G",
-    context:
-      "La app bundle es pesada (~42MB con TF.js) y tarda en cargar en móviles.",
+    context: "La app bundle es pesada (~42MB con TF.js) y tarda en cargar en móviles.",
     userStory:
       "Como usuario móvil, quiero que la aplicación cargue en menos de 2 segundos en conexiones 4G, para una experiencia fluida y sin esperas.",
     criteria: [
@@ -437,8 +437,7 @@ const TICKETS = {
   },
   "SCRUM-245": {
     newSummary: "Eliminar mi cuenta y todos mis datos (derecho al olvido GDPR)",
-    context:
-      "La app no permite a los usuarios borrar su cuenta, lo que incumple GDPR.",
+    context: "La app no permite a los usuarios borrar su cuenta, lo que incumple GDPR.",
     userStory:
       "Como usuario, quiero poder eliminar mi cuenta y todos mis datos de la plataforma, para ejercer mi derecho al olvido según GDPR.",
     criteria: [
@@ -455,8 +454,7 @@ const TICKETS = {
   },
   "SCRUM-246": {
     newSummary: "Proteger todos los endpoints con Row Level Security (RLS) de Supabase",
-    context:
-      "Las tablas sin RLS exponen datos a accesos no autorizados.",
+    context: "Las tablas sin RLS exponen datos a accesos no autorizados.",
     userStory:
       "Como administrador del sistema, quiero que todos los endpoints de la API estén protegidos con Row Level Security (RLS) de Supabase, para garantizar la seguridad de los datos de los usuarios.",
     criteria: [
@@ -518,8 +516,7 @@ const TICKETS = {
   },
   "SCRUM-249": {
     newSummary: "Pipeline CI/CD con GitHub Actions para validar calidad",
-    context:
-      "Sin CI/CD, los merges pueden romper la rama main.",
+    context: "Sin CI/CD, los merges pueden romper la rama main.",
     userStory:
       "Como equipo de desarrollo, quiero tener un pipeline de CI/CD completo en GitHub Actions que valide calidad antes de cada deploy, para evitar regresiones en producción.",
     criteria: [
@@ -596,8 +593,7 @@ const TICKETS = {
   },
   "SCRUM-253": {
     newSummary: "Dashboard de métricas de uso para product owner",
-    context:
-      "Las decisiones de producto se toman sin datos reales de uso.",
+    context: "Las decisiones de producto se toman sin datos reales de uso.",
     userStory:
       "Como product owner, quiero tener un dashboard de métricas de uso de la plataforma, para tomar decisiones basadas en datos reales de los usuarios.",
     criteria: [
@@ -617,8 +613,7 @@ const TICKETS = {
   },
   "SCRUM-254": {
     newSummary: "Alertas automatizadas para usuarios inactivos (>14 días)",
-    context:
-      "Los usuarios que llevan más de 14 días sin jugar son candidatos a churn.",
+    context: "Los usuarios que llevan más de 14 días sin jugar son candidatos a churn.",
     userStory:
       "Como administrador, quiero configurar alertas automatizadas de inactividad, para reactivar usuarios que llevan más de 14 días sin jugar y reducir el churn.",
     criteria: [
@@ -656,8 +651,7 @@ const TICKETS = {
   },
   "SCRUM-256": {
     newSummary: "Mostrar pronóstico meteorológico en canchas outdoor",
-    context:
-      "Los partidos al aire libre se arruinan por lluvia no prevista.",
+    context: "Los partidos al aire libre se arruinan por lluvia no prevista.",
     userStory:
       "Como usuario, quiero ver el pronóstico meteorológico del día del partido en la pantalla de la cancha reservada, para saber si lloverá y reprogramar si es necesario.",
     criteria: [
@@ -674,8 +668,7 @@ const TICKETS = {
   },
   "SCRUM-257": {
     newSummary: "Exportar reporte financiero consolidado de FitCoins",
-    context:
-      "Los administradores no pueden analizar la economía interna de la plataforma.",
+    context: "Los administradores no pueden analizar la economía interna de la plataforma.",
     userStory:
       "Como administrador, quiero exportar un reporte financiero consolidado del uso de FitCoins, para analizar la economía interna de la plataforma y tomar decisiones.",
     criteria: [
@@ -763,7 +756,7 @@ for (const [key, data] of Object.entries(TICKETS)) {
 
     // Eliminar labels antiguos problemáticos
     newLabels = newLabels.filter(
-      (l) => !["historia-usuario", "sportmatch-2026"].includes(l) || l === "historia-usuario"
+      (l) => !["historia-usuario", "sportmatch-2026"].includes(l) || l === "historia-usuario",
     );
     // Asegurar historia-usuario
     if (!newLabels.includes("historia-usuario")) newLabels.push("historia-usuario");
@@ -796,7 +789,9 @@ for (const [key, data] of Object.entries(TICKETS)) {
     if (data.action === "DONE") {
       const transitions = await getTransitions(key);
       // Buscar transición que lleve a "Finalizada" (status id 10001)
-      const doneTransition = transitions.find((t) => t.to?.id === "10003" || /listo|finalizada|done/i.test(t.name));
+      const doneTransition = transitions.find(
+        (t) => t.to?.id === "10003" || /listo|finalizada|done/i.test(t.name),
+      );
       if (doneTransition) {
         await api(`/rest/api/3/issue/${key}/transitions`, {
           method: "POST",
@@ -822,6 +817,10 @@ console.log(`Tickets finalizados: ${finalized}`);
 console.log(`Tickets partial (label): ${partialLabelled}`);
 console.log(`Tickets fallidos: ${failed}`);
 console.log(`\nAcción breakdown:`);
-console.log(`  DONE (implementado): ${Object.values(TICKETS).filter((t) => t.action === "DONE").length}`);
+console.log(
+  `  DONE (implementado): ${Object.values(TICKETS).filter((t) => t.action === "DONE").length}`,
+);
 console.log(`  PARTIAL: ${Object.values(TICKETS).filter((t) => t.action === "PARTIAL").length}`);
-console.log(`  OPEN (backlog): ${Object.values(TICKETS).filter((t) => t.action === "OPEN").length}`);
+console.log(
+  `  OPEN (backlog): ${Object.values(TICKETS).filter((t) => t.action === "OPEN").length}`,
+);

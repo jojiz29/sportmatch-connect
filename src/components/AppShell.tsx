@@ -19,6 +19,7 @@ import {
   Settings,
   Package,
   MapPin,
+  Globe,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
@@ -26,6 +27,7 @@ import { useThemeStore } from "@/features/theme/store";
 import { NotificationBell } from "@/features/notifications/ui/NotificationBell";
 import { WorldCupBackground } from "@/components/WorldCupBackground";
 import { useTranslation } from "react-i18next";
+import i18n from "@/shared/i18n";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { JuryTour } from "@/components/JuryTour";
 import { useTourStore } from "@/shared/hooks/useTourStore";
@@ -47,6 +49,27 @@ function ThemeToggle() {
       className="h-8 w-8 rounded-full border border-border/40 bg-background/50 hover:bg-accent/40 active:scale-95 transition-all flex items-center justify-center cursor-pointer text-primary shrink-0"
     >
       {theme === "world-cup" ? <Moon className="h-4.5 w-4.5" /> : <Sun className="h-4.5 w-4.5" />}
+    </button>
+  );
+}
+
+// SCRUM-341 — Selector de idioma para i18next
+function LanguageSelector() {
+  const currentLng = i18n.language?.split("-")[0] ?? "es";
+  const cycle = () => {
+    const order: Array<"es" | "en" | "pt"> = ["es", "en", "pt"];
+    const idx = order.indexOf(currentLng as "es" | "en" | "pt");
+    const next = order[(idx + 1) % order.length];
+    i18n.changeLanguage(next);
+  };
+  return (
+    <button
+      onClick={cycle}
+      title={`Idioma: ${currentLng.toUpperCase()} (click para cambiar)`}
+      className="h-8 px-2 rounded-full border border-border/40 bg-background/50 hover:bg-accent/40 active:scale-95 transition-all flex items-center gap-1 cursor-pointer text-primary shrink-0 text-[10px] font-bold"
+    >
+      <Globe className="h-3.5 w-3.5" />
+      {currentLng.toUpperCase()}
     </button>
   );
 }
@@ -257,6 +280,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="font-heading text-xl tracking-wide text-foreground">SportMatch</span>
             </Link>
             <div className="flex items-center gap-1">
+              <LanguageSelector />
               <ThemeToggle />
               <NotificationBell />
             </div>

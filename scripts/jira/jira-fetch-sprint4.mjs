@@ -13,15 +13,18 @@ if (fs.existsSync(envLocalPath)) {
       if (trimmed && !trimmed.startsWith("#")) {
         const parts = trimmed.split("=");
         const key = parts[0].trim();
-        const val = parts.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+        const val = parts
+          .slice(1)
+          .join("=")
+          .trim()
+          .replace(/^['"]|['"]$/g, "");
         env[key] = val;
       }
     });
 }
 
 const auth =
-  "Basic " +
-  Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 const jql = encodeURIComponent("sprint = 4");
 const url = `${env.JIRA_BASE_URL}/rest/api/3/search/jql?jql=${jql}&maxResults=100&fields=summary,status,assignee,issuetype,labels,description`;
@@ -34,7 +37,7 @@ console.log("Total issues en Sprint 4:", data.issues ? data.issues.length : 0);
 if (data.issues) {
   data.issues.forEach((i) => {
     console.log(
-      `[${i.key}] ${i.fields.issuetype.name} | ${i.fields.status.name} | ${i.fields.summary} | Labels: ${(i.fields.labels || []).join(",")}`
+      `[${i.key}] ${i.fields.issuetype.name} | ${i.fields.status.name} | ${i.fields.summary} | Labels: ${(i.fields.labels || []).join(",")}`,
     );
   });
 }

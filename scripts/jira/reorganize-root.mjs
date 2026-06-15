@@ -152,7 +152,7 @@ deleteFile("bun.lock");
 console.log("\n=== PASO 8: Verificar resultado final ===\n");
 const remaining = execSync(
   `git ls-files | grep -E "^(fix_|refactor_|scratch_|generate_report|build_err|build_out|bun\\.lock|sprint_3_issues\\.json|Informe_Sprint_2|Dockerfile$|docker-compose|railway\\.toml|api/\\[)"`,
-  { cwd: ROOT, encoding: "utf-8" }
+  { cwd: ROOT, encoding: "utf-8" },
 );
 if (remaining.trim()) {
   console.log("⚠ Archivos misplaced restantes:");
@@ -164,6 +164,6 @@ if (remaining.trim()) {
 console.log("\n=== Resumen de archivos en root (git tracked) ===\n");
 const rootTracked = execSync(
   `git ls-files | grep -v "^\\.\\|^docs/\\|^server/\\|^src/\\|^tests/\\|^supabase/\\|^public/\\|^playwright-report/\\|^test-results/\\|^deploy/\\|^archive/\\|^scripts/"`,
-  { cwd: ROOT, encoding: "utf-8" }
+  { cwd: ROOT, encoding: "utf-8" },
 );
 console.log(rootTracked || "(vacío)");

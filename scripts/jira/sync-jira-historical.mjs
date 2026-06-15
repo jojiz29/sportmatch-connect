@@ -19,14 +19,17 @@ fs.readFileSync(envLocalPath, "utf-8")
     if (trimmed && !trimmed.startsWith("#")) {
       const parts = trimmed.split("=");
       const key = parts[0].trim();
-      const val = parts.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      const val = parts
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
       env[key] = val;
     }
   });
 
 const auth =
-  "Basic " +
-  Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 // IDs fijos
 const PROJECT_KEY = "SCRUM";

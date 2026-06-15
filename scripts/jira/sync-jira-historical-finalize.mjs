@@ -9,14 +9,23 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 async function api(endpoint, options = {}) {
   const res = await fetch(`${env.JIRA_BASE_URL}${endpoint}`, {
-    headers: { Authorization: auth, Accept: "application/json", "Content-Type": "application/json" },
+    headers: {
+      Authorization: auth,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
     ...options,
   });
   if (!res.ok) throw new Error(await res.text());
@@ -31,12 +40,32 @@ async function transition(issueKey, transitionId) {
 }
 
 const keys = [
-  "SCRUM-367","SCRUM-368","SCRUM-369","SCRUM-370","SCRUM-371","SCRUM-372","SCRUM-373","SCRUM-374","SCRUM-375","SCRUM-376",
-  "SCRUM-377","SCRUM-378","SCRUM-379","SCRUM-380","SCRUM-381","SCRUM-382","SCRUM-383","SCRUM-384","SCRUM-385","SCRUM-386","SCRUM-387"
+  "SCRUM-367",
+  "SCRUM-368",
+  "SCRUM-369",
+  "SCRUM-370",
+  "SCRUM-371",
+  "SCRUM-372",
+  "SCRUM-373",
+  "SCRUM-374",
+  "SCRUM-375",
+  "SCRUM-376",
+  "SCRUM-377",
+  "SCRUM-378",
+  "SCRUM-379",
+  "SCRUM-380",
+  "SCRUM-381",
+  "SCRUM-382",
+  "SCRUM-383",
+  "SCRUM-384",
+  "SCRUM-385",
+  "SCRUM-386",
+  "SCRUM-387",
 ];
 
 console.log(`Transicionando ${keys.length} tickets a Finalizada...`);
-let ok = 0, fail = 0;
+let ok = 0,
+  fail = 0;
 for (const key of keys) {
   try {
     // Estado actual: En curso (10001). Transición 41 → Finalizada.

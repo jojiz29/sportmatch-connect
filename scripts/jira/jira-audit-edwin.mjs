@@ -9,10 +9,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 async function api(endpoint) {
   const res = await fetch(`${env.JIRA_BASE_URL}${endpoint}`, {
@@ -21,10 +26,21 @@ async function api(endpoint) {
   return res.json();
 }
 
-const keys = ["SCRUM-338","SCRUM-339","SCRUM-340","SCRUM-341","SCRUM-342","SCRUM-343","SCRUM-344","SCRUM-345"];
+const keys = [
+  "SCRUM-338",
+  "SCRUM-339",
+  "SCRUM-340",
+  "SCRUM-341",
+  "SCRUM-342",
+  "SCRUM-343",
+  "SCRUM-344",
+  "SCRUM-345",
+];
 console.log("=== TÍTULOS Y DESCRIPCIONES ACTUALES DE EDWIN SPRINT 4 ===\n");
 for (const key of keys) {
-  const data = await api(`/rest/api/3/issue/${key}?fields=summary,description,labels,customfield_10020`);
+  const data = await api(
+    `/rest/api/3/issue/${key}?fields=summary,description,labels,customfield_10020`,
+  );
   console.log(`\n${"=".repeat(70)}`);
   console.log(`${key}`);
   console.log(`${"=".repeat(70)}`);

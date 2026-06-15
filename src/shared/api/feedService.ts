@@ -322,6 +322,22 @@ export async function createPost(
     throw error || new Error("Failed to create post");
   }
 
+  // Feature #3 — Auto-Hashtags: trigger async no bloqueante después de crear el post
+  try {
+    const { generateHashtags } = await import("@/features/ai-text/api/textApi");
+    const res = await generateHashtags({ content, minTags: 3, maxTags: 5 });
+    if (res.tags.length > 0) {
+      const tagRows = res.tags.map((tag) => ({
+        post_id: newPostId,
+        tag,
+        created_at: new Date().toISOString(),
+      }));
+      await supabase.from("post_tags").insert(tagRows).select();
+    }
+  } catch (err) {
+    console.warn("Auto-hashtags failed (non-blocking):", err);
+  }
+
   // Notifica a seguidores si el autor es un negocio
   try {
     const author = (post as unknown as SupabasePost).profile;

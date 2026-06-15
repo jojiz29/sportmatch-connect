@@ -8,10 +8,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 let nextPageToken = null;
 let pageCount = 0;
@@ -54,7 +59,7 @@ Array.from(sprintMap.entries())
     const issues = sprintIssues.get(id) || [];
     const open = issues.filter((i) => i.fields.status.name !== "Finalizada").length;
     console.log(
-      `  Sprint ${id} [${s.state}]: ${s.name} — ${issues.length} issues (${open} abiertas)`
+      `  Sprint ${id} [${s.state}]: ${s.name} — ${issues.length} issues (${open} abiertas)`,
     );
   });
 
@@ -63,7 +68,7 @@ const sprint4Issues = sprintIssues.get(42) || [];
 console.log(`Total: ${sprint4Issues.length}`);
 sprint4Issues.forEach((i) => {
   console.log(
-    `  [${i.key}] ${i.fields.issuetype.name} | ${i.fields.status.name} | ${i.fields.summary} | Labels: ${(i.fields.labels || []).join(",")}`
+    `  [${i.key}] ${i.fields.issuetype.name} | ${i.fields.status.name} | ${i.fields.summary} | Labels: ${(i.fields.labels || []).join(",")}`,
   );
 });
 
@@ -73,6 +78,6 @@ console.log(`Total: ${openIssues.length}`);
 openIssues.forEach((i) => {
   const sprints = (i.fields.customfield_10020 || []).map((s) => s.id).join(",");
   console.log(
-    `  [${i.key}] ${i.fields.issuetype.name} | ${i.fields.status.name} | Sprint: ${sprints || "none"} | ${i.fields.summary}`
+    `  [${i.key}] ${i.fields.issuetype.name} | ${i.fields.status.name} | Sprint: ${sprints || "none"} | ${i.fields.summary}`,
   );
 });

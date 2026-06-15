@@ -8,10 +8,15 @@ fs.readFileSync(path.resolve(process.cwd(), ".env.local"), "utf-8")
     const t = l.trim();
     if (t && !t.startsWith("#")) {
       const p = t.split("=");
-      env[p[0].trim()] = p.slice(1).join("=").trim().replace(/^['"]|['"]$/g, "");
+      env[p[0].trim()] = p
+        .slice(1)
+        .join("=")
+        .trim()
+        .replace(/^['"]|['"]$/g, "");
     }
   });
-const auth = "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
+const auth =
+  "Basic " + Buffer.from(env.JIRA_USER_EMAIL + ":" + env.JIRA_API_TOKEN).toString("base64");
 
 function extractText(node) {
   if (!node) return "";
@@ -20,20 +25,35 @@ function extractText(node) {
   return "";
 }
 
-const keys = ["SCRUM-338","SCRUM-339","SCRUM-340","SCRUM-341","SCRUM-342","SCRUM-343","SCRUM-344","SCRUM-345"];
+const keys = [
+  "SCRUM-338",
+  "SCRUM-339",
+  "SCRUM-340",
+  "SCRUM-341",
+  "SCRUM-342",
+  "SCRUM-343",
+  "SCRUM-344",
+  "SCRUM-345",
+];
 console.log("=".repeat(80));
 console.log("VERIFICACIÓN FINAL - 8 US DE EDWIN EN SPRINT 4");
 console.log("=".repeat(80));
 
 for (const key of keys) {
-  const res = await fetch(`${env.JIRA_BASE_URL}/rest/api/3/issue/${key}?fields=summary,description,status,assignee,customfield_10020`, {
-    headers: { Authorization: auth, Accept: "application/json" },
-  });
+  const res = await fetch(
+    `${env.JIRA_BASE_URL}/rest/api/3/issue/${key}?fields=summary,description,status,assignee,customfield_10020`,
+    {
+      headers: { Authorization: auth, Accept: "application/json" },
+    },
+  );
   const data = await res.json();
   const sprints = (data.fields.customfield_10020 || []).map((s) => s.name).join(", ");
   const desc = data.fields.description;
   const bloques = desc?.content || [];
-  let headings = 0, paragraphs = 0, bulletLists = 0, codeBlocks = 0;
+  let headings = 0,
+    paragraphs = 0,
+    bulletLists = 0,
+    codeBlocks = 0;
   bloques.forEach((b) => {
     if (b.type === "heading") headings++;
     if (b.type === "paragraph") paragraphs++;
