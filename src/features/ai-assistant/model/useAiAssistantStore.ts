@@ -1,6 +1,11 @@
 // === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
-import { sendMessageToAI, AiChatResponse, ChatMessage } from "../api/sportyAiAPI";
+import {
+  sendMessageToAI,
+  fetchWelcomeMessage,
+  AiChatResponse,
+  ChatMessage,
+} from "../api/sportyAiAPI";
 import i18n from "@/shared/i18n";
 
 // === BLOQUE: TIPOS DEL DOMINIO ===
@@ -44,6 +49,7 @@ interface AiAssistantState {
   closeChat: () => void;
   toggleChat: () => void;
   sendMessage: (text: string) => Promise<void>;
+  loadWelcome: () => Promise<void>;
   setLanguage: (lang: SupportedLanguage) => void;
   clearMessages: () => void;
   dismissError: () => void;
@@ -134,4 +140,35 @@ export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
 
   clearMessages: () => set({ messages: [], error: null }),
   dismissError: () => set({ error: null }),
+
+  // --- Carga el primer mensaje del LLM (Vertex AI) ---
+  // Se llama cuando el usuario abre el chat por primera vez.
+  // Si ya hay mensajes, no hace nada (idempotente).
+  loadWelcome: async () => {
+    if (get().messages.length > 0) return;
+    set({ isTyping: true, error: null });
+    try {
+      const response: AiChatResponse = await fetchWelcomeMessage({
+        language: get().language,
+      });
+      const aiMsg: AiMessage = {
+        id: generateId(),
+        role: "assistant",
+        text: response.reply,
+        timestamp: new Date().toISOString(),
+        suggestions: response.suggestions,
+      };
+      set({ messages: [aiMsg], isTyping: false });
+    } catch (err) {
+      const errorText = err instanceof Error ? err.message : "Error desconocido";
+      const errorMsg: AiMessage = {
+        id: generateId(),
+        role: "system",
+        text: errorText,
+        timestamp: new Date().toISOString(),
+        variant: "error",
+      };
+      set({ messages: [errorMsg], isTyping: false, error: errorText });
+    }
+  },
 }));

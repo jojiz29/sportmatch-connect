@@ -40,16 +40,62 @@ export class AiService {
     userId: string,
     message: string,
     history?: ChatMessageDto[],
+    language?: "es" | "en" | "pt",
   ): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
     let result: VertexAiGenerationResult;
     try {
-      result = await this.vertexAiService.generateContent(message, { history });
+      result = await this.vertexAiService.generateContent(message, {
+        history,
+        language: language ?? "es",
+      });
     } catch (err) {
       const rawError = err instanceof Error ? err.message : String(err);
       const friendlyMessage = this.parseVertexAiError(rawError);
       this.logger.error(`AI chat failed for user ${userId}: ${friendlyMessage}`);
+      throw new InternalServerErrorException(friendlyMessage);
+    }
+
+    return {
+      reply: result.text,
+      suggestions: this.extractSuggestions(result.text),
+      metadata: {
+        tokens: result.tokens,
+        model: result.model,
+        latencyMs: result.latencyMs,
+      },
+    };
+  }
+
+  // ==============================================================
+  // SCRUM-345 — welcome(): Genera el primer mensaje de Sporty
+  // dinámicamente con Vertex AI. NO devuelve texto hardcoded.
+  // El LLM produce el contenido en el idioma solicitado.
+  // ==============================================================
+  async welcome(userId: string, language: "es" | "en" | "pt"): Promise<ChatResponseDto> {
+    this.checkRateLimit(userId, "chat");
+
+    // Prompt que induce al LLM a generar un saludo natural en el
+    // idioma del usuario, con tono motivador y oferta de ayuda
+    // específica al contexto de SportMatch (canchas, partidos, racha).
+    const welcomePrompt =
+      language === "en"
+        ? "Greet the user briefly as Sporty, the AI sports assistant of SportMatch Connect. Mention you can help with finding courts, joining matches, tracking their weekly streak, or anything sports-related. Be warm, energetic, and concise (max 60 words). Respond in English only."
+        : language === "pt"
+          ? "Cumprimente brevemente o usuário como Sporty, o assistente esportivo de IA do SportMatch Connect. Mencione que você pode ajudar a encontrar quadras, participar de partidas, acompanhar a sequência semanal ou qualquer assunto esportivo. Seja caloroso, enérgico e conciso (máx 60 palavras). Responda apenas em português."
+          : "Saluda brevemente al usuario como Sporty, el asistente deportivo de IA de SportMatch Connect. Menciona que puedes ayudar a encontrar canchas, unirse a partidos, llevar el control de su racha semanal o cualquier tema deportivo. Sé cálido, enérgico y conciso (máx 60 palabras). Responde solo en español.";
+
+    let result: VertexAiGenerationResult;
+    try {
+      result = await this.vertexAiService.generateContent(welcomePrompt, {
+        language,
+        temperature: 0.8,
+      });
+    } catch (err) {
+      const rawError = err instanceof Error ? err.message : String(err);
+      const friendlyMessage = this.parseVertexAiError(rawError);
+      this.logger.error(`AI welcome failed for user ${userId}: ${friendlyMessage}`);
       throw new InternalServerErrorException(friendlyMessage);
     }
 

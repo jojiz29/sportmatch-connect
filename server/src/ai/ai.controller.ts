@@ -1,6 +1,7 @@
 // ============================================================
 // ai.controller.ts — Endpoints REST
 // POST /api/v1/ai/chat                → Chat general
+// POST /api/v1/ai/chat/welcome        → SCRUM-345 primer mensaje del LLM
 // POST /api/v1/ai/text/comment-suggestion  → Feature #2 Smart Comments
 // POST /api/v1/ai/text/hashtags      → Feature #3 Auto-Hashtags
 // POST /api/v1/ai/text/moderate      → Feature #6 Content Moderation
@@ -11,7 +12,7 @@ import { Body, Controller, Post, Request, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 import { AiService } from "./ai.service";
-import { ChatRequestDto, ChatResponseDto } from "./dto/chat.dto";
+import { ChatRequestDto, ChatResponseDto, WelcomeRequestDto } from "./dto/chat.dto";
 import {
   CommentSuggestionDto,
   HashtagsDto,
@@ -43,7 +44,20 @@ export class AiController {
     @Request() req: AuthenticatedRequest,
   ): Promise<ChatResponseDto> {
     const userId = req.user.sub;
-    return this.aiService.chat(userId, dto.message, dto.history);
+    return this.aiService.chat(userId, dto.message, dto.history, dto.language);
+  }
+
+  @Post("chat/welcome")
+  @ApiOperation({
+    summary:
+      "SCRUM-345 — Genera el primer mensaje de bienvenida dinámicamente con Vertex AI (no hardcoded)",
+  })
+  async welcome(
+    @Body() dto: WelcomeRequestDto,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ChatResponseDto> {
+    const userId = req.user.sub;
+    return this.aiService.welcome(userId, dto.language ?? "es");
   }
 
   @Post("text/comment-suggestion")

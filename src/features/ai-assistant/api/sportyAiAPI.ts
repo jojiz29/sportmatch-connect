@@ -74,6 +74,57 @@ function getApiBaseUrl(): string {
 // ==============================================================
 
 /**
+ * fetchWelcomeMessage(): Pide al backend el primer mensaje del LLM
+ * (Vertex AI) para arrancar la conversación. El backend genera este
+ * mensaje dinámicamente con Gemini según el idioma del usuario y
+ * opcionalmente el contexto (ubicación, racha, etc.).
+ *
+ * NO devuelve nada hardcoded — todo proviene del LLM real.
+ */
+export async function fetchWelcomeMessage(
+  options: { language?: "es" | "en" | "pt" } = {},
+): Promise<AiChatResponse> {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!isAllowedApiHost(apiBaseUrl)) {
+    throw new Error(
+      `Configuración inválida: VITE_API_URL="${apiBaseUrl}" no apunta a un backend válido.`,
+    );
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+  }
+
+  const body: Record<string, unknown> = {};
+  if (options.language) body.language = options.language;
+
+  const response = await fetch(`${apiBaseUrl}/api/v1/ai/chat/welcome`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("No autorizado. Inicia sesión de nuevo.");
+    if (response.status === 429) throw new Error("Demasiadas solicitudes. Espera un momento.");
+    const errPayload = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
+    throw new Error(errPayload.message || `Error welcome (HTTP ${response.status})`);
+  }
+
+  const data = (await response.json()) as AiChatResponse;
+  if (typeof data?.reply !== "string" || data.reply.trim().length === 0) {
+    throw new Error("El asistente devolvió un mensaje de bienvenida vacío.");
+  }
+  return data;
+}
+
+/**
  * sendMessageToAI(): Envía un mensaje del usuario al backend de IA.
  * ------------------------------------------------------------------
  * Soporta multi-idioma y memoria conversacional.

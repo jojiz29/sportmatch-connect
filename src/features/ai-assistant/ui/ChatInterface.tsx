@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User, Zap, Loader2, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Send, Bot, User, Zap, Loader2, AlertTriangle, Sparkles } from "lucide-react";
 import { useAiAssistantStore } from "../model/useAiAssistantStore";
 import { VoiceControl } from "@/features/voice/ui/VoiceControl";
 
@@ -9,11 +10,41 @@ interface ChatInterfaceProps {
   onClose: () => void;
 }
 
+// SCRUM-345 — Quick prompts en los 3 idiomas soportados. NO son
+// respuestas hardcoded: son sugerencias de UI que el usuario puede
+// clickear para iniciar conversación. Cada prompt se envía al LLM
+// real de Vertex AI cuando se hace click.
+const QUICK_PROMPTS: Record<"es" | "en" | "pt", string[]> = {
+  es: [
+    "¿Qué canchas hay cerca de mí?",
+    "Busco un partido de fútbol 7 para esta semana",
+    "¿Cómo funciona el sistema de FitCoins?",
+    "Cuéntame sobre la racha semanal",
+  ],
+  en: [
+    "What courts are near me?",
+    "I'm looking for a 7-a-side football match this week",
+    "How do FitCoins work?",
+    "Tell me about the weekly streak",
+  ],
+  pt: [
+    "Quais quadras estão perto de mim?",
+    "Procuro uma partida de futebol 7 esta semana",
+    "Como funcionam os FitCoins?",
+    "Conte-me sobre a sequência semanal",
+  ],
+};
+
 export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
+  // SCRUM-345 — i18n para textos estáticos de la UI
+  const { t } = useTranslation();
   // Suscripción al store (estado de dominio)
   const messages = useAiAssistantStore((s) => s.messages);
   const isTyping = useAiAssistantStore((s) => s.isTyping);
   const sendMessage = useAiAssistantStore((s) => s.sendMessage);
+  const loadWelcome = useAiAssistantStore((s) => s.loadWelcome);
+  const language = useAiAssistantStore((s) => s.language);
+  const quickPrompts = QUICK_PROMPTS[language] ?? QUICK_PROMPTS.es;
 
   // Estado puramente transitorio de UI (no merece vivir en el store)
   const [input, setInput] = useState("");
@@ -33,6 +64,15 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
       setLastAssistantMsg({ text: lastMsg.text, id: lastMsg.id });
     }
   }, [messages, isTyping, lastAssistantMsg]);
+
+  // SCRUM-345 — Cuando el chat se abre por primera vez, pedir al LLM
+  // (Vertex AI) el primer mensaje de bienvenida dinámico. NO quemamos
+  // texto en el JSX: el LLM lo genera en el idioma activo del usuario.
+  useEffect(() => {
+    if (isOpen) {
+      void loadWelcome();
+    }
+  }, [isOpen, loadWelcome]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -125,7 +165,7 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
                   Sporty
                 </span>
                 <span className="text-[10px] text-success block leading-tight font-medium">
-                  En línea
+                  {t("ai_assistant.online", "En línea")}
                 </span>
               </div>
             </div>
@@ -140,22 +180,53 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
 
           {/* Messages */}
           <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth">
-            {messages.length === 0 && !isTyping && (
+            {/* SCRUM-345: Estado vacío SIN texto hardcoded.
+                Solo se ve si el LLM aún no respondió (cold start del
+                endpoint /welcome). Las sugerencias clicables SON prompts
+                que se envían al LLM real cuando se hace click. */}
+            {messages.length === 0 && isTyping && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col items-center justify-center h-full text-center px-4"
+                className="flex flex-col items-center justify-center h-full text-center px-4 gap-3"
               >
-                <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center shadow-glow mb-3">
-                  <Bot className="h-6 w-6 text-primary-foreground" />
+                <div className="h-12 w-12 rounded-full bg-gradient-primary grid place-items-center shadow-glow">
+                  <Loader2 className="h-6 w-6 text-primary-foreground animate-spin" />
                 </div>
-                <p className="text-sm font-semibold text-chat-surface-foreground">
-                  ¡Hola! Soy Sporty
+                <p className="text-xs text-[color:var(--color-chat-typing-text)] font-medium">
+                  Conectando con Sporty...
                 </p>
-                <p className="text-xs text-[color:var(--color-chat-typing-text)] mt-1 max-w-[260px]">
-                  Tu asistente deportivo. Pregúntame sobre canchas, partidos o cualquier tema
-                  deportivo.
+              </motion.div>
+            )}
+            {/* SCRUM-345: Sugerencias rápidas (prompts) para iniciar conversación.
+                Se ocultan cuando ya hay un mensaje del LLM en la conversación. */}
+            {messages.length === 0 && !isTyping && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col h-full px-2 py-4 gap-3"
+              >
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-[color:var(--color-chat-typing-text)]">
+                  <Sparkles className="h-3 w-3" />
+                  {t("ai_assistant.suggestions", "Sugerencias")}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {quickPrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => {
+                        void sendMessage(prompt);
+                      }}
+                      className="text-left text-xs px-3 py-2.5 rounded-xl bg-[color:var(--color-chat-suggestion-bg)] hover:bg-[color:var(--color-chat-suggestion-hover)] text-[color:var(--color-chat-suggestion-fg)] border border-border/40 transition-all cursor-pointer"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[color:var(--color-chat-typing-text)] mt-auto opacity-70">
+                  {t("ai_assistant.powered_by", "Respuestas generadas por IA · Vertex AI")}
                 </p>
               </motion.div>
             )}
@@ -228,8 +299,8 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Pregúntale a Sporty..."
-                aria-label="Escribe tu mensaje para Sporty"
+                placeholder={t("ai_assistant.input_placeholder", "Pregúntale a Sporty...")}
+                aria-label={t("ai_assistant.input_aria", "Escribe tu mensaje para Sporty")}
                 className="flex-1 bg-transparent text-sm text-chat-surface-foreground placeholder:text-muted-foreground outline-none border-none"
               />
               <VoiceControl
@@ -255,7 +326,7 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
                   }}
                   className="flex items-center gap-1 text-[10px] font-semibold text-[color:var(--color-chat-suggestion-fg)] hover:text-primary bg-[color:var(--color-chat-suggestion-bg)] hover:bg-[color:var(--color-chat-suggestion-hover)] px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                 >
-                  <Zap className="h-3 w-3" /> Limpiar chat
+                  <Zap className="h-3 w-3" /> {t("ai_assistant.clear_chat", "Limpiar chat")}
                 </button>
               )}
             </div>
