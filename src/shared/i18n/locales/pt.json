@@ -504,8 +504,17 @@
   },
   "skills": {
     "amateur": "Amateur",
-    "intermedio": "Intermediate",
-    "avanzado": "Advanced",
+    "intermedio": "Intermediário",
+    "avanzado": "Avançado",
     "pro": "Pro"
+  },
+  "ai_assistant": {
+    "suggestions": "Sugestões",
+    "powered_by": "Respostas geradas por IA · Vertex AI",
+    "input_placeholder": "Pergunte ao Sporty...",
+    "input_aria": "Digite sua mensagem para Sporty",
+    "connecting": "Conectando ao Sporty...",
+    "clear_chat": "Limpar chat",
+    "online": "Online"
   }
 }

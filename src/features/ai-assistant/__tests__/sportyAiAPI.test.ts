@@ -99,6 +99,59 @@ describe("AI Assistant — anti-mock safeguards", () => {
     await expect(sendMessageToAI("test")).rejects.toThrow(/No autorizado/);
   });
 
+  it("fetchWelcomeMessage() hace POST al endpoint /chat/welcome y devuelve respuesta del LLM", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        reply: "¡Hola! Soy Sporty, tu asistente deportivo ⚡ ¿En qué te ayudo hoy?",
+        suggestions: ["Buscar canchas", "Ver mi racha", "Reservar"],
+        metadata: { tokens: 30, model: "gemini-2.5-flash", latencyMs: 800 },
+      }),
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const { fetchWelcomeMessage } = await import("../api/sportyAiAPI");
+    const response = await fetchWelcomeMessage({ language: "es" });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(`${BACKEND_URL}/api/v1/ai/chat/welcome`);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ language: "es" });
+    expect(response.reply).toMatch(/Sporty/);
+    expect(response.suggestions).toHaveLength(3);
+  });
+
+  it("fetchWelcomeMessage() rechaza si la respuesta del LLM está vacía", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        reply: "",
+        suggestions: [],
+        metadata: { tokens: 0, model: "gemini-2.5-flash", latencyMs: 100 },
+      }),
+    }) as unknown as typeof fetch;
+
+    const { fetchWelcomeMessage } = await import("../api/sportyAiAPI");
+    await expect(fetchWelcomeMessage({ language: "es" })).rejects.toThrow(/vacío/);
+  });
+
+  it("ChatInterface.tsx NO contiene textos hardcoded de bienvenida (debe venir del LLM)", async () => {
+    // El bug que vimos: el JSX tenía "¡Hola! Soy Sporty" hardcoded.
+    // Ahora debe venir del LLM via fetchWelcomeMessage().
+    const fs = await import("node:fs");
+    const source = await fs.promises.readFile(
+      "src/features/ai-assistant/ui/ChatInterface.tsx",
+      "utf-8",
+    );
+
+    // No debe haber texto de bienvenida hardcoded en el JSX principal
+    expect(source).not.toMatch(/¡Hola! Soy Sporty/);
+    expect(source).not.toMatch(/Tu asistente deportivo\. Pregúntame/);
+  });
+
   it("sendMessageToAI() propaga errores HTTP 429 (rate limit)", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
