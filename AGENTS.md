@@ -13,6 +13,38 @@
 - **Tests:** `npm run test` (Vitest), `npm run test:e2e` (Playwright).
 - **Pre-commit constraints:** Hook runs `eslint --fix` → `prettier --write` → `tsc --noEmit`. Fix all TS errors before committing.
 
+## 🔑 Infrastructure Credentials (Render + Vercel)
+
+**Location:** `C:\Users\ejuni\.opencode\credentials\sportmatch-infrastructure.json`
+**Status:** Outside the repo. Git cannot access it. Windows ACL restricted to current user.
+**Rotation policy:** Rotate tokens every 90 days OR immediately if exposed. Update `last_rotated` in the file.
+
+### Quick API access
+
+```powershell
+# Load credentials
+$creds = Get-Content "C:\Users\ejuni\.opencode\credentials\sportmatch-infrastructure.json" -Raw | ConvertFrom-Json
+
+# Render API
+$renderHeaders = @{ Authorization = "Bearer $($creds.render.api_token)" }
+$renderService = "https://api.render.com/v1/services/$($creds.render.service_id)"
+
+# Vercel API
+$vercelHeaders = @{ Authorization = "Bearer $($creds.vercel.api_token)" }
+$vercelProjects = "https://api.vercel.com/v9/projects"
+```
+
+### Pre-built helper scripts (use these — never inline the tokens)
+
+- `scripts/infra/render-status.ps1` → Service status, env vars (masked), recent deploys
+- `scripts/infra/render-logs.ps1` → Tail live logs
+- `scripts/infra/render-deploy.ps1` → Trigger manual deploy with commit SHA
+- `scripts/infra/render-env-set.ps1` → Update env vars (use with care)
+- `scripts/infra/vercel-status.ps1` → List projects + last deploy per project
+- `scripts/infra/vercel-env.ps1` → Get/set env vars per project
+
+All scripts auto-load the credentials file and **mask secrets** in any console output.
+
 ## 🗄️ Database & Prisma Dual-URL Architecture (us-west-2)
 
 **CRITICAL PROTOCOL:** The project relies on a Dual-URL Prisma setup with Supabase's Oregon (`us-west-2`) pooler.
