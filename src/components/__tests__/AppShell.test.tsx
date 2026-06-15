@@ -29,8 +29,18 @@ vi.mock("react-i18next", () => ({
     t: (key: string, fallback?: string) => fallback || key,
     i18n: {
       changeLanguage: () => Promise.resolve(),
+      language: "es",
     },
   }),
+  initReactI18next: { type: "3rdParty", init: () => undefined },
+}));
+
+// Mock shared i18n module
+vi.mock("@/shared/i18n", () => ({
+  default: {
+    changeLanguage: () => Promise.resolve(),
+    language: "es",
+  },
 }));
 
 // Mock theme store

@@ -1,11 +1,22 @@
 // ============================================================
-// chat.dto.ts — DTO de entrada/salida para el endpoint de IA
+// chat.dto.ts — DTO de entrada/salida para el endpoint de chat
 // Protección contra inyección de prompts + validación estricta
+// + soporte para historial conversacional (ventana deslizante)
 // ============================================================
 
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsNotEmpty, MaxLength, MinLength, Matches } from "class-validator";
-import { Transform, TransformFnParams } from "class-transformer";
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  MaxLength,
+  MinLength,
+  Matches,
+} from "class-validator";
+import { Type, Transform, TransformFnParams } from "class-transformer";
+import { ChatMessageDto } from "./ai.dto";
 
 /**
  * Sanitiza el input del usuario para prevenir inyecciones de prompt
@@ -16,11 +27,11 @@ function sanitizeMessage({ value }: TransformFnParams): string {
   return (
     value
       // eslint-disable-next-line no-control-regex
-      .replace(/[\u0000-\u001F\u007F]/g, "") // Elimina caracteres de control
-      .replace(/<script[^>]*>.*?<\/script>/gi, "") // Bloquea <script>
-      .replace(/<[^>]+>/g, "") // Elimina tags HTML
-      .replace(/javascript:/gi, "") // Bloquea protocolos JS
-      .replace(/data:text\/html/gi, "") // Bloquea data URIs HTML
+      .replace(/[\u0000-\u001F\u007F]/g, "")
+      .replace(/<script[^>]*>.*?<\/script>/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/javascript:/gi, "")
+      .replace(/data:text\/html/gi, "")
       .trim()
   );
 }
@@ -39,13 +50,35 @@ export class ChatRequestDto {
   @Matches(/^[\s\S]+$/, { message: "El mensaje contiene caracteres no permitidos" })
   @Transform(sanitizeMessage)
   message!: string;
+
+  @ApiProperty({
+    description: "Idioma del usuario para respuestas localizadas",
+    example: "es",
+    enum: ["es", "en", "pt"],
+    required: false,
+  })
+  @IsOptional()
+  @Matches(/^(es|en|pt)$/, { message: "Idioma debe ser es, en o pt" })
+  language?: "es" | "en" | "pt";
+
+  @ApiProperty({
+    description:
+      "Historial conversacional para mantener contexto (ventana deslizante últimos 5 turnos)",
+    type: [ChatMessageDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ChatMessageDto)
+  history?: ChatMessageDto[];
 }
 
 export class ChatResponseMetadataDto {
   @ApiProperty({ example: 150, description: "Tokens consumidos en la respuesta" })
   tokens!: number;
 
-  @ApiProperty({ example: "gemini-1.5-pro-002", description: "Modelo de IA utilizado" })
+  @ApiProperty({ example: "gemini-2.5-flash", description: "Modelo de IA utilizado" })
   model!: string;
 
   @ApiProperty({ example: 1200, description: "Latencia en milisegundos" })

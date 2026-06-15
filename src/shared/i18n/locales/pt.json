@@ -1,0 +1,511 @@
+{
+  "nav": {
+    "inicio": "Início",
+    "matchmaking": "Matchmaking",
+    "map_and_courts": "Reservas e Mapa",
+    "comunidad": "Comunidade (Feed)",
+    "squads": "Squads (Clãs)",
+    "mensajes": "Mensagens",
+    "telemetria": "Meu Desempenho",
+    "wallet": "FitCoins (Carteira)",
+    "torneos": "Torneios Relâmpago",
+    "perfil": "Meu Perfil",
+    "business": "Meu Negócio",
+    "admin": "Painel Admin",
+    "logout": "Sair",
+    "groups": {
+      "action": "ACTION & DISCOVERY",
+      "social": "SOCIAL & COMPETITION",
+      "analytics": "ANALYTICS & ECONOMY",
+      "account": "MY ACCOUNT"
+    }
+  },
+  "login": {
+    "title_signin": "Entrar",
+    "title_signup": "Create Account",
+    "subtitle": "Access the largest sports network",
+    "email": "E-mail",
+    "password": "Senha",
+    "btn_signin": "Login",
+    "btn_signup": "Registrar",
+    "toggle_signup": "Don't have an account? Sign up",
+    "toggle_signin": "Already have an account? Sign in",
+    "success_toast": "Welcome back!",
+    "error_toast": "Error logging in. Please check your credentials.",
+    "btn_demo": "Try Demo",
+    "email_placeholder": "your@email.com"
+  },
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Complete your sports onboarding",
+    "fullName": "Full Name",
+    "email": "E-mail",
+    "password": "Senha",
+    "sports": "Preferred Sports",
+    "btn_register": "Register and Start",
+    "success_toast": "Welcome to SportMatch!",
+    "error_toast": "Error registering. Please try again.",
+    "select_sports_error": "Please select at least one preferred sport",
+    "role_player": "Athlete",
+    "role_business": "Company",
+    "companyName": "Company Name",
+    "placeholder_company": "e.g., Deportes Flores S.A.C.",
+    "businessCategory": "Business Category",
+    "cat_shop": "Sports Store",
+    "cat_courts": "Court Rental",
+    "cat_gym": "Gym",
+    "cat_beverages": "Drinks & Nutrition",
+    "cat_academy": "Sports Academy",
+    "cat_physio": "Physiotherapy & Recovery",
+    "cat_nutrition": "Sports Nutrition",
+    "cat_events": "Tournaments & Events",
+    "cat_brands": "Sports Brands",
+    "cat_sponsor": "Sponsor",
+    "gps_location": "GPS Location (Coordinates)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "business_bio_template": "Official profile of {{companyName}}. Welcome to our catalog!",
+    "default_player_bio": "Ready to play!"
+  },
+  "dashboard": {
+    "title": "Main Dashboard",
+    "balance": "FitCoins Balance",
+    "recent_activity": "Recent Activity",
+    "next_match": "Next Match",
+    "no_next_match": "No upcoming matches scheduled",
+    "find_one": "Find Match"
+  },
+  "matchmaking": {
+    "title": "AI Matchmaking",
+    "subtitle": "Swipe to find your next ideal rival",
+    "filters": "Filters",
+    "empty": "No more suggestions",
+    "compatibility": "AI Compatibility",
+    "level": "Level",
+    "distance": "Distance",
+    "reputation": "Reputation",
+    "like_toast": "Like sent!",
+    "match_toast": "It's a Match!",
+    "schedule": "Schedule",
+    "its_a_match": "It's a Match! 🎉",
+    "sport_connection": "Sports Connection!",
+    "me": "You",
+    "match_desc": "You and {{name}} like the same sport ({{sport}}). Start chatting now!",
+    "send_message": "Send Message",
+    "keep_swiping": "Keep Swiping",
+    "empty_stack": "No more suggestions",
+    "sport_default": "Sport",
+    "user_default": "User",
+    "view_profile": "View Profile"
+  },
+  "map": {
+    "title": "Live Map",
+    "subtitle": "Courts, matches and players near you",
+    "near_you": "Near you",
+    "view_court": "View Court",
+    "filter_district": "Filter by district / Hub",
+    "all_districts": "All districts"
+  },
+  "chat": {
+    "title": "Messages",
+    "search": "Search chats...",
+    "online": "participants online",
+    "empty": "Select a conversation to chat",
+    "placeholder": "Type a message...",
+    "new_message": "New message",
+    "search_users": "Search users...",
+    "chat_btn": "Chat",
+    "me": "ME",
+    "no_messages": "No messages",
+    "create_squad": "Create Squad",
+    "squad_name": "Squad Name",
+    "squad_placeholder": "e.g., Peloteros FC",
+    "select_members": "Select Members (Followers / Following)",
+    "no_contacts": "You do not have any followers or followed contacts to create a group chat.",
+    "create_squad_hint": "Name your group and select the contacts you want to invite.",
+    "selected_members": "{{count}} selected",
+    "no_contacts_hint": "You can create the Squad now and add contacts once you follow other athletes or they follow you.",
+    "create_squad_btn": "Create Squad ({{count}} members)"
+  },
+  "wallet": {
+    "title": "FitCoins & Rewards",
+    "subtitle": "Your gamified sports economy",
+    "balance": "Your balance",
+    "redeem": "Redeem",
+    "no_stock": "Out of stock",
+    "canjear": "Redeem",
+    "history": "History",
+    "challenges": "Active challenges",
+    "rewards": "Rewards",
+    "ranking": "Weekly ranking",
+    "confirm_title": "Redeem {{reward}}",
+    "confirm_desc": "Are you sure you want to redeem this reward for {{cost}} FitCoins?",
+    "confirm_btn": "Confirm Redeem",
+    "cancel_btn": "Cancelar",
+    "success": "Redeem successful!",
+    "success_desc": "You have obtained: {{reward}}",
+    "error": "Insufficient balance",
+    "error_desc": "Keep playing to earn more FitCoins.",
+    "history_title": "Transaction History",
+    "history_subtitle": "Track your FitCoins income and expenses",
+    "back": "Back to FitCoins",
+    "claimed": "Claimed",
+    "advance": "Advance",
+    "claim": "Claim",
+    "completed": "✓ Completed",
+    "business_marketplace": "Business Store (B2B Marketplace)",
+    "product": "Product",
+    "service": "Service",
+    "buy": "Buy",
+    "no_products": "No commercial products available at this time.",
+    "confirm_purchase_title": "Confirm Purchase",
+    "confirm_purchase_desc": "Do you want to buy {{name}} for {{price}} FC?",
+    "processing": "Processing...",
+    "cancel": "Cancelar",
+    "this_week_gain": "+{{amount}} this week ↗",
+    "recent_movements": "Recent movements",
+    "spend": "Spend",
+    "earn": "Earn",
+    "penalty": "Penalty",
+    "monthly_summary": "Monthly Summary",
+    "income": "Income",
+    "expenses": "Expenses",
+    "net_balance": "Net balance",
+    "purchase_success": "Purchase completed successfully!",
+    "purchase_success_desc": "You redeemed: {{name}}",
+    "purchase_error": "Insufficient balance",
+    "purchase_error_desc": "You don't have enough FitCoins for this item.",
+    "purchase_failed": "Error processing purchase"
+  },
+  "profile": {
+    "title": "My profile",
+    "edit": "Editar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "trust_score": "Trust Score",
+    "achievements": "Unlocked achievements",
+    "recent_history": "Recent history",
+    "updated": "Profile updated",
+    "placeholder_name": "Your name",
+    "placeholder_city": "Your city",
+    "placeholder_bio": "Your bio",
+    "placeholder_sports": "Sports separated by commas",
+    "badge_streak_name": "7-day streak",
+    "badge_streak_desc": "Play at least 5 matches",
+    "badge_partner_name": "Good partner",
+    "badge_partner_desc": "Trust Score ≥ 90% and 3+ matches",
+    "badge_mvp_name": "MVP",
+    "badge_mvp_desc": "Play at least 15 matches",
+    "badge_top_name": "Top 10%",
+    "badge_top_desc": "Have 1,000+ FitCoins",
+    "completed": "Completed",
+    "no_matches_yet": "You have not participated in matches yet.",
+    "change_photo": "Change photo",
+    "uploading_photo": "Uploading profile photo...",
+    "photo_updated_demo": "Photo updated successfully (Demo).",
+    "photo_updated": "Photo updated successfully.",
+    "photo_error": "Error uploading photo. Please try again.",
+    "age_label": "{{age}} years old",
+    "followers": "Followers",
+    "following": "Following",
+    "matches": "Matches",
+    "punctuality": "Punctuality",
+    "attendance": "Attendance",
+    "cancellations": "Cancellations",
+    "behavior": "Behavior",
+    "trust_level_excellent": "Excellent",
+    "trust_level_good": "Good",
+    "trust_level_risk": "Risky",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "recent_matches": "Recent Matches",
+    "sports_practiced": "Practiced Sports",
+    "level": "Level",
+    "medals": "Medals",
+    "unfollow_success": "You unfollowed this user.",
+    "follow_success": "You are now following this user!",
+    "follow_error": "Failed to process follow request.",
+    "try_again_later": "Please try again later.",
+    "following_status": "Following",
+    "user_not_found": "User not found.",
+    "status_finished": "Finished",
+    "status_in_progress": "In Progress",
+    "status_open": "Abrir",
+    "change_sports": "Change"
+  },
+  "auth": {
+    "email_invalid_format": "Please enter a valid email address.",
+    "email_invalid_tld": "The email domain must end with a valid TLD (.com, .pe, .edu, .org, .net).",
+    "email_invalid_domain": "Please enter a valid email from a permitted provider (Gmail, Outlook, Yahoo, Hotmail, iCloud, or ProtonMail).",
+    "password_min_length": "Password must be at least 8 characters long.",
+    "password_uppercase": "At least one uppercase letter is required.",
+    "password_lowercase": "At least one lowercase letter is required.",
+    "password_number": "At least one number is required.",
+    "password_special": "At least one special character is required (!@#$%^&*).",
+    "password_strength_weak": "Weak password",
+    "password_strength_medium": "Medium password",
+    "password_strength_strong": "Strong password",
+    "password_strength_title": "Password strength",
+    "password_crit_len": "Min 8 characters",
+    "password_crit_upper": "1 Uppercase",
+    "password_crit_lower": "1 Lowercase",
+    "password_crit_number": "1 Number",
+    "password_crit_special": "1 Special character (!@#$%^&*)",
+    "continue_with_google": "Continuar com Google",
+    "sign_in_with_google": "Sign In with Google",
+    "or_continue_with": "Or continue with"
+  },
+  "feedback": {
+    "modal_title": "Rate Match & Players",
+    "rate_court": "Rate Court / Venue",
+    "rate_players": "Rate player behavior",
+    "tag_good_level": "Good skill level",
+    "tag_punctual": "Punctual",
+    "tag_good_teammate": "Good teammate",
+    "tag_disrespectful": "Disrespectful",
+    "tag_no_show": "No-show",
+    "submit_feedback": "Submit Feedback",
+    "feedback_success": "Feedback submitted successfully! Thank you for keeping our community clean."
+  },
+  "game_day": {
+    "confirm_attendance": "Confirm Attendance",
+    "checkin_success": "Attendance confirmed successfully!",
+    "checkin_too_far": "You are too far from the court (at {{distance}} km). You must be within 100 meters.",
+    "checkin_error": "Failed to get location. Please enable GPS."
+  },
+  "common": {
+    "loading": "Carregando...",
+    "close": "Fechar"
+  },
+  "landing": {
+    "empezar": "Start Playing",
+    "crear_cuenta": "Create account",
+    "features_title": "Features",
+    "matchmaking_title": "Smart Matchmaking",
+    "matchmaking_desc": "Our AI analyzes your sports level, Trust Score, location, and preferred times to connect you with the ideal opponents or teammates in minutes.",
+    "squads_title": "Squads & Community",
+    "split_billing_title": "Split Billing",
+    "split_billing_desc": "Forget about collecting from everyone. The rental cost is automatically split among active participants in your squad from their FitCoins wallet.",
+    "group_chat_title": "Integrated Group Chat",
+    "group_chat_desc": "Communicate in real time with your squad, organize games, share memes, and keep the passion of the game alive.",
+    "map_title": "Venue Map & Full Coverage",
+    "map_desc": "Visualize the 35 districts of metropolitan Lima in an interactive map with a 'Night Mode' filter. Find your ideal sports complex for padel or soccer in a georeferenced way.",
+    "challenges_title": "Live Sports Challenges",
+    "challenges_desc": "Complete weekly challenges to accumulate FitCoins and redeem them in our Marketplace. Stay active and level up.",
+    "challenge_padel": "3 Padel matches this week",
+    "challenge_squad": "Host a Squad event",
+    "challenge_cup": "Copa SportMatch Tournament",
+    "status_seeking": "Seeking",
+    "status_starting": "Starting",
+    "status_full": "Full",
+    "challenge_ready": "Ready to Claim",
+    "challenge_progress": "In Progress",
+    "challenge_claimed": "Claimed"
+  },
+  "onboarding": {
+    "step_indicator": "Step {{step}} of 3",
+    "step1_title": "Choose your disciplines",
+    "step1_subtitle": "Select the traditional sports and e-sports titles you play.",
+    "traditional_sports": "Traditional Sports",
+    "esports_gaming": "E-Sports & Gaming Core",
+    "step2_title": "Your Skill Level",
+    "step2_subtitle": "Select your level to calculate your competitive weight and ensure fair matches.",
+    "skill_amateur_desc": "Ideal for fun, learning, and socializing without pressure.",
+    "skill_amateur_details": "Weight 1.0 · Suitable for purely recreational leagues and casual friendly matches.",
+    "skill_intermedio_desc": "For players with experience and basic rule knowledge.",
+    "skill_intermedio_details": "Weight 2.0 · Suitable for competitive friendly matches and standard local tournaments.",
+    "skill_avanzado_desc": "Focused on tactical play, fast pace, and higher skill.",
+    "skill_avanzado_details": "Weight 3.5 · Designed for regular competitive leagues, advanced matches, and challenging tournaments.",
+    "skill_pro_desc": "Intended for competitive leagues and high-intensity tournaments.",
+    "skill_pro_details": "Weight 5.0 · Intended for competitive leagues and high-intensity professional tournaments.",
+    "step3_title": "Sports Intent Matrix",
+    "step3_subtitle": "Adjust the interactive sliders to fine-tune your weekly matchmaking.",
+    "intent_label": "Game Intent",
+    "recreativo": "Recreational",
+    "competitivo": "Competitive",
+    "intent_recreativo_desc": "Recreational / Post-Game Hangout",
+    "intent_competitivo_desc": "Competitive / Leaderboard Focus",
+    "weekly_dedication": "Weekly Dedication",
+    "weekly_min": "Minimum (1h)",
+    "weekly_default": "Default (6h)",
+    "weekly_max": "Intense (20h+)",
+    "weekly_hour_sing": "hour",
+    "weekly_hour_plur": "hours",
+    "weight_label": "Weight: {{weight}}",
+    "btn_back": "Back",
+    "btn_cancel": "Cancelar",
+    "btn_next": "Next",
+    "btn_finish": "Finish & Register",
+    "streak_title": "Sports Streak",
+    "streak_current": "Current streak:",
+    "streak_max": "Max:",
+    "streak_unit_sing": "wk",
+    "streak_unit_plur": "wks",
+    "streak_footer": "Verified attendance days light up in <span className=\"text-[#39FF14] font-bold\">Neon Green</span>.",
+    "streak_footer_plain": "Verified attendance days light up in Neon Green.",
+    "streak_footer_prefix": "Verified attendance days light up in",
+    "streak_footer_color": "Neon Green",
+    "day_mon": "Mon",
+    "day_wed": "Wed",
+    "day_fri": "Fri",
+    "day_sun": "Sun",
+    "weight_disclosure_am": "Amateur (Weight: 1.0) - Ideal for fun and socializing without pressure.",
+    "weight_disclosure_int": "Intermediate (Weight: 2.0) - For competitive friendly matches.",
+    "weight_disclosure_adv": "Advanced (Weight: 3.5) - Designed for regular competitive leagues.",
+    "weight_disclosure_pro": "Pro (Weight: 5.0) - Intended for high-intensity leagues and tournaments.",
+    "ver_mas": "See more ↓",
+    "ver_menos": "See less ↑"
+  },
+  "sports": {
+    "futbol": {
+      "name": "Soccer",
+      "desc": "Tradition and passion on real or synthetic grass."
+    },
+    "voley": {
+      "name": "Volleyball",
+      "desc": "Team play and jumps in a closed arena."
+    },
+    "padel": {
+      "name": "Padel",
+      "desc": "Walls and metal mesh in the trendy discipline."
+    },
+    "basquet": {
+      "name": "Basketball",
+      "desc": "Hoop and quick bounce on the hardwood court."
+    },
+    "tenis": {
+      "name": "Tennis",
+      "desc": "Strategic duel on a classic clay court."
+    },
+    "running": {
+      "name": "Running / Track & Field",
+      "desc": "Running, sprints, and long-distance on a running track."
+    },
+    "rugby": {
+      "name": "Rugby",
+      "desc": "Contact, strength, and team play."
+    },
+    "natacion": {
+      "name": "Swimming",
+      "desc": "Endurance and speed in an Olympic pool."
+    },
+    "gimnasio": {
+      "name": "Gym / CrossFit",
+      "desc": "High-intensity functional training."
+    },
+    "calistenia": {
+      "name": "Calisthenics",
+      "desc": "Bodyweight control and static strength outdoors."
+    },
+    "tenis_mesa": {
+      "name": "Table Tennis",
+      "desc": "Speed, reflexes, and millimeter precision."
+    },
+    "boxeo_mma": {
+      "name": "Boxing / MMA",
+      "desc": "Stand-up fighting, submissions, and full body conditioning."
+    },
+    "ciclismo": {
+      "name": "Cycling",
+      "desc": "Urban routes, mountain biking or track speed."
+    },
+    "futbol_americano": {
+      "name": "American Football",
+      "desc": "Yard strategy, passing and contact."
+    },
+    "beisbol": {
+      "name": "Baseball",
+      "desc": "Pitches, powerful hits and running bases."
+    },
+    "skateboarding": {
+      "name": "Skateboarding",
+      "desc": "Street tricks, ramps and urban freestyle."
+    },
+    "golf": {
+      "name": "Golf",
+      "desc": "Precision, strategy and focus on the green."
+    },
+    "automovilismo": {
+      "name": "Motorsport",
+      "desc": "Speed on wheels, karts and racing."
+    },
+    "ea_fc": {
+      "name": "EA Sports FC",
+      "desc": "Virtual elite soccer simulator."
+    },
+    "lol": {
+      "name": "League of Legends",
+      "desc": "Tactical MOBA battles on the Summoner's Rift."
+    },
+    "valorant": {
+      "name": "Valorant",
+      "desc": "Extreme precision tactical shooter by Riot."
+    },
+    "clash_royale": {
+      "name": "Clash Royale",
+      "desc": "Real-time card and tower strategy."
+    },
+    "fortnite": {
+      "name": "Fortnite",
+      "desc": "Battle Royale construction and survival."
+    },
+    "brawl_stars": {
+      "name": "Brawl Stars",
+      "desc": "Dynamic multiplayer arcade battles."
+    },
+    "cs2": {
+      "name": "Counter-Strike 2",
+      "desc": "Tactical team-based first-person shooter."
+    },
+    "dota2": {
+      "name": "Dota 2",
+      "desc": "Classic multiplayer online battle arena strategy."
+    },
+    "rocket_league": {
+      "name": "Rocket League",
+      "desc": "High-speed vehicular soccer and acrobatics."
+    },
+    "overwatch2": {
+      "name": "Overwatch 2",
+      "desc": "Hero shooter team battles with dynamic roles."
+    },
+    "street_fighter_tekken": {
+      "name": "Street Fighter / Tekken",
+      "desc": "Traditional 1v1 fighting games."
+    },
+    "apex_legends": {
+      "name": "Apex Legends",
+      "desc": "Frenetic Battle Royale with heroes and abilities."
+    },
+    "pubg_mobile": {
+      "name": "PUBG Mobile",
+      "desc": "Survival and tactical shooter on mobile devices."
+    },
+    "free_fire": {
+      "name": "Free Fire",
+      "desc": "Fast-paced Battle Royale matches optimized for mobile."
+    },
+    "cod_warzone": {
+      "name": "Call of Duty: Warzone",
+      "desc": "Massive high-fidelity military combat."
+    },
+    "rainbow_six": {
+      "name": "Rainbow Six Siege",
+      "desc": "Tactical indoor shooter with environment destruction."
+    },
+    "hearthstone": {
+      "name": "Hearthstone",
+      "desc": "Strategic card duels in the Warcraft universe."
+    },
+    "iracing_simracing": {
+      "name": "iRacing / F1 SimRacing",
+      "desc": "High-precision automotive simulation and licensed racing."
+    }
+  },
+  "skills": {
+    "amateur": "Amateur",
+    "intermedio": "Intermediate",
+    "avanzado": "Advanced",
+    "pro": "Pro"
+  }
+}

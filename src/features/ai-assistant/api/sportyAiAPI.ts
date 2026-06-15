@@ -5,6 +5,15 @@
  *            Realiza la llamada HTTP al endpoint /api/v1/ai/chat del
  *            backend NestJS, el cual orquesta Vertex AI con las
  *            credenciales seguras del Service Account.
+ *
+ * ⚠️  IMPORTANTE: Esta capa NO contiene respuestas hardcodeadas ni
+ * mocks. Todas las respuestas provienen EXCLUSIVAMENTE de Vertex AI
+ * a través del backend NestJS. Si el backend falla, el error se
+ * propaga al store y la UI lo muestra como burbuja de error visible.
+ *
+ * Flujo:  [Chat UI] → [sendMessageToAI] → [/api/v1/ai/chat (NestJS)]
+ *        → [VertexAiService] → [Google Gen AI (gemini-2.5-flash)]
+ *        → respuesta natural del LLM al usuario.
  * ===================================================================
  */
 
@@ -14,12 +23,16 @@ import { supabase } from "@/shared/api/supabase";
 // TIPOS PÚBLICOS DEL CONTRATO LLM
 // ==============================================================
 
-/** Payload de entrada para el endpoint de IA */
-export interface AiChatRequest {
-  message: string;
+export interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
 }
 
-/** Payload de salida del backend (debe coincidir con ChatResponseDto) */
+export interface SendMessageOptions {
+  language?: "es" | "en" | "pt";
+  history?: ChatMessage[];
+}
+
 export interface AiChatResponse {
   reply: string;
   suggestions: string[];
@@ -34,8 +47,27 @@ export interface AiChatResponse {
 // CONFIGURACIÓN
 // ==============================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
-const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/ai/chat`;
+const ALLOWED_HOST_PATTERNS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/[a-z0-9-]+\.onrender\.com$/,
+  /^https?:\/\/[a-z0-9-]+\.render\.com$/,
+  /^https?:\/\/[a-z0-9-]+\.fly\.dev$/,
+  /^https?:\/\/[a-z0-9-]+\.railway\.app$/,
+  /^https?:\/\/api\.[a-z0-9-]+\.(com|dev|app)$/,
+];
+
+function isAllowedApiHost(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_HOST_PATTERNS.some((pattern) => pattern.test(parsed.origin));
+  } catch {
+    return false;
+  }
+}
+
+function getApiBaseUrl(): string {
+  return (import.meta.env.VITE_API_URL as string) || "http://localhost:3000";
+}
 
 // ==============================================================
 // FUNCIÓN PRINCIPAL
@@ -44,22 +76,29 @@ const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/ai/chat`;
 /**
  * sendMessageToAI(): Envía un mensaje del usuario al backend de IA.
  * ------------------------------------------------------------------
- * El backend NestJS (protegido por SupabaseAuthGuard) se encarga de:
- *  1. Validar el token del usuario.
- *  2. Aplicar rate limiting por userId.
- *  3. Inyectar el system prompt y delegar a Vertex AI.
- *  4. Devolver { reply, suggestions, metadata }.
- *
- * Si la petición falla por red, timeout o 5xx, se lanza un error
- * para que el store pueda mostrar un mensaje contextual al usuario.
+ * Soporta multi-idioma y memoria conversacional.
  */
-export async function sendMessageToAI(message: string): Promise<AiChatResponse> {
+export async function sendMessageToAI(
+  message: string,
+  options: SendMessageOptions = {},
+): Promise<AiChatResponse> {
   const trimmed = message.trim();
   if (!trimmed) {
     throw new Error("El mensaje no puede estar vacío");
   }
 
-  // 1. Obtener el Bearer token de la sesión actual de Supabase
+  const apiBaseUrl = getApiBaseUrl();
+  if (!isAllowedApiHost(apiBaseUrl)) {
+    const errorMessage =
+      `Configuración inválida: VITE_API_URL="${apiBaseUrl}" no apunta a un backend válido. ` +
+      `Verifica la variable de entorno en tu archivo .env o en el dashboard de Vercel. ` +
+      `Debe ser la URL del backend NestJS (e.g. https://sportmatch-api.onrender.com).`;
+    console.error("[sportyAiAPI]", errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  const chatEndpoint = `${apiBaseUrl}/api/v1/ai/chat`;
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -69,15 +108,26 @@ export async function sendMessageToAI(message: string): Promise<AiChatResponse> 
     throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
   }
 
-  // 2. Llamada HTTP al backend NestJS
-  const response = await fetch(CHAT_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ message: trimmed } satisfies AiChatRequest),
-  });
+  const body: Record<string, unknown> = { message: trimmed };
+  if (options.language) body.language = options.language;
+  if (options.history && options.history.length > 0) body.history = options.history;
+
+  let response: Response;
+  try {
+    response = await fetch(chatEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    const networkError = err instanceof Error ? err.message : "Error de red desconocido";
+    throw new Error(
+      `No se pudo contactar al asistente. Verifica tu conexión o inténtalo más tarde. (${networkError})`,
+    );
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -86,7 +136,6 @@ export async function sendMessageToAI(message: string): Promise<AiChatResponse> 
     if (response.status === 429) {
       throw new Error("Has enviado demasiados mensajes. Espera un momento.");
     }
-    // Intenta extraer el mensaje de error del backend
     const errorPayload = await response
       .json()
       .catch(() => ({ message: `HTTP ${response.status}` }));
@@ -95,5 +144,16 @@ export async function sendMessageToAI(message: string): Promise<AiChatResponse> 
     );
   }
 
-  return (await response.json()) as AiChatResponse;
+  let data: AiChatResponse;
+  try {
+    data = (await response.json()) as AiChatResponse;
+  } catch {
+    throw new Error("La respuesta del asistente no es JSON válido.");
+  }
+
+  if (typeof data?.reply !== "string" || data.reply.trim().length === 0) {
+    throw new Error("El asistente devolvió una respuesta vacía.");
+  }
+
+  return data;
 }

@@ -1,43 +1,55 @@
 // ============================================================
-// ai.service.ts — Capa de negocio
-// Orquesta: rate limiting + llamada a Vertex AI + formateo
+// server/src/ai/ai.service.ts — Capa de negocio
+// Orquesta: rate limiting granular + Vertex AI + formateo por endpoint
 // ============================================================
 
-import { Injectable, Logger, InternalServerErrorException } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  HttpException,
+  HttpStatus,
+} from "@nestjs/common";
 import { VertexAiService, VertexAiGenerationResult } from "./vertex-ai.service";
 import { ChatResponseDto } from "./dto/chat.dto";
+import { ChatMessageDto, ModerationResultDto } from "./dto/ai.dto";
 
 interface UserRateLimit {
   count: number;
   resetTime: number;
 }
 
+type RateLimitBucket = "chat" | "hashtags" | "comments" | "moderation";
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private readonly userRateLimits = new Map<string, UserRateLimit>();
+  private readonly userRateLimits = new Map<string, Map<RateLimitBucket, UserRateLimit>>();
   private readonly rateLimitWindowMs = 60_000; // 1 minuto
-  private readonly maxRequestsPerWindow = 20;
+
+  private readonly rateLimits: Record<RateLimitBucket, number> = {
+    chat: 20,
+    hashtags: 60,
+    comments: 30,
+    moderation: 100,
+  };
 
   constructor(private readonly vertexAiService: VertexAiService) {}
 
-  /**
-   * Procesa un mensaje del usuario autenticado.
-   * Aplica rate limiting, invoca Vertex AI y estructura la respuesta.
-   */
-  async chat(userId: string, message: string): Promise<ChatResponseDto> {
-    this.checkRateLimit(userId);
+  async chat(
+    userId: string,
+    message: string,
+    history?: ChatMessageDto[],
+  ): Promise<ChatResponseDto> {
+    this.checkRateLimit(userId, "chat");
 
     let result: VertexAiGenerationResult;
     try {
-      result = await this.vertexAiService.generateContent(message);
+      result = await this.vertexAiService.generateContent(message, { history });
     } catch (err) {
-      // Extrae un mensaje de error legible sin exponer detalles sensibles
       const rawError = err instanceof Error ? err.message : String(err);
       const friendlyMessage = this.parseVertexAiError(rawError);
-
-      this.logger.error(`AI generation failed for authenticated user: ${friendlyMessage}`);
-
+      this.logger.error(`AI chat failed for user ${userId}: ${friendlyMessage}`);
       throw new InternalServerErrorException(friendlyMessage);
     }
 
@@ -52,10 +64,123 @@ export class AiService {
     };
   }
 
-  /**
-   * Convierte errores crudos de Vertex AI en mensajes amigables para el usuario.
-   * Detecta patrones comunes: modelo no encontrado, region inválida, auth, etc.
-   */
+  async generateCommentSuggestions(
+    userId: string,
+    postContext: string,
+    partialText: string,
+    language?: "es" | "en" | "pt",
+  ): Promise<{
+    suggestions: string[];
+    metadata: { tokens: number; model: string; latencyMs: number };
+  }> {
+    this.checkRateLimit(userId, "comments");
+
+    const prompt = `Contexto del post: """${postContext.slice(0, 500)}"""
+
+Comentario parcial del usuario: """${partialText.slice(0, 200)}"""
+
+Genera 3 sugerencias cortas (máx 80 caracteres cada una) para completar este comentario.
+Responde ÚNICAMENTE con un JSON array de strings en este formato exacto:
+{"suggestions": ["sugerencia 1", "sugerencia 2", "sugerencia 3"]}`;
+
+    let result: VertexAiGenerationResult;
+    try {
+      result = await this.vertexAiService.generateContent(prompt, {
+        language: language ?? "es",
+        temperature: 0.7,
+      });
+    } catch (err) {
+      const rawError = err instanceof Error ? err.message : String(err);
+      throw new InternalServerErrorException(this.parseVertexAiError(rawError));
+    }
+
+    const suggestions = this.parseSuggestionList(result.text, 3);
+    return {
+      suggestions,
+      metadata: { tokens: result.tokens, model: result.model, latencyMs: result.latencyMs },
+    };
+  }
+
+  async generateHashtags(
+    userId: string,
+    content: string,
+    options?: { minTags?: number; maxTags?: number; language?: "es" | "en" | "pt" },
+  ): Promise<{ tags: string[]; metadata: { tokens: number; model: string; latencyMs: number } }> {
+    this.checkRateLimit(userId, "hashtags");
+
+    const minTags = options?.minTags ?? 3;
+    const maxTags = options?.maxTags ?? 5;
+    const language = options?.language ?? "es";
+
+    const prompt = `Contenido del post: """${content.slice(0, 1000)}"""
+
+Genera entre ${minTags} y ${maxTags} hashtags relevantes en ${language === "es" ? "español" : language === "pt" ? "portugués" : "inglés"}.
+Reglas estrictas:
+- Sin acentos, en minúsculas
+- Formato: "deporte-zona" (p. ej. "padel-lima"), "deporte-nivel" (p. ej. "tenis-intermedio") o términos genéricos (p. ej. "deporte", "amateur", "competitivo")
+- Devuelve SOLO el JSON array: {"tags": ["padel", "lima", "competitivo"]}`;
+
+    let result: VertexAiGenerationResult;
+    try {
+      result = await this.vertexAiService.generateContent(prompt, {
+        language,
+        temperature: 0.5,
+      });
+    } catch (err) {
+      const rawError = err instanceof Error ? err.message : String(err);
+      throw new InternalServerErrorException(this.parseVertexAiError(rawError));
+    }
+
+    const tags = this.parseHashtagsList(result.text, maxTags);
+    return {
+      tags,
+      metadata: { tokens: result.tokens, model: result.model, latencyMs: result.latencyMs },
+    };
+  }
+
+  async moderateContent(
+    userId: string,
+    text: string,
+    context: "post" | "comment" | "bio" | "ad",
+  ): Promise<ModerationResultDto> {
+    this.checkRateLimit(userId, "moderation");
+
+    const prompt = `Analiza el siguiente texto (contexto: ${context}) y clasifícalo en categorías de seguridad.
+
+Texto: """${text.slice(0, 2000)}"""
+
+Responde SOLO con un JSON en este formato exacto:
+{
+  "safe": boolean,
+  "flagged": boolean,
+  "categorias": {
+    "toxicity": number,
+    "harassment": number,
+    "sexual": number,
+    "violence": number
+  },
+  "confidencia": number
+}
+
+Reglas:
+- "safe": true si ninguna categoría supera 0.7
+- "flagged": true si "safe" es false
+- "confidencia" >= 0.8 si hay indicadores claros`;
+
+    let result: VertexAiGenerationResult;
+    try {
+      result = await this.vertexAiService.generateContent(prompt, {
+        language: "es",
+        temperature: 0.1,
+      });
+    } catch (err) {
+      const rawError = err instanceof Error ? err.message : String(err);
+      throw new InternalServerErrorException(this.parseVertexAiError(rawError));
+    }
+
+    return this.parseModerationResult(result.text, text);
+  }
+
   private parseVertexAiError(rawError: string): string {
     if (rawError.includes("NOT_FOUND") || rawError.includes("was not found")) {
       return "El modelo de IA no está disponible. Por favor, contacta al administrador.";
@@ -72,44 +197,120 @@ export class AiService {
     if (rawError.includes("DEADLINE_EXCEEDED") || rawError.includes("timeout")) {
       return "La IA tardó demasiado en responder. Por favor, intenta de nuevo.";
     }
-    // Mensaje genérico para errores no clasificados
     return "No se pudo procesar tu solicitud en este momento. Por favor, intenta de nuevo.";
   }
 
-  /**
-   * Rate limiting simple en memoria (suficiente para single-instance).
-   * Para producción multi-instancia, migrar a Redis (Bull/Throttler).
-   */
-  private checkRateLimit(userId: string): void {
+  private checkRateLimit(userId: string, bucket: RateLimitBucket): void {
     const now = Date.now();
-    const userLimit = this.userRateLimits.get(userId);
+    let userBuckets = this.userRateLimits.get(userId);
+    if (!userBuckets) {
+      userBuckets = new Map();
+      this.userRateLimits.set(userId, userBuckets);
+    }
+    const userLimit = userBuckets.get(bucket);
+    const max = this.rateLimits[bucket];
 
     if (!userLimit || now > userLimit.resetTime) {
-      this.userRateLimits.set(userId, {
-        count: 1,
-        resetTime: now + this.rateLimitWindowMs,
-      });
+      userBuckets.set(bucket, { count: 1, resetTime: now + this.rateLimitWindowMs });
       return;
     }
 
-    if (userLimit.count >= this.maxRequestsPerWindow) {
-      throw new InternalServerErrorException(
-        "Has excedido el límite de mensajes por minuto. Por favor, espera un momento.",
+    if (userLimit.count >= max) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: `Has excedido el límite de ${max} operaciones de ${bucket} por minuto. Por favor, espera un momento.`,
+          bucket,
+          retryAfterMs: this.rateLimitWindowMs,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
     userLimit.count++;
   }
 
-  /**
-   * Extrae sugerencias contextuales de la respuesta.
-   * Estrategia simple: si la IA termina con una pregunta o
-   * menciona acciones específicas, las extrae como sugerencias.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private extractSuggestions(_reply: string): string[] {
-    // Implementación simple: 3 sugerencias genéricas
-    // TODO: Mejorar con extracción semántica de la respuesta
-    return ["Buscar canchas cerca", "Ver mi racha", "Recomiéndame un partido"];
+  private extractSuggestions(reply: string): string[] {
+    return this.parseSuggestionList(reply, 4, [
+      "Buscar canchas cerca",
+      "Ver mi racha",
+      "Recomiéndame un partido",
+    ]);
+  }
+
+  private parseSuggestionList(text: string, max: number, fallback?: string[]): string[] {
+    const fallbackArr = fallback ?? [
+      "Buscar canchas cerca",
+      "Ver mi racha",
+      "Recomiéndame un partido",
+    ];
+    try {
+      const trimmed = text.trim();
+      const jsonMatch = trimmed.match(/\{[\s\S]*\}/) ?? trimmed.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as { suggestions?: unknown; tags?: unknown };
+        const arr = parsed.suggestions ?? parsed.tags;
+        if (Array.isArray(arr)) {
+          return arr.filter((s): s is string => typeof s === "string").slice(0, max);
+        }
+      }
+    } catch {
+      // No era JSON
+    }
+    return fallbackArr;
+  }
+
+  private parseHashtagsList(text: string, max: number): string[] {
+    const tags = this.parseSuggestionList(text, max, []);
+    return tags.map((t) =>
+      t
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, ""),
+    );
+  }
+
+  private parseModerationResult(text: string, originalText: string): ModerationResultDto {
+    try {
+      const trimmed = text.trim();
+      const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as {
+          safe?: boolean;
+          flagged?: boolean;
+          categorias?: {
+            toxicity?: number;
+            harassment?: number;
+            sexual?: number;
+            violence?: number;
+          };
+          confidencia?: number;
+        };
+        return {
+          safe: parsed.safe ?? true,
+          flagged: parsed.flagged ?? false,
+          categorias: {
+            toxicity: parsed.categorias?.toxicity ?? 0,
+            harassment: parsed.categorias?.harassment ?? 0,
+            sexual: parsed.categorias?.sexual ?? 0,
+            violence: parsed.categorias?.violence ?? 0,
+          },
+          confidencia: parsed.confidencia ?? 0.5,
+          preview: originalText.slice(0, 80),
+        };
+      }
+    } catch {
+      // No era JSON, fall back a permissive defaults
+    }
+    return {
+      safe: true,
+      flagged: false,
+      categorias: { toxicity: 0, harassment: 0, sexual: 0, violence: 0 },
+      confidencia: 0.3,
+      preview: originalText.slice(0, 80),
+    };
   }
 }
