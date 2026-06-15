@@ -507,5 +507,14 @@
     "intermedio": "Intermedio",
     "avanzado": "Avanzado",
     "pro": "Pro"
+  },
+  "ai_assistant": {
+    "suggestions": "Sugerencias",
+    "powered_by": "Respuestas generadas por IA · Vertex AI",
+    "input_placeholder": "Pregúntale a Sporty...",
+    "input_aria": "Escribe tu mensaje para Sporty",
+    "connecting": "Conectando con Sporty...",
+    "clear_chat": "Limpiar chat",
+    "online": "En línea"
   }
 }

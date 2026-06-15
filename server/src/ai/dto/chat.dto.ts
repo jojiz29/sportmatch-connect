@@ -10,6 +10,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsArray,
+  IsEnum,
   ValidateNested,
   MaxLength,
   MinLength,
@@ -101,4 +102,22 @@ export class ChatResponseDto {
 
   @ApiProperty({ type: ChatResponseMetadataDto })
   metadata!: ChatResponseMetadataDto;
+}
+
+// ==============================================================
+// SCRUM-345 — DTO para el endpoint de bienvenida del LLM
+// Genera el primer mensaje de Sporty dinámicamente con Vertex AI.
+// NO devuelve texto hardcoded: el LLM produce el contenido en
+// el idioma solicitado, considerando el contexto del usuario.
+// ==============================================================
+export class WelcomeRequestDto {
+  @ApiProperty({
+    description: "Idioma activo del usuario",
+    example: "es",
+    enum: ["es", "en", "pt"],
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(["es", "en", "pt"], { message: "Idioma debe ser es, en o pt" })
+  language?: "es" | "en" | "pt";
 }
