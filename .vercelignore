@@ -1,72 +1,124 @@
-# .vercelignore — Files NOT to upload to Vercel
-# Reduces deployment size and time
+# ============================================================
+# .vercelignore — SportMatch Connect
+# Solo el frontend se despliega en Vercel. El backend NestJS
+# corre en Render y NO debe incluirse en el upload de Vercel.
+#
+# ⚠️ CRÍTICO: NO excluir `**/*.ts` ni `**/*.tsx` aquí.
+# Vite compila TypeScript al vuelo durante `vite build`, así que
+# los archivos fuente DEBEN estar presentes en el upload.
+# Excluir `**/*.ts` rompe el build (registrado 15-jun-2026,
+# deployments dpl_2E3cLs5MP..., dpl_ATY8Jnnw..., dpl_AFJYqpV3...).
+# ============================================================
 
-# Dependencies (Vercel runs installCommand)
+# ─── Dependencies (Vercel ejecuta installCommand) ───
 node_modules
 **/node_modules
 **/node_modules/**
 
-# Source TypeScript files (only compiled JS is needed)
-server/src/
-**/*.ts
-!server/dist/**/*.js
-!api/**
+# ─── BACKEND COMPLETO (NUNCA necesario en build de Vercel) ───
+# Render maneja el deploy del backend. Excluir toda la carpeta
+# reduce ~80% del tamaño del upload y acelera el cache de Vercel.
+server/
+!server/README.md
 
-# Test files
+# ─── Source TypeScript/TSX — NECESARIOS para Vite ───
+# (NO escribir reglas `**/*.ts` ni `**/*.tsx`)
+
+# ─── Test files (no se usan en build de producción) ───
 **/*.spec.ts
+**/*.spec.tsx
 **/*.test.ts
+**/*.test.tsx
 **/__tests__/
+**/__mocks__/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+tests/
 
-# Documentation
+# ─── Documentación (no se sirve en runtime) ───
 **/*.md
-docs/
 **/README.md
+docs/
 
-# Build artifacts (frontend)
-node_modules/
-dist/
-build/
+# ─── Dev environment (NO necesarios para build) ───
+.agents/              # 543 archivos .md de skills de opencode
+.opencode/
+.lovable/
+.cursorrules
+.scratch/
+.claude/
+.tmp/
 
-# Local env files (NEVER upload credentials)
+# ─── Archive (legacy code, no se usa) ───
+archive/
+
+# ─── Scripts de utilidad (Jira, debug, etc.) ───
+scripts/jira/
+scripts/debug/
+scripts/*.mjs
+scripts/*.js
+scripts/*.ts
+
+# ─── Supabase (no se usa en build, DB está en cloud) ───
+supabase/
+!supabase/.gitkeep
+
+# ─── Deploy configs (Vercel lee el suyo del repo root) ───
+deploy/
+render.yaml
+railway.toml
+Dockerfile
+docker-compose.yml
+
+# ─── Local env files (NUNCA subir credenciales) ───
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
 server/.env
 server/.env.local
+server/.env.*.local
 
-# Git
+# ─── Git ───
 .git/
 .gitignore
 .gitattributes
 
-# Editor
+# ─── Editor ───
 .vscode/
 .idea/
 .DS_Store
 *.swp
 *.swo
+*~
+*.sublime-project
+*.sublime-workspace
 
-# Logs
+# ─── Logs ───
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Tests e2e
-tests/
-playwright-report/
-test-results/
-
-# Coverage
-coverage/
-.nyc_output/
-
-# Prisma generated client (not needed at runtime, Vercel uses DATABASE_URL directly)
-server/node_modules/.prisma
-server/node_modules/@prisma/client/runtime
-
-# Python (none in this project)
+# ─── Python (no hay pero por si acaso) ───
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
 
-# Temporary
+# ─── Empty/unused folders ───
+api/                  # vacío, legacy serverless movido a archive/
+public/locales/       # duplicado obsoleto (i18n ahora en src/shared/i18n)
+
+# ─── Misc ───
 tmp/
 temp/
+*.tsbuildinfo
+.eslintcache
+.cache/
