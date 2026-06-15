@@ -43,6 +43,8 @@ interface AiAssistantState {
   error: string | null;
   /** Idioma activo del usuario (SCRUM-341) */
   language: SupportedLanguage;
+  /** Flag interno: previene múltiples loadWelcome simultáneos (race condition) */
+  welcomeLoading: boolean;
 
   // --- Acciones ---
   openChat: () => void;
@@ -75,6 +77,7 @@ export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
   isOpen: false,
   error: null,
   language: (i18n.language?.split("-")[0] as SupportedLanguage) ?? "es",
+  welcomeLoading: false,
 
   openChat: () => set({ isOpen: true }),
   closeChat: () => set({ isOpen: false }),
@@ -143,10 +146,24 @@ export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
 
   // --- Carga el primer mensaje del LLM (Vertex AI) ---
   // Se llama cuando el usuario abre el chat por primera vez.
-  // Si ya hay mensajes, no hace nada (idempotente).
+  // Robusto contra:
+  //   - Llamadas paralelas (race condition): usa flag `welcomeLoading`
+  //   - Loop de useEffect: si ya hay mensajes o isTyping, no hace nada
+  //   - Errores: muestra mensaje de error con variant="error" para la UI
   loadWelcome: async () => {
-    if (get().messages.length > 0) return;
-    set({ isTyping: true, error: null });
+    const state = get();
+    // Si ya hay mensajes O ya se está cargando, no hacer nada.
+    // Esto previene el loop infinito que ocurría cuando ChatInterface
+    // tenía `loadWelcome` en las dependencias de useEffect (cada
+    // cambio de estado creaba una nueva referencia de la función).
+    if (state.messages.length > 0 || state.isTyping || state.welcomeLoading) {
+      return;
+    }
+
+    // Marcar como loading INMEDIATAMENTE antes del await para que
+    // cualquier llamada concurrente vea el flag y se salga.
+    set({ welcomeLoading: true, isTyping: true, error: null });
+
     try {
       const response: AiChatResponse = await fetchWelcomeMessage({
         language: get().language,
@@ -158,7 +175,7 @@ export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
         timestamp: new Date().toISOString(),
         suggestions: response.suggestions,
       };
-      set({ messages: [aiMsg], isTyping: false });
+      set({ messages: [aiMsg], isTyping: false, welcomeLoading: false });
     } catch (err) {
       const errorText = err instanceof Error ? err.message : "Error desconocido";
       const errorMsg: AiMessage = {
@@ -168,7 +185,12 @@ export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
         timestamp: new Date().toISOString(),
         variant: "error",
       };
-      set({ messages: [errorMsg], isTyping: false, error: errorText });
+      set({
+        messages: [errorMsg],
+        isTyping: false,
+        welcomeLoading: false,
+        error: errorText,
+      });
     }
   },
 }));

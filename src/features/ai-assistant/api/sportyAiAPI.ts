@@ -20,6 +20,28 @@
 import { supabase } from "@/shared/api/supabase";
 
 // ==============================================================
+// HELPERS DE FETCH CON TIMEOUT
+// ==============================================================
+// fetchWithTimeout(): Wrapper de fetch() con AbortSignal que aborta
+// automáticamente después de `timeoutMs`. Sin esto, un backend colgado
+// (ej. Render free tier dormido) podía hacer que el chat se quedara
+// en "Conectando con Sporty..." indefinidamente.
+//
+// El error resultante es un DOMException con `name === "AbortError"`,
+// que el catch del caller traduce a un mensaje amigable para el usuario.
+const DEFAULT_TIMEOUT_MS = 30000; // 30 segundos es suficiente para LLMs
+
+function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+// ==============================================================
 // TIPOS PÚBLICOS DEL CONTRATO LLM
 // ==============================================================
 
@@ -101,14 +123,18 @@ export async function fetchWelcomeMessage(
   const body: Record<string, unknown> = {};
   if (options.language) body.language = options.language;
 
-  const response = await fetch(`${apiBaseUrl}/api/v1/ai/chat/welcome`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
+  const response = await fetchWithTimeout(
+    `${apiBaseUrl}/api/v1/ai/chat/welcome`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    30000,
+  );
 
   if (!response.ok) {
     if (response.status === 401) throw new Error("No autorizado. Inicia sesión de nuevo.");
@@ -165,16 +191,26 @@ export async function sendMessageToAI(
 
   let response: Response;
   try {
-    response = await fetch(chatEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    response = await fetchWithTimeout(
+      chatEndpoint,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    });
+      30000,
+    );
   } catch (err) {
     const networkError = err instanceof Error ? err.message : "Error de red desconocido";
+    // Si fue abort por timeout, mensaje específico para el usuario
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        "El asistente está tardando demasiado en responder. Por favor, intenta de nuevo.",
+      );
+    }
     throw new Error(
       `No se pudo contactar al asistente. Verifica tu conexión o inténtalo más tarde. (${networkError})`,
     );
