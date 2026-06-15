@@ -290,7 +290,12 @@ export const backendApi = {
 
     async verifyDni(
       token: string,
-      payload: { dni: string; documentPath?: string; selfiePath?: string },
+      payload: {
+        dni: string;
+        documentPath?: string;
+        selfiePath?: string;
+        consentimientoBio?: boolean;
+      },
     ) {
       return fetchApi("/profiles/verify-dni", {
         method: "POST",

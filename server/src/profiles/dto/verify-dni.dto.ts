@@ -1,10 +1,10 @@
 // ============================================================
 // verify-dni.dto.ts — DTO para verificación de identidad DNI 2.0
-// Soporta flujo v1 (solo número) y v2 (documento + selfie)
+// Soporta flujo v1 (solo número) y v2 (documento + selfie + consentimiento)
 // ============================================================
 
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength, Equals } from "class-validator";
 
 export class VerifyDniDto {
   @ApiProperty({ example: "70123456", description: "DNI peruano de 8 dígitos" })
@@ -13,8 +13,8 @@ export class VerifyDniDto {
   dni!: string;
 
   @ApiPropertyOptional({
-    example: "identity-documents/70123456-dni-front.webp",
-    description: "Ruta en Supabase Storage del documento DNI (frente)",
+    example: "user-id/dni-front_123.webp",
+    description: "Ruta temporal en Supabase Storage del documento DNI (frente)",
   })
   @IsOptional()
   @IsString()
@@ -22,13 +22,22 @@ export class VerifyDniDto {
   documentPath?: string;
 
   @ApiPropertyOptional({
-    example: "identity-documents/70123456-selfie.webp",
-    description: "Ruta en Supabase Storage de la selfie de verificación",
+    example: "user-id/selfie_123.webp",
+    description: "Ruta temporal en Supabase Storage de la selfie de verificación",
   })
   @IsOptional()
   @IsString()
   @MaxLength(512)
   selfiePath?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: "Consentimiento explícito para procesamiento biométrico (obligatorio en v2)",
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Equals(true, { message: "Debes aceptar el consentimiento biométrico para continuar." })
+  consentimientoBio?: boolean;
 }
 
 export interface DniAiValidationResult {

@@ -330,6 +330,18 @@ function Profile() {
 
   const handleSave = () => handleFormSubmit();
 
+  const handleDniVerificationSuccess = (updatedProfile: User) => {
+    useAuthStore.setState({ user: updatedProfile });
+    useProfileStore.setState({ profile: updatedProfile });
+  };
+
+  const handleDniVerificationFailure = (partial: Partial<User>) => {
+    if (!profile) return;
+    const updatedUser = { ...profile, ...partial };
+    useAuthStore.setState({ user: updatedUser });
+    useProfileStore.setState({ profile: updatedUser });
+  };
+
   // === BLOQUE: handleFileChange — Subida de avatar con moderación NSFW ===
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const target = e.target;
@@ -705,6 +717,8 @@ function Profile() {
                 <DniVerificationDialog
                   profile={profile}
                   attemptsLeft={3 - (profile.dni_intentos || 0)}
+                  onSuccess={handleDniVerificationSuccess}
+                  onFailure={handleDniVerificationFailure}
                 />
               </div>
             )}

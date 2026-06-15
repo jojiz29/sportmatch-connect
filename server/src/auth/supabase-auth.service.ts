@@ -97,4 +97,13 @@ export class SupabaseAuthService {
     const mimeType = data.type || "image/webp";
     return { data: Buffer.from(arrayBuffer), mimeType };
   }
+
+  async deleteStorageObjects(bucket: string, paths: string[]): Promise<void> {
+    if (!this.isConfigured || paths.length === 0) return;
+
+    const { error } = await this.supabaseAdmin.storage.from(bucket).remove(paths);
+    if (error) {
+      console.warn(`Failed to delete storage objects from ${bucket}:`, error.message);
+    }
+  }
 }

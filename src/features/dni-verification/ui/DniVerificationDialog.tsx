@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Camera, CheckCircle2, CreditCard, Loader2, UserRound } from "lucide-react";
 import { toast } from "sonner";
@@ -15,7 +15,6 @@ import { uploadIdentityImage } from "../lib/uploadIdentityImage";
 import { verifyDniIdentity } from "../api/dniVerificationApi";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { useProfileStore } from "@/features/profile/useProfileStore";
 import type { User } from "@/entities/types";
 
 type WizardStep = "dni" | "document" | "selfie" | "review";
@@ -24,6 +23,8 @@ interface DniVerificationDialogProps {
   profile: User;
   attemptsLeft: number;
   triggerLabel?: string;
+  onSuccess: (updatedProfile: User) => void;
+  onFailure: (partial: Partial<User>) => void;
 }
 
 interface ImageCaptureProps {
@@ -43,13 +44,14 @@ function ImageCaptureSlot({
   isUploading,
   onFileSelected,
 }: ImageCaptureProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("La imagen debe ser menor a 5MB");
+      toast.error(t("dni_verification.file_too_large"));
       return;
     }
     onFileSelected(file);
@@ -94,6 +96,8 @@ export function DniVerificationDialog({
   profile,
   attemptsLeft,
   triggerLabel,
+  onSuccess,
+  onFailure,
 }: DniVerificationDialogProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -104,9 +108,18 @@ export function DniVerificationDialog({
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [documentPreview, setDocumentPreview] = useState<string | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const revokePreview = (url: string | null) => {
+    if (url && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const resetWizard = () => {
+    revokePreview(documentPreview);
+    revokePreview(selfiePreview);
     setStep("dni");
     setDni("");
     setDniError("");
@@ -114,6 +127,7 @@ export function DniVerificationDialog({
     setSelfieFile(null);
     setDocumentPreview(null);
     setSelfiePreview(null);
+    setConsentAccepted(false);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -121,15 +135,20 @@ export function DniVerificationDialog({
     if (!nextOpen) resetWizard();
   };
 
+  useEffect(() => {
+    return () => {
+      revokePreview(documentPreview);
+      revokePreview(selfiePreview);
+    };
+  }, [documentPreview, selfiePreview]);
+
   const handleVerifyDemo = () => {
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
       if (dni === "99999999") {
         const nextIntentos = (profile.dni_intentos || 0) + 1;
-        const updatedUser = { ...profile, dni_intentos: nextIntentos };
-        useAuthStore.setState({ user: updatedUser });
-        useProfileStore.setState({ profile: updatedUser });
+        onFailure({ dni_intentos: nextIntentos });
         const left = 3 - nextIntentos;
         setDniError(
           t("dni_verification.name_mismatch", {
@@ -152,9 +171,9 @@ export function DniVerificationDialog({
         trust_score: Math.min(100, (profile.trust_score || 0) + 15),
         dni_verification_version: "v2",
         dni_ai_confidence: 0.95,
+        consentimiento_bio: new Date().toISOString(),
       };
-      useAuthStore.setState({ user: updatedUser });
-      useProfileStore.setState({ profile: updatedUser });
+      onSuccess(updatedUser);
       toast.success(t("dni_verification.success_toast"));
       setOpen(false);
       resetWizard();
@@ -168,6 +187,10 @@ export function DniVerificationDialog({
     }
     if (!documentFile || !selfieFile) {
       toast.error(t("dni_verification.missing_images"));
+      return;
+    }
+    if (!consentAccepted) {
+      toast.error(t("dni_verification.consent_required"));
       return;
     }
 
@@ -189,7 +212,12 @@ export function DniVerificationDialog({
         uploadIdentityImage(profile.id, selfieFile, "selfie"),
       ]);
 
-      await verifyDniIdentity(token, { dni, documentPath, selfiePath });
+      await verifyDniIdentity(token, {
+        dni,
+        documentPath,
+        selfiePath,
+        consentimientoBio: true,
+      });
 
       const { data: updatedProfile, error: fetchErr } = await supabase
         .from("profiles")
@@ -198,8 +226,7 @@ export function DniVerificationDialog({
         .single();
 
       if (!fetchErr && updatedProfile) {
-        useAuthStore.setState({ user: updatedProfile as User });
-        useProfileStore.setState({ profile: updatedProfile as User });
+        onSuccess(updatedProfile as User);
       }
 
       toast.success(t("dni_verification.success_toast"));
@@ -217,13 +244,23 @@ export function DniVerificationDialog({
         .single();
 
       if (currentProfile) {
-        const updatedUser = { ...profile, dni_intentos: currentProfile.dni_intentos };
-        useAuthStore.setState({ user: updatedUser });
-        useProfileStore.setState({ profile: updatedUser });
+        onFailure({ dni_intentos: currentProfile.dni_intentos });
       }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const setDocumentWithPreview = (file: File) => {
+    revokePreview(documentPreview);
+    setDocumentFile(file);
+    setDocumentPreview(URL.createObjectURL(file));
+  };
+
+  const setSelfieWithPreview = (file: File) => {
+    revokePreview(selfiePreview);
+    setSelfieFile(file);
+    setSelfiePreview(URL.createObjectURL(file));
   };
 
   const stepTitle: Record<WizardStep, string> = {
@@ -247,7 +284,7 @@ export function DniVerificationDialog({
         ? Boolean(documentFile)
         : step === "selfie"
           ? Boolean(selfieFile)
-          : Boolean(documentFile && selfieFile);
+          : Boolean(documentFile && selfieFile && consentAccepted);
 
   const goNext = () => {
     if (step === "dni") setStep("document");
@@ -319,10 +356,7 @@ export function DniVerificationDialog({
               previewUrl={documentPreview}
               captureMode="environment"
               isUploading={false}
-              onFileSelected={(file) => {
-                setDocumentFile(file);
-                setDocumentPreview(URL.createObjectURL(file));
-              }}
+              onFileSelected={setDocumentWithPreview}
             />
           )}
 
@@ -333,10 +367,7 @@ export function DniVerificationDialog({
               previewUrl={selfiePreview}
               captureMode="user"
               isUploading={false}
-              onFileSelected={(file) => {
-                setSelfieFile(file);
-                setSelfiePreview(URL.createObjectURL(file));
-              }}
+              onFileSelected={setSelfieWithPreview}
             />
           )}
 
@@ -368,6 +399,17 @@ export function DniVerificationDialog({
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
                 {t("dni_verification.review_note")}
               </p>
+              <label className="flex items-start gap-2.5 cursor-pointer text-left">
+                <input
+                  type="checkbox"
+                  checked={consentAccepted}
+                  onChange={(e) => setConsentAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border accent-primary shrink-0"
+                />
+                <span className="text-[11px] text-muted-foreground leading-snug">
+                  {t("dni_verification.consent_label")}
+                </span>
+              </label>
             </div>
           )}
 
@@ -406,8 +448,8 @@ export function DniVerificationDialog({
             <button
               type="button"
               onClick={handleSubmit}
-              className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold cursor-pointer flex items-center gap-1.5"
-              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              disabled={isSubmitting || !consentAccepted}
             >
               {isSubmitting ? (
                 <>
@@ -425,7 +467,7 @@ export function DniVerificationDialog({
             <button
               type="button"
               onClick={goNext}
-              className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold cursor-pointer disabled:opacity-50"
               disabled={!canGoNext || isSubmitting}
             >
               {t("dni_verification.next")}

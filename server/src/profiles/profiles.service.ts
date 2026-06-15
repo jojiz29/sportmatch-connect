@@ -88,7 +88,7 @@ export class ProfilesService {
   }
 
   async verifyDni(userId: string, payload: VerifyDniDto) {
-    const { dni, documentPath, selfiePath } = payload;
+    const { dni, documentPath, selfiePath, consentimientoBio } = payload;
     const isV2 = Boolean(documentPath && selfiePath);
 
     try {
@@ -101,6 +101,12 @@ export class ProfilesService {
       }
       if (selfiePath && !documentPath) {
         throw new BadRequestException("Debes subir la foto del documento DNI.");
+      }
+
+      if (isV2 && consentimientoBio !== true) {
+        throw new BadRequestException(
+          "Debes aceptar el consentimiento biométrico para continuar con la verificación.",
+        );
       }
 
       const profile = await this.prisma.profiles.findUnique({
@@ -141,34 +147,39 @@ export class ProfilesService {
       if (isV2) {
         this.assertIdentityPathOwnership(userId, documentPath!);
         this.assertIdentityPathOwnership(userId, selfiePath!);
-        aiValidation = await this.validateDniWithVertexAi(dni, documentPath!, selfiePath!);
 
-        if (!aiValidation.isValidDocument) {
-          await this.incrementDniAttempts(userId);
-          throw new BadRequestException(
-            `El documento no parece ser un DNI peruano válido. ${aiValidation.reason}`,
-          );
-        }
+        try {
+          aiValidation = await this.validateDniWithVertexAi(dni, documentPath!, selfiePath!);
 
-        if (!aiValidation.dniMatches) {
-          await this.incrementDniAttempts(userId);
-          throw new BadRequestException(
-            "El número de DNI en la imagen no coincide con el ingresado.",
-          );
-        }
+          if (!aiValidation.isValidDocument) {
+            await this.incrementDniAttempts(userId);
+            throw new BadRequestException(
+              `El documento no parece ser un DNI peruano válido. ${aiValidation.reason}`,
+            );
+          }
 
-        if (!aiValidation.faceMatch) {
-          await this.incrementDniAttempts(userId);
-          throw new BadRequestException(
-            "La selfie no coincide con la foto del documento. Intenta con mejor iluminación.",
-          );
-        }
+          if (!aiValidation.dniMatches) {
+            await this.incrementDniAttempts(userId);
+            throw new BadRequestException(
+              "El número de DNI en la imagen no coincide con el ingresado.",
+            );
+          }
 
-        if (aiValidation.confidence < 0.65) {
-          await this.incrementDniAttempts(userId);
-          throw new BadRequestException(
-            "No pudimos validar tu identidad con suficiente confianza. Intenta con fotos más claras.",
-          );
+          if (!aiValidation.faceMatch) {
+            await this.incrementDniAttempts(userId);
+            throw new BadRequestException(
+              "La selfie no coincide con la foto del documento. Intenta con mejor iluminación.",
+            );
+          }
+
+          if (aiValidation.confidence < 0.65) {
+            await this.incrementDniAttempts(userId);
+            throw new BadRequestException(
+              "No pudimos validar tu identidad con suficiente confianza. Intenta con fotos más claras.",
+            );
+          }
+        } finally {
+          await this.deleteTransientIdentityFiles(documentPath!, selfiePath!);
         }
       }
 
@@ -246,9 +257,8 @@ export class ProfilesService {
           fecha_verificacion: new Date(),
           trust_score: Math.min(100, (profile.trust_score || 0) + 15),
           dni_verification_version: isV2 ? "v2" : "v1",
-          dni_document_path: isV2 ? documentPath : null,
-          dni_selfie_path: isV2 ? selfiePath : null,
           dni_ai_confidence: aiValidation?.confidence ?? null,
+          consentimiento_bio: isV2 ? new Date() : null,
         },
       });
 
@@ -262,6 +272,7 @@ export class ProfilesService {
           trust_score: updated.trust_score,
           dni_verification_version: updated.dni_verification_version,
           dni_ai_confidence: updated.dni_ai_confidence,
+          consentimiento_bio: updated.consentimiento_bio,
         },
       };
     } catch (err) {
@@ -271,10 +282,41 @@ export class ProfilesService {
   }
 
   private assertIdentityPathOwnership(userId: string, storagePath: string): void {
+    if (!storagePath || typeof storagePath !== "string") {
+      throw new BadRequestException("Ruta de imagen inválida.");
+    }
+
+    // OWASP: Evitar Path Traversal rechazando secuencias ".." y barras diagonales inversas "\"
+    if (storagePath.includes("..") || storagePath.includes("\\")) {
+      throw new BadRequestException("Ruta de imagen maliciosa detectada.");
+    }
+
+    // OWASP: Rechazar rutas absolutas o esquemas de protocolo (que comiencen con / o contengan :)
+    if (storagePath.startsWith("/") || storagePath.includes(":")) {
+      throw new BadRequestException("Ruta absoluta o esquema no permitido.");
+    }
+
+    // OWASP: Validar caracteres contra una lista blanca limpia para prevenir escapes, inyecciones y bypasses
+    // Permitimos: alfanuméricos, guiones bajos, puntos, barras diagonales y guiones comunes (colocado al final para no requerir escape).
+    const pathRegex = /^[a-zA-Z0-9_./-]+$/;
+    if (!pathRegex.test(storagePath)) {
+      throw new BadRequestException("La ruta contiene caracteres no permitidos.");
+    }
+
+    // Eliminar barras diagonales iniciales redundantes para normalizar la ruta
     const normalized = storagePath.replace(/^\/+/, "");
+
+    // Validar control de propiedad (IDOR): la ruta debe iniciar con la carpeta del usuario autenticado
     if (!normalized.startsWith(`${userId}/`)) {
       throw new BadRequestException("Ruta de imagen no autorizada para este usuario.");
     }
+  }
+
+  private async deleteTransientIdentityFiles(
+    documentPath: string,
+    selfiePath: string,
+  ): Promise<void> {
+    await this.supabaseAuth.deleteStorageObjects(IDENTITY_BUCKET, [documentPath, selfiePath]);
   }
 
   private async incrementDniAttempts(userId: string) {

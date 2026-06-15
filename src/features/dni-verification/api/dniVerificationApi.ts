@@ -4,6 +4,7 @@ export interface VerifyDniPayload {
   dni: string;
   documentPath?: string;
   selfiePath?: string;
+  consentimientoBio?: boolean;
 }
 
 export interface VerifyDniResponse {
@@ -16,6 +17,7 @@ export interface VerifyDniResponse {
     trust_score: number;
     dni_verification_version?: string | null;
     dni_ai_confidence?: number | null;
+    consentimiento_bio?: string | null;
   };
   error?: string;
 }
