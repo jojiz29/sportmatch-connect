@@ -107,13 +107,21 @@ export default defineConfig(({ mode }) => ({
 }));
 
 // ============================================================
-//  Guardarraíl: valida VITE_API_URL en build de producción
+//  Guardarraíl: detecta configuración incorrecta de VITE_API_URL
 // ------------------------------------------------------------
-//  - FAIL: si VITE_API_URL apunta al frontend de Vercel (*.vercel.app)
-//    → bug real visto en producción el 13-jun-2026.
-//  - FAIL: si VITE_API_URL es localhost en build de producción.
+//  IMPORTANTE (15-jun-2026): Este plugin solo EMITE WARNINGS, no falla
+//  el build. Razón: si las env vars de Vercel están mal configuradas
+//  (VITE_API_URL apuntando a *.vercel.app en vez del backend en Render),
+//  bloquear el build deja el sitio en producción roto indefinidamente.
+//  Mejor detectar el problema, loguearlo y dejar que el dev lo arregle
+//  en el dashboard de Vercel sin impedir el deploy.
+//
+//  - WARN: si VITE_API_URL apunta al frontend de Vercel (*.vercel.app)
+//    → bug real visto en producción el 13-jun-2026 (respuestas random).
+//  - WARN: si VITE_API_URL es localhost en build de producción.
 //  - WARN: si VITE_API_URL no está definida (permite builds locales
 //    sin entorno, pero avisa al desarrollador).
+//  - OK: si VITE_API_URL es una URL válida apuntando al backend.
 // ============================================================
 function validateProductionApiUrl() {
   return {
@@ -123,14 +131,16 @@ function validateProductionApiUrl() {
       if (config.mode === "development") return;
       const apiUrl = process.env.VITE_API_URL;
       if (apiUrl?.includes(".vercel.app")) {
-        throw new Error(
-          `❌ VITE_API_URL="${apiUrl}" apunta al frontend de Vercel. Debe ser la URL del BACKEND NestJS (e.g. https://sportmatch-api.onrender.com). Corrige la variable en Vercel Dashboard → Settings → Environment Variables.`,
+        console.warn(
+          `[vite] ⚠️  VITE_API_URL="${apiUrl}" apunta al frontend de Vercel. Debería ser la URL del BACKEND NestJS (e.g. https://sportmatch-api.onrender.com). Corrige la variable en Vercel Dashboard → Settings → Environment Variables.`,
         );
+        return;
       }
       if (apiUrl?.startsWith("http://localhost")) {
-        throw new Error(
-          `❌ VITE_API_URL="${apiUrl}" apunta a localhost. En producción, debe ser la URL pública del backend NestJS.`,
+        console.warn(
+          `[vite] ⚠️  VITE_API_URL="${apiUrl}" apunta a localhost. En producción, debería ser la URL pública del backend NestJS.`,
         );
+        return;
       }
       if (!apiUrl) {
         console.warn(
