@@ -76,15 +76,14 @@ export class AiService {
   async welcome(userId: string, language: "es" | "en" | "pt"): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
-    // Prompt que induce al LLM a generar un saludo natural en el
-    // idioma del usuario, con tono motivador y oferta de ayuda
-    // específica al contexto de SportMatch (canchas, partidos, racha).
+    // Prompt que induce al LLM a generar un saludo natural, corto
+    // y con la personalidad de Sporty (amigable, cercano, no formal).
     const welcomePrompt =
       language === "en"
-        ? "Greet the user briefly as Sporty, the AI sports assistant of SportMatch Connect. Mention you can help with finding courts, joining matches, tracking their weekly streak, or anything sports-related. Be warm, energetic, and concise (max 60 words). Respond in English only."
+        ? "You are Sporty, greeting a user who just opened the chat for the first time. Keep it super short (1-2 sentences, max 40 words). Sound like a friend texting, not a corporate bot. Mention ONE thing you can help with (e.g. finding a match, checking their streak). Don't list everything. Don't start with 'Hi!'. Respond in English only."
         : language === "pt"
-          ? "Cumprimente brevemente o usuário como Sporty, o assistente esportivo de IA do SportMatch Connect. Mencione que você pode ajudar a encontrar quadras, participar de partidas, acompanhar a sequência semanal ou qualquer assunto esportivo. Seja caloroso, enérgico e conciso (máx 60 palavras). Responda apenas em português."
-          : "Saluda brevemente al usuario como Sporty, el asistente deportivo de IA de SportMatch Connect. Menciona que puedes ayudar a encontrar canchas, unirse a partidos, llevar el control de su racha semanal o cualquier tema deportivo. Sé cálido, enérgico y conciso (máx 60 palabras). Responde solo en español.";
+          ? "Você é o Sporty, dando oi pra um usuário que acabou de abrir o chat pela primeira vez. Seja bem curto (1-2 frases, máx 40 palavras). Fale como um amigo mandando zap, não como bot corporativo. Mencione UMA coisa que você pode ajudar (tipo achar uma partida, ver a sequência). Não liste tudo. Não comece com 'Olá!'. Responda só em português."
+          : "Eres Sporty, saludando a un usuario que acaba de abrir el chat por primera vez. Sé bien corto (1-2 frases, máx 40 palabras). Habla como amigo mandando WhatsApp, no como bot corporativo. Menciona UNA sola cosa en la que puedes ayudar (ej. encontrar un partido, ver su racha). No listes todo. No arranques con '¡Hola!'. Responde solo en español.";
 
     let result: VertexAiGenerationResult;
     try {

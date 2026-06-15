@@ -41,7 +41,8 @@ interface AiAssistantState {
   isOpen: boolean;
   /** Último error de la API (si lo hubo) */
   error: string | null;
-  /** Idioma activo del usuario (SCRUM-341) */
+  /** Idioma activo del chat. Por defecto "en" (inglés).
+   *  Se puede override con VITE_CHAT_DEFAULT_LANG o setLanguage(). */
   language: SupportedLanguage;
   /** Flag interno: previene múltiples loadWelcome simultáneos (race condition) */
   welcomeLoading: boolean;
@@ -65,6 +66,22 @@ function generateId(): string {
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
+// === BLOQUE: RESOLUCIÓN DE IDIOMA POR DEFECTO ===
+// Prioridad:
+//   1. VITE_CHAT_DEFAULT_LANG (override de build para presentaciones)
+//   2. Idioma del i18n del navegador (es-MX, en-US, etc.) → mapea a es/en/pt
+//   3. "en" (por defecto: inglés para showcase internacional)
+function resolveDefaultLanguage(): SupportedLanguage {
+  const override = import.meta.env.VITE_CHAT_DEFAULT_LANG as string | undefined;
+  if (override === "es" || override === "en" || override === "pt") return override;
+
+  const browserLang = i18n.language?.split("-")[0];
+  if (browserLang === "es" || browserLang === "en" || browserLang === "pt") {
+    return browserLang;
+  }
+  return "en";
+}
+
 // === BLOQUE: STORE ZUSTAND ===
 // Administra el estado del chat: mensajes, typing, visibilidad.
 // NO usa persist (consistente con useChatStore: sesión efímera).
@@ -76,7 +93,7 @@ export const useAiAssistantStore = create<AiAssistantState>((set, get) => ({
   isTyping: false,
   isOpen: false,
   error: null,
-  language: (i18n.language?.split("-")[0] as SupportedLanguage) ?? "es",
+  language: resolveDefaultLanguage(),
   welcomeLoading: false,
 
   openChat: () => set({ isOpen: true }),

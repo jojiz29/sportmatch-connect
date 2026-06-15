@@ -516,5 +516,14 @@
     "connecting": "Conectando con Sporty...",
     "clear_chat": "Limpiar chat",
     "online": "En línea"
+  },
+  "voice": {
+    "start_recording": "Empezar a hablar",
+    "stop_recording": "Detener grabación",
+    "start_recording_web": "Toca para hablar (Web Speech API)",
+    "start_recording_cloud": "Toca para hablar (Google Cloud)",
+    "read_aloud": "Leer mensaje en voz alta",
+    "stop_speaking": "Detener lectura",
+    "listening": "Escuchando... {{transcript}}"
   }
 }
