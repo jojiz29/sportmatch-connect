@@ -68,11 +68,41 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
   // SCRUM-345 — Cuando el chat se abre por primera vez, pedir al LLM
   // (Vertex AI) el primer mensaje de bienvenida dinámico. NO quemamos
   // texto en el JSX: el LLM lo genera en el idioma activo del usuario.
+  //
+  // PATRÓN ROBUSTO contra loops infinitos:
+  // - Usamos useRef para guardar la referencia de loadWelcome, así el
+  //   useEffect NO se vuelve a disparar cuando el store cambia.
+  // - loadWelcome internamente es idempotente (Fix A en el store).
+  // - Si pasan 15s y loadWelcome no completa, mostramos mensaje de
+  //   error con variant="error" (Fix C) para que el usuario no se
+  //   quede colgado viendo "Conectando con Sporty...".
+  const loadWelcomeRef = useRef(loadWelcome);
+  loadWelcomeRef.current = loadWelcome;
   useEffect(() => {
-    if (isOpen) {
-      void loadWelcome();
-    }
-  }, [isOpen, loadWelcome]);
+    if (!isOpen) return;
+    loadWelcomeRef.current();
+    // Watchdog: si pasan 15s y el LLM no responde, mostramos error.
+    const watchdog = setTimeout(() => {
+      const state = useAiAssistantStore.getState();
+      if (state.isTyping && state.messages.length === 0) {
+        useAiAssistantStore.setState({
+          isTyping: false,
+          welcomeLoading: false,
+          error: "El asistente está tardando en responder. Por favor, intenta de nuevo.",
+          messages: [
+            {
+              id: `timeout-${Date.now()}`,
+              role: "system",
+              text: "El asistente está tardando en responder. Por favor, intenta de nuevo o revisa tu conexión.",
+              timestamp: new Date().toISOString(),
+              variant: "error",
+            },
+          ],
+        });
+      }
+    }, 15000);
+    return () => clearTimeout(watchdog);
+  }, [isOpen]);
 
   const handleSend = async () => {
     const text = input.trim();
