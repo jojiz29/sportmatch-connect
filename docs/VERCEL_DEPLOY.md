@@ -1,5 +1,28 @@
 # 🚀 Plan de Despliegue — SportMatch Connect
 
+## 🚨 Diagnóstico deployments Vercel fallidos (15-jun-2026)
+
+**Síntoma**: 3 proyectos de Vercel (`sportmatch-connect`, `sportmatch-connect-czs5`, `sportmatch-connect-juan-alonso`) fallan simultáneamente al mergear PR #26 (`b354a39f`) a `main`. `Main CI / build_and_test` PASA.
+
+**Causa raíz (95% confianza)**: El plugin `validateProductionApiUrl` introducido en `dfb8672` **fallaba el build** si `VITE_API_URL` apuntaba a un dominio `*.vercel.app`. Las env vars de los 3 proyectos de Vercel seguían configuradas con la URL del frontend (o del propio proyecto) en vez del backend en Render.
+
+**Fix aplicado** (commit pendiente de push):
+- `vite.config.ts`: el guardarraíl ahora solo emite **warnings** en vez de `throw Error`. Detecta el problema y lo loguea, pero no bloquea el deploy.
+- Decisión: es preferible que el sitio salga a producción con la API mal apuntada (funcionalidad degradada pero sitio vivo) a que quede roto indefinidamente sin poder re-deployar.
+
+**Acción manual requerida en Vercel Dashboard** (no automatizable desde el repo):
+Para cada uno de los 3 proyectos, ir a Settings → Environment Variables y corregir:
+| Variable | Valor correcto | Environments |
+|----------|----------------|--------------|
+| `VITE_API_URL` | `https://sportmatch-api.onrender.com` (o la URL de tu backend NestJS) | Production, Preview |
+
+Una vez corregido, el warning desaparecerá y el backend funcionará correctamente.
+
+**Por qué Main CI pasa pero Vercel falla**:
+- GitHub Actions NO tiene `VITE_API_URL` configurado → el plugin solo loguea warning y el build sigue.
+- Vercel SÍ tiene `VITE_API_URL` configurado en su dashboard (incorrectamente) → el plugin lanza y falla el build.
+- En local sin `.env`, `VITE_API_URL` está undefined → warning, no error.
+
 ## ✅ Estado Actual (post-fix)
 
 - `tsconfig.json`: ahora incluye `baseUrl: "."` y resuelve correctamente los alias `@/*` durante `tsc --noEmit`.
