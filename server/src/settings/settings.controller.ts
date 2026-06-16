@@ -141,8 +141,11 @@ export class SettingsController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: DeleteAccountDto,
   ) {
-    const ip = (req.headers["x-forwarded-for"] as string) || (req.ip as string);
-    const userAgent = req.headers["user-agent"] as string;
+    const ip =
+      req.headers.get("x-forwarded-for") ||
+      (req as unknown as { ip?: string }).ip ||
+      undefined;
+    const userAgent = req.headers.get("user-agent") || undefined;
     return this.settingsService.deleteAccount(
       req.user.sub,
       req.user.email,
@@ -153,5 +156,4 @@ export class SettingsController {
       dto.reason,
     );
   }
-}
 }
