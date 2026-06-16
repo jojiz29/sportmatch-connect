@@ -100,12 +100,15 @@
     "view_profile": "View Profile"
   },
   "map": {
-    "title": "Live Map",
-    "subtitle": "Courts, matches and players near you",
-    "near_you": "Near you",
-    "view_court": "View Court",
-    "filter_district": "Filter by district / Hub",
-    "all_districts": "All districts"
+    "title": "Nearby courts",
+    "my_location": "My location",
+    "sport_label": "Sport",
+    "radius_label": "Radius",
+    "price_label": "Max price",
+    "any": "Any",
+    "searching": "Searching courts...",
+    "courts_found": "courts found",
+    "attribution": "Tiles by OpenStreetMap contributors"
   },
   "chat": {
     "title": "Messages",

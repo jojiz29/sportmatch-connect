@@ -100,12 +100,15 @@
     "view_profile": "View Profile"
   },
   "map": {
-    "title": "Live Map",
-    "subtitle": "Courts, matches and players near you",
-    "near_you": "Near you",
-    "view_court": "View Court",
-    "filter_district": "Filter by district / Hub",
-    "all_districts": "All districts"
+    "title": "Quadras proximas",
+    "my_location": "Minha localizacao",
+    "sport_label": "Esporte",
+    "radius_label": "Raio",
+    "price_label": "Preco maximo",
+    "any": "Qualquer",
+    "searching": "Buscando quadras...",
+    "courts_found": "quadras encontradas",
+    "attribution": "Tiles por OpenStreetMap contributors"
   },
   "chat": {
     "title": "Messages",

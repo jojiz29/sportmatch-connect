@@ -100,12 +100,15 @@
     "view_profile": "Ver Perfil"
   },
   "map": {
-    "title": "Mapa en vivo",
-    "subtitle": "Canchas, partidos y jugadores cerca tuyo",
-    "near_you": "Cerca tuyo",
-    "view_court": "Ver Cancha",
-    "filter_district": "Filtrar por distrito / Hub",
-    "all_districts": "Todos los distritos"
+    "title": "Canchas cercanas",
+    "my_location": "Mi ubicacion",
+    "sport_label": "Deporte",
+    "radius_label": "Radio",
+    "price_label": "Precio maximo",
+    "any": "Cualquiera",
+    "searching": "Buscando canchas...",
+    "courts_found": "canchas encontradas",
+    "attribution": "Tiles por OpenStreetMap contributors"
   },
   "chat": {
     "title": "Mensajes",
