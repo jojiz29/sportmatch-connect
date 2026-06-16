@@ -11,9 +11,13 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { VertexAiService, VertexAiGenerationResult } from "../vertex-ai.service";
 import { PricingEngineService } from "./services/pricing-engine.service";
+import { AdsOptimizerService } from "./services/ads-optimizer.service";
+import { ChurnPredictorService } from "./services/churn-predictor.service";
 import { ShapExplainerService } from "./services/shap-explainer.service";
 import { ShapFeatureDto } from "./dto/b2b-common.dto";
 import { PricingRequestDto, PricingResponseDto } from "./dto/pricing.dto";
+import { AdsOptimizeRequestDto, AdsOptimizeResponseDto } from "./dto/ads-optimizer.dto";
+import { ChurnPredictRequestDto, ChurnPredictResponseDto } from "./dto/churn.dto";
 
 interface UserRateLimit {
   count: number;
@@ -30,6 +34,8 @@ export class B2bAiService {
   constructor(
     private vertexAi: VertexAiService,
     private pricingEngine: PricingEngineService,
+    private adsOptimizer: AdsOptimizerService,
+    private churnPredictor: ChurnPredictorService,
     private explainer: ShapExplainerService,
   ) {}
 
@@ -63,6 +69,121 @@ export class B2bAiService {
       narrative,
       metadata: {
         tokens: 0, // se sobrescribe abajo si la llamada al LLM tuvo éxito
+        model: "gemini-2.5-flash",
+        latencyMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  // ============================================================
+  // FEATURE #21 — ADS OPTIMIZER
+  // ============================================================
+
+  async optimizeAds(userId: string, dto: AdsOptimizeRequestDto): Promise<AdsOptimizeResponseDto> {
+    this.checkB2bRateLimit(userId);
+
+    const startTime = Date.now();
+
+    // 1. Engine: análisis A/B + UCB1 bandit + LLM reescritura
+    const result = await this.adsOptimizer.optimize(
+      userId,
+      dto.adId,
+      dto.goal,
+      dto.variantCount ?? 3,
+    );
+
+    // 2. LLM: genera narrative ejecutivo
+    let narrative: string;
+    try {
+      narrative = await this.generateAdsNarrative(result, dto);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Vertex AI narrative falló para ads, usando skeleton: ${msg}`);
+      const winner = result.variants.find((v) => v.variantId === result.recommendation);
+      narrative = winner
+        ? `Recomendamos la variante ${winner.variantId} (estilo ${winner.style}) con CTR predicho de ${(winner.predictedCtr * 100).toFixed(1)}%.`
+        : "No se pudo generar una recomendación.";
+    }
+
+    return {
+      variants: result.variants,
+      recommendation: result.recommendation,
+      expectedLift: result.expectedLift,
+      currentCtr: result.currentCtr,
+      sampleSize: result.sampleSize,
+      drivers: result.drivers,
+      narrative,
+      metadata: {
+        tokens: 0,
+        model: "gemini-2.5-flash",
+        latencyMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  private async generateAdsNarrative(
+    result: {
+      recommendation: string;
+      expectedLift: number;
+      currentCtr: number;
+      variants: { variantId: string; style: string; predictedCtr: number }[];
+    },
+    dto: AdsOptimizeRequestDto,
+  ): Promise<string> {
+    const winner = result.variants.find((v) => v.variantId === result.recommendation);
+    if (!winner) return "No se pudo identificar la mejor variante.";
+
+    const prompt = `Eres un experto en performance marketing para SportMatch Connect (plataforma deportiva peruana). Genera UNA recomendación ejecutiva en español (máx 60 palabras) sobre optimización de anuncios.
+
+Anuncio: ${dto.adId}
+Objetivo: ${dto.goal}
+Variante recomendada: ${result.recommendation} (estilo ${winner.style})
+CTR actual: ${(result.currentCtr * 100).toFixed(2)}%
+CTR predicho de la recomendada: ${(winner.predictedCtr * 100).toFixed(2)}%
+Lift esperado: ${(result.expectedLift * 100).toFixed(1)} puntos porcentuales
+
+Reglas:
+- Tono directo, orientado a acción.
+- Empieza con verbo en imperativo (Ej: "Cambia...", "Prueba...", "Publica...").
+- Una o dos frases cortas.
+- Sin disclaimers.
+- Devuelve SOLO el texto.`;
+
+    const llmResult: VertexAiGenerationResult = await this.vertexAi.generateContent(prompt, {
+      language: "es",
+      temperature: 0.5,
+    });
+    return llmResult.text.trim();
+  }
+
+  // ============================================================
+  // FEATURE #23 — CHURN PREDICTOR
+  // ============================================================
+
+  async predictChurn(
+    userId: string,
+    dto: ChurnPredictRequestDto,
+  ): Promise<ChurnPredictResponseDto> {
+    this.checkB2bRateLimit(userId);
+
+    const startTime = Date.now();
+    const lookbackDays = dto.lookbackDays ?? 30;
+
+    // El service genera su propia narrative internamente
+    const analysis = await this.churnPredictor.predict(dto.businessId, lookbackDays);
+
+    return {
+      churnScore: analysis.churnScore,
+      riskLevel: analysis.riskLevel,
+      factors: analysis.factors,
+      daysSinceLastInteraction: analysis.daysSinceLastInteraction,
+      activeAdsCount: analysis.activeAdsCount,
+      totalRevenue: analysis.totalRevenue,
+      totalEngagement: analysis.totalEngagement,
+      drivers: analysis.drivers,
+      narrative: analysis.narrative,
+      metadata: {
+        tokens: 0,
         model: "gemini-2.5-flash",
         latencyMs: Date.now() - startTime,
       },

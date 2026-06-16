@@ -12,12 +12,21 @@ import { B2bAiController } from "./b2b-ai.controller";
 import { B2bAiService } from "./b2b-ai.service";
 import { DataPipelineService } from "./services/data-pipeline.service";
 import { PricingEngineService } from "./services/pricing-engine.service";
+import { AdsOptimizerService } from "./services/ads-optimizer.service";
+import { ChurnPredictorService } from "./services/churn-predictor.service";
 import { ShapExplainerService } from "./services/shap-explainer.service";
 
 @Module({
   imports: [AuthModule],
   controllers: [B2bAiController],
-  providers: [B2bAiService, DataPipelineService, PricingEngineService, ShapExplainerService],
+  providers: [
+    B2bAiService,
+    DataPipelineService,
+    PricingEngineService,
+    AdsOptimizerService,
+    ChurnPredictorService,
+    ShapExplainerService,
+  ],
   exports: [B2bAiService],
 })
 export class B2bAiModule {}
