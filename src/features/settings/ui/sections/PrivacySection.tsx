@@ -1,5 +1,6 @@
 // ============================================================
 // PrivacySection.tsx — Privacidad y visibilidad del perfil
+// Toggle switches con Switch de shadcn, Selects accesibles
 // ============================================================
 
 import { useTranslation } from "react-i18next";
@@ -44,6 +45,7 @@ export function PrivacySection() {
               label: t("settings.privacy.profile_visibility_private", "Solo yo"),
             },
           ]}
+          label={t("settings.privacy.profile_visibility", "Quién puede ver tu perfil")}
         />
       </SettingRow>
 
@@ -54,6 +56,7 @@ export function PrivacySection() {
         <ToggleSwitch
           checked={preferences.show_fitcoins_balance}
           onChange={(v) => update("show_fitcoins_balance", v)}
+          label={t("settings.privacy.show_fitcoins", "Mostrar mi saldo de FitCoins")}
         />
       </SettingRow>
 
@@ -64,6 +67,7 @@ export function PrivacySection() {
         <ToggleSwitch
           checked={preferences.show_trust_score}
           onChange={(v) => update("show_trust_score", v)}
+          label={t("settings.privacy.show_trust", "Mostrar mi Trust Score")}
         />
       </SettingRow>
 
@@ -71,14 +75,22 @@ export function PrivacySection() {
         label={t("settings.privacy.show_email", "Mostrar mi email")}
         description={t("settings.privacy.show_email_help", "Visible para otros usuarios")}
       >
-        <ToggleSwitch checked={preferences.show_email} onChange={(v) => update("show_email", v)} />
+        <ToggleSwitch
+          checked={preferences.show_email}
+          onChange={(v) => update("show_email", v)}
+          label={t("settings.privacy.show_email", "Mostrar mi email")}
+        />
       </SettingRow>
 
       <SettingRow
         label={t("settings.privacy.show_phone", "Mostrar mi teléfono")}
         description={t("settings.privacy.show_phone_help", "Visible para otros usuarios")}
       >
-        <ToggleSwitch checked={preferences.show_phone} onChange={(v) => update("show_phone", v)} />
+        <ToggleSwitch
+          checked={preferences.show_phone}
+          onChange={(v) => update("show_phone", v)}
+          label={t("settings.privacy.show_phone", "Mostrar mi teléfono")}
+        />
       </SettingRow>
 
       <SettingRow
@@ -88,6 +100,7 @@ export function PrivacySection() {
         <ToggleSwitch
           checked={preferences.show_last_seen}
           onChange={(v) => update("show_last_seen", v)}
+          label={t("settings.privacy.show_last_seen", "Mostrar última vez en línea")}
         />
       </SettingRow>
 
@@ -101,6 +114,7 @@ export function PrivacySection() {
         <ToggleSwitch
           checked={preferences.show_match_history}
           onChange={(v) => update("show_match_history", v)}
+          label={t("settings.privacy.show_match_history", "Mostrar historial de partidos")}
         />
       </SettingRow>
 
@@ -125,6 +139,7 @@ export function PrivacySection() {
             },
             { value: "nobody", label: t("settings.privacy.allow_messages_from_nobody", "Nadie") },
           ]}
+          label={t("settings.privacy.allow_messages_from", "Quién puede enviarme mensajes")}
         />
       </SettingRow>
     </SectionCard>

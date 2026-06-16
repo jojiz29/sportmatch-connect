@@ -1,11 +1,13 @@
 // ============================================================
 // useSettingsStore.ts — Estado de Configuración del usuario
-// Persiste localmente (modo offline) y sincroniza con backend
+// Optimistic update con rollback, toasts automáticos y
+// soporte para cancelación via AbortSignal
 // ============================================================
 
 import { create } from "zustand";
 import type { UserPreferences, BlockedUser, UserSession, SettingsSection } from "../settings.types";
 import * as settingsApi from "../api/settingsApi";
+import { SettingsApiError } from "../api/settingsApi";
 import { toast } from "sonner";
 
 interface SettingsState {
@@ -16,25 +18,26 @@ interface SettingsState {
   saving: boolean;
   error: string | null;
   activeSection: SettingsSection;
+  /** Sección actual con cambios sin guardar (futuro) */
   dirtySections: Set<SettingsSection>;
 
-  // Acciones
+  /** Acciones */
   loadPreferences: () => Promise<void>;
   updatePreferences: (section: SettingsSection, updates: Partial<UserPreferences>) => Promise<void>;
   resetPreferences: () => Promise<void>;
   setActiveSection: (section: SettingsSection) => void;
 
-  // Bloqueos
+  /** Bloqueos */
   loadBlocks: () => Promise<void>;
   blockUser: (userId: string, reason?: string) => Promise<void>;
   unblockUser: (userId: string) => Promise<void>;
 
-  // Sesiones
+  /** Sesiones */
   loadSessions: () => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   deleteAllOtherSessions: () => Promise<void>;
 
-  // Export
+  /** Export */
   exportData: () => Promise<unknown>;
 }
 
@@ -83,6 +86,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   updated_at: new Date().toISOString(),
 };
 
+const errorMessage = (err: unknown): string => SettingsApiError.userMessage(err, (k) => k);
+
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   preferences: null,
   blocks: [],
@@ -105,9 +110,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         dirtySections: new Set(),
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al cargar preferencias";
+      if (err instanceof SettingsApiError && err.kind === "aborted") {
+        set({ loading: false });
+        return;
+      }
+      const msg = errorMessage(err);
       console.error("[settings] loadPreferences error:", err);
-      set({ error: msg, loading: false, preferences: DEFAULT_PREFERENCES });
+      // Si no hay prefs aún, usar defaults; pero mostrar toast
+      set({
+        error: msg,
+        loading: false,
+        preferences: get().preferences ?? DEFAULT_PREFERENCES,
+      });
+      toast.error(msg);
     }
   },
 
@@ -115,8 +130,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const current = get().preferences;
     if (!current) return;
     set({ saving: true, error: null });
+
+    // Snapshot para rollback
+    const snapshot = current;
     // Optimistic update
     set({ preferences: { ...current, ...updates } });
+
     try {
       const updated = await settingsApi.updatePreferences(updates);
       set((s) => {
@@ -129,9 +148,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         };
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al guardar";
-      // Revertir optimistic update
-      set({ preferences: current, saving: false, error: msg });
+      if (err instanceof SettingsApiError && err.kind === "aborted") {
+        set({ saving: false });
+        return;
+      }
+      // Rollback al estado previo
+      set({ preferences: snapshot, saving: false });
+      const msg = errorMessage(err);
+      set({ error: msg });
       toast.error(msg);
     }
   },
@@ -143,7 +167,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({ preferences: defaults, saving: false, dirtySections: new Set() });
       toast.success("Preferencias restablecidas");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al restablecer";
+      if (err instanceof SettingsApiError && err.kind === "aborted") {
+        set({ saving: false });
+        return;
+      }
+      const msg = errorMessage(err);
       set({ saving: false, error: msg });
       toast.error(msg);
     }
@@ -156,6 +184,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const blocks = await settingsApi.listBlocks();
       set({ blocks });
     } catch (err) {
+      if (err instanceof SettingsApiError && err.kind === "aborted") return;
       console.error("[settings] loadBlocks error:", err);
     }
   },
@@ -166,7 +195,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set((s) => ({ blocks: [block, ...s.blocks] }));
       toast.success("Usuario bloqueado");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al bloquear";
+      const msg = errorMessage(err);
       toast.error(msg);
     }
   },
@@ -177,7 +206,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set((s) => ({ blocks: s.blocks.filter((b) => b.blocked_id !== userId) }));
       toast.success("Usuario desbloqueado");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al desbloquear";
+      const msg = errorMessage(err);
       toast.error(msg);
     }
   },
@@ -189,6 +218,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const sessions = await settingsApi.listSessions();
       set({ sessions });
     } catch (err) {
+      if (err instanceof SettingsApiError && err.kind === "aborted") return;
       console.error("[settings] loadSessions error:", err);
     }
   },
@@ -199,7 +229,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set((s) => ({ sessions: s.sessions.filter((sess) => sess.id !== id) }));
       toast.success("Sesión cerrada");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al cerrar sesión";
+      const msg = errorMessage(err);
       toast.error(msg);
     }
   },
@@ -212,7 +242,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }));
       toast.success("Otras sesiones cerradas");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al cerrar sesiones";
+      const msg = errorMessage(err);
       toast.error(msg);
     }
   },
@@ -222,18 +252,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   exportData: async () => {
     try {
       const data = await settingsApi.exportUserData();
-      // Descargar como JSON
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `sportmatch-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
       toast.success("Descarga iniciada");
       return data;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al exportar";
+      const msg = errorMessage(err);
       toast.error(msg);
       throw err;
     }

@@ -1,15 +1,15 @@
 // ============================================================
 // AccountSection.tsx — Sección Cuenta
-// Edición de nombre, email (display), bio, ciudad
-// La edición real del perfil vive en /app/profile, esta es solo
-// una vista de configuración con resumen + link a editar
+// Vista resumida del perfil + enlaces a editar/wallet/perfil
+// público
 // ============================================================
 
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
+import { Edit3, ExternalLink, Mail, CheckCircle2, Wallet, Globe } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { SectionCard, SettingRow } from "./SectionCard";
-import { Edit3, ExternalLink, Mail, CheckCircle2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 
 export function AccountSection() {
   const { t } = useTranslation();
@@ -17,32 +17,38 @@ export function AccountSection() {
 
   if (!user) return null;
 
+  const initials = (user.name || user.email || "U")
+    .split(" ")
+    .map((s) => s[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <SectionCard
         title={t("settings.account.title", "Cuenta")}
         description={t("settings.account.subtitle", "Información básica de tu perfil")}
       >
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-background/40 border border-border/40">
-          <img
-            src={user.avatar_url || ""}
-            alt={user.name || ""}
-            className="h-16 w-16 rounded-full bg-muted object-cover border-2 border-border"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-background/40 border border-border/40">
+          <Avatar className="h-16 w-16 border-2 border-border">
+            <AvatarImage src={user.avatar_url || ""} alt={user.name || ""} />
+            <AvatarFallback className="text-base font-bold">{initials}</AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-lg truncate">
+            <div className="font-bold text-base sm:text-lg truncate">
               {user.name || t("settings.account.no_name", "Sin nombre")}
             </div>
             <div className="text-sm text-muted-foreground truncate">{user.email}</div>
             {user.user_role && (
-              <div className="text-xs text-primary mt-1">
+              <div className="text-xs text-primary mt-1 inline-flex items-center gap-1">
                 {user.user_role === "BUSINESS" ? "🏢 Negocio" : "🏆 Jugador"}
               </div>
             )}
           </div>
           <Link
             to="/app/profile"
-            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors min-h-[44px]"
           >
             <Edit3 className="h-4 w-4" />
             {t("settings.common.edit", "Editar")}
@@ -50,13 +56,20 @@ export function AccountSection() {
         </div>
 
         <SettingRow
-          label={t("settings.account.email", "Correo electrónico")}
+          label={
+            <span className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              {t("settings.account.email", "Correo electrónico")}
+            </span>
+          }
           description={t("settings.account.email_help", "Tu email no es público")}
         >
           <div className="flex items-center gap-2 text-sm">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{user.email}</span>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span className="truncate max-w-[200px]">{user.email}</span>
+            <CheckCircle2
+              className="h-4 w-4 text-green-500 shrink-0"
+              aria-label={t("settings.account.email_verified", "Verificado")}
+            />
           </div>
         </SettingRow>
 
@@ -64,13 +77,18 @@ export function AccountSection() {
           label={t("settings.account.bio", "Biografía")}
           description={t("settings.account.bio_help", "Cuéntale a otros jugadores sobre ti")}
         >
-          <span className="text-sm text-muted-foreground max-w-xs text-right truncate">
+          <span className="text-sm text-muted-foreground max-w-[200px] sm:max-w-xs text-right truncate">
             {user.bio || t("settings.account.no_bio", "Sin biografía")}
           </span>
         </SettingRow>
 
         <SettingRow
-          label={t("settings.account.city", "Ciudad")}
+          label={
+            <span className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              {t("settings.account.city", "Ciudad")}
+            </span>
+          }
           description={t("settings.account.city_help", "Para partidos cerca de ti")}
         >
           <span className="text-sm text-muted-foreground">
@@ -86,22 +104,23 @@ export function AccountSection() {
         <Link
           to="/app/profile/$userId"
           params={{ userId: user.id }}
-          className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors group"
+          className="flex items-center justify-between gap-2 p-3 min-h-[48px] rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors group"
         >
-          <div className="text-sm font-medium">
+          <span className="text-sm font-medium">
             {t("settings.account.view_public_profile", "Ver mi perfil público")}
-          </div>
-          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+          </span>
+          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
         </Link>
         <Link
           to="/app/wallet"
           search={{ buyItem: undefined }}
-          className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors group"
+          className="flex items-center justify-between gap-2 p-3 min-h-[48px] rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors group"
         >
-          <div className="text-sm font-medium">
+          <span className="text-sm font-medium flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-muted-foreground" />
             {t("settings.account.view_wallet", "Ver mi monedero de FitCoins")}
-          </div>
-          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+          </span>
+          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
         </Link>
       </SectionCard>
     </div>
