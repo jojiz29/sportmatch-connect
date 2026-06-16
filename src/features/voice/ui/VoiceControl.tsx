@@ -74,7 +74,7 @@ function pickNaturalVoice(
 export function VoiceControl({ onTranscript, textToSpeak, textKey }: VoiceControlProps) {
   const { t } = useTranslation();
   const language = useAiAssistantStore((s) => s.language) as SupportedLanguage;
-  const { state, error, transcript, start, stop, hasWebSpeechSupport } = useVoiceRecorder({
+  const { state, mode, error, transcript, start, stop, hasWebSpeechSupport } = useVoiceRecorder({
     language,
     onTranscript: (text) => onTranscript?.(text),
     onError: (msg) => console.error("Voice error:", msg),
@@ -84,6 +84,18 @@ export function VoiceControl({ onTranscript, textToSpeak, textKey }: VoiceContro
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const lastSpokenKey = useRef<string | number | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Tooltip dinámico: muestra el modo actual (web-speech | google-cloud)
+  const micTooltip =
+    state === "recording"
+      ? t("voice.stop_recording")
+      : state === "processing"
+        ? t("voice.processing")
+        : hasWebSpeechSupport
+          ? mode === "google-cloud"
+            ? t("voice.start_recording_cloud_fallback")
+            : t("voice.start_recording_web")
+          : t("voice.start_recording_cloud");
 
   // Web Speech API carga las voces de forma asíncrona en algunos navegadores
   useEffect(() => {
@@ -172,13 +184,7 @@ export function VoiceControl({ onTranscript, textToSpeak, textKey }: VoiceContro
         onClick={state === "recording" ? stop : start}
         disabled={state === "processing"}
         aria-label={state === "recording" ? t("voice.stop_recording") : t("voice.start_recording")}
-        title={
-          state === "recording"
-            ? t("voice.stop_recording")
-            : hasWebSpeechSupport
-              ? t("voice.start_recording_web")
-              : t("voice.start_recording_cloud")
-        }
+        title={micTooltip}
         className={`h-8 w-8 rounded-lg grid place-items-center transition-all cursor-pointer ${
           state === "recording"
             ? "bg-destructive text-destructive-foreground animate-pulse"

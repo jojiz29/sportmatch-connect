@@ -948,8 +948,36 @@ function Chats() {
                   <button
                     key={u.id}
                     onClick={async () => {
-                      await createChat(u.id);
-                      setIsNewChatModalOpen(false);
+                      try {
+                        const newChatId = await createChat(u.id);
+                        if (newChatId) {
+                          setIsNewChatModalOpen(false);
+                          // FIX 15-jun-2026: si el chat fue creado y el
+                          // usuario no tenía match previo, se crea la
+                          // conexión inversa automáticamente en el RPC.
+                          // Mostramos un toast informativo.
+                          toast.success(
+                            t("chat.chat_started_with", {
+                              defaultValue: "Conversación iniciada con {{name}}",
+                              name: u.name,
+                            }),
+                          );
+                        } else {
+                          toast.error(
+                            t("chat.chat_failed", {
+                              defaultValue:
+                                "No se pudo iniciar la conversación. Inténtalo de nuevo.",
+                            }),
+                          );
+                        }
+                      } catch (err) {
+                        console.error("[chat] newChat:error", err);
+                        toast.error(
+                          t("chat.chat_failed", {
+                            defaultValue: "No se pudo iniciar la conversación. Inténtalo de nuevo.",
+                          }),
+                        );
+                      }
                     }}
                     className="w-full p-2.5 rounded-xl hover:bg-accent/40 flex items-center gap-3 transition-colors text-left cursor-pointer"
                   >

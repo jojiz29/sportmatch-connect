@@ -226,22 +226,87 @@ Reglas:
     return this.parseModerationResult(result.text, text);
   }
 
+  /**
+   * Mapea errores del SDK de Vertex AI / Gen AI a mensajes amigables.
+   *
+   * IMPORTANTE: distinguir entre errores REALES de permisos (IAM
+   * del Service Account) y errores transitorios que contienen la
+   * palabra "permission" en su mensaje (rate limits, timeouts, etc.).
+   * El mapeo anterior era demasiado laxo y mostraba
+   * "No tienes permisos para usar el asistente de IA" incluso
+   * para errores 503 transitorios del servicio.
+   *
+   * Estrategia: detectar el código/status HTTP/SDK PRIMERO, luego
+   * hacer fallback a la búsqueda de palabras clave.
+   */
   private parseVertexAiError(rawError: string): string {
-    if (rawError.includes("NOT_FOUND") || rawError.includes("was not found")) {
+    const lower = rawError.toLowerCase();
+
+    // 1. Modelos / recursos no encontrados (404)
+    if (lower.includes("not_found") || lower.includes("was not found") || lower.includes("404")) {
       return "El modelo de IA no está disponible. Por favor, contacta al administrador.";
     }
-    if (rawError.includes("PERMISSION_DENIED") || rawError.includes("permission")) {
-      return "No tienes permisos para usar el asistente de IA.";
-    }
-    if (rawError.includes("UNAUTHENTICATED") || rawError.includes("credentials")) {
+
+    // 2. Errores de autenticación del SERVICE ACCOUNT (401/403 IAM)
+    //    Diferenciar de errores genéricos que mencionan "permission".
+    if (lower.includes("unauthenticated") || lower.includes("401")) {
       return "Error de autenticación con el servicio de IA. Por favor, contacta al administrador.";
     }
-    if (rawError.includes("RESOURCE_EXHAUSTED") || rawError.includes("quota")) {
+    if (
+      lower.includes("permission_denied") ||
+      lower.includes("iam") ||
+      lower.includes("service account") ||
+      lower.includes("caller does not have permission")
+    ) {
+      return "El servicio de IA no tiene permisos configurados. Por favor, contacta al administrador.";
+    }
+    if (lower.includes("403") && !lower.includes("rate") && !lower.includes("quota")) {
+      return "Acceso denegado al servicio de IA. Por favor, contacta al administrador.";
+    }
+
+    // 3. Rate limit / cuota (429)
+    if (
+      lower.includes("resource_exhausted") ||
+      lower.includes("429") ||
+      lower.includes("quota exceeded") ||
+      lower.includes("rate limit")
+    ) {
       return "Se ha alcanzado el límite de uso de IA. Por favor, intenta más tarde.";
     }
-    if (rawError.includes("DEADLINE_EXCEEDED") || rawError.includes("timeout")) {
+
+    // 4. Timeouts / deadline (504)
+    if (lower.includes("deadline_exceeded") || lower.includes("504") || lower.includes("timeout")) {
       return "La IA tardó demasiado en responder. Por favor, intenta de nuevo.";
     }
+
+    // 5. Errores transitorios del servidor (500/502/503)
+    if (
+      lower.includes("internal") ||
+      lower.includes("unavailable") ||
+      lower.includes("500") ||
+      lower.includes("502") ||
+      lower.includes("503") ||
+      lower.includes("service is currently unavailable")
+    ) {
+      return "El servicio de IA está temporalmente no disponible. Por favor, intenta en unos segundos.";
+    }
+
+    // 6. Network errors (cliente no pudo alcanzar el servicio)
+    if (
+      lower.includes("econnrefused") ||
+      lower.includes("enotfound") ||
+      lower.includes("network") ||
+      lower.includes("fetch failed")
+    ) {
+      return "No se pudo conectar con el servicio de IA. Verifica tu conexión e intenta de nuevo.";
+    }
+
+    // 7. Errores residuales que mencionan "permission" genéricamente
+    //    (los más laxa posible: solo si NO se clasificó antes)
+    if (lower.includes("permission")) {
+      return "El servicio de IA reportó un error de permisos. Si persiste, contacta al administrador.";
+    }
+
     return "No se pudo procesar tu solicitud en este momento. Por favor, intenta de nuevo.";
   }
 

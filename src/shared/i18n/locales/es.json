@@ -522,6 +522,8 @@
     "stop_recording": "Detener grabación",
     "start_recording_web": "Toca para hablar (Web Speech API)",
     "start_recording_cloud": "Toca para hablar (Google Cloud)",
+    "start_recording_cloud_fallback": "Web Speech falló, usando Google Cloud (toca para reintentar)",
+    "processing": "Procesando audio...",
     "read_aloud": "Leer mensaje en voz alta",
     "stop_speaking": "Detener lectura",
     "listening": "Escuchando... {{transcript}}"

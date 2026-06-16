@@ -361,7 +361,11 @@ export const useChatStore = create<ChatState>()(
             }
           } catch (e) {
             console.error("[chat] conversation:error", { targetUserId, error: e });
-            return "";
+            // FIX 15-jun-2026: Si el RPC falla porque el usuario destino
+            // no tenía conexión previa, propagamos el error para que
+            // la UI lo muestre. Antes el catch silenciaba TODO y el
+            // chat no abría, dejando al usuario sin feedback.
+            throw e;
           }
         }
 

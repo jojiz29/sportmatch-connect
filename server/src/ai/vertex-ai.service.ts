@@ -53,6 +53,12 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
   /**
    * Genera contenido usando el modelo configurado.
    * Soporta multi-idioma (es/en/pt), slang regional y memoria conversacional.
+   *
+   * FIX 15-jun-2026: añadido retry con backoff exponencial para
+   * errores transitorios (503, 504, 429) que antes se propagaban
+   * directamente al usuario como "permisos" u otros mensajes
+   * confusos. El cliente ahora reintenta hasta 3 veces con esperas
+   * de 500ms, 1500ms, 4500ms antes de rendirse.
    */
   async generateContent(
     userMessage: string,
@@ -63,35 +69,79 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     const temperature = options.temperature ?? this.config.temperature;
     const systemInstruction = this.buildSystemInstruction(language, options.history);
 
-    try {
-      const response = await this.genAi.models.generateContent({
-        model: this.config.modelId,
-        contents: this.buildContentsWithHistory(userMessage, options.history),
-        config: {
-          maxOutputTokens: this.config.maxTokens,
-          temperature,
-          topP: 0.9,
-          systemInstruction,
-        },
-      });
+    const maxRetries = 3;
+    const baseDelayMs = 500;
+    let lastError: unknown;
 
-      const text = response.text ?? "";
-      const usage = (response as { usageMetadata?: { totalTokenCount?: number } }).usageMetadata;
-      const tokens = usage?.totalTokenCount ?? 0;
-      const latencyMs = Date.now() - startTime;
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      try {
+        const response = await this.genAi.models.generateContent({
+          model: this.config.modelId,
+          contents: this.buildContentsWithHistory(userMessage, options.history),
+          config: {
+            maxOutputTokens: this.config.maxTokens,
+            temperature,
+            topP: 0.9,
+            systemInstruction,
+          },
+        });
 
-      return {
-        text,
-        tokens,
-        model: this.config.modelId,
-        latencyMs,
-      };
-    } catch (err) {
-      this.logger.error(
-        `Gen AI generation failed: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
-      throw err;
+        const text = response.text ?? "";
+        const usage = (response as { usageMetadata?: { totalTokenCount?: number } }).usageMetadata;
+        const tokens = usage?.totalTokenCount ?? 0;
+        const latencyMs = Date.now() - startTime;
+
+        if (attempt > 0) {
+          this.logger.log(`Gen AI succeeded on retry #${attempt} after ${latencyMs}ms`);
+        }
+
+        return {
+          text,
+          tokens,
+          model: this.config.modelId,
+          latencyMs,
+        };
+      } catch (err) {
+        lastError = err;
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const lower = errorMsg.toLowerCase();
+
+        const isRetryable =
+          lower.includes("503") ||
+          lower.includes("502") ||
+          lower.includes("500") ||
+          lower.includes("504") ||
+          lower.includes("deadline_exceeded") ||
+          lower.includes("timeout") ||
+          lower.includes("resource_exhausted") ||
+          lower.includes("429") ||
+          lower.includes("econnrefused") ||
+          lower.includes("enotfound") ||
+          lower.includes("network") ||
+          lower.includes("fetch failed") ||
+          lower.includes("temporarily unavailable");
+
+        if (!isRetryable || attempt === maxRetries) {
+          this.logger.error(
+            `Gen AI generation failed (attempt ${attempt + 1}/${maxRetries + 1}): ${errorMsg}`,
+          );
+          throw err;
+        }
+
+        const delay = baseDelayMs * Math.pow(3, attempt);
+        this.logger.warn(
+          `Gen AI attempt ${attempt + 1} failed with retryable error, retrying in ${delay}ms: ${errorMsg}`,
+        );
+        await this.sleep(delay);
+      }
     }
+
+    // No deberíamos llegar aquí, pero por seguridad
+    throw lastError;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
