@@ -192,27 +192,29 @@ export class DataPipelineService {
 
       if (!rows || rows.length === 0) return empty;
 
-      const perAd = rows.map((r: {
-        id: string;
-        title: string;
-        views: number | null;
-        clicks: number | null;
-        contacts: number | null;
-        created_at: Date;
-      }) => {
-        const views = Number(r.views) || 0;
-        const clicks = Number(r.clicks) || 0;
-        const contacts = Number(r.contacts) || 0;
-        return {
-          adId: r.id,
-          title: r.title,
-          views,
-          clicks,
-          contacts,
-          ctr: views > 0 ? clicks / views : 0,
-          lastInteractionAt: r.created_at ? r.created_at.toISOString() : null,
-        };
-      });
+      const perAd = rows.map(
+        (r: {
+          id: string;
+          title: string;
+          views: number | null;
+          clicks: number | null;
+          contacts: number | null;
+          created_at: Date;
+        }) => {
+          const views = Number(r.views) || 0;
+          const clicks = Number(r.clicks) || 0;
+          const contacts = Number(r.contacts) || 0;
+          return {
+            adId: r.id,
+            title: r.title,
+            views,
+            clicks,
+            contacts,
+            ctr: views > 0 ? clicks / views : 0,
+            lastInteractionAt: r.created_at ? r.created_at.toISOString() : null,
+          };
+        },
+      );
 
       const totalViews = perAd.reduce<number>((s, a) => s + a.views, 0);
       const totalClicks = perAd.reduce<number>((s, a) => s + a.clicks, 0);

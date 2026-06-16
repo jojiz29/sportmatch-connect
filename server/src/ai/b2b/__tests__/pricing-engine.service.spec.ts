@@ -218,9 +218,7 @@ describe("PricingEngineService", () => {
 
     it("contribución total está en rango plausible vs delta absoluto del precio", async () => {
       const result = await service.recommend("court-1", "biz-1", "2026-06-20", 19);
-      const totalContribution = Math.abs(
-        result.drivers.reduce((s, d) => s + d.contribution, 0),
-      );
+      const totalContribution = Math.abs(result.drivers.reduce((s, d) => s + d.contribution, 0));
       const expectedDelta = Math.abs(result.recommendedPrice - result.baseline);
       // Las contributions son SHAP-style (no must exactly = delta).
       // Comprobamos solo que estén en el mismo orden de magnitud.
