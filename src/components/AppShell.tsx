@@ -20,6 +20,7 @@ import {
   Package,
   MapPin,
   Globe,
+  ScanEye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
@@ -190,6 +191,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
           ],
         },
+        {
+          titleKey: "nav.groups.vision",
+          title: "Visión por Computadora",
+          items: [
+            {
+              to: "/app/ai-vision",
+              labelKey: "nav.vision_overview",
+              label: "Visión General",
+              icon: ScanEye,
+            },
+            {
+              to: "/app/ai-vision/form-analyzer",
+              labelKey: "nav.vision_form",
+              label: "Form Analyzer",
+              icon: ScanEye,
+            },
+            {
+              to: "/app/ai-vision/fake-profile",
+              labelKey: "nav.vision_fake",
+              label: "Fake Profile Detector",
+              icon: ScanEye,
+            },
+            {
+              to: "/app/ai-vision/dni-verify",
+              labelKey: "nav.vision_dni",
+              label: "Verificación DNI",
+              icon: ScanEye,
+            },
+          ],
+        },
       ];
 
   const dynamicMobileNav: NavItem[] = isBusiness
@@ -236,6 +267,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa", icon: Map },
         { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
         { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
+        {
+          to: "/app/ai-vision",
+          labelKey: "nav.vision_overview",
+          label: "Visión IA",
+          icon: ScanEye,
+        },
       ];
 
   // Filter accounts list dynamically based on permissions

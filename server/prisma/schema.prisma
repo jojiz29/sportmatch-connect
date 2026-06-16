@@ -142,24 +142,27 @@ model match_participants {
 }
 
 model courts {
-  id                String  @id @default(uuid())
+  id                String   @id @default(uuid())
   name              String
   sport             String
-  price_per_hour    Int     @map("price_per_hour")
+  price_per_hour    Int      @map("price_per_hour")
   rating            Float
-  reviews_count     Int     @map("reviews_count")
+  reviews_count     Int      @map("reviews_count")
   lat               Float
   lng               Float
-  image_url         String? @map("image_url")
+  image_url         String?  @map("image_url")
   amenities         String[]
-  is_available      Boolean @default(true) @map("is_available")
+  is_available      Boolean  @default(true) @map("is_available")
   address           String?
-  max_players       Int?    @map("max_players")
+  max_players       Int?     @map("max_players")
   operating_hours   String[] @map("operating_hours")
   district          String?
-  is_sponsored      Boolean @default(false) @map("is_sponsored")
-  owner_id          String? @map("owner_id")
+  is_sponsored      Boolean  @default(false) @map("is_sponsored")
+  owner_id          String?  @map("owner_id")
   created_at        DateTime @default(now()) @map("created_at")
+  ar_model_url      String?  @map("ar_model_url")
+  ar_scale          Float?   @default(1.0) @map("ar_scale")
+  ar_rotation       Json?    @map("ar_rotation")
 
   matches           matches[]
   reviews           reviews[]

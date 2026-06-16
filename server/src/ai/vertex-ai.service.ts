@@ -16,10 +16,21 @@ export interface VertexAiGenerationResult {
   latencyMs: number;
 }
 
+export interface VertexAiMediaPart {
+  inlineData: {
+    mimeType: string;
+    data: string; // base64
+  };
+}
+
 export interface VertexAiOptions {
   language?: "es" | "en" | "pt";
   temperature?: number;
   history?: ChatMessageDto[];
+}
+
+export interface VertexAiMediaOptions extends VertexAiOptions {
+  mediaParts?: VertexAiMediaPart[];
 }
 
 @Injectable()
@@ -137,6 +148,89 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     }
 
     // No deberíamos llegar aquí, pero por seguridad
+    throw lastError;
+  }
+
+  /**
+   * Genera contenido multimodal (texto + imágenes/video frames).
+   * Permite enviar imágenes inlineData a Gemini para análisis visual.
+   */
+  async generateContentWithMedia(
+    userMessage: string,
+    options: VertexAiMediaOptions = {},
+  ): Promise<VertexAiGenerationResult> {
+    const startTime = Date.now();
+    const language = options.language ?? "es";
+    const temperature = options.temperature ?? this.config.temperature;
+    const systemInstruction = this.buildSystemInstruction(language, options.history);
+
+    const maxRetries = 3;
+    const baseDelayMs = 500;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      try {
+        const parts: Array<{ text: string } | VertexAiMediaPart> = [{ text: userMessage }];
+        if (options.mediaParts) {
+          parts.push(...options.mediaParts);
+        }
+
+        const response = await this.genAi.models.generateContent({
+          model: this.config.modelId,
+          contents: [{ role: "user", parts }],
+          config: {
+            maxOutputTokens: this.config.maxTokens,
+            temperature,
+            topP: 0.9,
+            systemInstruction,
+          },
+        });
+
+        const text = response.text ?? "";
+        const usage = (response as { usageMetadata?: { totalTokenCount?: number } }).usageMetadata;
+        const tokens = usage?.totalTokenCount ?? 0;
+        const latencyMs = Date.now() - startTime;
+
+        if (attempt > 0) {
+          this.logger.log(`Gen AI vision succeeded on retry #${attempt} after ${latencyMs}ms`);
+        }
+
+        return { text, tokens, model: this.config.modelId, latencyMs };
+      } catch (err) {
+        lastError = err;
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const lower = errorMsg.toLowerCase();
+
+        const isRetryable =
+          lower.includes("503") ||
+          lower.includes("502") ||
+          lower.includes("500") ||
+          lower.includes("504") ||
+          lower.includes("deadline_exceeded") ||
+          lower.includes("timeout") ||
+          lower.includes("resource_exhausted") ||
+          lower.includes("429") ||
+          lower.includes("econnrefused") ||
+          lower.includes("enotfound") ||
+          lower.includes("network") ||
+          lower.includes("fetch failed") ||
+          lower.includes("temporarily unavailable");
+
+        if (!isRetryable || attempt === maxRetries) {
+          this.logger.error(
+            `Gen AI vision failed (attempt ${attempt + 1}/${maxRetries + 1}): ${errorMsg}`,
+          );
+          throw err;
+        }
+
+        const delay = baseDelayMs * Math.pow(3, attempt);
+        this.logger.warn(
+          `Gen AI vision attempt ${attempt + 1} failed with retryable error, retrying in ${delay}ms: ${errorMsg}`,
+        );
+        await this.sleep(delay);
+      }
+    }
+
     throw lastError;
   }
 
