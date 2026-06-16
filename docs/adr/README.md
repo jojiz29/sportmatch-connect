@@ -18,9 +18,9 @@ Seguimos el formato clásico de Michael Nygard ([adr.github.io](https://adr.gith
 
 ## Índice
 
-| ID | Título | Estado | Fecha |
-|---|---|---|---|
-| [ADR-001](ADR-001-database-persistence.md) | PostgreSQL/Supabase como persistencia principal | Aceptada | 16-jun-2026 |
+| ID | Título | Estado | Fecha | Tag |
+|---|---|---|---|---|
+| [ADR-001](ADR-001-database-persistence.md) | PostgreSQL/Supabase como persistencia principal | Aceptada | 16-jun-2026 | v3.6.0-adr-001 |
 
 ## Cómo crear una nueva ADR
 
