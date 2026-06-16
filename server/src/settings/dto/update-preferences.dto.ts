@@ -1,5 +1,5 @@
-// ============================================================
-// update-preferences.dto.ts — DTO para actualizar preferencias
+﻿// ============================================================
+// update-preferences.dto.ts â€” DTO para actualizar preferencias
 // Acepta cualquier subset de campos (PATCH semantics)
 // ============================================================
 
@@ -174,7 +174,7 @@ export class UpdatePreferencesDto {
   @Transform(({ value }) => value === true || value === "true")
   show_me_in_squad_search?: boolean;
 
-  // === IDIOMA / REGIÓN ===
+  // === IDIOMA / REGIÃ“N ===
   @ApiProperty({ enum: ["es", "en", "pt"], required: false })
   @IsOptional()
   @IsIn(["es", "en", "pt"])
@@ -209,6 +209,33 @@ export class BlockUserDto {
   @IsString()
   user_id!: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+
+export class DeleteAccountDto {
+  /**
+   * Password actual del usuario para confirmar la eliminacion.
+   * Se valida contra Supabase Auth antes de proceder.
+   */
+  @ApiProperty({ description: 'Password actual del usuario' })
+  @IsString()
+  password!: string;
+
+  /**
+   * Texto de confirmacion. Debe ser exactamente 'ELIMINAR'.
+   * Confirmacion tipeada para evitar borrado accidental.
+   */
+  @ApiProperty({ description: 'Debe ser exactamente ELIMINAR' })
+  @IsString()
+  confirmText!: string;
+
+  /**
+   * Razon opcional de la eliminacion (feedback para el PO).
+   */
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

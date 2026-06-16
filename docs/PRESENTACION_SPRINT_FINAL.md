@@ -19,11 +19,12 @@ El idioma del chat se determina por esta prioridad:
 
 En los 3 proyectos de Vercel, agrega / actualiza la variable:
 
-| Key | Value |
-|-----|-------|
-| `VITE_CHAT_DEFAULT_LANG` | `es` |
+| Key                      | Value |
+| ------------------------ | ----- |
+| `VITE_CHAT_DEFAULT_LANG` | `es`  |
 
 Proyectos:
+
 - `sportmatch-connect` (prj_xkYkcOWCW33LPADuE4A5S5sBMkRj)
 - `sportmatch-connect-czs5` (prj_Kz1dpeTTAKDoJo5rrF0JNHRnvu1B)
 - `sportmatch-connect-juan-alonso` (prj_NIumA1tC8u3RIVSXxuWBR5ffCQoz)
@@ -71,6 +72,7 @@ El chat tiene **dos botones** en la barra inferior del input:
 ### Voces disponibles
 
 El frontend intenta usar la **mejor voz disponible** del navegador en este orden:
+
 1. Voces "premium / neural / natural" (Samantha, Ava, Allison, Microsoft Neural...)
 2. Coincidencia exacta del locale (es-ES, en-US, pt-BR)
 3. Cualquier voz del idioma

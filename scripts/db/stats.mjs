@@ -63,14 +63,10 @@ const trgs = await c.query(`
 `);
 console.log(`**Triggers: ${trgs.rows[0].n}**`);
 
-const pols = await c.query(
-  `SELECT count(*) AS n FROM pg_policies WHERE schemaname = 'public';`,
-);
+const pols = await c.query(`SELECT count(*) AS n FROM pg_policies WHERE schemaname = 'public';`);
 console.log(`**RLS policies: ${pols.rows[0].n}**`);
 
-const indices = await c.query(
-  `SELECT count(*) AS n FROM pg_indexes WHERE schemaname = 'public';`,
-);
+const indices = await c.query(`SELECT count(*) AS n FROM pg_indexes WHERE schemaname = 'public';`);
 console.log(`**Índices: ${indices.rows[0].n}**`);
 
 const enums = await c.query(`
@@ -83,8 +79,6 @@ const ext = await c.query(`
   SELECT extname FROM pg_extension
   WHERE extname IN ('postgis', 'pg_trgm', 'uuid-ossp', 'pgcrypto');
 `);
-console.log(
-  `**Extensiones: ${ext.rows.map((x) => x.extname).join(", ")}**`,
-);
+console.log(`**Extensiones: ${ext.rows.map((x) => x.extname).join(", ")}**`);
 
 await c.end();

@@ -126,6 +126,9 @@ export interface User {
   dni_hash?: string | null;
   dni_intentos?: number;
   fecha_verificacion?: string | null;
+  xp?: number;
+  xp_level?: number;
+  xp_to_next_level?: number;
 }
 
 // === BLOQUE: SEDE / CANCHA DEPORTIVA ===

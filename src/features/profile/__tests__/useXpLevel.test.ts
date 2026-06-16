@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // ============================================================
 // useXpLevel.test.ts — Tests para hook de XP y nivel
 // SCRUM-229

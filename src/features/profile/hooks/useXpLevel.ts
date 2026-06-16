@@ -86,7 +86,7 @@ export function useXpLevel(): XpInfo | null {
       textColor: levelToTextColor(level),
       remaining,
     };
-  }, [user, user?.xp, user?.xp_level, user?.xp_to_next_level]);
+  }, [user]);
 }
 
 /**

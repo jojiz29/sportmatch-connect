@@ -60,20 +60,14 @@ const c = new pg.Client({
   `);
   if (sample.rows[0]) {
     const uid = sample.rows[0].user_id;
-    const beforeXp = await c.query(
-      "SELECT xp, level FROM profiles WHERE user_id = $1",
-      [uid],
-    );
+    const beforeXp = await c.query("SELECT xp, level FROM profiles WHERE user_id = $1", [uid]);
     console.log(`\nBefore add_user_xp: xp=${beforeXp.rows[0].xp} level=${beforeXp.rows[0].level}`);
 
     const add = await c.query("SELECT * FROM add_user_xp($1, $2)", [uid, 50]);
     console.log("After add 50:", add.rows[0]);
 
     // Reset
-    await c.query("UPDATE profiles SET xp = $1 WHERE user_id = $2", [
-      beforeXp.rows[0].xp,
-      uid,
-    ]);
+    await c.query("UPDATE profiles SET xp = $1 WHERE user_id = $2", [beforeXp.rows[0].xp, uid]);
   }
 
   await c.end();

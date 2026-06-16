@@ -1,6 +1,7 @@
 // ============================================================
-// settings.controller.ts — Endpoints REST para Configuración
+// settings.controller.ts — Endpoints REST para ConfiguraciA3n
 // Base: /users/me/* (preferences, blocks, sessions, export)
+// SCRUM-410: anadido DELETE /users/me (GDPR right to be forgotten)
 // ============================================================
 
 import {
@@ -19,7 +20,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 import { SettingsService } from "./settings.service";
-import { UpdatePreferencesDto, BlockUserDto } from "./dto/update-preferences.dto";
+import { UpdatePreferencesDto, BlockUserDto, DeleteAccountDto } from "./dto/update-preferences.dto";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -121,8 +122,36 @@ export class SettingsController {
 
   @Post("export-data")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Generar exportación de todos los datos del usuario" })
+  @ApiOperation({ summary: "Generar exportaciA3n de todos los datos del usuario" })
   async exportData(@Req() req: AuthenticatedRequest) {
     return this.settingsService.exportUserData(req.user.sub);
   }
+
+  // === ELIMINAR CUENTA (GDPR - SCRUM-410) ===
+
+  @Delete()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Eliminar cuenta (derecho al olvido, GDPR)",
+    description:
+      "Soft delete: anonimiza datos personales inmediatamente, " +
+      "marca deleted_at, registra audit log. Purgado fisico tras 30 dias via cron.",
+  })
+  async deleteAccount(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: DeleteAccountDto,
+  ) {
+    const ip = (req.headers["x-forwarded-for"] as string) || (req.ip as string);
+    const userAgent = req.headers["user-agent"] as string;
+    return this.settingsService.deleteAccount(
+      req.user.sub,
+      req.user.email,
+      dto.password,
+      dto.confirmText,
+      ip,
+      userAgent,
+      dto.reason,
+    );
+  }
+}
 }

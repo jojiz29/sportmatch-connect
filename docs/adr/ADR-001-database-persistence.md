@@ -56,16 +56,16 @@ Justificación basada en los 5 factores que más impactan a este proyecto:
 
 Métricas reales del esquema en producción:
 
-| Métrica | Valor |
-|---|---:|
-| Tablas | 30 |
-| Filas totales estimadas | 583 |
-| Funciones RPC | 16 |
-| Triggers | 14 |
-| RLS policies | 78 |
-| Índices | 58 |
-| Extensiones | `postgis`, `pgcrypto`, `uuid-ossp` |
-| Usuarios activos (`profiles`) | 32 |
+| Métrica                       |                              Valor |
+| ----------------------------- | ---------------------------------: |
+| Tablas                        |                                 30 |
+| Filas totales estimadas       |                                583 |
+| Funciones RPC                 |                                 16 |
+| Triggers                      |                                 14 |
+| RLS policies                  |                                 78 |
+| Índices                       |                                 58 |
+| Extensiones                   | `postgis`, `pgcrypto`, `uuid-ossp` |
+| Usuarios activos (`profiles`) |                                 32 |
 
 Las tablas más grandes son `courts` (433 filas) — datos de canchas pre-cargados —
 y `profiles` (32) — usuarios reales. El sistema está en fase early-adopter con

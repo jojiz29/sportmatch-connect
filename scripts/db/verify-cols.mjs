@@ -28,7 +28,9 @@ const c = new pg.Client({
   `);
   console.log("All profiles columns:");
   cols.rows.forEach((r) =>
-    console.log(`  ${r.column_name.padEnd(30)} ${r.data_type.padEnd(20)} ${r.column_default || ""}`),
+    console.log(
+      `  ${r.column_name.padEnd(30)} ${r.data_type.padEnd(20)} ${r.column_default || ""}`,
+    ),
   );
 
   await c.end();

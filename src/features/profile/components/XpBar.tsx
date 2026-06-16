@@ -10,11 +10,7 @@
 import { useTranslation } from "react-i18next";
 import { Trophy } from "lucide-react";
 import { motion } from "framer-motion";
-import {
-  useXpLevel,
-  formatXp,
-  type XpLevelLabel,
-} from "@/features/profile/hooks/useXpLevel";
+import { useXpLevel, formatXp, type XpLevelLabel } from "@/features/profile/hooks/useXpLevel";
 import { cn } from "@/lib/utils";
 
 type XpBarVariant = "compact" | "default" | "detailed";
