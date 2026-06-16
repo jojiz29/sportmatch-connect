@@ -33,6 +33,7 @@ import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useAdsStore } from "@/features/business/model/useAdsStore";
+import { IntelligenceDashboard } from "@/features/b2b-ai";
 import { toast } from "sonner";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
@@ -71,7 +72,7 @@ import {
 
 // === BLOQUE: Tipos de búsqueda para pestañas ===
 interface BusinessSearch {
-  tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings";
+  tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings" | "intelligence";
 }
 
 async function uploadVenueImage(imageValue: string, businessId: string): Promise<string> {
@@ -1931,6 +1932,17 @@ function BusinessPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* === BLOQUE: Pestaña Intelligence (B2B-AI) === */}
+      {/* Feature #9 Pricing, #21 Ads Optimizer, #23 Churn Predictor */}
+      {activeTab === "intelligence" && (
+        <IntelligenceDashboard
+          businessId={user.id}
+          businessName={user.company_name || user.name}
+          courts={venues.map((v) => ({ id: v.id, name: v.name }))}
+          ads={businessAds}
+        />
       )}
     </div>
   );

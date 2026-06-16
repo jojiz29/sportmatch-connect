@@ -20,6 +20,7 @@ import {
   Package,
   MapPin,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
@@ -162,6 +163,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               labelKey: "nav.business_analytics",
               label: "Métricas y Alcance",
               icon: TrendingUp,
+            },
+            {
+              to: "/app/business",
+              search: { tab: "intelligence" },
+              labelKey: "nav.business_intelligence",
+              label: "Inteligencia IA",
+              icon: Sparkles,
             },
             {
               to: "/app/business",
