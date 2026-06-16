@@ -1,11 +1,11 @@
-import pg from 'pg';
-import fs from 'node:fs';
+import pg from "pg";
+import fs from "node:fs";
 
-const env = fs.readFileSync('.env', 'utf-8');
+const env = fs.readFileSync(".env", "utf-8");
 for (const line of env.split(/\r?\n/)) {
   const t = line.trim();
-  if (!t || t.startsWith('#')) continue;
-  const i = t.indexOf('=');
+  if (!t || t.startsWith("#")) continue;
+  const i = t.indexOf("=");
   if (i === -1) continue;
   const k = t.slice(0, i).trim();
   const v = t.slice(i + 1).trim();
@@ -14,11 +14,14 @@ for (const line of env.split(/\r?\n/)) {
 
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.error('No DATABASE_URL in .env');
+  console.error("No DATABASE_URL in .env");
   process.exit(1);
 }
 
-const c = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+const c = new pg.Client({
+  connectionString: url,
+  ssl: { rejectUnauthorized: false },
+});
 await c.connect();
 
 const r = await c.query(`
@@ -37,8 +40,8 @@ const r = await c.query(`
 
 const tables = r.rows;
 let totalRows = 0;
-console.log('| Tabla | Filas | Tamaño |');
-console.log('|---|---:|---:|');
+console.log("| Tabla | Filas | Tamaño |");
+console.log("|---|---:|---:|");
 for (const row of tables) {
   const n = Number(row.rows) || 0;
   totalRows += n;
@@ -60,12 +63,14 @@ const trgs = await c.query(`
 `);
 console.log(`**Triggers: ${trgs.rows[0].n}**`);
 
-const pols = await c.query(`SELECT count(*) AS n FROM pg_policies WHERE schemaname = 'public';`);
+const pols = await c.query(
+  `SELECT count(*) AS n FROM pg_policies WHERE schemaname = 'public';`,
+);
 console.log(`**RLS policies: ${pols.rows[0].n}**`);
 
-const indices = await c.query(`
-  SELECT count(*) AS n FROM pg_indexes WHERE schemaname = 'public';
-`);
+const indices = await c.query(
+  `SELECT count(*) AS n FROM pg_indexes WHERE schemaname = 'public';`,
+);
 console.log(`**Índices: ${indices.rows[0].n}**`);
 
 const enums = await c.query(`
@@ -74,7 +79,12 @@ const enums = await c.query(`
 `);
 console.log(`**Tipos ENUM: ${enums.rows[0].n}**`);
 
-const ext = await c.query(`SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'pg_trgm', 'uuid-ossp', 'pgcrypto');`);
-console.log(`**Extensiones: ${ext.rows.map(x => x.extname).join(', ')}**`);
+const ext = await c.query(`
+  SELECT extname FROM pg_extension
+  WHERE extname IN ('postgis', 'pg_trgm', 'uuid-ossp', 'pgcrypto');
+`);
+console.log(
+  `**Extensiones: ${ext.rows.map((x) => x.extname).join(", ")}**`,
+);
 
 await c.end();
