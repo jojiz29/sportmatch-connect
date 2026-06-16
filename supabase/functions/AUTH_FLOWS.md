@@ -26,7 +26,10 @@ serve(async (req: Request) => {
   );
 
   // Obtener usuario actual
-  const { data: { user }, error } = await supabaseUser.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabaseUser.auth.getUser();
   if (!user) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -83,11 +86,11 @@ serve(async (req: Request) => {
 
 ## Variables de entorno necesarias
 
-| Funcion | SUPABASE_URL | SUPABASE_ANON_KEY | SUPABASE_SERVICE_ROLE_KEY | Otras |
-|---|---|---|---|---|
-| `create-stripe-payment-intent` | ✓ | ✓ | opcional | `STRIPE_SECRET_KEY` |
-| `notify-match` | ✓ | | ✓ | |
-| `notify-squad-msg` | ✓ | | ✓ | |
+| Funcion                        | SUPABASE_URL | SUPABASE_ANON_KEY | SUPABASE_SERVICE_ROLE_KEY | Otras               |
+| ------------------------------ | ------------ | ----------------- | ------------------------- | ------------------- |
+| `create-stripe-payment-intent` | ✓            | ✓                 | opcional                  | `STRIPE_SECRET_KEY` |
+| `notify-match`                 | ✓            |                   | ✓                         |                     |
+| `notify-squad-msg`             | ✓            |                   | ✓                         |                     |
 
 ## Troubleshooting
 

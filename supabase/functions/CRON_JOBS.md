@@ -32,10 +32,9 @@ serve(async () => {
     });
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, purged: data?.length ?? 0 }),
-    { headers: { "Content-Type": "application/json" } },
-  );
+  return new Response(JSON.stringify({ ok: true, purged: data?.length ?? 0 }), {
+    headers: { "Content-Type": "application/json" },
+  });
 });
 ```
 
@@ -85,15 +84,13 @@ serve(async () => {
     { type: "invite_friends", target: 1, reward_xp: 100, reward_fc: 30 },
   ];
 
-  const { data, error } = await supabase
-    .from("weekly_challenges")
-    .insert(
-      challenges.map((c) => ({
-        ...c,
-        starts_at: weekStart.toISOString(),
-        ends_at: weekEnd.toISOString(),
-      })),
-    );
+  const { data, error } = await supabase.from("weekly_challenges").insert(
+    challenges.map((c) => ({
+      ...c,
+      starts_at: weekStart.toISOString(),
+      ends_at: weekEnd.toISOString(),
+    })),
+  );
 
   return new Response(JSON.stringify({ ok: !error, count: data?.length ?? 0 }));
 });

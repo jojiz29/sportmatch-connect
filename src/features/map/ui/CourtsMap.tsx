@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // ============================================================
 // CourtsMap.tsx — Mapa interactivo de canchas con Leaflet
 // SCRUM-210
@@ -5,13 +6,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap,
-} from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -221,21 +216,15 @@ export function CourtsMap({ className, onCourtClick }: CourtsMapProps) {
                 <div className="text-sm">
                   <div className="font-bold">{court.name}</div>
                   {court.address && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {court.address}
-                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">{court.address}</div>
                   )}
                   <div className="mt-2 flex items-center gap-2 text-xs">
                     <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">
                       {court.sport}
                     </span>
-                    <span className="text-muted-foreground">
-                      {court.distance_km.toFixed(1)} km
-                    </span>
+                    <span className="text-muted-foreground">{court.distance_km.toFixed(1)} km</span>
                   </div>
-                  <div className="mt-1 font-bold text-primary">
-                    {court.price_per_hour} FC/h
-                  </div>
+                  <div className="mt-1 font-bold text-primary">{court.price_per_hour} FC/h</div>
                 </div>
               </Popup>
             </Marker>

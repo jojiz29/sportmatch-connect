@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // card.test.tsx — Tests unitarios para el componente Card
 // ============================================================

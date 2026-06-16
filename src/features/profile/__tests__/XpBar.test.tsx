@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // ============================================================
 // XpBar.test.tsx — Tests del componente XpBar

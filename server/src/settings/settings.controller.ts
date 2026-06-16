@@ -137,14 +137,9 @@ export class SettingsController {
       "Soft delete: anonimiza datos personales inmediatamente, " +
       "marca deleted_at, registra audit log. Purgado fisico tras 30 dias via cron.",
   })
-  async deleteAccount(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: DeleteAccountDto,
-  ) {
+  async deleteAccount(@Req() req: AuthenticatedRequest, @Body() dto: DeleteAccountDto) {
     const ip =
-      req.headers.get("x-forwarded-for") ||
-      (req as unknown as { ip?: string }).ip ||
-      undefined;
+      req.headers.get("x-forwarded-for") || (req as unknown as { ip?: string }).ip || undefined;
     const userAgent = req.headers.get("user-agent") || undefined;
     return this.settingsService.deleteAccount(
       req.user.sub,

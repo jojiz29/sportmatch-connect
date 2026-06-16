@@ -38,12 +38,7 @@ export function OfflineBanner({ className, sticky = false }: OfflineBannerProps)
           )}
         >
           <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>
-            {t(
-              "offline.banner",
-              "Sin conexion. Mostrando los ultimos datos guardados.",
-            )}
-          </span>
+          <span>{t("offline.banner", "Sin conexion. Mostrando los ultimos datos guardados.")}</span>
         </motion.div>
       )}
     </AnimatePresence>

@@ -247,3 +247,16 @@ export async function deleteAllOtherSessions(signal?: AbortSignal): Promise<{ su
 export async function exportUserData(signal?: AbortSignal): Promise<unknown> {
   return authFetch("/users/me/export-data", { method: "POST", signal });
 }
+
+// === ELIMINAR CUENTA (GDPR - SCRUM-410) ===
+
+export async function deleteAccount(
+  body: { password: string; confirmText: string; reason?: string },
+  signal?: AbortSignal,
+): Promise<{ deletion_id: string; deleted_at: string; message: string }> {
+  return authFetch<{ deletion_id: string; deleted_at: string; message: string }>("/users/me", {
+    method: "DELETE",
+    body,
+    signal,
+  });
+}

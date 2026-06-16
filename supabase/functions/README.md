@@ -5,19 +5,19 @@ Cada función se deploya con `supabase functions deploy <nombre>`.
 
 ## Inventario
 
-| Función | Trigger | Inputs | Outputs | Auth |
-|---|---|---|---|---|
-| [`create-stripe-payment-intent`](./create-stripe-payment-intent/) | HTTP POST | `{ amount, currency, bookingId }` | `{ clientSecret, paymentIntentId }` | JWT required |
-| [`notify-match`](./notify-match/) | Database webhook (`matches` INSERT) | Record de `matches` | `void` (envia push) | service_role |
-| [`notify-squad-msg`](./notify-squad-msg/) | Database webhook (`messages` INSERT) | Record de `messages` | `void` (envia push) | service_role |
+| Función                                                           | Trigger                              | Inputs                            | Outputs                             | Auth         |
+| ----------------------------------------------------------------- | ------------------------------------ | --------------------------------- | ----------------------------------- | ------------ |
+| [`create-stripe-payment-intent`](./create-stripe-payment-intent/) | HTTP POST                            | `{ amount, currency, bookingId }` | `{ clientSecret, paymentIntentId }` | JWT required |
+| [`notify-match`](./notify-match/)                                 | Database webhook (`matches` INSERT)  | Record de `matches`               | `void` (envia push)                 | service_role |
+| [`notify-squad-msg`](./notify-squad-msg/)                         | Database webhook (`messages` INSERT) | Record de `messages`              | `void` (envia push)                 | service_role |
 
 ## Tabla resumen rapida
 
-| Funcion | Tamano | Lenguaje | Ultima modificacion |
-|---|---|---|---|
-| `create-stripe-payment-intent` | 4.2KB | TypeScript / Deno | 2026-05-27 |
-| `notify-match` | 2.1KB | TypeScript / Deno | 2026-05-27 |
-| `notify-squad-msg` | 1.8KB | TypeScript / Deno | 2026-05-27 |
+| Funcion                        | Tamano | Lenguaje          | Ultima modificacion |
+| ------------------------------ | ------ | ----------------- | ------------------- |
+| `create-stripe-payment-intent` | 4.2KB  | TypeScript / Deno | 2026-05-27          |
+| `notify-match`                 | 2.1KB  | TypeScript / Deno | 2026-05-27          |
+| `notify-squad-msg`             | 1.8KB  | TypeScript / Deno | 2026-05-27          |
 
 ## Como deployar
 
@@ -33,29 +33,26 @@ supabase functions deploy
 
 Las Edge Functions esperan estas variables de entorno (configuradas en el dashboard de Supabase):
 
-| Variable | Descripcion | Usada por |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | API key de Stripe (test o live) | `create-stripe-payment-intent` |
-| `SUPABASE_URL` | URL del proyecto Supabase | todas |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (admin) | todas (para bypassar RLS) |
+| Variable                    | Descripcion                     | Usada por                      |
+| --------------------------- | ------------------------------- | ------------------------------ |
+| `STRIPE_SECRET_KEY`         | API key de Stripe (test o live) | `create-stripe-payment-intent` |
+| `SUPABASE_URL`              | URL del proyecto Supabase       | todas                          |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (admin)        | todas (para bypassar RLS)      |
 
 ## Invocar desde el cliente
 
 ### create-stripe-payment-intent
 
 ```typescript
-import { supabase } from '@/shared/api/supabase';
+import { supabase } from "@/shared/api/supabase";
 
-const { data, error } = await supabase.functions.invoke(
-  'create-stripe-payment-intent',
-  {
-    body: {
-      amount: 5000,        // centavos
-      currency: 'pen',
-      bookingId: 'uuid-aqui',
-    },
+const { data, error } = await supabase.functions.invoke("create-stripe-payment-intent", {
+  body: {
+    amount: 5000, // centavos
+    currency: "pen",
+    bookingId: "uuid-aqui",
   },
-);
+});
 
 if (data?.clientSecret) {
   // Inicializar Stripe Elements con data.clientSecret
@@ -68,6 +65,7 @@ Estas funciones se ejecutan automáticamente cuando se inserta un row en
 `matches` o `messages`. No se invocan manualmente.
 
 El trigger se configura en el dashboard de Supabase:
+
 - Database → Webhooks → Create
 - Tabla: `public.matches` (o `public.messages`)
 - Events: INSERT
@@ -77,12 +75,12 @@ El trigger se configura en el dashboard de Supabase:
 
 Los siguientes cron jobs aun NO estan implementados pero se planean:
 
-| Job | Schedule | Proposito |
-|---|---|---|
+| Job                     | Schedule         | Proposito                                                               |
+| ----------------------- | ---------------- | ----------------------------------------------------------------------- |
 | `cleanup-deleted-users` | Diario 03:00 UTC | Purga fisica de profiles con `deleted_at < now() - 30 days` (SCRUM-410) |
-| `weekly-challenges` | Lunes 00:00 UTC | Crea nuevos challenges semanales (SCRUM-228) |
-| `inactive-users-alert` | Diario 09:00 UTC | Detecta usuarios sin actividad > 14 dias y envia email (SCRUM-254) |
-| `clean-temp-uploads` | Cada 6h | Borra uploads temporales sin referencia (limpieza general) |
+| `weekly-challenges`     | Lunes 00:00 UTC  | Crea nuevos challenges semanales (SCRUM-228)                            |
+| `inactive-users-alert`  | Diario 09:00 UTC | Detecta usuarios sin actividad > 14 dias y envia email (SCRUM-254)      |
+| `clean-temp-uploads`    | Cada 6h          | Borra uploads temporales sin referencia (limpieza general)              |
 
 ## Como agregar una nueva Edge Function
 

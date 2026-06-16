@@ -47,15 +47,10 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
   loadAvailability: async (courtId, fromDate, toDate) => {
     set({ loading: true, error: null });
     try {
-      const availability = await bookingsApi.getCourtAvailability(
-        courtId,
-        fromDate,
-        toDate,
-      );
+      const availability = await bookingsApi.getCourtAvailability(courtId, fromDate, toDate);
       set({ availability, loading: false });
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Error al cargar disponibilidad";
+      const msg = err instanceof Error ? err.message : "Error al cargar disponibilidad";
       set({ error: msg, loading: false });
     }
   },
@@ -74,8 +69,8 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
         err instanceof Error && err.message.includes("duplicate")
           ? "Ese horario ya esta reservado"
           : err instanceof Error
-          ? err.message
-          : "Error al crear reserva";
+            ? err.message
+            : "Error al crear reserva";
       set({ error: msg, saving: false });
       toast.error(msg);
       return null;

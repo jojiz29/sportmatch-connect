@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // AppShell.test.tsx — Tests del shell principal de la app
 // Verifica renderizado del layout con navegación y sidebar

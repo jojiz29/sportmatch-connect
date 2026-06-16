@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // connectionService.test.ts — Tests de conexiones entre jugadores
 // Verifica crear, listar y eliminar player_connections

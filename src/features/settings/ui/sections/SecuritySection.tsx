@@ -41,12 +41,16 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Button } from "@/shared/ui/button";
 import { useSettingsStore } from "../../model/useSettingsStore";
+import { useAuth } from "@/entities/user/useAuth";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/shared/api/supabase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function SecuritySection() {
   const { t } = useTranslation();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const {
     preferences,
     sessions,
@@ -55,6 +59,7 @@ export function SecuritySection() {
     loadSessions,
     deleteSession,
     deleteAllOtherSessions,
+    deleteAccount,
   } = useSettingsStore();
 
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -126,15 +131,34 @@ export function SecuritySection() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    toast.error(
-      t(
-        "settings.security.delete_account_contact",
-        "Para eliminar tu cuenta, contacta a soporte@sportmatch.com desde el email registrado.",
-      ),
-    );
-    setShowDeleteConfirm(false);
-    setDeleteConfirmText("");
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "ELIMINAR") return;
+    if (!currentPwd) {
+      toast.error(t("settings.security.password_required", "Ingresa tu password para confirmar"));
+      return;
+    }
+    setSaving(true);
+    try {
+      await deleteAccount(currentPwd, deleteConfirmText);
+      toast.success(
+        t(
+          "settings.security.delete_account_success",
+          "Tu cuenta ha sido eliminada. Tus datos fueron anonimizados.",
+        ),
+      );
+      setShowDeleteConfirm(false);
+      setDeleteConfirmText("");
+      setCurrentPwd("");
+      // Cerrar sesion despues de un momento
+      setTimeout(() => {
+        signOut().then(() => navigate({ to: "/login" }));
+      }, 2000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al eliminar cuenta";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

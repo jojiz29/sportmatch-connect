@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // useNSFWJS.test.ts — Tests del hook de moderación NSFW
 // Verifica detección de contenido explícito en imágenes

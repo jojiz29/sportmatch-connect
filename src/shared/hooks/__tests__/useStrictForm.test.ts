@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // useStrictForm.test.ts — Tests del hook de formulario estricto
 // Verifica validaciones personalizadas y mensajes de error

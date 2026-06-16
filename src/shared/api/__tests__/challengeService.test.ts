@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // challengeService.test.ts — Tests de desafíos entre jugadores
 // Verifica crear, aceptar, rechazar y resolver challenges

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // ============================================================
 // BookingCalendar.tsx — Calendario interactivo de reservas
 // SCRUM-186
@@ -46,8 +47,16 @@ export function BookingCalendar({
   onBookingCreated,
 }: BookingCalendarProps) {
   const { t } = useTranslation();
-  const { availability, loading, saving, loadAvailability, createBooking, cancelBooking, myBookings, loadMyBookings } =
-    useBookingsStore();
+  const {
+    availability,
+    loading,
+    saving,
+    loadAvailability,
+    createBooking,
+    cancelBooking,
+    myBookings,
+    loadMyBookings,
+  } = useBookingsStore();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
@@ -56,9 +65,7 @@ export function BookingCalendar({
   useEffect(() => {
     const now = new Date();
     const from = now.toISOString().slice(0, 10);
-    const to = new Date(now.getTime() + 60 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const to = new Date(now.getTime() + 60 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     loadAvailability(courtId, from, to);
     loadMyBookings();
   }, [courtId, loadAvailability, loadMyBookings]);
@@ -173,14 +180,12 @@ export function BookingCalendar({
                             isBooked && !isMyBooking
                               ? "bg-muted/30 border-border/20 text-muted-foreground cursor-not-allowed line-through"
                               : isMyBooking
-                              ? "bg-green-500/20 border-green-500/40 text-green-700 dark:text-green-300 hover:bg-green-500/30"
-                              : selectedSlot === slot.time_slot
-                              ? "bg-primary text-primary-foreground border-primary shadow-glow"
-                              : "bg-background border-border/40 hover:border-primary/50 active:scale-95",
+                                ? "bg-green-500/20 border-green-500/40 text-green-700 dark:text-green-300 hover:bg-green-500/30"
+                                : selectedSlot === slot.time_slot
+                                  ? "bg-primary text-primary-foreground border-primary shadow-glow"
+                                  : "bg-background border-border/40 hover:border-primary/50 active:scale-95",
                           )}
-                          aria-label={`${slot.time_slot} ${
-                            isBooked ? "reservado" : "disponible"
-                          }`}
+                          aria-label={`${slot.time_slot} ${isBooked ? "reservado" : "disponible"}`}
                         >
                           {slot.time_slot}
                           {isMyBooking && (
@@ -214,14 +219,8 @@ export function BookingCalendar({
                       >
                         {t("common.cancel", "Cancelar")}
                       </Button>
-                      <Button
-                        onClick={handleConfirm}
-                        disabled={saving}
-                        className="min-h-[44px]"
-                      >
-                        {saving && (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        )}
+                      <Button onClick={handleConfirm} disabled={saving} className="min-h-[44px]">
+                        {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                         {t("bookings.confirm", "Reservar")}
                       </Button>
                     </div>

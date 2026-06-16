@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // MatchmakingFeature.test.tsx — Tests del componente de matchmaking
 // Verifica renderizado, swipe y modal de match

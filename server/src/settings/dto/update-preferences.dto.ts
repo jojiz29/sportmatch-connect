@@ -215,13 +215,12 @@ export class BlockUserDto {
   reason?: string;
 }
 
-
 export class DeleteAccountDto {
   /**
    * Password actual del usuario para confirmar la eliminacion.
    * Se valida contra Supabase Auth antes de proceder.
    */
-  @ApiProperty({ description: 'Password actual del usuario' })
+  @ApiProperty({ description: "Password actual del usuario" })
   @IsString()
   password!: string;
 
@@ -229,7 +228,7 @@ export class DeleteAccountDto {
    * Texto de confirmacion. Debe ser exactamente 'ELIMINAR'.
    * Confirmacion tipeada para evitar borrado accidental.
    */
-  @ApiProperty({ description: 'Debe ser exactamente ELIMINAR' })
+  @ApiProperty({ description: "Debe ser exactamente ELIMINAR" })
   @IsString()
   confirmText!: string;
 

@@ -39,6 +39,13 @@ interface SettingsState {
 
   /** Export */
   exportData: () => Promise<unknown>;
+
+  /** Eliminar cuenta (GDPR - SCRUM-410) */
+  deleteAccount: (
+    password: string,
+    confirmText: string,
+    reason?: string,
+  ) => Promise<{ deletion_id: string; deleted_at: string; message: string }>;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -263,6 +270,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       URL.revokeObjectURL(url);
       toast.success("Descarga iniciada");
       return data;
+    } catch (err) {
+      const msg = errorMessage(err);
+      toast.error(msg);
+      throw err;
+    }
+  },
+
+  // === ELIMINAR CUENTA (GDPR - SCRUM-410) ===
+
+  deleteAccount: async (password: string, confirmText: string, reason?: string) => {
+    try {
+      const result = await settingsApi.deleteAccount({
+        password,
+        confirmText,
+        reason,
+      });
+      return result;
     } catch (err) {
       const msg = errorMessage(err);
       toast.error(msg);

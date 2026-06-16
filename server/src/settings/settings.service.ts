@@ -346,9 +346,7 @@ export class SettingsService {
     this.ensureConfigured();
 
     if (confirmText !== "ELIMINAR") {
-      throw new BadRequestException(
-        "Debes escribir ELIMINAR (en mayusculas) para confirmar",
-      );
+      throw new BadRequestException("Debes escribir ELIMINAR (en mayusculas) para confirmar");
     }
 
     if (!password || password.length < 1) {
@@ -361,7 +359,8 @@ export class SettingsService {
     //    intentamos signIn con el email/password via admin API.
     try {
       // Supabase Admin: listar usuario y verificar via getUserById
-      const { data: user, error: userErr } = await this.supabaseAdmin.auth.admin.getUserById(userId);
+      const { data: user, error: userErr } =
+        await this.supabaseAdmin.auth.admin.getUserById(userId);
       if (userErr || !user?.user) {
         throw new UnauthorizedException("Usuario no encontrado");
       }
@@ -385,16 +384,12 @@ export class SettingsService {
     });
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Error al eliminar cuenta: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`Error al eliminar cuenta: ${error.message}`);
     }
 
     const result = data?.[0];
     if (!result) {
-      throw new InternalServerErrorException(
-        "No se recibio respuesta del RPC soft_delete_user",
-      );
+      throw new InternalServerErrorException("No se recibio respuesta del RPC soft_delete_user");
     }
 
     // 3) Cerrar todas las sesiones del usuario

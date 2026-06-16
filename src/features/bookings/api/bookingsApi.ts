@@ -106,9 +106,6 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
 
 /** Cancela una reserva (delete) */
 export async function cancelBooking(bookingId: string): Promise<void> {
-  const { error } = await supabase
-    .from("bookings")
-    .delete()
-    .eq("id", bookingId);
+  const { error } = await supabase.from("bookings").delete().eq("id", bookingId);
   if (error) throw error;
 }

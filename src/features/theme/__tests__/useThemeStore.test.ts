@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // ============================================================
 // useThemeStore.test.ts — Tests para useThemeStore (Zustand)

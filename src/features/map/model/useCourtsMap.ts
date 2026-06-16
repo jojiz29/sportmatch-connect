@@ -39,31 +39,33 @@ export function useCourtsMap() {
     radius_km: 25,
   });
 
-  const search = useCallback(async (override?: Partial<MapFilters>) => {
-    const params = { ...filters, ...override };
-    setFilters(params);
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: rpcErr } = await supabase.rpc("search_courts_nearby", {
-        p_lng: params.lng,
-        p_lat: params.lat,
-        p_radius_km: params.radius_km,
-        p_sport: params.sport ?? null,
-        p_max_price: params.max_price ?? null,
-      });
-      if (rpcErr) throw rpcErr;
-      setCourts((data || []) as CourtOnMap[]);
-      setCenter({ lat: params.lat, lng: params.lng });
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Error al buscar canchas";
-      setError(msg);
-      setCourts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+  const search = useCallback(
+    async (override?: Partial<MapFilters>) => {
+      const params = { ...filters, ...override };
+      setFilters(params);
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: rpcErr } = await supabase.rpc("search_courts_nearby", {
+          p_lng: params.lng,
+          p_lat: params.lat,
+          p_radius_km: params.radius_km,
+          p_sport: params.sport ?? null,
+          p_max_price: params.max_price ?? null,
+        });
+        if (rpcErr) throw rpcErr;
+        setCourts((data || []) as CourtOnMap[]);
+        setCenter({ lat: params.lat, lng: params.lng });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Error al buscar canchas";
+        setError(msg);
+        setCourts([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters],
+  );
 
   // Carga inicial con centro default
   useEffect(() => {

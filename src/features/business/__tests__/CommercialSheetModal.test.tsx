@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ============================================================
 // CommercialSheetModal.test.tsx — Tests del modal comercial B2B
 // Verifica renderizado de catálogo y acciones comerciales
