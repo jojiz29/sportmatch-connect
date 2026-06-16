@@ -9,7 +9,7 @@ const ROTATION: Theme[] = ["world-cup", "dark-footballer", "light"];
 
 function applyTheme(theme: Theme) {
   if (typeof document !== "undefined") {
-    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.dataset.theme = theme;
     // Asegura que .light y .world-cup se activen en cualquier ancla superior
     document.documentElement.classList.remove("light", "dark-footballer", "world-cup");
     document.documentElement.classList.add(theme);

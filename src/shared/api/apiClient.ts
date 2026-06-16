@@ -737,7 +737,7 @@ export const apiClient = {
       return {
         ...data,
         current_players: [],
-      } as unknown as Match;
+      };
     },
   },
 
@@ -869,7 +869,7 @@ export const apiClient = {
 
         // Refleja el cambio en el store de autenticación (UI reactiva)
         const currentUser = useAuthStore.getState().user;
-        if (currentUser && currentUser.id === userId) {
+        if (currentUser?.id === userId) {
           useAuthStore.setState({ user: { ...currentUser, fitcoins_balance: newBalance } });
         }
       }

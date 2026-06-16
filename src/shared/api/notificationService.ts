@@ -13,6 +13,7 @@ import { supabase } from "./supabase";
 import { AppNotification } from "@/entities/types";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
+import { cryptoSecureRandomString } from "@/shared/lib/crypto";
 
 // ==============================================================
 // HELPERS DE DEMO MODE (persistencia en localStorage)
@@ -20,7 +21,7 @@ import { useNotificationStore } from "@/features/notifications/model/useNotifica
 
 /** Lee todas las notificaciones demo desde localStorage */
 function getDemoNotifications(): AppNotification[] {
-  if (typeof window === "undefined") return [];
+  if (globalThis.window === undefined) return [];
   try {
     const saved = localStorage.getItem("sportmatch_demo_notifications");
     return saved ? JSON.parse(saved) : [];
@@ -32,7 +33,7 @@ function getDemoNotifications(): AppNotification[] {
 
 /** Guarda notificaciones demo en localStorage */
 function saveDemoNotifications(notifications: AppNotification[]): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   try {
     localStorage.setItem("sportmatch_demo_notifications", JSON.stringify(notifications));
   } catch (e) {
@@ -99,7 +100,7 @@ export async function createNotification(
   content: string,
   link?: string,
 ): Promise<AppNotification> {
-  const notifId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const notifId = `notif-${Date.now()}-${cryptoSecureRandomString(9)}`;
   let newNotif: AppNotification;
 
   if (useAuthStore.getState().isDemoMode) {
@@ -150,7 +151,7 @@ export async function createNotification(
 
   // Sincroniza con el store Zustand si la notificación es para el usuario actual
   const currentUser = useAuthStore.getState().user;
-  if (currentUser && currentUser.id === userId) {
+  if (currentUser?.id === userId) {
     useNotificationStore.getState().addNotificationDirectly(newNotif);
   }
 

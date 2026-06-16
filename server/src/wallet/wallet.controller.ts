@@ -13,8 +13,8 @@ import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 @Controller("wallet")
 export class WalletController {
   constructor(
-    private walletService: WalletService,
-    private prisma: PrismaService,
+    private readonly walletService: WalletService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get(":userId/balance")

@@ -18,6 +18,7 @@ import {
   HashtagsDto,
   ModerateTextDto,
   ModerationResultDto,
+  CoachRecommendationDto,
 } from "./dto/ai.dto";
 
 interface AuthenticatedRequest extends Request {
@@ -58,6 +59,18 @@ export class AiController {
   ): Promise<ChatResponseDto> {
     const userId = req.user.sub;
     return this.aiService.welcome(userId, dto.language ?? "es");
+  }
+
+  @Post("coach/recommend")
+  @ApiOperation({
+    summary: "Sporty Coach — Recomienda canchas según preferencias del usuario",
+  })
+  async recommend(
+    @Body() dto: CoachRecommendationDto,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ChatResponseDto> {
+    const userId = req.user.sub;
+    return this.aiService.recommendCourts(userId, dto, dto.language);
   }
 
   @Post("text/comment-suggestion")

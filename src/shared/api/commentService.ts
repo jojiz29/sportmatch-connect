@@ -55,9 +55,9 @@ interface SupabaseReaction {
 
 /** Almacena comentarios mock: { postId: PostComment[] } */
 function getMockComments(): Record<string, PostComment[]> {
-  if (typeof window === "undefined") return {};
+  if (globalThis.window === undefined) return {};
   try {
-    const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_COMMENTS);
+    const saved = globalThis.window.localStorage.getItem(LOCAL_STORAGE_KEY_COMMENTS);
     return saved ? JSON.parse(saved) : {};
   } catch {
     return {};
@@ -65,9 +65,9 @@ function getMockComments(): Record<string, PostComment[]> {
 }
 
 function saveMockComments(comments: Record<string, PostComment[]>) {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   try {
-    window.localStorage.setItem(LOCAL_STORAGE_KEY_COMMENTS, JSON.stringify(comments));
+    globalThis.window.localStorage.setItem(LOCAL_STORAGE_KEY_COMMENTS, JSON.stringify(comments));
   } catch {
     console.warn("Failed to save mock comments to localStorage");
   }
@@ -300,7 +300,7 @@ export async function addReaction(
     throw error;
   }
 
-  return reaction as unknown as CommentReaction;
+  return reaction;
 }
 
 /**
@@ -369,7 +369,7 @@ export async function getUserReactionForComment(
     .single();
 
   if (error || !data) return null;
-  return (data as unknown as { reaction_type: ReactionType }).reaction_type;
+  return data.reaction_type;
 }
 
 /**

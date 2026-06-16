@@ -769,5 +769,60 @@
   },
   "offline": {
     "banner": "Sin conexion. Mostrando los ultimos datos guardados."
+  },
+  "share": {
+    "button": "Compartir",
+    "copied": "¡Copiado!",
+    "levelUp": "¡Acabo de subir a nivel {level} ({label}) en SportMatch! 🏆",
+    "matchCompleted": "¡Partidazo! {sport} completado en SportMatch",
+    "challengeCompleted": "¡Completé el desafío '{name}' en SportMatch!",
+    "hashtags": "#SportMatch #Deporte #FitCoins"
+  },
+  "levelUp": {
+    "title": "¡Subiste de nivel!",
+    "message": "¡Felicidades! Has subido a nivel {label}. Sigue así.",
+    "close": "Cerrar"
+  },
+  "weeklyChallenges": {
+    "title": "Desafíos de la Semana",
+    "empty": "No hay desafíos esta semana. ¡Vuelve el lunes!",
+    "claim": "Reclamar",
+    "claimed": "Reclamado",
+    "progress": "{current}/{goal}",
+    "reward": "{xp} XP · {fc} FitCoins",
+    "types": {
+      "play_matches": "Juega {goal} partidos",
+      "win_matches": "Gana {goal} partidos",
+      "book_courts": "Reserva {goal} canchas",
+      "invite_friends": "Invita {goal} amigo",
+      "maintain_streak": "Mantén racha de {goal} días",
+      "earn_xp": "Gana {goal} XP"
+    }
+  },
+  "favorites": {
+    "add": "Añadir a favoritos",
+    "remove": "Quitar de favoritos",
+    "filter": "Solo favoritos",
+    "empty": "No tienes canchas favoritas"
+  },
+  "wallet": {
+    "sporty_coach": "Sporty Coach",
+    "coach_sport_placeholder": "¿Qué deporte?",
+    "coach_location_placeholder": "¿Dónde quieres jugar?",
+    "coach_level_placeholder": "Nivel de juego",
+    "coach_level_beginner": "Principiante",
+    "coach_level_intermediate": "Intermedio",
+    "coach_level_advanced": "Avanzado",
+    "coach_prefs_placeholder": "Preferencias (ej. techada, iluminación)",
+    "coach_ask": "Preguntar a Sporty",
+    "coach_loading": "Sporty está pensando..."
+  },
+  "challengeInvite": {
+    "title": "¡Te han retado!",
+    "expired": "Este reto ha expirado",
+    "notFound": "Reto no encontrado",
+    "selfChallenge": "No puedes retarte a ti mismo",
+    "acceptRegister": "Aceptar Reto — Registrarme",
+    "acceptLogin": "Ya tengo cuenta — Iniciar Sesión"
   }
 }

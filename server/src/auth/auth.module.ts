@@ -9,10 +9,11 @@ import { AuthService } from "./auth.service";
 import { SupabaseAuthService } from "./supabase-auth.service";
 import { SupabaseAuthGuard } from "./guards/supabase-auth.guard";
 import { RolesGuard } from "./guards/roles.guard";
+import { AdminGuard } from "./guards/admin.guard";
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, SupabaseAuthService, SupabaseAuthGuard, RolesGuard],
-  exports: [AuthService, SupabaseAuthService, SupabaseAuthGuard, RolesGuard],
+  providers: [AuthService, SupabaseAuthService, SupabaseAuthGuard, RolesGuard, AdminGuard],
+  exports: [AuthService, SupabaseAuthService, SupabaseAuthGuard, RolesGuard, AdminGuard],
 })
 export class AuthModule {}

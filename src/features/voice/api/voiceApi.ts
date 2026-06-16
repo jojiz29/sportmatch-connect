@@ -76,7 +76,7 @@ export async function transcribeAudio(
 
   const data = (await response.json()) as VoiceTranscriptionResponse;
   if (typeof data?.text !== "string") {
-    throw new Error("La transcripción recibida no es válida.");
+    throw new TypeError("La transcripción recibida no es válida.");
   }
   return data;
 }

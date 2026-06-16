@@ -17,6 +17,7 @@ import { backendApi } from "./backendApi";
 import { withTimeout } from "./timeoutHelper";
 import { getCatalogItems } from "./businessService";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
+import { cryptoSecureRandomString } from "@/shared/lib/crypto";
 
 const LOCAL_STORAGE_KEY_POSTS = "sportmatch_demo_posts";
 
@@ -64,9 +65,9 @@ const DEFAULT_MOCK_POSTS: Post[] = [
 // ==============================================================
 
 function getMockPosts(): Post[] {
-  if (typeof window === "undefined") return DEFAULT_MOCK_POSTS;
+  if (globalThis.window === undefined) return DEFAULT_MOCK_POSTS;
   try {
-    const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_POSTS);
+    const saved = globalThis.window.localStorage.getItem(LOCAL_STORAGE_KEY_POSTS);
     if (saved) {
       return JSON.parse(saved);
     }
@@ -77,9 +78,9 @@ function getMockPosts(): Post[] {
 }
 
 function saveMockPosts(posts: Post[]) {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   try {
-    window.localStorage.setItem(LOCAL_STORAGE_KEY_POSTS, JSON.stringify(posts));
+    globalThis.window.localStorage.setItem(LOCAL_STORAGE_KEY_POSTS, JSON.stringify(posts));
   } catch (e) {
     console.warn("Failed to save mock posts to localStorage:", e);
   }
@@ -171,10 +172,10 @@ export async function getFeed(userId: string): Promise<Post[]> {
         if (!author.last_location_lat || !author.last_location_lng) return false;
 
         const dist = calculateDistance(
-          parseFloat(String(currentUser.last_location_lat)),
-          parseFloat(String(currentUser.last_location_lng)),
-          parseFloat(String(author.last_location_lat)),
-          parseFloat(String(author.last_location_lng)),
+          Number.parseFloat(String(currentUser.last_location_lat)),
+          Number.parseFloat(String(currentUser.last_location_lng)),
+          Number.parseFloat(String(author.last_location_lat)),
+          Number.parseFloat(String(author.last_location_lng)),
         );
         return dist <= 5;
       }
@@ -183,7 +184,7 @@ export async function getFeed(userId: string): Promise<Post[]> {
     });
 
     // 5. Normaliza la respuesta
-    return (filtered as SupabasePost[]).map((post) => ({
+    return filtered.map((post) => ({
       id: post.id,
       user_id: post.user_id,
       content: post.content,
@@ -219,6 +220,139 @@ export async function getFeed(userId: string): Promise<Post[]> {
  * @param sport     - Deporte relacionado (opcional)
  * @param imageFile - Archivo de imagen para subida directa (opcional)
  */
+async function createDemoPost(
+  userId: string,
+  content: string,
+  type: Post["type"],
+  mediaUrl?: string,
+  sport?: Post["sport"],
+): Promise<Post> {
+  const currentUser = useAuthStore.getState().user;
+  const newPost: Post = {
+    id: `post-demo-${Date.now()}`,
+    user_id: userId,
+    content,
+    type,
+    media_url: mediaUrl,
+    sport,
+    user_name: currentUser?.name || "Usuario Demo",
+    user_avatar: currentUser?.avatar_url || "",
+    created_at: new Date().toISOString(),
+  };
+  const posts = getMockPosts();
+  posts.unshift(newPost);
+  saveMockPosts(posts);
+
+  // Notifica a seguidores si es negocio (Demo Mode)
+  if (currentUser?.user_role === "BUSINESS") {
+    const businessName = currentUser.company_name || currentUser.name;
+    getCatalogItems(userId)
+      .then(async (catalog) => {
+        const itemIdToLink = catalog[0]?.id;
+        const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
+        const notifTitle = `Nueva oferta de ${businessName}`;
+        const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
+
+        const relationships = useSocialStore.getState().relationships;
+        const followerIds = relationships
+          .filter((r) => r.followingId === userId)
+          .map((r) => r.followerId);
+
+        for (const followerId of followerIds) {
+          await createNotification(
+            followerId,
+            "AD_IMPRESSION",
+            notifTitle,
+            notifContent,
+            notifLink,
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not trigger B2B post notifications in demo mode:", err);
+      });
+  }
+
+  return newPost;
+}
+
+async function uploadPostImage(
+  userId: string,
+  content: string,
+  type: Post["type"],
+  sport?: Post["sport"],
+  imageFile?: File,
+): Promise<Post> {
+  const formData = new FormData();
+  formData.append("userId", userId);
+  formData.append("content", content);
+  formData.append("type", type);
+  if (sport) formData.append("sport", sport);
+  formData.append("image", imageFile!);
+
+  const { data: uploadResult, error: uploadError } = await backendApi.posts.createMultipart(
+    "",
+    formData,
+  );
+  if (uploadError || !uploadResult) {
+    throw new Error(uploadError || "Failed to create post with image file");
+  }
+  return uploadResult as Post;
+}
+
+async function generateAndInsertHashtags(postId: string, content: string): Promise<void> {
+  try {
+    const { generateHashtags } = await import("@/features/ai-text/api/textApi");
+    const res = await generateHashtags({ content, minTags: 3, maxTags: 5 });
+    if (res.tags.length > 0) {
+      const tagRows = res.tags.map((tag) => ({
+        post_id: postId,
+        tag,
+        created_at: new Date().toISOString(),
+      }));
+      await supabase.from("post_tags").insert(tagRows).select();
+    }
+  } catch (err) {
+    console.warn("Auto-hashtags failed (non-blocking):", err);
+  }
+}
+
+async function notifyFollowersAboutNewPost(userId: string, content: string, author: any): Promise<void> {
+  try {
+    const businessName = author.company_name || author.name;
+
+    const { data: catalogItems } = await supabase
+      .from("business_catalog")
+      .select("id")
+      .eq("business_id", userId)
+      .limit(1);
+
+    const itemIdToLink = catalogItems?.[0]?.id;
+    const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
+    const notifTitle = `Nueva oferta de ${businessName}`;
+    const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
+
+    const { data: followers } = await supabase
+      .from("followers")
+      .select("follower_id")
+      .eq("following_id", userId);
+
+    if (followers && followers.length > 0) {
+      for (const f of followers) {
+        await createNotification(
+          f.follower_id,
+          "AD_IMPRESSION",
+          notifTitle,
+          notifContent,
+          notifLink,
+        );
+      }
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn("Could not trigger B2B post notifications:", err);
+  }
+}
+
 export async function createPost(
   userId: string,
   content: string,
@@ -228,78 +362,18 @@ export async function createPost(
   imageFile?: File,
 ): Promise<Post> {
   if (useAuthStore.getState().isDemoMode) {
-    const currentUser = useAuthStore.getState().user;
-    const newPost: Post = {
-      id: `post-demo-${Date.now()}`,
-      user_id: userId,
-      content,
-      type,
-      media_url: mediaUrl,
-      sport,
-      user_name: currentUser?.name || "Usuario Demo",
-      user_avatar: currentUser?.avatar_url || "",
-      created_at: new Date().toISOString(),
-    };
-    const posts = getMockPosts();
-    posts.unshift(newPost);
-    saveMockPosts(posts);
-
-    // Notifica a seguidores si es negocio (Demo Mode)
-    if (currentUser && currentUser.user_role === "BUSINESS") {
-      const businessName = currentUser.company_name || currentUser.name;
-      getCatalogItems(userId)
-        .then(async (catalog) => {
-          const itemIdToLink = catalog[0]?.id;
-          const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
-          const notifTitle = `Nueva oferta de ${businessName}`;
-          const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
-
-          const relationships = useSocialStore.getState().relationships;
-          const followerIds = relationships
-            .filter((r) => r.followingId === userId)
-            .map((r) => r.followerId);
-
-          for (const followerId of followerIds) {
-            await createNotification(
-              followerId,
-              "AD_IMPRESSION",
-              notifTitle,
-              notifContent,
-              notifLink,
-            );
-          }
-        })
-        .catch((err) => {
-          console.warn("Could not trigger B2B post notifications in demo mode:", err);
-        });
-    }
-
-    return newPost;
+    return createDemoPost(userId, content, type, mediaUrl, sport);
   }
 
   // --- MODO REAL ---
 
   // Si hay archivo de imagen, sube via multipart FormData al backend NestJS
   if (imageFile) {
-    const formData = new FormData();
-    formData.append("userId", userId);
-    formData.append("content", content);
-    formData.append("type", type);
-    if (sport) formData.append("sport", sport);
-    formData.append("image", imageFile);
-
-    const { data: uploadResult, error: uploadError } = await backendApi.posts.createMultipart(
-      "",
-      formData,
-    );
-    if (uploadError || !uploadResult) {
-      throw new Error(uploadError || "Failed to create post with image file");
-    }
-    return uploadResult as Post;
+    return uploadPostImage(userId, content, type, sport, imageFile);
   }
 
   // Post de texto: inserta en Supabase
-  const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const newPostId = `post-${Date.now()}-${cryptoSecureRandomString(9)}`;
 
   const { data: post, error } = await withTimeout(
     supabase
@@ -323,57 +397,12 @@ export async function createPost(
   }
 
   // Feature #3 — Auto-Hashtags: trigger async no bloqueante después de crear el post
-  try {
-    const { generateHashtags } = await import("@/features/ai-text/api/textApi");
-    const res = await generateHashtags({ content, minTags: 3, maxTags: 5 });
-    if (res.tags.length > 0) {
-      const tagRows = res.tags.map((tag) => ({
-        post_id: newPostId,
-        tag,
-        created_at: new Date().toISOString(),
-      }));
-      await supabase.from("post_tags").insert(tagRows).select();
-    }
-  } catch (err) {
-    console.warn("Auto-hashtags failed (non-blocking):", err);
-  }
+  generateAndInsertHashtags(newPostId, content);
 
   // Notifica a seguidores si el autor es un negocio
-  try {
-    const author = (post as unknown as SupabasePost).profile;
-    if (author && author.user_role === "BUSINESS") {
-      const businessName = author.company_name || author.name;
-
-      const { data: catalogItems } = await supabase
-        .from("business_catalog")
-        .select("id")
-        .eq("business_id", userId)
-        .limit(1);
-
-      const itemIdToLink = catalogItems?.[0]?.id;
-      const notifLink = itemIdToLink ? `/app/wallet?buyItem=${itemIdToLink}` : "/app/wallet";
-      const notifTitle = `Nueva oferta de ${businessName}`;
-      const notifContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
-
-      const { data: followers } = await supabase
-        .from("followers")
-        .select("follower_id")
-        .eq("following_id", userId);
-
-      if (followers && followers.length > 0) {
-        for (const f of followers) {
-          await createNotification(
-            f.follower_id,
-            "AD_IMPRESSION",
-            notifTitle,
-            notifContent,
-            notifLink,
-          );
-        }
-      }
-    }
-  } catch (err) {
-    if (import.meta.env.DEV) console.warn("Could not trigger B2B post notifications:", err);
+  const author = (post as unknown as SupabasePost).profile;
+  if (author?.user_role === "BUSINESS") {
+    notifyFollowersAboutNewPost(userId, content, author);
   }
 
   // Normaliza la respuesta

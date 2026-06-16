@@ -78,6 +78,44 @@ interface FetchOptions {
   signal?: AbortSignal;
 }
 
+const mapHttpStatusToErrorKind = (status: number): SettingsApiErrorKind => {
+  if (status === 401) return "unauthorized";
+  if (status === 403) return "forbidden";
+  if (status === 404) return "not_found";
+  if (status === 422 || status === 400) return "validation";
+  if (status === 429) return "rate_limited";
+  if (status >= 500) return "server";
+  return "unknown";
+};
+
+const parseResponseError = async (res: Response): Promise<SettingsApiError> => {
+  let message = `HTTP ${res.status}`;
+  let details = null;
+  try {
+    const payload = await res.json();
+    if (payload.message) message = payload.message;
+    if (payload.details) details = payload.details;
+  } catch {
+    /* ignore */
+  }
+  const kind = mapHttpStatusToErrorKind(res.status);
+  return new SettingsApiError(message, kind, res.status, details);
+};
+
+const handleFetchException = (err: unknown): never => {
+  if (err instanceof SettingsApiError) throw err;
+  if (err instanceof DOMException && err.name === "AbortError") {
+    throw new SettingsApiError("Aborted", "aborted", null);
+  }
+  if (err instanceof Error && err.name === "AbortError") {
+    throw new SettingsApiError("Timeout", "timeout", null);
+  }
+  if (err instanceof TypeError) {
+    throw new SettingsApiError("Network", "network", null);
+  }
+  throw new SettingsApiError(err instanceof Error ? err.message : "Unknown", "unknown", null);
+};
+
 async function authFetch<T>(path: string, opts: FetchOptions = {}): Promise<T> {
   const {
     data: { session },
@@ -109,43 +147,13 @@ async function authFetch<T>(path: string, opts: FetchOptions = {}): Promise<T> {
     });
 
     if (!res.ok) {
-      let payload: { message?: string; details?: Record<string, unknown> } = {};
-      try {
-        payload = await res.json();
-      } catch {
-        /* ignore */
-      }
-
-      let kind: SettingsApiErrorKind = "unknown";
-      if (res.status === 401) kind = "unauthorized";
-      else if (res.status === 403) kind = "forbidden";
-      else if (res.status === 404) kind = "not_found";
-      else if (res.status === 422 || res.status === 400) kind = "validation";
-      else if (res.status === 429) kind = "rate_limited";
-      else if (res.status >= 500) kind = "server";
-
-      throw new SettingsApiError(
-        payload.message || `HTTP ${res.status}`,
-        kind,
-        res.status,
-        payload.details || null,
-      );
+      throw await parseResponseError(res);
     }
 
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   } catch (err) {
-    if (err instanceof SettingsApiError) throw err;
-    if (err instanceof DOMException && err.name === "AbortError") {
-      throw new SettingsApiError("Aborted", "aborted", null);
-    }
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new SettingsApiError("Timeout", "timeout", null);
-    }
-    if (err instanceof TypeError) {
-      throw new SettingsApiError("Network", "network", null);
-    }
-    throw new SettingsApiError(err instanceof Error ? err.message : "Unknown", "unknown", null);
+    throw handleFetchException(err);
   } finally {
     clearTimeout(timeout);
   }

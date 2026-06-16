@@ -93,7 +93,7 @@ const MOCK_CATALOG: CatalogItem[] = [
 // ==============================================================
 
 const getDemoCatalog = (): CatalogItem[] => {
-  if (typeof window === "undefined") return MOCK_CATALOG;
+  if (globalThis.window === undefined) return MOCK_CATALOG;
   const stored = localStorage.getItem("sportmatch_demo_catalog");
   if (!stored) {
     localStorage.setItem("sportmatch_demo_catalog", JSON.stringify(MOCK_CATALOG));
@@ -103,7 +103,7 @@ const getDemoCatalog = (): CatalogItem[] => {
 };
 
 const saveDemoCatalog = (catalog: CatalogItem[]) => {
-  if (typeof window !== "undefined") {
+  if (globalThis.window !== undefined) {
     localStorage.setItem("sportmatch_demo_catalog", JSON.stringify(catalog));
   }
 };

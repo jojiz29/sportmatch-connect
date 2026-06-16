@@ -50,7 +50,7 @@ interface CreateConnectionInput {
 // ==============================================================
 
 function getDemoConnections(): PlayerConnection[] {
-  if (typeof window === "undefined") return [];
+  if (globalThis.window === undefined) return [];
   try {
     const saved = localStorage.getItem(DEMO_STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
@@ -61,7 +61,7 @@ function getDemoConnections(): PlayerConnection[] {
 }
 
 function saveDemoConnections(connections: PlayerConnection[]): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(connections));
 }
 

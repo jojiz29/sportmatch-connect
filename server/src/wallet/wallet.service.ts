@@ -8,7 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class WalletService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async getBalance(userId: string) {
     const profile = await this.prisma.profiles.findUnique({

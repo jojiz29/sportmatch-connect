@@ -6,7 +6,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Court, User } from "@/entities/types";
-import { Users, DollarSign, CalendarCheck, Activity, Star, MoreHorizontal } from "lucide-react";
+import { Users, DollarSign, CalendarCheck, Activity, Star, MoreHorizontal, Plus, Edit3, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -50,6 +50,10 @@ const ADMIN_KPI = {
 function Admin() {
   const [usersList, setUsersList] = useState<User[]>([]);
   const [courtsList, setCourtsList] = useState<Court[]>([]);
+  const [showCourtForm, setShowCourtForm] = useState(false);
+  const [editingCourt, setEditingCourt] = useState<Court | null>(null);
+  const [courtForm, setCourtForm] = useState({ name: "", sport: "", address: "", price_per_hour: 0 });
+  const [savingCourt, setSavingCourt] = useState(false);
 
   // === BLOQUE: Carga de datos ===
   // Obtiene lista de canchas (backend → fallback Supabase) y
@@ -118,6 +122,71 @@ function Admin() {
     (a: number, b: { sport: string; value: number }) => a + b.value,
     0,
   );
+
+  const openAddCourt = () => {
+    setEditingCourt(null);
+    setCourtForm({ name: "", sport: "", address: "", price_per_hour: 0 });
+    setShowCourtForm(true);
+  };
+
+  const openEditCourt = (court: Court) => {
+    setEditingCourt(court);
+    setCourtForm({
+      name: court.name,
+      sport: court.sport,
+      address: court.address || "",
+      price_per_hour: court.price_per_hour || 0,
+    });
+    setShowCourtForm(true);
+  };
+
+  const saveCourt = async () => {
+    if (!courtForm.name.trim() || !courtForm.sport.trim()) {
+      toast.error("Nombre y deporte son obligatorios");
+      return;
+    }
+    setSavingCourt(true);
+    try {
+      if (editingCourt) {
+        const { error } = await supabase
+          .from("courts")
+          .update({ name: courtForm.name, sport: courtForm.sport, address: courtForm.address, price_per_hour: courtForm.price_per_hour })
+          .eq("id", editingCourt.id);
+        if (error) throw error;
+        setCourtsList(courtsList.map((c) => (c.id === editingCourt.id ? { ...c, ...courtForm } : c)));
+        toast.success("Cancha actualizada");
+      } else {
+        const { data, error } = await supabase
+          .from("courts")
+          .insert([{ name: courtForm.name, sport: courtForm.sport, address: courtForm.address, price_per_hour: courtForm.price_per_hour }])
+          .select()
+          .single();
+        if (error) throw error;
+        setCourtsList([...courtsList, data as unknown as Court]);
+        toast.success("Cancha creada");
+      }
+      setShowCourtForm(false);
+      setEditingCourt(null);
+    } catch (e) {
+      console.error("Error saving court:", e);
+      toast.error("Error al guardar cancha");
+    } finally {
+      setSavingCourt(false);
+    }
+  };
+
+  const deleteCourt = async (courtId: string) => {
+    if (!confirm("¿Eliminar esta cancha?")) return;
+    try {
+      const { error } = await supabase.from("courts").delete().eq("id", courtId);
+      if (error) throw error;
+      setCourtsList(courtsList.filter((c) => c.id !== courtId));
+      toast.success("Cancha eliminada");
+    } catch (e) {
+      console.error("Error deleting court:", e);
+      toast.error("Error al eliminar cancha");
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -283,6 +352,121 @@ function Admin() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* === BLOQUE: Gestión de canchas === */}
+      <div className="mt-8 bg-gradient-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Gestión de canchas</h3>
+          <button
+            onClick={openAddCourt}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" /> Agregar
+          </button>
+        </div>
+
+        {showCourtForm && (
+          <div className="mb-4 p-4 bg-muted/50 rounded-xl border border-border space-y-3">
+            <input
+              value={courtForm.name}
+              onChange={(e) => setCourtForm({ ...courtForm, name: e.target.value })}
+              placeholder="Nombre de la cancha"
+              className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
+            />
+            <div className="flex gap-3">
+              <input
+                value={courtForm.sport}
+                onChange={(e) => setCourtForm({ ...courtForm, sport: e.target.value })}
+                placeholder="Deporte"
+                className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm"
+              />
+              <input
+                value={courtForm.price_per_hour}
+                onChange={(e) => setCourtForm({ ...courtForm, price_per_hour: Number(e.target.value) })}
+                placeholder="Precio/h (FC)"
+                type="number"
+                className="w-32 px-3 py-2 rounded-lg bg-background border border-border text-sm"
+              />
+            </div>
+            <input
+              value={courtForm.address}
+              onChange={(e) => setCourtForm({ ...courtForm, address: e.target.value })}
+              placeholder="Dirección (opcional)"
+              className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowCourtForm(false); setEditingCourt(null); }}
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-accent transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveCourt}
+                disabled={savingCourt}
+                className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform disabled:opacity-50 cursor-pointer"
+              >
+                {savingCourt ? "Guardando..." : editingCourt ? "Actualizar" : "Crear"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-muted-foreground text-left">
+                <th className="py-2">Cancha</th>
+                <th>Deporte</th>
+                <th>Precio/h</th>
+                <th>Dirección</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {courtsList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-muted-foreground text-xs">
+                    No hay canchas registradas
+                  </td>
+                </tr>
+              ) : (
+                courtsList.map((c) => (
+                  <tr key={c.id} className="border-t border-border">
+                    <td className="py-3">
+                      <div className="flex items-center gap-2">
+                        <img src={c.image_url} alt="" className="h-8 w-8 rounded-lg object-cover bg-muted" />
+                        <span className="font-medium">{c.name}</span>
+                      </div>
+                    </td>
+                    <td>{c.sport}</td>
+                    <td>{c.price_per_hour} FC</td>
+                    <td className="text-muted-foreground max-w-[200px] truncate">{c.address || "—"}</td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEditCourt(c)}
+                          className="p-1.5 rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                          title="Editar"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteCourt(c.id)}
+                          className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

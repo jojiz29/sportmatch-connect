@@ -76,7 +76,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
     if (response.status === 401) {
       toast.error("Sesión expirada. Por favor, inicia sesión de nuevo.");
       useAuthStore.getState().logout();
-      window.location.href = "/login";
+      globalThis.window.location.href = "/login";
       return { error: "Unauthorized" };
     }
 
@@ -415,6 +415,64 @@ export const backendApi = {
   sports: {
     async getAll() {
       return fetchApi("/sports");
+    },
+  },
+
+  // ------------------------------------------------------------
+  // MATCHMAKING (V2.3 — Queue, Swipes, Elo)
+  // ------------------------------------------------------------
+  matchmaking: {
+    async enterQueue(sport: string, lat: number, lng: number, radiusKm?: number) {
+      return fetchApi("/matchmaking/queue/enter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sport, lat, lng, radius_km: radiusKm ?? 10 }),
+      });
+    },
+
+    async leaveQueue(sport: string) {
+      return fetchApi(`/matchmaking/queue/leave/${encodeURIComponent(sport)}`, {
+        method: "DELETE",
+      });
+    },
+
+    async getQueueStatus(sport: string) {
+      return fetchApi(`/matchmaking/queue/status/${encodeURIComponent(sport)}`);
+    },
+
+    async findMatch(sport: string) {
+      return fetchApi(`/matchmaking/queue/find/${encodeURIComponent(sport)}`, {
+        method: "POST",
+      });
+    },
+
+    async swipe(targetId: string, action: "LIKE" | "PASS", sport: string) {
+      return fetchApi<{ mutual_like: boolean; conversation_id?: string }>("/matchmaking/swipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_id: targetId, action, sport }),
+      });
+    },
+
+    async reportResult(matchId: string, winnerId: string, scoreHome?: number, scoreAway?: number) {
+      return fetchApi("/matchmaking/result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          match_id: matchId,
+          winner_id: winnerId,
+          score_home: scoreHome,
+          score_away: scoreAway,
+        }),
+      });
+    },
+
+    async getElo(sport: string) {
+      return fetchApi(`/matchmaking/elo/${encodeURIComponent(sport)}`);
+    },
+
+    async getAllElo() {
+      return fetchApi("/matchmaking/elo");
     },
   },
 

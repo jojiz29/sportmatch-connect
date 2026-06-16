@@ -106,12 +106,12 @@ const createBusinessIcon = (isSponsored?: boolean, category?: string) => {
 
 // === BLOQUE: CONTENIDO DEL POPUP DE CANCHA ===
 interface PopupContentProps {
-  venue: Venue;
-  onBookCourt?: (venue: Venue) => void;
-  onViewCourt: (venueId: string) => void;
-  owner?: User;
-  onViewCommercialSheet?: (business: User) => void;
-  onOpenVenueActivity?: (venue: Venue) => void;
+  readonly venue: Venue;
+  readonly onBookCourt?: (venue: Venue) => void;
+  readonly onViewCourt: (venueId: string) => void;
+  readonly owner?: User;
+  readonly onViewCommercialSheet?: (business: User) => void;
+  readonly onOpenVenueActivity?: (venue: Venue) => void;
 }
 
 function PopupContent({
@@ -135,7 +135,7 @@ function PopupContent({
       const target = e.target as HTMLElement;
       const clickable = target.closest("[data-action]");
       if (!clickable) return;
-      const action = clickable.getAttribute("data-action");
+      const action = (clickable as HTMLElement).dataset.action;
       if (action === "book") {
         e.preventDefault();
         e.stopPropagation();
@@ -255,8 +255,8 @@ function PopupContent({
 
 // === BLOQUE: POPUP DE NEGOCIO EN EL MAPA ===
 interface BusinessPopupProps {
-  player: User;
-  onViewCommercialSheet?: (business: User) => void;
+  readonly player: User;
+  readonly onViewCommercialSheet?: (business: User) => void;
 }
 
 function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
@@ -272,7 +272,7 @@ function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
       const target = e.target as HTMLElement;
       const btn = target.closest("button");
       if (!btn) return;
-      const action = btn.getAttribute("data-action");
+      const action = btn.dataset.action;
       if (action === "profile") {
         e.preventDefault();
         e.stopPropagation();
@@ -293,7 +293,7 @@ function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
       <div className="font-bold text-sm text-foreground">{player.company_name || player.name}</div>
       <div className="text-xs text-muted-foreground mt-0.5">
         {isBusiness ? `${player.business_category} · ` : ""}
-        {player.distance_km !== undefined ? `${player.distance_km.toFixed(1)} km` : "Cerca de ti"}
+        {player.distance_km === undefined ? "Cerca de ti" : `${player.distance_km.toFixed(1)} km`}
       </div>
       {isBusiness && (
         <div className="flex flex-col gap-1.5 mt-3">
@@ -323,6 +323,15 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 // === BLOQUE: COMPONENTE PRINCIPAL DEL MAPA ===
 // Mapa Leaflet con marcadores de canchas (venues) y negocios (players).
 // Incluye círculo de resaltado temporal al seleccionar un distrito.
+interface MapFeatureProps {
+  readonly venues: Venue[];
+  readonly players: User[];
+  readonly onBookCourt?: (venue: Venue) => void;
+  readonly selectedDistrictCenter?: [number, number] | null;
+  readonly onViewCommercialSheet?: (business: User) => void;
+  readonly onOpenVenueActivity?: (venue: Venue) => void;
+}
+
 export function MapFeature({
   venues,
   players,
@@ -330,14 +339,7 @@ export function MapFeature({
   selectedDistrictCenter,
   onViewCommercialSheet,
   onOpenVenueActivity,
-}: {
-  venues: Venue[];
-  players: User[];
-  onBookCourt?: (venue: Venue) => void;
-  selectedDistrictCenter?: [number, number] | null;
-  onViewCommercialSheet?: (business: User) => void;
-  onOpenVenueActivity?: (venue: Venue) => void;
-}) {
+}: MapFeatureProps) {
   const navigate = useNavigate();
   const theme = useThemeStore((s) => s.theme);
   const [mounted, setMounted] = useState(false);
@@ -413,7 +415,7 @@ export function MapFeature({
     });
   }, [players, onViewCommercialSheet]);
 
-  if (!mounted || typeof window === "undefined") {
+  if (!mounted || globalThis.window === undefined) {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;
   }
 

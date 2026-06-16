@@ -769,5 +769,60 @@
   },
   "offline": {
     "banner": "Sem conexao. Mostrando os ultimos dados salvos."
+  },
+  "share": {
+    "button": "Compartilhar",
+    "copied": "Copiado!",
+    "levelUp": "Acabei de subir para o nivel {level} ({label}) no SportMatch! 🏆",
+    "matchCompleted": "Partidao! {sport} concluido no SportMatch",
+    "challengeCompleted": "Completei o desafio '{name}' no SportMatch!",
+    "hashtags": "#SportMatch #Esporte #FitCoins"
+  },
+  "levelUp": {
+    "title": "Você subiu de nivel!",
+    "message": "Parabens! Voce alcancou o nivel {label}. Continue assim!",
+    "close": "Fechar"
+  },
+  "weeklyChallenges": {
+    "title": "Desafios da Semana",
+    "empty": "Nenhum desafio esta semana. Volte na segunda!",
+    "claim": "Resgatar",
+    "claimed": "Resgatado",
+    "progress": "{current}/{goal}",
+    "reward": "{xp} XP · {fc} FitCoins",
+    "types": {
+      "play_matches": "Jogue {goal} partidas",
+      "win_matches": "Ganhe {goal} partidas",
+      "book_courts": "Reserve {goal} quadras",
+      "invite_friends": "Convide {goal} amigo",
+      "maintain_streak": "Mantenha sequencia de {goal} dias",
+      "earn_xp": "Ganhe {goal} XP"
+    }
+  },
+  "favorites": {
+    "add": "Adicionar aos favoritos",
+    "remove": "Remover dos favoritos",
+    "filter": "So favoritos",
+    "empty": "Voce nao tem quadras favoritas"
+  },
+  "wallet": {
+    "sporty_coach": "Sporty Coach",
+    "coach_sport_placeholder": "Qual esporte?",
+    "coach_location_placeholder": "Onde você quer jogar?",
+    "coach_level_placeholder": "Nivel de jogo",
+    "coach_level_beginner": "Iniciante",
+    "coach_level_intermediate": "Intermediário",
+    "coach_level_advanced": "Avançado",
+    "coach_prefs_placeholder": "Preferências (ex. coberta, iluminação)",
+    "coach_ask": "Perguntar ao Sporty",
+    "coach_loading": "Sporty está pensando..."
+  },
+  "challengeInvite": {
+    "title": "Voce foi desafiado!",
+    "expired": "Este desafio expirou",
+    "notFound": "Desafio nao encontrado",
+    "selfChallenge": "Voce nao pode desafiar a si mesmo",
+    "acceptRegister": "Aceitar Desafio — Cadastrar",
+    "acceptLogin": "Ja tenho conta — Entrar"
   }
 }

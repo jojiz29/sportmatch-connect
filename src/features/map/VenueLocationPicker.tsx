@@ -4,9 +4,9 @@ import "leaflet/dist/leaflet.css";
 import { useThemeStore } from "@/features/theme/store";
 
 interface VenueLocationPickerProps {
-  lat: number | "";
-  lng: number | "";
-  onChange: (lat: number, lng: number) => void;
+  readonly lat: number | "";
+  readonly lng: number | "";
+  readonly onChange: (lat: number, lng: number) => void;
 }
 
 const DEFAULT_LIMA_LOCATION: [number, number] = [-12.14, -76.995];
@@ -16,9 +16,9 @@ function LocationSelection({
   lng,
   onChange,
 }: {
-  lat: number | "";
-  lng: number | "";
-  onChange: (lat: number, lng: number) => void;
+  readonly lat: number | "";
+  readonly lng: number | "";
+  readonly onChange: (lat: number, lng: number) => void;
 }) {
   const theme = useThemeStore((s) => s.theme);
   const getThemePrimaryColor = () => {
@@ -36,8 +36,8 @@ function LocationSelection({
 
   useEffect(() => {
     // Los mapas dentro de un diálogo necesitan recalcular su tamaño cuando se vuelven visibles.
-    const timeoutId = window.setTimeout(() => map.invalidateSize(), 100);
-    return () => window.clearTimeout(timeoutId);
+    const timeoutId = globalThis.setTimeout(() => map.invalidateSize(), 100);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [map]);
 
   useEffect(() => {

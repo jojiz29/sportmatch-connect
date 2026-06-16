@@ -5,4 +5,5 @@
  *            Actualmente la persistencia se maneja via Supabase.
  * ===================================================================
  */
-export {};
+/** Placeholder: futura migración a Vercel Postgres. Actualmente usa Supabase. */
+export const _databasePlaceholder = true;

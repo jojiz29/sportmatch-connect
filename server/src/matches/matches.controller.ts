@@ -23,7 +23,7 @@ import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 @ApiTags("Matches")
 @Controller("matches")
 export class MatchesController {
-  constructor(private matchesService: MatchesService) {}
+  constructor(private readonly matchesService: MatchesService) {}
 
   @Get()
   @ApiOperation({ summary: "Get all matches" })

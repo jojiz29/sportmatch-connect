@@ -128,7 +128,7 @@ export function useBackendPosts() {
   });
 
   return {
-    posts: postsQuery.data || [],
+    posts: postsQuery.data ?? [],
     isLoading: postsQuery.isLoading,
     error: postsQuery.error,
     createPost: createPostMutation.mutate,

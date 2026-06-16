@@ -9,7 +9,7 @@
  * ===================================================================
  */
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent } from "react";
 import { toast } from "sonner";
 
 interface UseStrictFormOptions<T> {
@@ -99,7 +99,7 @@ export function useStrictForm<T extends Record<string, unknown>>({
    * 5. Ejecuta onSubmit()
    * 6. Muestra mensaje de éxito si está configurado
    */
-  const handleSubmit = async (e?: FormEvent) => {
+  const handleSubmit = async (e?: React.BaseSyntheticEvent) => {
     if (e) {
       e.preventDefault();
     }

@@ -354,7 +354,7 @@ export const usePublicMatchStore = create<MatchesState>()(
         if (!currentUser) return;
 
         const match = get().publicMatches.find((m) => m.id === matchId);
-        if (!match || match.creatorId !== currentUser.id) {
+        if (match?.creatorId !== currentUser?.id) {
           toast.error("Solo el creador puede expulsar participantes.");
           return;
         }
@@ -363,12 +363,14 @@ export const usePublicMatchStore = create<MatchesState>()(
           return;
         }
 
+        const filterParticipants = (m: any) => {
+          if (m.id !== matchId) return m;
+          const newParticipants = m.participants.filter((p: any) => p.userId !== userId);
+          return { ...m, participants: newParticipants, status: "Open" };
+        };
+
         set((s) => ({
-          publicMatches: s.publicMatches.map((m) => {
-            if (m.id !== matchId) return m;
-            const newParticipants = m.participants.filter((p) => p.userId !== userId);
-            return { ...m, participants: newParticipants, status: "Open" };
-          }),
+          publicMatches: s.publicMatches.map(filterParticipants),
         }));
 
         const kicked = match.participants.find((p) => p.userId === userId);

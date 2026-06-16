@@ -33,6 +33,7 @@ import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 import { JuryTour } from "@/components/JuryTour";
 import { useTourStore } from "@/shared/hooks/useTourStore";
 import { AIAvatarButton } from "@/features/ai-assistant/ui/AIAvatarButton";
+import { LevelUpModal } from "@/features/profile/components/LevelUpModal";
 
 const ACCOUNT_ITEMS = [
   { to: "/app/profile", labelKey: "nav.perfil", icon: User },
@@ -519,6 +520,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <JuryTour />
       <TourTriggerButton />
       <AIAvatarButton />
+      <LevelUpModal />
     </div>
   );
 }

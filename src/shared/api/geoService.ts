@@ -77,7 +77,9 @@ export async function searchNearbyCourts(
     const list = await apiClient.venues.getAll();
     const courts = list.map((c) => ({
       ...c,
-      distance_km: parseFloat(calculateDistance(latitude, longitude, c.lat, c.lng).toFixed(2)),
+      distance_km: Number.parseFloat(
+        calculateDistance(latitude, longitude, c.lat, c.lng).toFixed(2),
+      ),
     }));
     return courts.sort((a, b) => a.distance_km - b.distance_km);
   }
@@ -114,7 +116,7 @@ export async function searchNearbyCourts(
       id: string;
       created_at: string;
       name: string;
-      sport: string;
+      sport: Court["sport"];
       price_per_hour: string | number;
       rating: string | number;
       reviews_count: string | number;
@@ -131,18 +133,18 @@ export async function searchNearbyCourts(
       id: row.id,
       created_at: row.created_at,
       name: row.name,
-      sport: row.sport as Court["sport"],
-      price_per_hour: parseFloat(String(row.price_per_hour)),
-      rating: parseFloat(String(row.rating)),
-      reviews_count: parseInt(String(row.reviews_count), 10),
-      lat: parseFloat(String(row.lat)),
-      lng: parseFloat(String(row.lng)),
+      sport: row.sport,
+      price_per_hour: Number.parseFloat(String(row.price_per_hour)),
+      rating: Number.parseFloat(String(row.rating)),
+      reviews_count: Number.parseInt(String(row.reviews_count), 10),
+      lat: Number.parseFloat(String(row.lat)),
+      lng: Number.parseFloat(String(row.lng)),
       image_url: row.image_url ?? "",
       amenities: row.amenities ?? [],
       is_available: row.is_available,
       address: row.address ?? undefined,
       is_sponsored: row.is_sponsored ?? false,
-      distance_km: parseFloat(parseFloat(String(row.distance_km)).toFixed(2)),
+      distance_km: Number.parseFloat(Number.parseFloat(String(row.distance_km)).toFixed(2)),
       district: row.district ?? undefined,
     }),
   );

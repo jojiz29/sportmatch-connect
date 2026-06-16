@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/shared/api/apiClient";
 import { supabase } from "@/shared/api/supabase";
+import { backendApi } from "@/shared/api/backendApi";
 import { User } from "@/entities/types";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -18,12 +19,11 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
     initialData,
   });
 
-  // Real-time subscription to new players
   useEffect(() => {
     const channel = supabase
       .channel("public:profiles")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, () => {
-        toast("¡Nuevo jugador en tu zona!", { description: "Un usuario acaba de unirse." });
+        toast("Nuevo jugador en tu zona!", { description: "Un usuario acaba de unirse." });
         queryClient.invalidateQueries({ queryKey: ["matchmaking", "stack"] });
       })
       .subscribe();
@@ -34,9 +34,21 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
   }, [queryClient]);
 
   const swipeMutation = useMutation({
-    mutationFn: async ({ userId, action }: { userId: string; action: "like" | "pass" }) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return { userId, action };
+    mutationFn: async ({
+      userId,
+      action,
+      sport,
+    }: {
+      userId: string;
+      action: "like" | "pass";
+      sport: string;
+    }) => {
+      const res = await backendApi.matchmaking.swipe(
+        userId,
+        action === "like" ? "LIKE" : "PASS",
+        sport,
+      );
+      return { userId, action, data: res.data };
     },
     onMutate: async (newSwipe) => {
       await queryClient.cancelQueries({ queryKey: ["matchmaking", "stack"] });
@@ -49,20 +61,22 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
       }
       return { previousStack };
     },
-    onSuccess: (data, variables, context) => {
-      if (data.action === "like") {
-        const isMatch = Math.random() > 0.4;
-        if (isMatch && onMatch && context?.previousStack) {
-          const matchedUser = context.previousStack.find((u) => u.id === data.userId);
+    onSuccess: (result) => {
+      if (result.action === "like") {
+        const { mutual_like } = result.data ?? {};
+
+        if (mutual_like && onMatch) {
+          const stack = queryClient.getQueryData<User[]>(["matchmaking", "stack"]);
+          const matchedUser = stack?.find((u) => u.id === result.userId);
           if (matchedUser) {
             onMatch(matchedUser);
             return;
           }
         }
-        toast.success("¡Like enviado!", { description: "Te avisaremos si hay Match." });
+        toast.success("Like enviado!", { description: "Te avisaremos si hay Match." });
       }
     },
-    onError: (err, newSwipe, context) => {
+    onError: (_err, _newSwipe, context) => {
       toast.error("Error al registrar swipe. Intenta de nuevo.");
       if (context?.previousStack) {
         queryClient.setQueryData(["matchmaking", "stack"], context.previousStack);
@@ -74,6 +88,7 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
     stack,
     isLoading,
     error,
-    swipe: (userId: string, action: "like" | "pass") => swipeMutation.mutate({ userId, action }),
+    swipe: (userId: string, action: "like" | "pass", sport: string) =>
+      swipeMutation.mutate({ userId, action, sport }),
   };
 }

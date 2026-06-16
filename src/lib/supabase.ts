@@ -17,7 +17,10 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 // Se obtienen del archivo .env mediante Vite (import.meta.env).
 // Si no existen, se asigna cadena vacía para activar el modo fallback.
 const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
-const supabaseUrl = supabaseUrlRaw.replace(/\/+$/, ""); // Limpia diagonales finales
+let supabaseUrl = supabaseUrlRaw;
+while (supabaseUrl.endsWith("/")) {
+  supabaseUrl = supabaseUrl.slice(0, -1);
+}
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || "") as string;
 
 // ------------------------------------------------------------------
@@ -74,7 +77,7 @@ if (isConfigured) {
  */
 function createFallbackClient(): SupabaseClient {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return new Proxy({} as any, {
+  return new Proxy({}, {
     get(target, prop) {
       // --- MÓDULO AUTH: login, registro, sesión ---
       if (prop === "auth") {
@@ -96,7 +99,8 @@ function createFallbackClient(): SupabaseClient {
           console.warn(`Called supabase.from('${table}') but Supabase is not configured.`);
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const chainObj: any = {
+          const dummyPromise = Promise.resolve({ data: null, count: null, error: new Error("Supabase not configured") });
+          const chainObj: any = Object.assign(dummyPromise, {
             select: () => chainObj,
             insert: () => chainObj,
             update: () => chainObj,
@@ -113,10 +117,7 @@ function createFallbackClient(): SupabaseClient {
                 count: null,
                 error: new Error("Supabase not configured"),
               }),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            then: (resolve: any) =>
-              resolve({ data: null, count: null, error: new Error("Supabase not configured") }),
-          };
+          });
           return chainObj;
         };
       }

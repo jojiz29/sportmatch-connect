@@ -11,7 +11,7 @@ import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 @ApiTags("Profiles")
 @Controller("profiles")
 export class ProfilesController {
-  constructor(private profilesService: ProfilesService) {}
+  constructor(private readonly profilesService: ProfilesService) {}
 
   @Get()
   @ApiOperation({ summary: "Get all profiles" })

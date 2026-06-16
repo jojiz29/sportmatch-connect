@@ -1,0 +1,5 @@
+{
+  "schedule": "0 9 * * *",
+  "name": "detect-inactive-users",
+  "description": "Detecta usuarios inactivos (>14 días) y envía notificaciones push con bonos de FitCoins diariamente a las 09:00 UTC"
+}

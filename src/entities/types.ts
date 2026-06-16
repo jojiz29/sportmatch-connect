@@ -345,7 +345,40 @@ export interface Ad {
   views: number;
   clicks: number;
   contacts: number;
-  is_featured: boolean; // placeholder for monetization
-  is_premium: boolean; // placeholder for monetization
+  is_featured: boolean;
+  is_premium: boolean;
   created_at: string;
+}
+
+// === BLOQUE: MATCHMAKING (V2.3) ===
+export type QueueStatus = "WAITING" | "FOUND" | "CANCELLED";
+export type SwipeAction = "LIKE" | "PASS";
+
+export interface PlayerRating {
+  user_id: string;
+  sport: string;
+  elo_rating: number;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  last_match_at: string | null;
+}
+
+export interface QueueEntry {
+  user_id: string;
+  sport: string;
+  status: QueueStatus;
+  lat: number;
+  lng: number;
+  radius_km: number;
+  matched_with: string | null;
+  matched_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SwipeResult {
+  mutual_like: boolean;
+  action?: SwipeAction;
+  conversation_id?: string | null;
 }
