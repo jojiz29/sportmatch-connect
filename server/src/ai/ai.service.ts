@@ -9,17 +9,19 @@ import {
   InternalServerErrorException,
   HttpException,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import { VertexAiService, VertexAiGenerationResult } from "./vertex-ai.service";
 import { ChatResponseDto } from "./dto/chat.dto";
 import { ChatMessageDto, ModerationResultDto } from "./dto/ai.dto";
+import { VisionAnalysisType } from "./dto/vision-analyze.dto";
 
 interface UserRateLimit {
   count: number;
   resetTime: number;
 }
 
-type RateLimitBucket = "chat" | "hashtags" | "comments" | "moderation";
+type RateLimitBucket = "chat" | "hashtags" | "comments" | "moderation" | "vision";
 
 @Injectable()
 export class AiService {
@@ -32,6 +34,7 @@ export class AiService {
     hashtags: 60,
     comments: 30,
     moderation: 100,
+    vision: 30,
   };
 
   constructor(private readonly vertexAiService: VertexAiService) {}
@@ -312,5 +315,118 @@ Reglas:
       confidencia: 0.3,
       preview: originalText.slice(0, 80),
     };
+  }
+
+  async analyzeVision(
+    userId: string,
+    imageUrl: string,
+    analysisType: VisionAnalysisType,
+  ): Promise<{ result: unknown; confidence: number }> {
+    this.checkRateLimit(userId, "vision");
+
+    // Descargar imagen
+    let imageBuffer: Buffer;
+    let mimeType = "image/jpeg";
+
+    try {
+      if (imageUrl.startsWith("data:")) {
+        const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!match) throw new BadRequestException("Formato de imagen data URL inválido");
+        mimeType = match[1];
+        imageBuffer = Buffer.from(match[2], "base64");
+      } else if (imageUrl.startsWith("http")) {
+        const res = await fetch(imageUrl);
+        if (!res.ok) {
+          throw new BadRequestException(
+            `No se pudo descargar la imagen desde la URL: ${res.statusText}`,
+          );
+        }
+        const arrayBuffer = await res.arrayBuffer();
+        imageBuffer = Buffer.from(arrayBuffer);
+        mimeType = res.headers.get("content-type") || "image/jpeg";
+      } else {
+        throw new BadRequestException("URL de imagen inválida o no soportada.");
+      }
+    } catch (err) {
+      throw new BadRequestException(
+        `Error al procesar la imagen: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // Definir prompt según tipo de análisis
+    let prompt = "";
+    if (analysisType === VisionAnalysisType.FAKE_PROFILE) {
+      prompt = `Analiza esta fotografía de perfil.
+Determina si presenta señales típicas de imágenes generadas por inteligencia artificial (IA).
+
+Evalúa detalladamente:
+- Ojos: anomalías en pupilas, reflejos extraños, falta de simetría en el iris.
+- Dientes: fusión de dientes, formas poco naturales.
+- Manos visibles (si las hay): dedos extra, formas distorsionadas.
+- Fondo: desenfoque incoherente, deformaciones geométricas, texturas extrañas.
+- Iluminación y sombras: inconsistencias en la fuente de luz, sombras anómalas en el rostro.
+- Consistencia facial: orejas asimétricas, accesorios (aretes, lentes) que no coinciden o se funden con la piel.
+- Textura de piel: excesivamente lisa (estilo plástico/porcelana) o patrones repetitivos.
+- Artefactos visuales: distorsiones de compresión localizadas.
+
+Responde ÚNICAMENTE con un objeto JSON en el siguiente formato exacto:
+{
+  "isLikelyAIGenerated": boolean,
+  "confidence": number,
+  "reasons": string[]
+}
+
+Reglas:
+- isLikelyAIGenerated: true si la probabilidad de ser generada por IA es mayor al 50%
+- confidence: número entre 0 y 1 que indica tu confianza en el análisis
+- reasons: un array de strings en español explicando brevemente cada señal detectada (máximo 3-4 razones)`;
+    } else {
+      prompt = `Analiza la postura deportiva de la persona en la imagen.
+
+Evalúa detalladamente:
+- Alineación corporal: ángulo de la columna, posición de la cabeza, hombros y cadera.
+- Equilibrio y centro de gravedad: distribución del peso.
+- Postura general y biomecánica según el deporte observable (fútbol, tenis, padel, etc.).
+- Estabilidad de las articulaciones de apoyo.
+- Errores visibles en la ejecución de la postura.
+
+Responde ÚNICAMENTE con un objeto JSON en el siguiente formato exacto:
+{
+  "score": number,
+  "strengths": string[],
+  "improvements": string[],
+  "confidence": number
+}
+
+Reglas:
+- score: número entero entre 0 y 100 indicando la calidad de la postura
+- strengths: un array de strings en español con las fortalezas observadas (máximo 3)
+- improvements: un array de strings en español con los errores o puntos de mejora (máximo 3)
+- confidence: número entre 0 y 1 que indica tu confianza en el análisis`;
+    }
+
+    try {
+      const response = await this.vertexAiService.analyzeImage(
+        {
+          mimeType,
+          base64Data: imageBuffer.toString("base64"),
+        },
+        prompt,
+        0.1,
+      );
+
+      // Si no hay confianza mapeada directamente, usar la devuelta por analyzeImage
+      const resultObj = response.result as { confidence?: number } | null | undefined;
+      const confidence =
+        resultObj && typeof resultObj.confidence === "number"
+          ? resultObj.confidence
+          : response.confidence;
+      return { result: response.result, confidence };
+    } catch (err) {
+      this.logger.error(
+        `AI vision analysis failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new InternalServerErrorException("No se pudo completar el análisis visual.");
+    }
   }
 }

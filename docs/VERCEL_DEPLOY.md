@@ -28,6 +28,7 @@
 ```
 
 **¿Por qué este split?**
+
 - ✅ Vercel: excelente para SPAs estáticas, CDN global, deploys instantáneos
 - ✅ Render: ideal para NestJS + Prisma (long-running, conexión persistente a DB)
 - ✅ Serverless de Vercel **no es ideal** para:
@@ -41,6 +42,7 @@
 ## 🚀 Deploy del Frontend en Vercel
 
 ### Paso 1: Importar el Proyecto
+
 1. Ve a [vercel.com/new](https://vercel.com/new)
 2. Conecta el repo `jojiz29/sportmatch-connect`
 3. Asegúrate de desplegar la **rama `edwin`** (o `main` después del merge)
@@ -52,18 +54,19 @@
 
 Solo necesitas las variables que el **frontend** usa (con prefijo `VITE_`):
 
-| Variable | Valor | Environments |
-|----------|-------|--------------|
-| `VITE_SUPABASE_URL` | `https://gzyoxfhzuxknqacplapi.supabase.co` | Production, Preview |
-| `VITE_SUPABASE_ANON_KEY` | Tu anon key pública (empieza con `sb_publishable_...`) | Production, Preview |
-| `VITE_API_URL` | URL del backend desplegado (ej: `https://sportmatch-api.onrender.com`) | Production, Preview |
-| `VITE_USE_MOCKS` | `false` | Production, Preview |
+| Variable                 | Valor                                                                  | Environments        |
+| ------------------------ | ---------------------------------------------------------------------- | ------------------- |
+| `VITE_SUPABASE_URL`      | `https://gzyoxfhzuxknqacplapi.supabase.co`                             | Production, Preview |
+| `VITE_SUPABASE_ANON_KEY` | Tu anon key pública (empieza con `sb_publishable_...`)                 | Production, Preview |
+| `VITE_API_URL`           | URL del backend desplegado (ej: `https://sportmatch-api.onrender.com`) | Production, Preview |
+| `VITE_USE_MOCKS`         | `false`                                                                | Production, Preview |
 
 **NO necesitas las variables del backend** (`DATABASE_URL`, `GOOGLE_APPLICATION_CREDENTIALS_JSON`, etc.) — esas van en Render.
 
 ### Paso 3: Build Command
 
 `vercel.json` ya configura:
+
 ```json
 {
   "buildCommand": "npm run build",
@@ -72,16 +75,19 @@ Solo necesitas las variables que el **frontend** usa (con prefijo `VITE_`):
 ```
 
 Y `package.json` ahora tiene:
+
 ```json
 "build": "vite build"
 ```
 
 Vercel ejecutará:
+
 1. `npm install --legacy-peer-deps`
 2. `vite build` (genera `dist/`)
 3. Sirve `dist/` como sitio estático con SPA routing
 
 ### Paso 4: Deploy
+
 Click "Deploy". Resultado esperado: `https://sportmatch-connect-juan-alonso.vercel.app`
 
 ---
@@ -91,6 +97,7 @@ Click "Deploy". Resultado esperado: `https://sportmatch-connect-juan-alonso.verc
 El `render.yaml` ya está configurado en el repo. Para activarlo:
 
 ### Opción A: Render Blueprint
+
 1. Ve a [render.com/blueprints](https://render.com/blueprints)
 2. Click "New Blueprint Instance"
 3. Conecta el repo `jojiz29/sportmatch-connect`
@@ -100,29 +107,32 @@ El `render.yaml` ya está configurado en el repo. Para activarlo:
 ### Variables de Entorno del Backend (en Render)
 
 #### 🔐 Sensitive
-| Variable | Valor |
-|----------|-------|
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | JSON completo del Service Account en una línea |
-| `SUPABASE_JWT_SECRET` | Tu JWT secret de Supabase |
-| `DATABASE_URL` | Connection string de Supabase Postgres |
-| `DIRECT_URL` | Misma connection string (para migraciones Prisma) |
-| `JWT_SECRET` | Clave aleatoria de 32+ caracteres |
+
+| Variable                              | Valor                                             |
+| ------------------------------------- | ------------------------------------------------- |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | JSON completo del Service Account en una línea    |
+| `SUPABASE_JWT_SECRET`                 | Tu JWT secret de Supabase                         |
+| `DATABASE_URL`                        | Connection string de Supabase Postgres            |
+| `DIRECT_URL`                          | Misma connection string (para migraciones Prisma) |
+| `JWT_SECRET`                          | Clave aleatoria de 32+ caracteres                 |
 
 #### 🔓 No Sensitive
-| Variable | Valor |
-|----------|-------|
-| `FRONTEND_URL` | `https://sportmatch-connect-juan-alonso.vercel.app` |
-| `PORT` | `3000` (Render lo inyecta automáticamente) |
-| `GOOGLE_CLOUD_PROJECT` | `sportmach-core` |
-| `VERTEX_AI_LOCATION` | `us-central1` |
-| `VERTEX_AI_MODEL_ID` | `gemini-2.5-flash` |
-| `VERTEX_AI_MAX_TOKENS` | `1024` |
-| `VERTEX_AI_TEMPERATURE` | `0.7` |
-| `VERTEX_AI_MAX_RETRIES` | `3` |
-| `VERTEX_AI_TIMEOUT_MS` | `30000` |
-| `VERTEX_AI_RATE_LIMIT_PER_MINUTE` | `20` |
+
+| Variable                          | Valor                                               |
+| --------------------------------- | --------------------------------------------------- |
+| `FRONTEND_URL`                    | `https://sportmatch-connect-juan-alonso.vercel.app` |
+| `PORT`                            | `3000` (Render lo inyecta automáticamente)          |
+| `GOOGLE_CLOUD_PROJECT`            | `sportmach-core`                                    |
+| `VERTEX_AI_LOCATION`              | `us-central1`                                       |
+| `VERTEX_AI_MODEL_ID`              | `gemini-2.5-flash`                                  |
+| `VERTEX_AI_MAX_TOKENS`            | `1024`                                              |
+| `VERTEX_AI_TEMPERATURE`           | `0.7`                                               |
+| `VERTEX_AI_MAX_RETRIES`           | `3`                                                 |
+| `VERTEX_AI_TIMEOUT_MS`            | `30000`                                             |
+| `VERTEX_AI_RATE_LIMIT_PER_MINUTE` | `20`                                                |
 
 ### Variables Opcionales (B2B/Stripe)
+
 - `STRIPE_SECRET_KEY`
 - `VITE_STRIPE_PUBLISHABLE_KEY`
 - `RENIEC_API_KEY`
@@ -137,7 +147,9 @@ El backend en Render debe aceptar requests del frontend en Vercel. Ya está conf
 
 ```typescript
 const allowedOrigins = (process.env.FRONTEND_URL || "")
-  .split(",").map(u => u.trim()).filter(Boolean);
+  .split(",")
+  .map((u) => u.trim())
+  .filter(Boolean);
 ```
 
 **Importante:** En Render, configura `FRONTEND_URL=https://sportmatch-connect-juan-alonso.vercel.app` (sin comas adicionales, solo el dominio).
@@ -147,18 +159,21 @@ const allowedOrigins = (process.env.FRONTEND_URL || "")
 ## 🧪 Verificación Post-Deploy
 
 ### 1. Health Check del Backend
+
 ```bash
 curl https://sportmatch-api.onrender.com/api/v1/health
 # → {"status":"ok","service":"sportmatch-api"}
 ```
 
 ### 2. Frontend Cargado
+
 ```bash
 curl -I https://sportmatch-connect-juan-alonso.vercel.app
 # → HTTP/2 200
 ```
 
 ### 3. AI Chat con Token Real
+
 ```bash
 # Login
 curl -X POST https://gzyoxfhzuxknqacplapi.supabase.co/auth/v1/token?grant_type=password \
@@ -175,21 +190,22 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 
 ## 🐛 Troubleshooting
 
-| Error | Causa | Solución |
-|-------|-------|----------|
-| `Cannot find module '@/...'` en Vercel | Commit desactualizado (sin `baseUrl`) | Redeploy desde la rama `edwin` o `main` actualizados |
-| `tsc` falla en Vercel | `build` script aún usa `tsc && vite build` | Verifica que `package.json` tenga `"build": "vite build"` |
-| CORS error en consola del navegador | `FRONTEND_URL` no está en Render o no coincide | Verifica que el dominio de Vercel esté EXACTAMENTE en Render |
-| "El modelo de IA no está disponible" | `GOOGLE_APPLICATION_CREDENTIALS_JSON` mal copiado | Usa el JSON en una sola línea (sin saltos) |
-| Login falla en Vercel | `VITE_SUPABASE_ANON_KEY` incorrecta | Re-copia la key desde Supabase Dashboard → API |
-| 401 en `/api/v1/ai/chat` | Token expirado o SupabaseAuthGuard no configurado | Verifica que el token se envía con prefijo `Bearer ` |
-| Render free tier se duerme | Plan gratuito duerme tras 15 min sin tráfico | Upgrade a Plan Pro o usa Railway/Fly.io |
+| Error                                  | Causa                                             | Solución                                                     |
+| -------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------ |
+| `Cannot find module '@/...'` en Vercel | Commit desactualizado (sin `baseUrl`)             | Redeploy desde la rama `edwin` o `main` actualizados         |
+| `tsc` falla en Vercel                  | `build` script aún usa `tsc && vite build`        | Verifica que `package.json` tenga `"build": "vite build"`    |
+| CORS error en consola del navegador    | `FRONTEND_URL` no está en Render o no coincide    | Verifica que el dominio de Vercel esté EXACTAMENTE en Render |
+| "El modelo de IA no está disponible"   | `GOOGLE_APPLICATION_CREDENTIALS_JSON` mal copiado | Usa el JSON en una sola línea (sin saltos)                   |
+| Login falla en Vercel                  | `VITE_SUPABASE_ANON_KEY` incorrecta               | Re-copia la key desde Supabase Dashboard → API               |
+| 401 en `/api/v1/ai/chat`               | Token expirado o SupabaseAuthGuard no configurado | Verifica que el token se envía con prefijo `Bearer `         |
+| Render free tier se duerme             | Plan gratuito duerme tras 15 min sin tráfico      | Upgrade a Plan Pro o usa Railway/Fly.io                      |
 
 ---
 
 ## 📋 Checklist de Merge y Deploy (para ejecutar paso a paso)
 
 ### Antes del Merge
+
 - [ ] `npm run typecheck` pasa (0 errores)
 - [ ] `npm run lint` pasa (0 errores)
 - [ ] `npm run test` pasa (48 tests)
@@ -198,16 +214,19 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 - [ ] No hay archivos de credenciales commiteados (`server/.gitignore` bloquea `credentials/` y `*.json`)
 
 ### Merge
+
 - [ ] Mergear `edwin` → `main`
 - [ ] Verificar que el push llegó a GitHub (`git log --oneline -5`)
 
 ### Deploy Backend (Render)
+
 - [ ] Ir a Render Dashboard → Blueprints → New Blueprint Instance
 - [ ] Seleccionar repo y rama `main`
 - [ ] Configurar las 9+ variables de entorno listadas arriba
 - [ ] Hacer deploy y esperar health check OK
 
 ### Deploy Frontend (Vercel)
+
 - [ ] Ir a Vercel Dashboard → Add New Project
 - [ ] Seleccionar repo y rama `main`
 - [ ] Configurar variables de entorno frontend
@@ -215,6 +234,7 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 - [ ] Verificar que la SPA routing funciona (refrescar en `/app/feed` no da 404)
 
 ### Verificación Final
+
 - [ ] Abrir Vercel URL en navegador, login con usuario real
 - [ ] Probar chat IA: enviar "Hola Sporty" y recibir respuesta del modelo
 - [ ] Revisar consola del navegador: 0 errores de CORS o 401
@@ -223,14 +243,14 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 
 ## 📊 Workflow de Desarrollo
 
-| Acción | Comando |
-|--------|---------|
-| Iniciar todo el stack local | `npm run dev` |
-| Solo frontend | `npm run dev:frontend` |
-| Solo backend | `npm run dev:backend` |
-| Build de producción | `npm run build` |
-| Type check manual | `npm run typecheck` |
-| Test E2E del chat | `node scripts/test-ai-chat.mjs` |
+| Acción                      | Comando                         |
+| --------------------------- | ------------------------------- |
+| Iniciar todo el stack local | `npm run dev`                   |
+| Solo frontend               | `npm run dev:frontend`          |
+| Solo backend                | `npm run dev:backend`           |
+| Build de producción         | `npm run build`                 |
+| Type check manual           | `npm run typecheck`             |
+| Test E2E del chat           | `node scripts/test-ai-chat.mjs` |
 
 ---
 

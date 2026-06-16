@@ -245,6 +245,31 @@ GÍRIAS BRASILEIRAS QUE VOCÊ CONHECE:
     }
   }
 
+  /**
+   * Servicio reutilizable para análisis visual general.
+   */
+  async analyzeImage(
+    image: VertexAiImageInput,
+    prompt: string,
+    temperature = 0.1,
+  ): Promise<{ result: unknown; confidence: number }> {
+    const response = await this.generateContentWithImages(prompt, [image], { temperature });
+    const text = response.text;
+
+    try {
+      const trimmed = text.trim();
+      const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return { result: { error: "No JSON found", text }, confidence: 0 };
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0.8;
+      return { result: parsed, confidence };
+    } catch {
+      return { result: { text }, confidence: 0.5 };
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     this.logger.log("Google Gen AI client shutting down");
   }

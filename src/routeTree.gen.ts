@@ -26,6 +26,7 @@ import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
 import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
+import { Route as AppAiVisionRouteImport } from './routes/app.ai-vision'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppWalletIndexRouteImport } from './routes/app.wallet.index'
 import { Route as AppProfileIndexRouteImport } from './routes/app.profile.index'
@@ -120,6 +121,11 @@ const AppBusinessRoute = AppBusinessRouteImport.update({
   path: '/business',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiVisionRoute = AppAiVisionRouteImport.update({
+  id: '/ai-vision',
+  path: '/ai-vision',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/ai-vision': typeof AppAiVisionRoute
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/ai-vision': typeof AppAiVisionRoute
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/ai-vision': typeof AppAiVisionRoute
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/app/admin'
+    | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/app/admin'
+    | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/app/admin'
+    | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
@@ -450,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBusinessRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ai-vision': {
+      id: '/app/ai-vision'
+      path: '/ai-vision'
+      fullPath: '/app/ai-vision'
+      preLoaderRoute: typeof AppAiVisionRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/admin': {
       id: '/app/admin'
       path: '/admin'
@@ -551,6 +570,7 @@ const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
+  AppAiVisionRoute: typeof AppAiVisionRoute
   AppBusinessRoute: typeof AppBusinessRoute
   AppChatRoute: typeof AppChatRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
@@ -569,6 +589,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
+  AppAiVisionRoute: AppAiVisionRoute,
   AppBusinessRoute: AppBusinessRoute,
   AppChatRoute: AppChatRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,

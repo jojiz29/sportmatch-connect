@@ -2,18 +2,19 @@
 
 ## ✅ Todo está deployando
 
-| Componente | Plataforma | Estado |
-|------------|-----------|--------|
-| Frontend (Vite SPA) | Vercel | ✅ Deployando desde `edwin` branch |
-| Backend (NestJS + Prisma) | Render | ✅ Deployando desde `main` branch |
-| Database (Postgres) | Supabase | ✅ Activo en us-west-2 |
-| AI (Vertex AI Gemini 2.5) | Google Cloud | ✅ Integrado |
+| Componente                | Plataforma   | Estado                             |
+| ------------------------- | ------------ | ---------------------------------- |
+| Frontend (Vite SPA)       | Vercel       | ✅ Deployando desde `edwin` branch |
+| Backend (NestJS + Prisma) | Render       | ✅ Deployando desde `main` branch  |
+| Database (Postgres)       | Supabase     | ✅ Activo en us-west-2             |
+| AI (Vertex AI Gemini 2.5) | Google Cloud | ✅ Integrado                       |
 
 ---
 
 ## 🔥 CRÍTICO: Render deploya desde MAIN, pero el código AI está en EDWIN
 
 **Problema actual:** Render hace deploy desde `main`, pero la rama `main` NO tiene:
+
 - ❌ `server/src/ai/` (módulo de Vertex AI)
 - ❌ `@google/genai` en `server/package.json`
 - ❌ CORS fixes en `server/src/main.ts`
@@ -28,6 +29,7 @@
 ## 📋 Variables de Entorno en Render (Verificadas)
 
 ### ✅ Ya configuradas
+
 - `DATABASE_URL` — connection string de Supabase
 - `FRONTEND_URL` — dominio de Vercel
 - `JWT_SECRET` — clave aleatoria
@@ -36,6 +38,7 @@
 - `SUPABASE_URL` — URL de Supabase
 
 ### ❌ Faltantes para AI
+
 - `GOOGLE_APPLICATION_CREDENTIALS_JSON` — JSON inline del Service Account
 - `GOOGLE_CLOUD_PROJECT` = `sportmach-core`
 - `VERTEX_AI_LOCATION` = `us-central1`
@@ -51,6 +54,7 @@
 ## 🎯 Pasos para que TODO funcione en producción
 
 ### Paso 1: Crear PR de edwin → main
+
 - Ve a https://github.com/jojiz29/sportmatch-connect
 - Click en "Pull requests" → "New pull request"
 - base: `main`, compare: `edwin`
@@ -59,12 +63,14 @@
 - Crea el PR y mergealo
 
 ### Paso 2: Render rebuildea automáticamente
+
 - Render detecta el push a main
 - Inicia build con `cd server && npm install && npm run build`
 - Ejecuta `node dist/main.js`
 - Verifica health: `curl https://sportmatch-api.onrender.com/api/v1/health`
 
 ### Paso 3: Verificar AI endpoint
+
 ```bash
 # Login
 curl -X POST https://gzyoxfhzuxknqacplapi.supabase.co/auth/v1/token?grant_type=password \
@@ -80,6 +86,7 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 ```
 
 ### Paso 4: Verificar Vercel
+
 - Vercel también hace deploy automático del PR a main
 - Frontend se sirve desde `https://sportmatch-connect-juan-alonso.vercel.app`
 - El frontend hace fetch al backend en Render (vía `VITE_API_URL`)
@@ -89,32 +96,36 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 ## 🔧 Comandos Útiles
 
 ### Ver logs de Render en tiempo real
+
 - Dashboard → Tu servicio → "Logs" tab
 - O desde CLI: `render logs -s sportmatch-connect`
 
 ### Forzar redeploy de Render
+
 - Dashboard → Tu servicio → "Manual Deploy" → "Deploy latest commit"
 
 ### Forzar redeploy de Vercel
+
 - Dashboard → Tu proyecto → "Deployments" → Click en los 3 puntos del último deploy → "Redeploy"
 
 ---
 
 ## 🐛 Si algo falla
 
-| Error | Causa | Solución |
-|-------|-------|----------|
-| 404 en `/api/v1/ai/chat` en Render | El AI module no está en main | Mergea el PR de edwin → main |
-| 500 con "GOOGLE_APPLICATION_CREDENTIALS_JSON no es válido" | JSON malformado | Re-pégalo desde el archivo original (debe estar en una línea) |
-| 500 con "Publisher Model not found" | Modelo o región incorrecta | Verifica `VERTEX_AI_MODEL_ID=gemini-2.5-flash` y `VERTEX_AI_LOCATION=us-central1` |
-| CORS error en el navegador | FRONTEND_URL incorrecto en Render | Verifica que sea exactamente `https://sportmatch-connect-juan-alonso.vercel.app` |
-| 401 Unauthorized | Token JWT expirado o inválido | El usuario debe hacer login en Supabase y usar el token fresco |
+| Error                                                      | Causa                             | Solución                                                                          |
+| ---------------------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| 404 en `/api/v1/ai/chat` en Render                         | El AI module no está en main      | Mergea el PR de edwin → main                                                      |
+| 500 con "GOOGLE_APPLICATION_CREDENTIALS_JSON no es válido" | JSON malformado                   | Re-pégalo desde el archivo original (debe estar en una línea)                     |
+| 500 con "Publisher Model not found"                        | Modelo o región incorrecta        | Verifica `VERTEX_AI_MODEL_ID=gemini-2.5-flash` y `VERTEX_AI_LOCATION=us-central1` |
+| CORS error en el navegador                                 | FRONTEND_URL incorrecto en Render | Verifica que sea exactamente `https://sportmatch-connect-juan-alonso.vercel.app`  |
+| 401 Unauthorized                                           | Token JWT expirado o inválido     | El usuario debe hacer login en Supabase y usar el token fresco                    |
 
 ---
 
 ## 📂 Archivos Clave
 
 ### Backend (Render)
+
 - `server/src/main.ts` — Entry point con CORS y serverless guard
 - `server/src/ai/ai-config.service.ts` — Validación de env vars
 - `server/src/ai/vertex-ai.service.ts` — Integración con @google/genai
@@ -127,6 +138,7 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 - `server/.gitignore` — Protege credentials/
 
 ### Frontend (Vercel)
+
 - `src/features/ai-assistant/api/sportyAiAPI.ts` — Cliente HTTP
 - `src/features/ai-assistant/model/useAiAssistantStore.ts` — Zustand store
 - `src/features/ai-assistant/ui/ChatInterface.tsx` — UI del chat
@@ -134,6 +146,7 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 - `src/components/AppShell.tsx` — Monta el avatar globalmente
 
 ### Config
+
 - `vercel.json` — Solo frontend, buildCommand: `npm run build`
 - `render.yaml` — Backend completo con buildCommand: `cd server && npm install && npm run build`
 - `docs/VERCEL_DEPLOY.md` — Guía completa de deploy
@@ -159,6 +172,7 @@ curl -X POST https://sportmatch-api.onrender.com/api/v1/ai/chat \
 ---
 
 ## 📞 Contacto de Equipo
+
 - **Edwin Flores Sanchez** (tú) — Frontend + Dev tooling + AI
 - **Juan Alonso Salvatierra** — Backend + Render + Supabase
 

@@ -18,6 +18,7 @@ import {
   ModerateTextDto,
   ModerationResultDto,
 } from "./dto/ai.dto";
+import { AnalyzeVisionDto } from "./dto/vision-analyze.dto";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -92,5 +93,18 @@ export class AiController {
   ): Promise<ModerationResultDto> {
     const userId = req.user.sub;
     return this.aiService.moderateContent(userId, dto.text, dto.context ?? "post");
+  }
+
+  @Post("vision/analyze")
+  @ApiOperation({
+    summary:
+      "Feature #8 & #26 — Analiza una imagen (Detector de perfiles falsos o Analizador de posturas)",
+  })
+  async analyzeVision(
+    @Body() dto: AnalyzeVisionDto,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<{ result: unknown; confidence: number }> {
+    const userId = req.user.sub;
+    return this.aiService.analyzeVision(userId, dto.imageUrl, dto.analysisType);
   }
 }

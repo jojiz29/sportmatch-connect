@@ -454,6 +454,25 @@ export const backendApi = {
       });
     },
   },
+
+  // ------------------------------------------------------------
+  // VISION (Análisis visual con IA)
+  // ------------------------------------------------------------
+  vision: {
+    async analyze(
+      token: string,
+      payload: {
+        imageUrl: string;
+        analysisType: string;
+      },
+    ) {
+      return fetchApi<{ result: unknown; confidence: number }>("/ai/vision/analyze", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+    },
+  },
 };
 
 export default backendApi;

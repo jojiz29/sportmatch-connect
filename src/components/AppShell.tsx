@@ -20,6 +20,7 @@ import {
   Package,
   MapPin,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
@@ -187,6 +188,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
             { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
             { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
+            {
+              to: "/app/ai-vision",
+              labelKey: "nav.ai_vision_hub",
+              label: "AI Vision Hub",
+              icon: Sparkles,
+            },
           ],
         },
       ];
