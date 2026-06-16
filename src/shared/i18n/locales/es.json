@@ -766,5 +766,8 @@
     "price": "Precio",
     "my_bookings": "Mis reservas",
     "confirm_cancel": "Cancelar esta reserva?"
+  },
+  "offline": {
+    "banner": "Sin conexion. Mostrando los ultimos datos guardados."
   }
 }

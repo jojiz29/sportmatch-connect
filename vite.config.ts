@@ -29,6 +29,67 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       workbox: {
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        // SCRUM-411: Runtime caching strategies
+        runtimeCaching: [
+          {
+            // API GET: NetworkFirst con timeout 3s y fallback a cache
+            urlPattern: /^https:\/\/[^/]+\/api\/v1\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-cache",
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 dias
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Supabase REST queries: StaleWhileRevalidate
+            urlPattern: /^https:\/\/[^/]+\/rest\/v1\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "supabase-rest",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 5, // 5 minutos
+              },
+            },
+          },
+          {
+            // Imagenes: CacheFirst con expiracion 30 dias
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif)$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
+          },
+          {
+            // Google Fonts: StaleWhileRevalidate
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: { cacheName: "google-fonts-stylesheets" },
+          },
+          {
+            // Leaflet tiles: CacheFirst con expiracion 7 dias
+            urlPattern: /^https:\/\/[abc]\.tile\.openstreetmap\.org\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "leaflet-tiles",
+              expiration: {
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
+              },
+            },
+          },
+        ],
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
       },
       manifest: {
         name: "SportMatch Connect",

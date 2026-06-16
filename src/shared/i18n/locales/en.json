@@ -766,5 +766,8 @@
     "price": "Price",
     "my_bookings": "My bookings",
     "confirm_cancel": "Cancel this booking?"
+  },
+  "offline": {
+    "banner": "Offline. Showing the last saved data."
   }
 }
