@@ -8,10 +8,11 @@ import {
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
-import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FilesInterceptor, FileFieldsInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../../auth/guards/supabase-auth.guard";
 import { VisionService } from "./vision.service";
+import { MediaService } from "./media.service";
 import {
   AnalyzeImageDto,
   AnalyzeImageResponseDto,
@@ -33,7 +34,10 @@ const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class VisionController {
-  constructor(private readonly visionService: VisionService) {}
+  constructor(
+    private readonly visionService: VisionService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   @Post("analyze")
   @ApiOperation({ summary: "Analiza una imagen usando Vertex AI (Gemini multimodal)" })
@@ -89,7 +93,7 @@ export class VisionController {
       );
     }
     const frameCount = Math.min(Math.max(parseInt(dto.frameCount || "5", 10) || 5, 1), 15);
-    const frames = this.extractFrames(videoFile.buffer, frameCount);
+    const frames = await this.mediaService.extractFrames(videoFile.buffer, frameCount);
     return this.visionService.analyzeVideo(frames, "image/jpeg", dto.prompt, dto.language);
   }
 
@@ -187,37 +191,35 @@ export class VisionController {
     },
   })
   @UseInterceptors(
-    FilesInterceptor("files", 2, { limits: { fileSize: MAX_IMAGE_SIZE } }),
+    FileFieldsInterceptor([
+      { name: "selfie", maxCount: 1 },
+      { name: "dni", maxCount: 1 },
+    ], { limits: { fileSize: MAX_IMAGE_SIZE } }),
   )
   async dniVerify(
-    @UploadedFiles() files: Array<{ buffer: Buffer; mimetype: string; fieldName: string }> | undefined,
+    @UploadedFiles()
+    files: { selfie?: { buffer: Buffer; mimetype: string; size: number }[]; dni?: { buffer: Buffer; mimetype: string; size: number }[] } | undefined,
     @Body("language") language?: string,
   ): Promise<DniVerifyResponseDto> {
-    if (!files || files.length < 2) {
+    const selfie = files?.selfie?.[0];
+    const dniFile = files?.dni?.[0];
+    if (!selfie || !dniFile) {
       throw new BadRequestException("Debes proporcionar ambas imágenes: selfie y foto del DNI");
     }
-    const selfie = files.find((f) => f.fieldName === "files");
-    const dniImg = files.find((f) => f.fieldName === "files" && f !== selfie);
-    // Use first two files regardless of fieldName order
+    if (!ALLOWED_IMAGE_TYPES.includes(selfie.mimetype)) {
+      throw new BadRequestException("Formato de selfie no soportado. Usa JPG, PNG o WebP.");
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(dniFile.mimetype)) {
+      throw new BadRequestException("Formato de DNI no soportado. Usa JPG, PNG o WebP.");
+    }
     const lang = (language === "pt" || language === "en" ? language : "es") as "es" | "en" | "pt";
     return this.visionService.verifyDniWithSelfie(
-      files[0].buffer,
-      files[0].mimetype,
-      files[1].buffer,
-      files[1].mimetype,
+      selfie.buffer,
+      selfie.mimetype,
+      dniFile.buffer,
+      dniFile.mimetype,
       lang,
     );
   }
 
-  private extractFrames(videoBuffer: Buffer, frameCount: number): Buffer[] {
-    const frames: Buffer[] = [];
-    const totalSize = videoBuffer.length;
-    const chunkSize = Math.floor(totalSize / frameCount);
-    for (let i = 0; i < frameCount; i++) {
-      const start = i * chunkSize;
-      const end = i === frameCount - 1 ? totalSize : start + chunkSize;
-      frames.push(videoBuffer.subarray(start, end));
-    }
-    return frames;
-  }
 }

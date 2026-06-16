@@ -135,8 +135,8 @@ export async function verifyDniWithSelfie(
   language?: SupportedLanguage,
 ): Promise<DniVerificationResult> {
   const formData = new FormData();
-  formData.append("files", selfie, "selfie.jpg");
-  formData.append("files", dniImage, "dni.jpg");
+  formData.append("selfie", selfie, "selfie.jpg");
+  formData.append("dni", dniImage, "dni.jpg");
   if (language) formData.append("language", language);
   return postFormData<DniVerificationResult>("/dni-verify", formData);
 }
