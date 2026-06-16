@@ -35,6 +35,7 @@ import { AIAvatarButton } from "@/features/ai-assistant/ui/AIAvatarButton";
 
 const ACCOUNT_ITEMS = [
   { to: "/app/profile", labelKey: "nav.perfil", icon: User },
+  { to: "/app/settings", labelKey: "nav.settings", icon: Settings },
   { to: "/app/business", labelKey: "nav.business", icon: Store },
   { to: "/app/admin", labelKey: "nav.admin", icon: LayoutDashboard },
 ];
@@ -263,12 +264,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="min-h-screen bg-background bg-[url('/images/sports/fondo-sportmatch-app.webp')] bg-cover bg-center bg-fixed relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/95 backdrop-blur-sm -z-10" />
+    <div className="min-h-screen bg-background bg-[url('/images/sports/fondo-sportmatch-app-final.webp')] bg-cover bg-center bg-fixed relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md -z-10" />
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 flex-col glass border-r border-border/40 z-30">
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-80 flex-col bg-background/80 backdrop-blur-xl border-r border-border/30 z-30 shadow-2xl">
           <div className="px-5 py-5 flex items-center justify-between border-b border-border/10">
             <Link
               to={isBusiness ? "/app/business" : "/app"}
@@ -311,13 +312,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                             : undefined
                       }
                       search={item.search}
-                      className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex items-center gap-4 px-5 py-3 rounded-xl text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
                           : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
                       }`}
                     >
-                      <Icon className="h-5 w-5 shrink-0" />
+                      <Icon className="h-6 w-6 shrink-0" />
                       {item.label || t(item.labelKey)}
                       {active && (
                         <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />
@@ -341,13 +342,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       key={item.to}
                       to={item.to}
                       id={item.to === "/app/business" ? "sidebar-nav-business" : undefined}
-                      className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex items-center gap-4 px-5 py-3 rounded-xl text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
                           : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
                       }`}
                     >
-                      <Icon className="h-5 w-5 shrink-0" />
+                      <Icon className="h-6 w-6 shrink-0" />
                       {t(item.labelKey)}
                       {active && (
                         <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />

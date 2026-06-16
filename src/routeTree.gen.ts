@@ -17,6 +17,7 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as OnboardingSportsRouteImport } from './routes/onboarding.sports'
 import { Route as AppTournamentsRouteImport } from './routes/app.tournaments'
 import { Route as AppSquadsRouteImport } from './routes/app.squads'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppRegisterRouteImport } from './routes/app.register'
 import { Route as AppProfileRouteImport } from './routes/app.profile'
 import { Route as AppMatchRouteImport } from './routes/app.match'
@@ -73,6 +74,11 @@ const AppTournamentsRoute = AppTournamentsRouteImport.update({
 const AppSquadsRoute = AppSquadsRouteImport.update({
   id: '/squads',
   path: '/squads',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRegisterRoute = AppRegisterRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/app/match': typeof AppMatchRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/register': typeof AppRegisterRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/squads': typeof AppSquadsRoute
   '/app/tournaments': typeof AppTournamentsRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
   '/app/register': typeof AppRegisterRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/squads': typeof AppSquadsRoute
   '/app/tournaments': typeof AppTournamentsRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/app/match': typeof AppMatchRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/register': typeof AppRegisterRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/squads': typeof AppSquadsRoute
   '/app/tournaments': typeof AppTournamentsRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/app/match'
     | '/app/profile'
     | '/app/register'
+    | '/app/settings'
     | '/app/squads'
     | '/app/tournaments'
     | '/onboarding/sports'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/app/iot'
     | '/app/map'
     | '/app/register'
+    | '/app/settings'
     | '/app/squads'
     | '/app/tournaments'
     | '/onboarding/sports'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/app/match'
     | '/app/profile'
     | '/app/register'
+    | '/app/settings'
     | '/app/squads'
     | '/app/tournaments'
     | '/onboarding/sports'
@@ -385,6 +397,13 @@ declare module '@tanstack/react-router' {
       path: '/squads'
       fullPath: '/app/squads'
       preLoaderRoute: typeof AppSquadsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/register': {
@@ -560,6 +579,7 @@ interface AppRouteChildren {
   AppMatchRoute: typeof AppMatchRouteWithChildren
   AppProfileRoute: typeof AppProfileRouteWithChildren
   AppRegisterRoute: typeof AppRegisterRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppSquadsRoute: typeof AppSquadsRoute
   AppTournamentsRoute: typeof AppTournamentsRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -578,6 +598,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMatchRoute: AppMatchRouteWithChildren,
   AppProfileRoute: AppProfileRouteWithChildren,
   AppRegisterRoute: AppRegisterRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppSquadsRoute: AppSquadsRoute,
   AppTournamentsRoute: AppTournamentsRoute,
   AppIndexRoute: AppIndexRoute,
