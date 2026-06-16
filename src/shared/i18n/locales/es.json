@@ -8,12 +8,12 @@
     "mensajes": "Mensajes",
     "telemetria": "Mi Rendimiento",
     "wallet": "FitCoins",
-    "torneos": "Torneos Relámpago",
+    "torneos": "Torneos RelÃ¡mpago",
     "perfil": "Mi Perfil",
     "business": "Mi Negocio",
     "admin": "Panel de Admin",
-    "settings": "Configuración",
-    "logout": "Cerrar Sesión",
+    "settings": "ConfiguraciÃ³n",
+    "logout": "Cerrar SesiÃ³n",
     "groups": {
       "action": "ACCION & DESCUBRIMIENTO",
       "social": "SOCIAL & COMPETENCIA",
@@ -22,17 +22,17 @@
     }
   },
   "login": {
-    "title_signin": "Iniciar Sesión",
+    "title_signin": "Iniciar SesiÃ³n",
     "title_signup": "Crear Cuenta",
-    "subtitle": "Accede a la red de deportistas más grande",
+    "subtitle": "Accede a la red de deportistas mÃ¡s grande",
     "email": "Email",
-    "password": "Contraseña",
+    "password": "ContraseÃ±a",
     "btn_signin": "Entrar",
     "btn_signup": "Registrarme",
-    "toggle_signup": "¿No tienes cuenta? Regístrate",
-    "toggle_signin": "¿Ya tienes cuenta? Inicia sesión",
-    "success_toast": "¡Bienvenido de nuevo!",
-    "error_toast": "Error al iniciar sesión. Verifica tus credenciales.",
+    "toggle_signup": "Â¿No tienes cuenta? RegÃ­strate",
+    "toggle_signin": "Â¿Ya tienes cuenta? Inicia sesiÃ³n",
+    "success_toast": "Â¡Bienvenido de nuevo!",
+    "error_toast": "Error al iniciar sesiÃ³n. Verifica tus credenciales.",
     "btn_demo": "Probar Demo",
     "email_placeholder": "tu@email.com"
   },
@@ -41,60 +41,60 @@
     "subtitle": "Completa tu onboarding deportivo",
     "fullName": "Nombre Completo",
     "email": "Email",
-    "password": "Contraseña",
+    "password": "ContraseÃ±a",
     "sports": "Deportes Favoritos",
     "btn_register": "Registrarme y Empezar",
-    "success_toast": "¡Bienvenido a SportMatch!",
+    "success_toast": "Â¡Bienvenido a SportMatch!",
     "error_toast": "Error al registrarse. Intenta de nuevo.",
     "select_sports_error": "Selecciona al menos un deporte favorito",
     "role_player": "Deportista",
     "role_business": "Empresa",
-    "companyName": "Razón Social",
+    "companyName": "RazÃ³n Social",
     "placeholder_company": "Ej. Deportes Flores S.A.C.",
-    "businessCategory": "Categoría de Negocio",
+    "businessCategory": "CategorÃ­a de Negocio",
     "cat_shop": "Tienda de Deportes",
     "cat_courts": "Alquiler de Canchas",
     "cat_gym": "Gimnasio",
-    "cat_beverages": "Bebidas y Nutrición",
+    "cat_beverages": "Bebidas y NutriciÃ³n",
     "cat_academy": "Academia Deportiva",
     "cat_physio": "Fisioterapia y Descarga",
-    "cat_nutrition": "Nutrición Deportiva",
+    "cat_nutrition": "NutriciÃ³n Deportiva",
     "cat_events": "Torneos y Eventos",
     "cat_brands": "Marcas Deportivas",
     "cat_sponsor": "Patrocinador",
-    "gps_location": "Ubicación GPS (Coordenadas)",
+    "gps_location": "UbicaciÃ³n GPS (Coordenadas)",
     "latitude": "Latitud",
     "longitude": "Longitud",
-    "business_bio_template": "Perfil oficial de {{companyName}}. ¡Bienvenido a nuestro catálogo!",
-    "default_player_bio": "¡Listo para jugar!"
+    "business_bio_template": "Perfil oficial de {{companyName}}. Â¡Bienvenido a nuestro catÃ¡logo!",
+    "default_player_bio": "Â¡Listo para jugar!"
   },
   "dashboard": {
     "title": "Panel Principal",
     "balance": "Balance de FitCoins",
     "recent_activity": "Actividad Reciente",
-    "next_match": "Próximo Partido",
+    "next_match": "PrÃ³ximo Partido",
     "no_next_match": "No tienes partidos programados",
     "find_one": "Encontrar Partido"
   },
   "matchmaking": {
     "title": "Matchmaking IA",
-    "subtitle": "Deslizá para encontrar tu próximo rival ideal",
+    "subtitle": "DeslizÃ¡ para encontrar tu prÃ³ximo rival ideal",
     "filters": "Filtros",
-    "empty": "Sin más sugerencias",
+    "empty": "Sin mÃ¡s sugerencias",
     "compatibility": "Compatibilidad IA",
     "level": "Nivel",
     "distance": "Distancia",
-    "reputation": "Reputación",
-    "like_toast": "¡Like enviado!",
-    "match_toast": "¡Es un Match!",
+    "reputation": "ReputaciÃ³n",
+    "like_toast": "Â¡Like enviado!",
+    "match_toast": "Â¡Es un Match!",
     "schedule": "Horario",
-    "its_a_match": "¡Es un Match! 🎉",
-    "sport_connection": "¡Conexión Deportiva!",
-    "me": "Tú",
-    "match_desc": "A ti y a {{name}} les gusta el mismo deporte ({{sport}}). ¡Empiecen a chatear ahora!",
+    "its_a_match": "Â¡Es un Match! ðŸŽ‰",
+    "sport_connection": "Â¡ConexiÃ³n Deportiva!",
+    "me": "TÃº",
+    "match_desc": "A ti y a {{name}} les gusta el mismo deporte ({{sport}}). Â¡Empiecen a chatear ahora!",
     "send_message": "Enviar Mensaje",
     "keep_swiping": "Seguir Deslizando",
-    "empty_stack": "Sin más sugerencias",
+    "empty_stack": "Sin mÃ¡s sugerencias",
     "sport_default": "Deporte",
     "user_default": "Usuario",
     "view_profile": "Ver Perfil"
@@ -110,8 +110,8 @@
   "chat": {
     "title": "Mensajes",
     "search": "Buscar chats...",
-    "online": "participantes en línea",
-    "empty": "Selecciona una conversación para chatear",
+    "online": "participantes en lÃ­nea",
+    "empty": "Selecciona una conversaciÃ³n para chatear",
     "placeholder": "Escribe un mensaje...",
     "new_message": "Nuevo mensaje",
     "search_users": "Buscar usuarios...",
@@ -122,7 +122,7 @@
     "squad_name": "Nombre del Squad",
     "squad_placeholder": "Ej: Los Peloteros FC",
     "select_members": "Seleccionar Miembros (Seguidores / Siguiendo)",
-    "no_contacts": "No tienes contactos seguidos o seguidores aún para crear un grupo.",
+    "no_contacts": "No tienes contactos seguidos o seguidores aÃºn para crear un grupo.",
     "create_squad_hint": "Ponle nombre a tu grupo y selecciona a los contactos que quieres invitar.",
     "selected_members": "{{count}} seleccionados",
     "no_contacts_hint": "Puedes crear el Squad ahora y agregar contactos cuando sigas a otros deportistas o ellos te sigan.",
@@ -130,7 +130,7 @@
   },
   "wallet": {
     "title": "FitCoins & Recompensas",
-    "subtitle": "Tu economía deportiva gamificada",
+    "subtitle": "Tu economÃ­a deportiva gamificada",
     "balance": "Tu balance",
     "redeem": "Canjear",
     "no_stock": "Sin stock",
@@ -140,42 +140,42 @@
     "rewards": "Recompensas",
     "ranking": "Ranking semanal",
     "confirm_title": "Canjear {{reward}}",
-    "confirm_desc": "¿Estás seguro de que deseas canjear esta recompensa por {{cost}} FitCoins?",
+    "confirm_desc": "Â¿EstÃ¡s seguro de que deseas canjear esta recompensa por {{cost}} FitCoins?",
     "confirm_btn": "Confirmar Canje",
     "cancel_btn": "Cancelar",
-    "success": "¡Canje exitoso!",
+    "success": "Â¡Canje exitoso!",
     "success_desc": "Has obtenido: {{reward}}",
     "error": "Saldo insuficiente",
-    "error_desc": "Sigue jugando para ganar más FitCoins.",
+    "error_desc": "Sigue jugando para ganar mÃ¡s FitCoins.",
     "history_title": "Historial de Transacciones",
     "history_subtitle": "Seguimiento de tus ingresos y gastos de FitCoins",
     "back": "Volver a FitCoins",
     "claimed": "Reclamado",
     "advance": "Avanzar",
     "claim": "Reclamar",
-    "completed": "✓ Completado",
+    "completed": "âœ“ Completado",
     "business_marketplace": "Tienda de Negocios (Marketplace B2B)",
     "product": "Producto",
     "service": "Servicio",
     "buy": "Comprar",
     "no_products": "No hay productos comerciales disponibles en este momento.",
     "confirm_purchase_title": "Confirmar Compra",
-    "confirm_purchase_desc": "¿Deseas comprar {{name}} por {{price}} FC?",
+    "confirm_purchase_desc": "Â¿Deseas comprar {{name}} por {{price}} FC?",
     "processing": "Procesando...",
     "cancel": "Cancelar",
-    "this_week_gain": "+{{amount}} esta semana ↗",
+    "this_week_gain": "+{{amount}} esta semana â†—",
     "recent_movements": "Movimientos recientes",
     "spend": "Gasto",
     "earn": "Ingreso",
-    "penalty": "Penalización",
+    "penalty": "PenalizaciÃ³n",
     "monthly_summary": "Resumen Mensual",
     "income": "Ingresos",
     "expenses": "Egresos",
     "net_balance": "Balance neto",
-    "purchase_success": "¡Compra completada con éxito!",
+    "purchase_success": "Â¡Compra completada con Ã©xito!",
     "purchase_success_desc": "Canjeaste: {{name}}",
     "purchase_error": "Saldo insuficiente",
-    "purchase_error_desc": "No tienes suficientes FitCoins para este artículo.",
+    "purchase_error_desc": "No tienes suficientes FitCoins para este artÃ­culo.",
     "purchase_failed": "Error al procesar la compra"
   },
   "profile": {
@@ -191,22 +191,22 @@
     "placeholder_city": "Tu ciudad",
     "placeholder_bio": "Tu bio",
     "placeholder_sports": "Deportes separados por comas",
-    "badge_streak_name": "Racha de 7 días",
+    "badge_streak_name": "Racha de 7 dÃ­as",
     "badge_streak_desc": "Jugar al menos 5 partidos",
-    "badge_partner_name": "Buen compañero",
-    "badge_partner_desc": "Trust Score ≥ 90% y 3+ partidos",
+    "badge_partner_name": "Buen compaÃ±ero",
+    "badge_partner_desc": "Trust Score â‰¥ 90% y 3+ partidos",
     "badge_mvp_name": "MVP",
     "badge_mvp_desc": "Jugar al menos 15 partidos",
     "badge_top_name": "Top 10%",
     "badge_top_desc": "Tener 1,000+ FitCoins",
     "completed": "Completado",
-    "no_matches_yet": "No has participado en partidos aún.",
+    "no_matches_yet": "No has participado en partidos aÃºn.",
     "change_photo": "Cambiar foto",
     "uploading_photo": "Subiendo foto de perfil...",
     "photo_updated_demo": "Foto actualizada correctamente (Demo).",
     "photo_updated": "Foto actualizada correctamente.",
     "photo_error": "Error al subir la foto. Intenta de nuevo.",
-    "age_label": "{{age}} años",
+    "age_label": "{{age}} aÃ±os",
     "followers": "Seguidores",
     "following": "Seguidos",
     "matches": "Partidos",
@@ -224,9 +224,9 @@
     "level": "Nivel",
     "medals": "Medallas",
     "unfollow_success": "Dejaste de seguir a este usuario.",
-    "follow_success": "¡Ahora sigues a este usuario!",
+    "follow_success": "Â¡Ahora sigues a este usuario!",
     "follow_error": "Error al procesar la solicitud.",
-    "try_again_later": "Inténtalo de nuevo más tarde.",
+    "try_again_later": "IntÃ©ntalo de nuevo mÃ¡s tarde.",
     "following_status": "Siguiendo",
     "user_not_found": "Usuario no encontrado.",
     "status_finished": "Finalizado",
@@ -235,26 +235,26 @@
     "change_sports": "Cambiar"
   },
   "auth": {
-    "email_invalid_format": "Por favor, ingresa un correo electrónico con formato válido.",
-    "email_invalid_tld": "El dominio del correo debe terminar en un TLD válido (.com, .pe, .edu, .org, .net).",
+    "email_invalid_format": "Por favor, ingresa un correo electrÃ³nico con formato vÃ¡lido.",
+    "email_invalid_tld": "El dominio del correo debe terminar en un TLD vÃ¡lido (.com, .pe, .edu, .org, .net).",
     "email_invalid_domain": "Por favor, ingresa un correo de un proveedor permitido (Gmail, Outlook, Yahoo, Hotmail, iCloud o ProtonMail).",
-    "password_min_length": "La contraseña debe tener al menos 8 caracteres.",
-    "password_uppercase": "Falta al menos una letra mayúscula.",
-    "password_lowercase": "Falta al menos una letra minúscula.",
-    "password_number": "Falta al menos un número.",
-    "password_special": "Falta al menos un carácter especial (!@#$%^&*).",
-    "password_strength_weak": "Contraseña débil",
-    "password_strength_medium": "Contraseña media",
-    "password_strength_strong": "Contraseña fuerte",
-    "password_strength_title": "Fortaleza de la contraseña",
-    "password_crit_len": "Mínimo 8 caracteres",
-    "password_crit_upper": "1 Mayúscula",
-    "password_crit_lower": "1 Minúscula",
-    "password_crit_number": "1 Número",
-    "password_crit_special": "1 Carácter especial (!@#$%^&*)",
+    "password_min_length": "La contraseÃ±a debe tener al menos 8 caracteres.",
+    "password_uppercase": "Falta al menos una letra mayÃºscula.",
+    "password_lowercase": "Falta al menos una letra minÃºscula.",
+    "password_number": "Falta al menos un nÃºmero.",
+    "password_special": "Falta al menos un carÃ¡cter especial (!@#$%^&*).",
+    "password_strength_weak": "ContraseÃ±a dÃ©bil",
+    "password_strength_medium": "ContraseÃ±a media",
+    "password_strength_strong": "ContraseÃ±a fuerte",
+    "password_strength_title": "Fortaleza de la contraseÃ±a",
+    "password_crit_len": "MÃ­nimo 8 caracteres",
+    "password_crit_upper": "1 MayÃºscula",
+    "password_crit_lower": "1 MinÃºscula",
+    "password_crit_number": "1 NÃºmero",
+    "password_crit_special": "1 CarÃ¡cter especial (!@#$%^&*)",
     "continue_with_google": "Continuar con Google",
-    "sign_in_with_google": "Iniciar Sesión con Google",
-    "or_continue_with": "O continúa con"
+    "sign_in_with_google": "Iniciar SesiÃ³n con Google",
+    "or_continue_with": "O continÃºa con"
   },
   "feedback": {
     "modal_title": "Calificar Partido & Jugadores",
@@ -262,17 +262,17 @@
     "rate_players": "Califica el comportamiento de los participantes",
     "tag_good_level": "Buen nivel",
     "tag_punctual": "Puntual",
-    "tag_good_teammate": "Gran compañero",
-    "tag_disrespectful": "Faltó el respeto",
-    "tag_no_show": "No asistió",
+    "tag_good_teammate": "Gran compaÃ±ero",
+    "tag_disrespectful": "FaltÃ³ el respeto",
+    "tag_no_show": "No asistiÃ³",
     "submit_feedback": "Enviar Calificaciones",
-    "feedback_success": "¡Calificaciones enviadas! Gracias por mantener la comunidad limpia."
+    "feedback_success": "Â¡Calificaciones enviadas! Gracias por mantener la comunidad limpia."
   },
   "game_day": {
     "confirm_attendance": "Confirmar Asistencia",
-    "checkin_success": "¡Asistencia confirmada con éxito!",
-    "checkin_too_far": "Estás demasiado lejos de la cancha (a {{distance}} km). Debes estar a menos de 100 metros.",
-    "checkin_error": "No se pudo obtener tu ubicación. Por favor, activa el GPS."
+    "checkin_success": "Â¡Asistencia confirmada con Ã©xito!",
+    "checkin_too_far": "EstÃ¡s demasiado lejos de la cancha (a {{distance}} km). Debes estar a menos de 100 metros.",
+    "checkin_error": "No se pudo obtener tu ubicaciÃ³n. Por favor, activa el GPS."
   },
   "common": {
     "loading": "Cargando...",
@@ -281,19 +281,19 @@
   "landing": {
     "empezar": "Empezar a jugar",
     "crear_cuenta": "Crear cuenta",
-    "features_title": "Características",
+    "features_title": "CaracterÃ­sticas",
     "matchmaking_title": "Matchmaking Inteligente",
-    "matchmaking_desc": "Nuestra IA analiza tu nivel deportivo, Trust Score, ubicación y horarios preferidos para conectarte con los rivales o compañeros ideales en minutos.",
+    "matchmaking_desc": "Nuestra IA analiza tu nivel deportivo, Trust Score, ubicaciÃ³n y horarios preferidos para conectarte con los rivales o compaÃ±eros ideales en minutos.",
     "squads_title": "Squads y Comunidad",
     "split_billing_title": "Pago Dividido",
-    "split_billing_desc": "Olvídate de cobrar a cada uno. El costo del alquiler se divide automáticamente entre los participantes activos de tu squad desde su billetera de FitCoins.",
+    "split_billing_desc": "OlvÃ­date de cobrar a cada uno. El costo del alquiler se divide automÃ¡ticamente entre los participantes activos de tu squad desde su billetera de FitCoins.",
     "group_chat_title": "Chat Grupal Integrado",
-    "group_chat_desc": "Comunícate en tiempo real con tu squad, organiza pichangas, comparte memes y mantén la pasión del partido viva.",
+    "group_chat_desc": "ComunÃ­cate en tiempo real con tu squad, organiza pichangas, comparte memes y mantÃ©n la pasiÃ³n del partido viva.",
     "map_title": "Mapa de Sedes y Cobertura Completa",
-    "map_desc": "Visualiza los 35 distritos de Lima metropolitana en un mapa interactivo con filtro de 'Modo Noche'. Encuentra tu complejo deportivo de pádel o fútbol ideal de forma georreferenciada.",
-    "challenges_title": "Desafíos Deportivos en Vivo",
+    "map_desc": "Visualiza los 35 distritos de Lima metropolitana en un mapa interactivo con filtro de 'Modo Noche'. Encuentra tu complejo deportivo de pÃ¡del o fÃºtbol ideal de forma georreferenciada.",
+    "challenges_title": "DesafÃ­os Deportivos en Vivo",
     "challenges_desc": "Supera retos semanales para acumular FitCoins y canjearlos en nuestro Marketplace. Mantente activo y sube de nivel.",
-    "challenge_padel": "3 partidos de Pádel esta semana",
+    "challenge_padel": "3 partidos de PÃ¡del esta semana",
     "challenge_squad": "Organizar evento de Squad",
     "challenge_cup": "Torneo Copa SportMatch",
     "status_seeking": "Buscando",
@@ -306,77 +306,77 @@
   "onboarding": {
     "step_indicator": "Paso {{step}} de 3",
     "step1_title": "Elige tus disciplinas",
-    "step1_subtitle": "Selecciona los deportes tradicionales y títulos de e-sports que juegas.",
+    "step1_subtitle": "Selecciona los deportes tradicionales y tÃ­tulos de e-sports que juegas.",
     "traditional_sports": "Deportes Tradicionales",
     "esports_gaming": "E-Sports & Gaming Core",
     "step2_title": "Tu Nivel de Habilidad",
     "step2_subtitle": "Selecciona tu nivel para calcular tu peso competitivo y asegurar emparejamientos justos.",
     "skill_amateur_desc": "Ideal para divertirse, aprender y socializar sin presiones.",
-    "skill_amateur_details": "Peso 1.0 · Adecuado para ligas puramente recreativas y partidos informales entre amigos.",
-    "skill_intermedio_desc": "Para jugadores con experiencia y dominio básico de reglas.",
-    "skill_intermedio_details": "Peso 2.0 · Adecuado para partidos amistosos competitivos y torneos locales estándar.",
-    "skill_avanzado_desc": "Enfocado en juego táctico, ritmo rápido y mayor destreza.",
-    "skill_avanzado_details": "Peso 3.5 · Diseñado para ligas competitivas regulares, partidos avanzados y torneos retadores.",
+    "skill_amateur_details": "Peso 1.0 Â· Adecuado para ligas puramente recreativas y partidos informales entre amigos.",
+    "skill_intermedio_desc": "Para jugadores con experiencia y dominio bÃ¡sico de reglas.",
+    "skill_intermedio_details": "Peso 2.0 Â· Adecuado para partidos amistosos competitivos y torneos locales estÃ¡ndar.",
+    "skill_avanzado_desc": "Enfocado en juego tÃ¡ctico, ritmo rÃ¡pido y mayor destreza.",
+    "skill_avanzado_details": "Peso 3.5 Â· DiseÃ±ado para ligas competitivas regulares, partidos avanzados y torneos retadores.",
     "skill_pro_desc": "Destinado a ligas competitivas y torneos de alta intensidad.",
-    "skill_pro_details": "Peso 5.0 · Destinado a ligas competitivas y torneos de alta intensidad profesional.",
-    "step3_title": "Matriz de Intención Deportiva",
+    "skill_pro_details": "Peso 5.0 Â· Destinado a ligas competitivas y torneos de alta intensidad profesional.",
+    "step3_title": "Matriz de IntenciÃ³n Deportiva",
     "step3_subtitle": "Ajusta los sliders interactivos para afinar tus emparejamientos semanales.",
-    "intent_label": "Intención de Juego",
+    "intent_label": "IntenciÃ³n de Juego",
     "recreativo": "Recreativo",
     "competitivo": "Competitivo",
     "intent_recreativo_desc": "Recreativo / Tercer Tiempo",
-    "intent_competitivo_desc": "Competitivo / Tabla de Clasificación",
-    "weekly_dedication": "Dedicación Semanal",
-    "weekly_min": "Mínimo (1h)",
+    "intent_competitivo_desc": "Competitivo / Tabla de ClasificaciÃ³n",
+    "weekly_dedication": "DedicaciÃ³n Semanal",
+    "weekly_min": "MÃ­nimo (1h)",
     "weekly_default": "Predeterminado (6h)",
     "weekly_max": "Intenso (20h+)",
     "weekly_hour_sing": "hora",
     "weekly_hour_plur": "horas",
     "weight_label": "Peso: {{weight}}",
-    "btn_back": "Atrás",
+    "btn_back": "AtrÃ¡s",
     "btn_cancel": "Cancelar",
     "btn_next": "Siguiente",
     "btn_finish": "Finalizar y Registrarse",
     "streak_title": "Racha Deportiva",
     "streak_current": "Racha actual:",
-    "streak_max": "Máx:",
+    "streak_max": "MÃ¡x:",
     "streak_unit_sing": "sem",
     "streak_unit_plur": "sems",
-    "streak_footer": "Los días con asistencia verificada se iluminan en <span className=\"text-[#39FF14] font-bold\">Verde Neón</span>.",
-    "streak_footer_plain": "Los días con asistencia verificada se iluminan en Verde Neón.",
-    "streak_footer_prefix": "Los días con asistencia verificada se iluminan en",
-    "streak_footer_color": "Verde Neón",
+    "streak_footer": "Los dÃ­as con asistencia verificada se iluminan en <span className=\"text-[#39FF14] font-bold\">Verde NeÃ³n</span>.",
+    "streak_footer_plain": "Los dÃ­as con asistencia verificada se iluminan en Verde NeÃ³n.",
+    "streak_footer_prefix": "Los dÃ­as con asistencia verificada se iluminan en",
+    "streak_footer_color": "Verde NeÃ³n",
     "day_mon": "Lun",
-    "day_wed": "Mié",
+    "day_wed": "MiÃ©",
     "day_fri": "Vie",
     "day_sun": "Dom",
     "weight_disclosure_am": "Amateur (Peso: 1.0) - Ideal para divertirse y socializar sin presiones.",
     "weight_disclosure_int": "Intermedio (Peso: 2.0) - Para partidos amistosos competitivos.",
-    "weight_disclosure_adv": "Avanzado (Peso: 3.5) - Diseñado para ligas competitivas regulares.",
+    "weight_disclosure_adv": "Avanzado (Peso: 3.5) - DiseÃ±ado para ligas competitivas regulares.",
     "weight_disclosure_pro": "Pro (Peso: 5.0) - Destinado a ligas y torneos de alta intensidad.",
-    "ver_mas": "Ver más ↓",
-    "ver_menos": "Ver menos ↑"
+    "ver_mas": "Ver mÃ¡s â†“",
+    "ver_menos": "Ver menos â†‘"
   },
   "sports": {
     "futbol": {
-      "name": "Fútbol",
-      "desc": "Tradición y pasión en césped real o sintético."
+      "name": "FÃºtbol",
+      "desc": "TradiciÃ³n y pasiÃ³n en cÃ©sped real o sintÃ©tico."
     },
     "voley": {
-      "name": "Vóley",
+      "name": "VÃ³ley",
       "desc": "Juego de equipo y saltos en coliseo cerrado."
     },
     "padel": {
-      "name": "Pádel",
-      "desc": "Paredes y malla metálica en la disciplina de moda."
+      "name": "PÃ¡del",
+      "desc": "Paredes y malla metÃ¡lica en la disciplina de moda."
     },
     "basquet": {
-      "name": "Básquet",
-      "desc": "Aro y rebote rápido sobre el tabloncillo."
+      "name": "BÃ¡squet",
+      "desc": "Aro y rebote rÃ¡pido sobre el tabloncillo."
     },
     "tenis": {
       "name": "Tenis",
-      "desc": "Duelo estratégico en cancha clásica de arcilla."
+      "desc": "Duelo estratÃ©gico en cancha clÃ¡sica de arcilla."
     },
     "running": {
       "name": "Running / Atletismo",
@@ -387,8 +387,8 @@
       "desc": "Contacto, fuerza y juego en equipo."
     },
     "natacion": {
-      "name": "Natación",
-      "desc": "Resistencia y velocidad en piscina olímpica."
+      "name": "NataciÃ³n",
+      "desc": "Resistencia y velocidad en piscina olÃ­mpica."
     },
     "gimnasio": {
       "name": "Gimnasio / Crossfit",
@@ -396,11 +396,11 @@
     },
     "calistenia": {
       "name": "Calistenia",
-      "desc": "Dominio corporal y fuerza estática al aire libre."
+      "desc": "Dominio corporal y fuerza estÃ¡tica al aire libre."
     },
     "tenis_mesa": {
       "name": "Tenis de Mesa",
-      "desc": "Velocidad, reflejos y precisión milimétrica."
+      "desc": "Velocidad, reflejos y precisiÃ³n milimÃ©trica."
     },
     "boxeo_mma": {
       "name": "Boxeo / MMA",
@@ -408,14 +408,14 @@
     },
     "ciclismo": {
       "name": "Ciclismo",
-      "desc": "Rutas urbanas, de montaña o velocidad en pista."
+      "desc": "Rutas urbanas, de montaÃ±a o velocidad en pista."
     },
     "futbol_americano": {
-      "name": "Fútbol Americano",
+      "name": "FÃºtbol Americano",
       "desc": "Estrategia de yardas, pases y contacto."
     },
     "beisbol": {
-      "name": "Béisbol",
+      "name": "BÃ©isbol",
       "desc": "Lanzamientos, bateos potentes y carreras por las bases."
     },
     "skateboarding": {
@@ -424,7 +424,7 @@
     },
     "golf": {
       "name": "Golf",
-      "desc": "Precisión, estrategia y concentración en el green."
+      "desc": "PrecisiÃ³n, estrategia y concentraciÃ³n en el green."
     },
     "automovilismo": {
       "name": "Automovilismo",
@@ -432,15 +432,15 @@
     },
     "ea_fc": {
       "name": "EA Sports FC",
-      "desc": "Simulador virtual de fútbol de élite."
+      "desc": "Simulador virtual de fÃºtbol de Ã©lite."
     },
     "lol": {
       "name": "League of Legends",
-      "desc": "Batallas tácticas MOBA en la Grieta del Invocador."
+      "desc": "Batallas tÃ¡cticas MOBA en la Grieta del Invocador."
     },
     "valorant": {
       "name": "Valorant",
-      "desc": "Tactical shooter de precisión extrema de Riot."
+      "desc": "Tactical shooter de precisiÃ³n extrema de Riot."
     },
     "clash_royale": {
       "name": "Clash Royale",
@@ -448,27 +448,27 @@
     },
     "fortnite": {
       "name": "Fortnite",
-      "desc": "Construcción y supervivencia Battle Royale."
+      "desc": "ConstrucciÃ³n y supervivencia Battle Royale."
     },
     "brawl_stars": {
       "name": "Brawl Stars",
-      "desc": "Batallas Arcade dinámicas multijugador."
+      "desc": "Batallas Arcade dinÃ¡micas multijugador."
     },
     "cs2": {
       "name": "Counter-Strike 2",
-      "desc": "Shooter táctico en primera persona por equipos."
+      "desc": "Shooter tÃ¡ctico en primera persona por equipos."
     },
     "dota2": {
       "name": "Dota 2",
-      "desc": "Estrategia de arena de batalla multijugador clásica."
+      "desc": "Estrategia de arena de batalla multijugador clÃ¡sica."
     },
     "rocket_league": {
       "name": "Rocket League",
-      "desc": "Fútbol vehicular de alta velocidad y acrobacias."
+      "desc": "FÃºtbol vehicular de alta velocidad y acrobacias."
     },
     "overwatch2": {
       "name": "Overwatch 2",
-      "desc": "Batallas por equipos de héroes con roles dinámicos."
+      "desc": "Batallas por equipos de hÃ©roes con roles dinÃ¡micos."
     },
     "street_fighter_tekken": {
       "name": "Street Fighter / Tekken",
@@ -476,15 +476,15 @@
     },
     "apex_legends": {
       "name": "Apex Legends",
-      "desc": "Battle Royale frenético con héroes y habilidades."
+      "desc": "Battle Royale frenÃ©tico con hÃ©roes y habilidades."
     },
     "pubg_mobile": {
       "name": "PUBG Mobile",
-      "desc": "Supervivencia y shooter táctico en dispositivos móviles."
+      "desc": "Supervivencia y shooter tÃ¡ctico en dispositivos mÃ³viles."
     },
     "free_fire": {
       "name": "Free Fire",
-      "desc": "Rápidos combates Battle Royale optimizados para móviles."
+      "desc": "RÃ¡pidos combates Battle Royale optimizados para mÃ³viles."
     },
     "cod_warzone": {
       "name": "Call of Duty: Warzone",
@@ -492,15 +492,15 @@
     },
     "rainbow_six": {
       "name": "Rainbow Six Siege",
-      "desc": "Shooter táctico en interiores y destrucción de entornos."
+      "desc": "Shooter tÃ¡ctico en interiores y destrucciÃ³n de entornos."
     },
     "hearthstone": {
       "name": "Hearthstone",
-      "desc": "Duelos de cartas estratégicos en el universo Warcraft."
+      "desc": "Duelos de cartas estratÃ©gicos en el universo Warcraft."
     },
     "iracing_simracing": {
       "name": "iRacing / F1 SimRacing",
-      "desc": "Simulación automotriz de alta precisión y licencias."
+      "desc": "SimulaciÃ³n automotriz de alta precisiÃ³n y licencias."
     }
   },
   "skills": {
@@ -511,26 +511,26 @@
   },
   "ai_assistant": {
     "suggestions": "Sugerencias",
-    "powered_by": "Respuestas generadas por IA · Vertex AI",
-    "input_placeholder": "Pregúntale a Sporty...",
+    "powered_by": "Respuestas generadas por IA Â· Vertex AI",
+    "input_placeholder": "PregÃºntale a Sporty...",
     "input_aria": "Escribe tu mensaje para Sporty",
     "connecting": "Conectando con Sporty...",
     "clear_chat": "Limpiar chat",
-    "online": "En línea"
+    "online": "En lÃ­nea"
   },
   "voice": {
     "start_recording": "Empezar a hablar",
-    "stop_recording": "Detener grabación",
+    "stop_recording": "Detener grabaciÃ³n",
     "start_recording_web": "Toca para hablar (Web Speech API)",
     "start_recording_cloud": "Toca para hablar (Google Cloud)",
-    "start_recording_cloud_fallback": "Web Speech falló, usando Google Cloud (toca para reintentar)",
+    "start_recording_cloud_fallback": "Web Speech fallÃ³, usando Google Cloud (toca para reintentar)",
     "processing": "Procesando audio...",
     "read_aloud": "Leer mensaje en voz alta",
     "stop_speaking": "Detener lectura",
     "listening": "Escuchando... {{transcript}}"
   },
   "settings": {
-    "title": "Configuración",
+    "title": "ConfiguraciÃ³n",
     "subtitle": "Gestiona tu cuenta, privacidad y preferencias",
     "tabs": {
       "account": "Cuenta",
@@ -542,67 +542,67 @@
       "blocked": "Usuarios bloqueados",
       "data": "Mis datos"
     },
-    "account_subtitle": "Información básica de tu perfil",
-    "privacy_subtitle": "Controla quién ve qué en tu perfil",
-    "notifications_subtitle": "Cómo y qué te notificamos",
-    "appearance_subtitle": "Personaliza cómo se ve SportMatch",
+    "account_subtitle": "InformaciÃ³n bÃ¡sica de tu perfil",
+    "privacy_subtitle": "Controla quiÃ©n ve quÃ© en tu perfil",
+    "notifications_subtitle": "CÃ³mo y quÃ© te notificamos",
+    "appearance_subtitle": "Personaliza cÃ³mo se ve SportMatch",
     "squads_subtitle": "Matchmaking y preferencias de squad",
     "security_subtitle": "Protege tu cuenta",
     "blocked_subtitle": "Personas que no pueden verte ni contactarte",
-    "data_subtitle": "Descarga, gestiona o elimina tu información",
+    "data_subtitle": "Descarga, gestiona o elimina tu informaciÃ³n",
     "account": {
       "title": "Cuenta",
-      "subtitle": "Información básica de tu perfil",
+      "subtitle": "InformaciÃ³n bÃ¡sica de tu perfil",
       "no_name": "Sin nombre",
-      "email": "Correo electrónico",
-      "email_help": "Tu email no es público",
+      "email": "Correo electrÃ³nico",
+      "email_help": "Tu email no es pÃºblico",
       "email_verified": "Verificado",
-      "bio": "Biografía",
-      "bio_help": "Cuéntale a otros jugadores sobre ti",
-      "no_bio": "Sin biografía",
+      "bio": "BiografÃ­a",
+      "bio_help": "CuÃ©ntale a otros jugadores sobre ti",
+      "no_bio": "Sin biografÃ­a",
       "city": "Ciudad",
       "city_help": "Para partidos cerca de ti",
       "no_city": "Sin ciudad",
-      "quick_links": "Enlaces rápidos",
-      "quick_links_help": "Gestiona más opciones de tu cuenta",
-      "view_public_profile": "Ver mi perfil público",
+      "quick_links": "Enlaces rÃ¡pidos",
+      "quick_links_help": "Gestiona mÃ¡s opciones de tu cuenta",
+      "view_public_profile": "Ver mi perfil pÃºblico",
       "view_wallet": "Ver mi monedero de FitCoins"
     },
     "privacy": {
       "title": "Privacidad y visibilidad",
-      "subtle": "Controla quién ve qué",
-      "profile_visibility": "Quién puede ver tu perfil",
-      "profile_visibility_help": "Tu perfil y estadísticas",
+      "subtle": "Controla quiÃ©n ve quÃ©",
+      "profile_visibility": "QuiÃ©n puede ver tu perfil",
+      "profile_visibility_help": "Tu perfil y estadÃ­sticas",
       "profile_visibility_public": "Todos",
       "profile_visibility_squads_only": "Solo mis squads",
       "profile_visibility_private": "Solo yo",
       "show_fitcoins": "Mostrar mi saldo de FitCoins",
       "show_fitcoins_help": "Aparece junto a tu nombre",
       "show_trust": "Mostrar mi Trust Score",
-      "show_trust_help": "Tu reputación en la comunidad",
+      "show_trust_help": "Tu reputaciÃ³n en la comunidad",
       "show_email": "Mostrar mi email",
       "show_email_help": "Visible para otros usuarios",
-      "show_phone": "Mostrar mi teléfono",
+      "show_phone": "Mostrar mi telÃ©fono",
       "show_phone_help": "Visible para otros usuarios",
-      "show_last_seen": "Mostrar última vez en línea",
+      "show_last_seen": "Mostrar Ãºltima vez en lÃ­nea",
       "show_last_seen_help": "Tu estado activo reciente",
       "show_match_history": "Mostrar historial de partidos",
       "show_match_history_help": "Otros pueden ver tus partidos jugados",
-      "allow_messages_from": "Quién puede enviarme mensajes",
-      "allow_messages_from_help": "Controla quién puede chatear contigo",
+      "allow_messages_from": "QuiÃ©n puede enviarme mensajes",
+      "allow_messages_from_help": "Controla quiÃ©n puede chatear contigo",
       "allow_messages_from_everyone": "Todos",
       "allow_messages_from_squads_only": "Solo mis squads",
       "allow_messages_from_nobody": "Nadie"
     },
     "notifications": {
       "channels_title": "Canales",
-      "channels_subtitle": "Cómo recibes las notificaciones",
-      "channel_push": "Notificaciones push (móvil)",
-      "channel_email": "Correo electrónico",
+      "channels_subtitle": "CÃ³mo recibes las notificaciones",
+      "channel_push": "Notificaciones push (mÃ³vil)",
+      "channel_email": "Correo electrÃ³nico",
       "channel_inapp": "En la app",
       "channel_sound": "Sonido al recibir",
-      "types_title": "Tipos de notificación",
-      "types_subtitle": "Qué eventos te notifican",
+      "types_title": "Tipos de notificaciÃ³n",
+      "types_subtitle": "QuÃ© eventos te notifican",
       "type_squad_invites": "Invitaciones a squads",
       "type_match_requests": "Solicitudes de partido",
       "type_chat_messages": "Mensajes del chat",
@@ -620,11 +620,11 @@
       "theme_light": "Claro",
       "theme_dark": "Oscuro",
       "theme_world_cup": "Copa del Mundo",
-      "theme_neon": "Neón Urbano",
+      "theme_neon": "NeÃ³n Urbano",
       "density": "Densidad de la interfaz",
       "density_help": "Espaciado entre elementos",
       "density_compact": "Compacta",
-      "density_comfortable": "Cómoda",
+      "density_comfortable": "CÃ³moda",
       "density_spacious": "Espaciosa",
       "reduce_motion": "Reducir animaciones",
       "reduce_motion_help": "Disminuye el movimiento en la UI",
@@ -633,56 +633,58 @@
     },
     "squads_section": {
       "title": "Squads y Partidos",
-      "matchmaking_radius": "Radio de búsqueda de partidos (km)",
-      "matchmaking_radius_help": "Qué tan lejos aceptas jugar",
+      "matchmaking_radius": "Radio de bÃºsqueda de partidos (km)",
+      "matchmaking_radius_help": "QuÃ© tan lejos aceptas jugar",
       "matchmaking_radius_value": "Valor exacto del radio",
       "radius_value_label": "Buscaremos partidos hasta {{km}} km a la redonda",
       "preferred_sport": "Deporte preferido",
       "preferred_sport_help": "Para matchmaking prioritario",
       "no_preference": "Sin preferencia",
-      "auto_accept_invites": "Aceptar invitaciones a squads automáticamente",
+      "auto_accept_invites": "Aceptar invitaciones a squads automÃ¡ticamente",
       "auto_accept_invites_help": "Te unes sin confirmar",
-      "show_in_search": "Aparecer en búsqueda de squads",
+      "show_in_search": "Aparecer en bÃºsqueda de squads",
       "show_in_search_help": "Otros pueden encontrarte para invitarte"
     },
     "security": {
       "title": "Seguridad",
-      "password": "Contraseña",
+      "password": "ContraseÃ±a",
       "change_password": "Cambiar",
-      "change_password_title": "Cambiar contraseña",
-      "change_password_help": "Mínimo 8 caracteres, con letras y números",
-      "current_password": "Contraseña actual",
-      "new_password": "Nueva contraseña",
-      "confirm_password": "Confirmar nueva contraseña",
-      "show_password": "Mostrar contraseña",
-      "hide_password": "Ocultar contraseña",
-      "password_mismatch": "Las contraseñas no coinciden",
-      "password_too_short": "La contraseña debe tener al menos 8 caracteres",
-      "password_weak": "La contraseña debe tener letras y números",
-      "password_updated": "Contraseña actualizada",
-      "two_factor": "Verificación en dos pasos (2FA)",
-      "two_factor_help": "Añade una capa extra con códigos TOTP",
-      "two_factor_coming_soon": "Próximamente disponible",
+      "change_password_title": "Cambiar contraseÃ±a",
+      "change_password_help": "MÃ­nimo 8 caracteres, con letras y nÃºmeros",
+      "current_password": "ContraseÃ±a actual",
+      "new_password": "Nueva contraseÃ±a",
+      "confirm_password": "Confirmar nueva contraseÃ±a",
+      "show_password": "Mostrar contraseÃ±a",
+      "hide_password": "Ocultar contraseÃ±a",
+      "password_mismatch": "Las contraseÃ±as no coinciden",
+      "password_too_short": "La contraseÃ±a debe tener al menos 8 caracteres",
+      "password_weak": "La contraseÃ±a debe tener letras y nÃºmeros",
+      "password_updated": "ContraseÃ±a actualizada",
+      "two_factor": "VerificaciÃ³n en dos pasos (2FA)",
+      "two_factor_help": "AÃ±ade una capa extra con cÃ³digos TOTP",
+      "two_factor_coming_soon": "PrÃ³ximamente disponible",
       "soon": "Pronto",
-      "login_alerts": "Alertas de inicio de sesión",
+      "login_alerts": "Alertas de inicio de sesiÃ³n",
       "login_alerts_help": "Email cuando hay un login nuevo",
       "active_sessions": "Sesiones activas",
       "active_sessions_subtitle": "Dispositivos donde tienes la cuenta abierta",
       "no_sessions": "No hay sesiones activas registradas",
       "session_current": "ACTUAL",
-      "session_terminate": "Cerrar sesión",
-      "terminate_all_others": "Cerrar todas las demás sesiones",
+      "session_terminate": "Cerrar sesiÃ³n",
+      "terminate_all_others": "Cerrar todas las demÃ¡s sesiones",
       "danger_zone": "Zona peligrosa",
       "danger_zone_subtitle": "Acciones irreversibles",
       "delete_account": "Eliminar cuenta",
       "delete_account_contact": "Para eliminar tu cuenta, contacta a soporte@sportmatch.com desde el email registrado.",
-      "delete_confirm_title": "¿Eliminar tu cuenta?",
-      "delete_confirm_placeholder": "Escribe ELIMINAR en mayúsculas",
-      "delete_account_warning": "Esta acción es permanente. Se eliminarán todos tus datos. Escribe ELIMINAR para confirmar."
+      "delete_confirm_title": "Â¿Eliminar tu cuenta?",
+      "delete_confirm_placeholder": "Escribe ELIMINAR en mayÃºsculas",
+      "delete_account_warning": "Esta acciÃ³n es permanente. Se eliminarÃ¡n todos tus datos. Escribe ELIMINAR para confirmar.",
+      "password_required": "Ingresa tu password para confirmar",
+      "delete_account_success": "Tu cuenta ha sido eliminada. Tus datos fueron anonimizados."
     },
     "blocked": {
       "title": "Usuarios bloqueados",
-      "empty": "No has bloqueado a ningún usuario",
+      "empty": "No has bloqueado a ningÃºn usuario",
       "block_button": "Bloquear usuario",
       "confirm_block": "Bloquear",
       "unblock_button": "Desbloquear",
@@ -691,25 +693,25 @@
       "search_hint": "Escribe al menos 2 letras",
       "search_error": "Error al buscar usuarios",
       "no_results": "Sin resultados",
-      "dialog_help": "Busca a la persona y añade un motivo opcional. No podrá verte ni contactarte.",
+      "dialog_help": "Busca a la persona y aÃ±ade un motivo opcional. No podrÃ¡ verte ni contactarte.",
       "unknown_user": "Usuario desconocido"
     },
     "data": {
       "title": "Mis datos",
       "export_data": "Descargar mis datos",
       "exporting": "Generando...",
-      "export_data_help": "Obtén una copia de todos tus datos (perfil, posts, matches, transacciones, etc.) en formato JSON. Tarda unos segundos.",
+      "export_data_help": "ObtÃ©n una copia de todos tus datos (perfil, posts, matches, transacciones, etc.) en formato JSON. Tarda unos segundos.",
       "export_request": "Solicitar descarga",
-      "last_export": "Última descarga: {{date}}",
-      "what_included": "¿Qué incluye la exportación?",
+      "last_export": "Ãšltima descarga: {{date}}",
+      "what_included": "Â¿QuÃ© incluye la exportaciÃ³n?",
       "includes_profile": "Tu perfil (nombre, bio, ciudad, avatar)",
-      "includes_preferences": "Tus preferencias de configuración",
+      "includes_preferences": "Tus preferencias de configuraciÃ³n",
       "includes_posts": "Todos tus posts y comentarios",
       "includes_matches": "Historial de partidos creados y jugados",
       "includes_squads": "Squads que has creado",
       "includes_transactions": "Todas tus transacciones de FitCoins",
-      "includes_notifications": "Tus notificaciones (no leídas y leídas)",
-      "privacy_note": "Tus datos son tuyos. SportMatch nunca los vende ni comparte con terceros. Esta exportación cumple con GDPR y políticas de privacidad de LATAM."
+      "includes_notifications": "Tus notificaciones (no leÃ­das y leÃ­das)",
+      "privacy_note": "Tus datos son tuyos. SportMatch nunca los vende ni comparte con terceros. Esta exportaciÃ³n cumple con GDPR y polÃ­ticas de privacidad de LATAM."
     },
     "common": {
       "save": "Guardar",
@@ -721,24 +723,24 @@
       "retry": "Reintentar",
       "reset_defaults": "Restablecer",
       "edit": "Editar",
-      "back": "Atrás"
+      "back": "AtrÃ¡s"
     },
     "errors": {
-      "no_session": "Tu sesión ha expirado. Inicia sesión de nuevo.",
+      "no_session": "Tu sesiÃ³n ha expirado. Inicia sesiÃ³n de nuevo.",
       "unauthorized": "No tienes permisos para hacer esto.",
       "forbidden": "Acceso denegado.",
       "not_found": "No encontrado.",
-      "validation": "Algunos datos no son válidos.",
-      "rate_limited": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
-      "server": "El servidor tuvo un problema. Inténtalo de nuevo en unos segundos.",
-      "network": "Sin conexión a internet. Revisa tu red e inténtalo de nuevo.",
-      "timeout": "La solicitud tardó demasiado. Inténtalo de nuevo.",
-      "aborted": "Operación cancelada.",
-      "unknown": "Algo salió mal. Inténtalo de nuevo."
+      "validation": "Algunos datos no son vÃ¡lidos.",
+      "rate_limited": "Demasiadas solicitudes. Espera un momento e intÃ©ntalo de nuevo.",
+      "server": "El servidor tuvo un problema. IntÃ©ntalo de nuevo en unos segundos.",
+      "network": "Sin conexiÃ³n a internet. Revisa tu red e intÃ©ntalo de nuevo.",
+      "timeout": "La solicitud tardÃ³ demasiado. IntÃ©ntalo de nuevo.",
+      "aborted": "OperaciÃ³n cancelada.",
+      "unknown": "Algo saliÃ³ mal. IntÃ©ntalo de nuevo."
     },
     "search": {
-      "placeholder": "Buscar en configuración...",
-      "open": "Buscar en configuración",
+      "placeholder": "Buscar en configuraciÃ³n...",
+      "open": "Buscar en configuraciÃ³n",
       "empty": "Sin resultados",
       "heading": "Secciones",
       "account": "cuenta editar perfil",
@@ -746,10 +748,20 @@
       "notifications": "notificaciones alertas push email",
       "appearance": "apariencia tema oscuro claro",
       "squads": "squads partidos radio deporte",
-      "security": "seguridad contraseña 2fa sesiones",
+      "security": "seguridad contraseÃ±a 2fa sesiones",
       "blocked": "bloqueados bloqueo",
       "data": "datos exportar descarga"
     },
-    "nav_aria": "Secciones de configuración"
+    "nav_aria": "Secciones de configuraciÃ³n"
+  },
+  "bookings": {
+    "title": "Calendario de reservas",
+    "slots_for": "Horarios disponibles",
+    "no_slots": "No hay horarios disponibles",
+    "confirm_title": "Confirmar reserva",
+    "confirm": "Reservar",
+    "price": "Precio",
+    "my_bookings": "Mis reservas",
+    "confirm_cancel": "Cancelar esta reserva?"
   }
 }

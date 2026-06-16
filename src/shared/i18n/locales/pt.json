@@ -678,7 +678,9 @@
       "delete_account_contact": "Para excluir sua conta, entre em contato com suporte@sportmatch.com pelo e-mail cadastrado.",
       "delete_confirm_title": "Excluir sua conta?",
       "delete_confirm_placeholder": "Digite EXCLUIR em maiúsculas",
-      "delete_account_warning": "Esta ação é permanente. Todos os seus dados serão excluídos. Digite EXCLUIR para confirmar."
+      "delete_account_warning": "Esta ação é permanente. Todos os seus dados serão excluídos. Digite EXCLUIR para confirmar.",
+      "password_required": "Digite sua senha para confirmar",
+      "delete_account_success": "Sua conta foi excluída. Seus dados foram anonimizados."
     },
     "blocked": {
       "title": "Usuários bloqueados",
@@ -751,5 +753,15 @@
       "data": "dados exportar download"
     },
     "nav_aria": "Seções de configurações"
+  },
+  "bookings": {
+    "title": "Calendario de reservas",
+    "slots_for": "Horarios disponiveis",
+    "no_slots": "Sem horarios disponiveis",
+    "confirm_title": "Confirmar reserva",
+    "confirm": "Reservar",
+    "price": "Preco",
+    "my_bookings": "Minhas reservas",
+    "confirm_cancel": "Cancelar esta reserva?"
   }
 }

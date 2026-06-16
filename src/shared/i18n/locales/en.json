@@ -678,7 +678,9 @@
       "delete_account_contact": "To delete your account, contact soporte@sportmatch.com from your registered email.",
       "delete_confirm_title": "Delete your account?",
       "delete_confirm_placeholder": "Type DELETE in capitals",
-      "delete_account_warning": "This action is permanent. All your data will be deleted. Type DELETE to confirm."
+      "delete_account_warning": "This action is permanent. All your data will be deleted. Type DELETE to confirm.",
+      "password_required": "Enter your password to confirm",
+      "delete_account_success": "Your account has been deleted. Your data was anonymized."
     },
     "blocked": {
       "title": "Blocked users",
@@ -751,5 +753,15 @@
       "data": "data export download"
     },
     "nav_aria": "Settings sections"
+  },
+  "bookings": {
+    "title": "Booking calendar",
+    "slots_for": "Available slots",
+    "no_slots": "No available slots",
+    "confirm_title": "Confirm booking",
+    "confirm": "Book",
+    "price": "Price",
+    "my_bookings": "My bookings",
+    "confirm_cancel": "Cancel this booking?"
   }
 }
