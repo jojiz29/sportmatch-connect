@@ -12,6 +12,9 @@ import {
   Swords,
   Clock3,
   Check,
+  Search,
+  Loader2,
+  Trophy,
 } from "lucide-react";
 import { useMatchmaking } from "./useMatchmaking";
 import { User, Match, Sport } from "@/entities/types";
@@ -35,6 +38,8 @@ import {
   respondToPlayerChallenge,
 } from "@/shared/api/challengeService";
 import { getPlayerConnections, createPlayerConnection } from "@/shared/api/connectionService";
+import { MatchResultModal } from "./ui/MatchResultModal";
+import type { QueueStatus } from "@/entities/types";
 
 // === BLOQUE: COMPONENTE PRINCIPAL DE MATCHMAKING ===
 // Carrusel de recomendaciones de jugadores con swipe, conexión y desafío.
@@ -58,6 +63,14 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   const [receivedChallenges, setReceivedChallenges] = useState<PlayerChallenge[]>([]);
   const [resolvingChallengeId, setResolvingChallengeId] = useState<string | null>(null);
   const [contactedUserIds, setContactedUserIds] = useState<string[]>([]);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
+  const [queueSport, setQueueSport] = useState<string>("");
+  const [isQueueLoading, setIsQueueLoading] = useState(false);
+  const [foundMatch, setFoundMatch] = useState<{
+    matched_with: string;
+    sport: string;
+  } | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   // === BLOQUE: CARGA DE PARTIDOS DEL USUARIO INSPECCIONADO ===
   // Cuando se abre el perfil de un candidato, carga sus partidos desde backend o Supabase.
@@ -196,6 +209,73 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
     };
   }, [currentUser]);
 
+  // === BLOQUE: COLA DE MATCHMAKING (V2.3) ===
+  const handleEnterQueue = async () => {
+    const sport = queueSport || (activeSport === "Todos" ? preferredSports[0] : activeSport);
+    if (!sport || !baseLocation) return;
+    setIsQueueLoading(true);
+    try {
+      await backendApi.matchmaking.enterQueue(sport, baseLocation.lat, baseLocation.lng, 10);
+      setQueueStatus("WAITING");
+      setQueueSport(sport);
+      toast.success("Buscando partido...", {
+        description: `Te avisaremos cuando encontremos rival para ${sport}.`,
+      });
+    } catch {
+      toast.error("No se pudo entrar a la cola");
+    } finally {
+      setIsQueueLoading(false);
+    }
+  };
+
+  const handleLeaveQueue = async () => {
+    const sport = queueSport;
+    if (!sport) return;
+    setIsQueueLoading(true);
+    try {
+      await backendApi.matchmaking.leaveQueue(sport);
+      setQueueStatus(null);
+      setFoundMatch(null);
+      toast.info("Búsqueda cancelada");
+    } catch {
+      toast.error("No se pudo salir de la cola");
+    } finally {
+      setIsQueueLoading(false);
+    }
+  };
+
+  // === BLOQUE: REALTIME — Cola de matchmaking (V2.3) ===
+  useEffect(() => {
+    if (!currentUser) return;
+    const channel = supabase
+      .channel(`matchmaking-queue-${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "matchmaking_queue",
+          filter: `user_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          const row = payload.new as { status: string; matched_with: string; sport: string };
+          if (row.status === "FOUND" && row.matched_with) {
+            setQueueStatus("FOUND");
+            setFoundMatch({ matched_with: row.matched_with, sport: row.sport });
+            toast.success("Match encontrado!", {
+              description: `Tienes un rival para ${row.sport}. Coordina tu partido.`,
+              duration: 8000,
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser]);
+
   // === BLOQUE: SUSCRIPCIÓN REALTIME A CONEXIONES MUTUAS ===
   // Escucha insercciones en player_connections; si el otro usuario conectó primero,
   // muestra el modal de match para que el primero también lo vea.
@@ -241,7 +321,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
-    const handleConnections = (connections: any[]) => {
+    const handleConnections = (connections: { connected_user_id: string }[]) => {
       if (!active) return;
       const ids = connections.map((c) => c.connected_user_id);
       setContactedUserIds((current) => Array.from(new Set([...current, ...ids])));
@@ -412,8 +492,12 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={1}
                 onDragEnd={(e, info) => {
-                  if (info.offset.x > 100) swipe(p.user.id, "like");
-                  else if (info.offset.x < -100) swipe(p.user.id, "pass");
+                  const swipeSport =
+                    activeSport === "Todos"
+                      ? p.user.preferred_sports?.[0] || "Fútbol"
+                      : activeSport;
+                  if (info.offset.x > 100) swipe(p.user.id, "like", swipeSport);
+                  else if (info.offset.x < -100) swipe(p.user.id, "pass", swipeSport);
                 }}
                 className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
                 style={{
@@ -482,9 +566,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                     </span>
                     <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
                       <MapPin className="h-2.5 w-2.5 text-primary" />{" "}
-                      {dist == null
-                        ? p.user.city || "Sin ubicación"
-                        : `${dist.toFixed(1)} km`}
+                      {dist == null ? p.user.city || "Sin ubicación" : `${dist.toFixed(1)} km`}
                     </span>
                   </div>
 
@@ -516,7 +598,13 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 {isTop && (
                   <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
                     <button
-                      onClick={() => swipe(p.user.id, "pass")}
+                      onClick={() => {
+                        const swipeSport =
+                          activeSport === "Todos"
+                            ? p.user.preferred_sports?.[0] || "Fútbol"
+                            : activeSport;
+                        swipe(p.user.id, "pass", swipeSport);
+                      }}
                       className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
                       aria-label={t("matchmaking.keep_swiping")}
                     >
@@ -627,9 +715,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
 
       {/* ── Carrusel de tarjetas swipe ── */}
       <div className="lg:col-span-2 flex justify-center">
-        <div className="relative w-full max-w-md h-[560px]">
-          {renderStackContent()}
-        </div>
+        <div className="relative w-full max-w-md h-[560px]">{renderStackContent()}</div>
       </div>
 
       {/* ── Panel lateral de compatibilidad y desafíos ── */}
@@ -651,6 +737,91 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               />
               <Bar label={t("matchmaking.distance")} value={topRecommendation.breakdown.location} />
               <Bar label={t("matchmaking.reputation")} value={topRecommendation.breakdown.trust} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Cola de matchmaking (V2.3) ── */}
+        <div className="bg-gradient-card border border-border rounded-2xl p-5">
+          <h3 className="font-semibold flex items-center gap-2 mb-3">
+            <Search className="h-4 w-4 text-neon" /> Buscar Partido
+          </h3>
+          {queueStatus === "WAITING" ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-neon" />
+                Buscando rival en {queueSport}...
+              </div>
+              <button
+                onClick={handleLeaveQueue}
+                disabled={isQueueLoading}
+                className="w-full py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
+              >
+                Cancelar búsqueda
+              </button>
+            </div>
+          ) : queueStatus === "FOUND" && foundMatch ? (
+            <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-neon/10 border border-neon/20 text-sm text-center">
+                <Trophy className="h-6 w-6 mx-auto text-neon mb-1" />
+                <div className="font-semibold text-neon">Match encontrado!</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Rival para {foundMatch.sport}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setQueueStatus(null);
+                    setFoundMatch(null);
+                    setShowResultModal(true);
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-[1.02] transition-transform cursor-pointer"
+                >
+                  Coordinar partido
+                </button>
+                <button
+                  onClick={() => {
+                    setQueueStatus(null);
+                    setFoundMatch(null);
+                  }}
+                  className="py-2 px-3 rounded-lg border border-border text-xs hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <select
+                value={queueSport || (activeSport === "Todos" ? "" : activeSport)}
+                onChange={(e) => setQueueSport(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
+              >
+                <option value="">Selecciona deporte</option>
+                {preferredSports.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleEnterQueue}
+                disabled={
+                  isQueueLoading || !baseLocation || (!queueSport && activeSport === "Todos")
+                }
+                className="w-full py-2 rounded-lg bg-gradient-primary text-primary-foreground text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                {isQueueLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Entrando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4" /> Buscar rival
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
@@ -1053,6 +1224,15 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal de resultado de partido (V2.3) */}
+      {showResultModal && foundMatch && (
+        <MatchResultModal
+          opponentId={foundMatch.matched_with}
+          sport={foundMatch.sport}
+          onClose={() => setShowResultModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -1106,7 +1286,7 @@ function Bar({ label, value }: Readonly<{ label: string; value: number }>) {
   );
 }
 
-function getTrustLevelLabel(score: number, t: any): string {
+function getTrustLevelLabel(score: number, t: (key: string) => string): string {
   if (score >= 90) return t("profile.trust_level_excellent");
   if (score >= 70) return t("profile.trust_level_good");
   return t("profile.trust_level_risk");
