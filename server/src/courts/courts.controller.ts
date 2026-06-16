@@ -23,7 +23,7 @@ import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 @ApiTags("Courts")
 @Controller("courts")
 export class CourtsController {
-  constructor(private courtsService: CourtsService) {}
+  constructor(private readonly courtsService: CourtsService) {}
 
   @Get()
   @ApiOperation({ summary: "Get all courts" })

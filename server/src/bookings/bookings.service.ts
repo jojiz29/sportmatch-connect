@@ -8,7 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async getByCourtAndDate(courtId: string, date: string) {
     const bookings = await this.prisma.bookings.findMany({

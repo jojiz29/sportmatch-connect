@@ -9,7 +9,7 @@ import { CreateCourtDto, UpdateCourtDto } from "./dto";
 
 @Injectable()
 export class CourtsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(sport?: string, district?: string) {
     const where: { sport?: string; district?: string } = {};

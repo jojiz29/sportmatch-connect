@@ -165,7 +165,7 @@ const INITIAL_ADS: Ad[] = [
 
 /** Lee anuncios demo desde localStorage */
 const getDemoAds = (): Ad[] => {
-  if (typeof window === "undefined") return INITIAL_ADS;
+  if (typeof globalThis.window === "undefined") return INITIAL_ADS;
   const stored = localStorage.getItem("sportmatch_demo_ads");
   if (!stored) {
     localStorage.setItem("sportmatch_demo_ads", JSON.stringify(INITIAL_ADS));
@@ -176,7 +176,7 @@ const getDemoAds = (): Ad[] => {
 
 /** Guarda anuncios demo en localStorage */
 const saveDemoAds = (ads: Ad[]) => {
-  if (typeof window !== "undefined") {
+  if (typeof globalThis.window !== "undefined") {
     localStorage.setItem("sportmatch_demo_ads", JSON.stringify(ads));
   }
 };

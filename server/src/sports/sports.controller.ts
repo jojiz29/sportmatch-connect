@@ -10,7 +10,7 @@ import { SportsService } from "./sports.service";
 @ApiTags("Sports")
 @Controller("sports")
 export class SportsController {
-  constructor(private sportsService: SportsService) {}
+  constructor(private readonly sportsService: SportsService) {}
 
   @Get()
   @ApiOperation({ summary: "Get all sports catalog" })

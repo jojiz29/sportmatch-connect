@@ -10,9 +10,9 @@ import { useOnlineStatus } from "@/shared/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
 interface OfflineBannerProps {
-  className?: string;
+  readonly className?: string;
   /** Si true, el banner se muestra sticky en la parte superior */
-  sticky?: boolean;
+  readonly sticky?: boolean;
 }
 
 export function OfflineBanner({ className, sticky = false }: OfflineBannerProps) {

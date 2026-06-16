@@ -22,7 +22,7 @@ export interface VenueActivity {
 }
 
 function getDemoActivities(): VenueActivity[] {
-  if (typeof window === "undefined") return [];
+  if (typeof globalThis.window === "undefined") return [];
   const activities = JSON.parse(localStorage.getItem(DEMO_STORAGE_KEY) || "[]") as VenueActivity[];
 
   // Normalizamos registros antiguos para que las pruebas locales no fallen al agregar cupos.
@@ -35,7 +35,7 @@ function getDemoActivities(): VenueActivity[] {
 }
 
 function saveDemoActivities(activities: VenueActivity[]) {
-  if (typeof window !== "undefined") {
+  if (typeof globalThis.window !== "undefined") {
     localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(activities));
   }
 }

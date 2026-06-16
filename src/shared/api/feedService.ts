@@ -64,9 +64,9 @@ const DEFAULT_MOCK_POSTS: Post[] = [
 // ==============================================================
 
 function getMockPosts(): Post[] {
-  if (typeof window === "undefined") return DEFAULT_MOCK_POSTS;
+  if (typeof globalThis.window === "undefined") return DEFAULT_MOCK_POSTS;
   try {
-    const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_POSTS);
+    const saved = globalThis.window.localStorage.getItem(LOCAL_STORAGE_KEY_POSTS);
     if (saved) {
       return JSON.parse(saved);
     }
@@ -77,9 +77,9 @@ function getMockPosts(): Post[] {
 }
 
 function saveMockPosts(posts: Post[]) {
-  if (typeof window === "undefined") return;
+  if (typeof globalThis.window === "undefined") return;
   try {
-    window.localStorage.setItem(LOCAL_STORAGE_KEY_POSTS, JSON.stringify(posts));
+    globalThis.window.localStorage.setItem(LOCAL_STORAGE_KEY_POSTS, JSON.stringify(posts));
   } catch (e) {
     console.warn("Failed to save mock posts to localStorage:", e);
   }
@@ -171,10 +171,10 @@ export async function getFeed(userId: string): Promise<Post[]> {
         if (!author.last_location_lat || !author.last_location_lng) return false;
 
         const dist = calculateDistance(
-          parseFloat(String(currentUser.last_location_lat)),
-          parseFloat(String(currentUser.last_location_lng)),
-          parseFloat(String(author.last_location_lat)),
-          parseFloat(String(author.last_location_lng)),
+          Number.parseFloat(String(currentUser.last_location_lat)),
+          Number.parseFloat(String(currentUser.last_location_lng)),
+          Number.parseFloat(String(author.last_location_lat)),
+          Number.parseFloat(String(author.last_location_lng)),
         );
         return dist <= 5;
       }
@@ -245,7 +245,7 @@ export async function createPost(
     saveMockPosts(posts);
 
     // Notifica a seguidores si es negocio (Demo Mode)
-    if (currentUser && currentUser.user_role === "BUSINESS") {
+    if (currentUser?.user_role === "BUSINESS") {
       const businessName = currentUser.company_name || currentUser.name;
       getCatalogItems(userId)
         .then(async (catalog) => {
@@ -299,7 +299,7 @@ export async function createPost(
   }
 
   // Post de texto: inserta en Supabase
-  const newPostId = `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const newPostId = `post-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
   const { data: post, error } = await withTimeout(
     supabase
@@ -341,7 +341,7 @@ export async function createPost(
   // Notifica a seguidores si el autor es un negocio
   try {
     const author = (post as unknown as SupabasePost).profile;
-    if (author && author.user_role === "BUSINESS") {
+    if (author?.user_role === "BUSINESS") {
       const businessName = author.company_name || author.name;
 
       const { data: catalogItems } = await supabase

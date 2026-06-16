@@ -10,7 +10,7 @@ import { UsersService } from "./users.service";
 @ApiTags("Users")
 @Controller("users")
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) {}
 
   @Get()
   @ApiOperation({ summary: "Get all users (for matchmaking)" })

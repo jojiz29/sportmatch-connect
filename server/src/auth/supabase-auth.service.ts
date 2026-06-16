@@ -8,7 +8,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 @Injectable()
 export class SupabaseAuthService {
-  private supabaseAdmin: SupabaseClient;
+  private readonly supabaseAdmin: SupabaseClient;
   private readonly isConfigured: boolean;
 
   constructor() {

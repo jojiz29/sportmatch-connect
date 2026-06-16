@@ -101,7 +101,9 @@ function getApiBaseUrl(): string {
  * mensaje dinámicamente con Gemini según el idioma del usuario y
  * opcionalmente el contexto (ubicación, racha, etc.).
  *
- * NO devuelve nada hardcoded — todo proviene del LLM real.
+ * El mensaje de bienvenida se genera en cada sesión nueva para que sea
+ * contextual (hora del día, idioma, racha deportiva). No se cachea en
+ * el cliente — el LLM decide el saludo apropiado cada vez.
  */
 export async function fetchWelcomeMessage(
   options: { language?: "es" | "en" | "pt" } = {},
@@ -148,6 +150,45 @@ export async function fetchWelcomeMessage(
     throw new Error("El asistente devolvió un mensaje de bienvenida vacío.");
   }
   return data;
+}
+
+// ==============================================================
+// HELPERS PRIVADOS DE MANEJO DE ERRORES
+// ==============================================================
+
+/**
+ * Traduce errores de red o AbortError a mensajes de usuario claros.
+ * AbortError viene del timeout de fetchWithTimeout(); TypeError de red caída.
+ */
+function handleNetworkError(err: unknown): never {
+  if (err instanceof Error && err.name === "AbortError") {
+    throw new Error(
+      "El asistente está tardando demasiado en responder. Por favor, intenta de nuevo.",
+    );
+  }
+  const networkError = err instanceof Error ? err.message : "Error de red desconocido";
+  throw new Error(
+    `No se pudo contactar al asistente. Verifica tu conexión o inténtalo más tarde. (${networkError})`,
+  );
+}
+
+/**
+ * Lanza un error tipado según el código de estado HTTP de la respuesta.
+ * 401 → sesión expirada, 429 → rate limit, resto → error de backend con payload.
+ */
+async function handleHttpError(response: Response): Promise<never> {
+  if (response.status === 401) {
+    throw new Error("No autorizado. Por favor, inicia sesión de nuevo.");
+  }
+  if (response.status === 429) {
+    throw new Error("Has enviado demasiados mensajes. Espera un momento.");
+  }
+  const errorPayload = await response
+    .json()
+    .catch(() => ({ message: `HTTP ${response.status}` }));
+  throw new Error(
+    errorPayload.message || `Error al contactar con el asistente (HTTP ${response.status})`,
+  );
 }
 
 /**
@@ -204,31 +245,11 @@ export async function sendMessageToAI(
       30000,
     );
   } catch (err) {
-    const networkError = err instanceof Error ? err.message : "Error de red desconocido";
-    // Si fue abort por timeout, mensaje específico para el usuario
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new Error(
-        "El asistente está tardando demasiado en responder. Por favor, intenta de nuevo.",
-      );
-    }
-    throw new Error(
-      `No se pudo contactar al asistente. Verifica tu conexión o inténtalo más tarde. (${networkError})`,
-    );
+    handleNetworkError(err);
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error("No autorizado. Por favor, inicia sesión de nuevo.");
-    }
-    if (response.status === 429) {
-      throw new Error("Has enviado demasiados mensajes. Espera un momento.");
-    }
-    const errorPayload = await response
-      .json()
-      .catch(() => ({ message: `HTTP ${response.status}` }));
-    throw new Error(
-      errorPayload.message || `Error al contactar con el asistente (HTTP ${response.status})`,
-    );
+    await handleHttpError(response);
   }
 
   let data: AiChatResponse;

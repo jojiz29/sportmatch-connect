@@ -76,7 +76,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
     if (response.status === 401) {
       toast.error("Sesión expirada. Por favor, inicia sesión de nuevo.");
       useAuthStore.getState().logout();
-      window.location.href = "/login";
+      globalThis.window.location.href = "/login";
       return { error: "Unauthorized" };
     }
 

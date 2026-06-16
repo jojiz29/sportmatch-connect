@@ -96,7 +96,7 @@ export function useBackendMatches() {
   });
 
   return {
-    matches: matchesQuery.data || [],
+    matches: matchesQuery.data ?? [],
     isLoading: matchesQuery.isLoading,
     error: matchesQuery.error,
     createMatch: createMatchMutation.mutate,

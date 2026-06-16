@@ -8,7 +8,7 @@ import { SupabaseAuthService } from "./supabase-auth.service";
 
 @Injectable()
 export class AuthService {
-  constructor(private supabaseAuth: SupabaseAuthService) {}
+  constructor(private readonly supabaseAuth: SupabaseAuthService) {}
 
   async validateToken(token: string) {
     try {

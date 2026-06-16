@@ -38,7 +38,11 @@ import { getPlayerConnections, createPlayerConnection } from "@/shared/api/conne
 
 // === BLOQUE: COMPONENTE PRINCIPAL DE MATCHMAKING ===
 // Carrusel de recomendaciones de jugadores con swipe, conexión y desafío.
-export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
+interface MatchmakingFeatureProps {
+  readonly initialStack: User[];
+}
+
+export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
@@ -49,7 +53,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [challengeTarget, setChallengeTarget] = useState<User | null>(null);
   const [challengeMessage, setChallengeMessage] = useState("");
-  const [, setPendingChallengeUserIds] = useState<string[]>([]);
+  const [pendingChallengeUserIds, setPendingChallengeUserIds] = useState<string[]>([]);
   const [isSavingConnection, setIsSavingConnection] = useState(false);
   const [isSendingChallenge, setIsSendingChallenge] = useState(false);
   const [receivedChallenges, setReceivedChallenges] = useState<PlayerChallenge[]>([]);
@@ -140,7 +144,7 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   // Ubicación base: geolocalización o última ubicación conocida del perfil.
   const baseLocation = useMemo(() => {
     if (userCoords) return userCoords;
-    if (currentUser && currentUser.last_location_lat && currentUser.last_location_lng) {
+    if (currentUser?.last_location_lat && currentUser?.last_location_lng) {
       return { lat: currentUser.last_location_lat, lng: currentUser.last_location_lng };
     }
     return null;
@@ -167,19 +171,18 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
+    const handleSentChallenges = (challenges: PlayerChallenge[]) => {
+      if (!active) return;
+      const filteredChallengedIds = challenges
+        .filter((c) => activeSport === "Todos" || c.sport === activeSport)
+        .map((c) => c.challenged_id);
+      setPendingChallengeUserIds(filteredChallengedIds);
+
+      const allChallengedIds = challenges.map((c) => c.challenged_id);
+      setContactedUserIds((current) => Array.from(new Set([...current, ...allChallengedIds])));
+    };
     getPendingChallengesSent(currentUser.id)
-      .then((challenges) => {
-        if (active) {
-          setPendingChallengeUserIds(
-            challenges
-              .filter((c) => activeSport === "Todos" || c.sport === activeSport)
-              .map((c) => c.challenged_id),
-          );
-          setContactedUserIds((current) =>
-            Array.from(new Set([...current, ...challenges.map((c) => c.challenged_id)])),
-          );
-        }
-      })
+      .then(handleSentChallenges)
       .catch((error) => console.error("Error al cargar desafíos pendientes:", error));
     return () => {
       active = false;
@@ -244,14 +247,13 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
+    const handleConnections = (connections: any[]) => {
+      if (!active) return;
+      const ids = connections.map((c) => c.connected_user_id);
+      setContactedUserIds((current) => Array.from(new Set([...current, ...ids])));
+    };
     getPlayerConnections(currentUser.id)
-      .then((connections) => {
-        if (active) {
-          setContactedUserIds((current) =>
-            Array.from(new Set([...current, ...connections.map((c) => c.connected_user_id)])),
-          );
-        }
-      })
+      .then(handleConnections)
       .catch((error) => console.error("Error al cargar conexiones deportivas:", error));
     return () => {
       active = false;
@@ -490,16 +492,15 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         {(() => {
                           const matrix = p.user.sport_preferences?.sports_matrix;
                           const sportLevel = matrix?.[activeSport]?.level || p.user.level;
-                          const displayLevel =
-                            sportLevel === "Amateur"
-                              ? t("skills.amateur", "Amateur")
-                              : sportLevel === "Intermediate" || sportLevel === "Intermedio"
-                                ? t("skills.intermedio", "Intermedio")
-                                : sportLevel === "Advanced" || sportLevel === "Avanzado"
-                                  ? t("skills.avanzado", "Avanzado")
-                                  : sportLevel === "Pro"
-                                    ? t("skills.pro", "Pro")
-                                    : sportLevel;
+                          const getDisplayLevel = (sportLevel: string | undefined): string => {
+                            if (!sportLevel) return "";
+                            if (sportLevel === "Amateur") return t("skills.amateur", "Amateur");
+                            if (sportLevel === "Intermediate" || sportLevel === "Intermedio") return t("skills.intermedio", "Intermedio");
+                            if (sportLevel === "Advanced" || sportLevel === "Avanzado") return t("skills.avanzado", "Avanzado");
+                            if (sportLevel === "Pro") return t("skills.pro", "Pro");
+                            return sportLevel;
+                          };
+                          const displayLevel = getDisplayLevel(sportLevel);
                           return (
                             <div className="flex flex-wrap justify-center gap-1.5">
                               <span className="px-2.5 py-1 rounded-md bg-secondary/15 border border-secondary/30 text-secondary text-[10px] font-extrabold uppercase tracking-wide">
@@ -1001,37 +1002,39 @@ export function MatchmakingFeature({ initialStack }: { initialStack: User[] }) {
                         <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
                       </div>
                     ) : (inspectedUserMatches || []).length > 0 ? (
-                      (inspectedUserMatches || []).map((m) => (
-                        <div
-                          key={m.id}
-                          className="flex items-center gap-3 text-xs p-2 rounded-xl hover:bg-accent/50 transition-colors border border-border/20"
-                        >
-                          <div className="h-7 w-7 rounded-lg bg-gradient-primary grid place-items-center text-[10px] font-bold">
-                            {m.sport.slice(0, 2)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate">{m.title}</div>
-                            <div className="text-[10px] text-muted-foreground">
-                              {new Date(m.date).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <span
-                            className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                              m.status === "Finished"
-                                ? "bg-muted text-muted-foreground"
-                                : m.status === "IN_PROGRESS"
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                  : "bg-primary/20 text-primary-foreground border border-primary/30"
-                            }`}
+                      (inspectedUserMatches || []).map((m) => {
+                        const getStatusBadgeClass = (status: string) => {
+                          if (status === "Finished") return "bg-muted text-muted-foreground";
+                          if (status === "IN_PROGRESS") return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                          return "bg-primary/20 text-primary-foreground border border-primary/30";
+                        };
+                        const getStatusLabel = (status: string) => {
+                          if (status === "Finished") return t("profile.status_finished", { defaultValue: "Finalizado" });
+                          if (status === "IN_PROGRESS") return t("profile.status_in_progress", { defaultValue: "En Curso" });
+                          return t("profile.status_open", { defaultValue: "Abierto" });
+                        };
+                        return (
+                          <div
+                            key={m.id}
+                            className="flex items-center gap-3 text-xs p-2 rounded-xl hover:bg-accent/50 transition-colors border border-border/20"
                           >
-                            {m.status === "Finished"
-                              ? t("profile.status_finished", { defaultValue: "Finalizado" })
-                              : m.status === "IN_PROGRESS"
-                                ? t("profile.status_in_progress", { defaultValue: "En Curso" })
-                                : t("profile.status_open", { defaultValue: "Abierto" })}
-                          </span>
-                        </div>
-                      ))
+                            <div className="h-7 w-7 rounded-lg bg-gradient-primary grid place-items-center text-[10px] font-bold">
+                              {m.sport.slice(0, 2)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{m.title}</div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {new Date(m.date).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <span
+                              className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getStatusBadgeClass(m.status || "")}`}
+                            >
+                              {getStatusLabel(m.status || "")}
+                            </span>
+                          </div>
+                        );
+                      })
                     ) : (
                       <div className="text-center py-4 text-xs text-muted-foreground">
                         {t("profile.no_matches_yet")}
@@ -1054,11 +1057,11 @@ function Stat({
   icon,
   label,
   value,
-}: {
+}: Readonly<{
   icon: React.ReactNode;
   label: string;
   value: string | number;
-}) {
+}>) {
   return (
     <div className="glass rounded-xl p-3 text-center">
       <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
@@ -1069,7 +1072,7 @@ function Stat({
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div>
       <div className="flex justify-between text-[10px]">
@@ -1083,7 +1086,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Bar({ label, value }: { label: string; value: number }) {
+function Bar({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">

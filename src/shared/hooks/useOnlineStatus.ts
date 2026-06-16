@@ -14,20 +14,20 @@ export function useOnlineStatus(): OnlineStatus {
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof globalThis.window === "undefined") return;
 
     const handleOnline = () => setStatus("online");
     const handleOffline = () => setStatus("offline");
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    globalThis.window.addEventListener("online", handleOnline);
+    globalThis.window.addEventListener("offline", handleOffline);
 
     // Set initial state
     setStatus(navigator.onLine ? "online" : "offline");
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      globalThis.window.removeEventListener("online", handleOnline);
+      globalThis.window.removeEventListener("offline", handleOffline);
     };
   }, []);
 

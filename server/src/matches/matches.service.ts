@@ -9,7 +9,7 @@ import { CreateMatchDto, UpdateMatchDto } from "./dto";
 
 @Injectable()
 export class MatchesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(sport?: string) {
     try {

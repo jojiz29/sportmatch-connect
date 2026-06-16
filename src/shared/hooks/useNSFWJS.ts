@@ -23,7 +23,7 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
     const img = new Image();
     img.src = url;
     img.onload = () => resolve(img);
-    img.onerror = (err) => reject(err);
+    img.onerror = () => reject(new Error("Failed to load image"));
   });
 };
 
@@ -91,11 +91,11 @@ export const useNSFWJS = () => {
         const predictions = (await activeModel.classify(img)) as Prediction[];
 
         // Clases consideradas inseguras
-        const unsafeClasses = ["Porn", "Hentai", "Sexy"];
+        const unsafeClasses = new Set(["Porn", "Hentai", "Sexy"]);
         let isUnsafe = false;
 
         for (const pred of predictions) {
-          if (unsafeClasses.includes(pred.className) && pred.probability > 0.6) {
+          if (unsafeClasses.has(pred.className) && pred.probability > 0.6) {
             isUnsafe = true;
             break;
           }

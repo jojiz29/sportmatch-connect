@@ -200,7 +200,22 @@ export const useChatStore = create<ChatState>()(
           return { chats: updatedChats };
         });
 
-        if (!isDemo) {
+        if (isDemo) {
+          // Modo demo: simula que el destino lee el mensaje después de 2 segundos
+          setTimeout(() => {
+            const markAsReadMap = (chat: any) => {
+              if (chat.id !== chatId) return chat;
+              const updateIsRead = (m: any) => m.id === newMessageId ? { ...m, isRead: true } : m;
+              return {
+                ...chat,
+                messages: chat.messages.map(updateIsRead),
+              };
+            };
+            set((state) => ({
+              chats: state.chats.map(markAsReadMap),
+            }));
+          }, 2000);
+        } else {
           // Persiste en Supabase: usa RPC para directos o INSERT directo para grupales
           const sendResult = await withTimeout(
             chatId.startsWith("direct_")
@@ -237,16 +252,15 @@ export const useChatStore = create<ChatState>()(
           }
 
           if (error) {
-            // Rollback: si Supabase rechaza el mensaje, elimina la copia optimista local
+            const filterMessages = (chat: any) => {
+              if (chat.id !== chatId) return chat;
+              return {
+                ...chat,
+                messages: chat.messages.filter((message: any) => message.id !== newMessageId),
+              };
+            };
             set((state) => ({
-              chats: state.chats.map((chat) =>
-                chat.id === chatId
-                  ? {
-                      ...chat,
-                      messages: chat.messages.filter((message) => message.id !== newMessageId),
-                    }
-                  : chat,
-              ),
+              chats: state.chats.map(filterMessages),
               lastDiagnostic: `Error enviando en ${chatId}: ${error.message}`,
             }));
             console.error("[chat] send:error", { chatId, messageId: newMessageId, error });
@@ -255,17 +269,17 @@ export const useChatStore = create<ChatState>()(
 
           chatLog("send:confirmed", { chatId, messageId: newMessageId });
           const confirmedMessage = { ...newMessage, metadata: sentMetadata };
+          
+          const mapMessages = (chat: any) => {
+            if (chat.id !== chatId) return chat;
+            const updateMsg = (message: any) => message.id === newMessageId ? confirmedMessage : message;
+            return {
+              ...chat,
+              messages: chat.messages.map(updateMsg),
+            };
+          };
           set((state) => ({
-            chats: state.chats.map((chat) =>
-              chat.id === chatId
-                ? {
-                    ...chat,
-                    messages: chat.messages.map((message) =>
-                      message.id === newMessageId ? confirmedMessage : message,
-                    ),
-                  }
-                : chat,
-            ),
+            chats: state.chats.map(mapMessages),
             lastDiagnostic: `Mensaje confirmado en ${chatId}.`,
           }));
 
@@ -278,27 +292,6 @@ export const useChatStore = create<ChatState>()(
               payload: { ...confirmedMessage, chat_id: chatId },
             });
           }
-        } else {
-          // Modo demo: simula que el destino lee el mensaje después de 2 segundos
-          setTimeout(() => {
-            set((state) => {
-              const updatedChats = state.chats.map((chat) => {
-                if (chat.id === chatId) {
-                  return {
-                    ...chat,
-                    messages: chat.messages.map((m) => {
-                      if (m.id === newMessageId) {
-                        return { ...m, metadata: { ...m.metadata, seen: true } };
-                      }
-                      return m;
-                    }),
-                  };
-                }
-                return chat;
-              });
-              return { chats: updatedChats };
-            });
-          }, 2000);
         }
       },
 
@@ -363,7 +356,7 @@ export const useChatStore = create<ChatState>()(
             console.error("[chat] conversation:error", { targetUserId, error: e });
             // FIX 15-jun-2026: Si el RPC falla porque el usuario destino
             // no tenía conexión previa, propagamos el error para que
-            // la UI lo muestre. Antes el catch silenciaba TODO y el
+            // la UI lo muestre. Antes el catch silenciaba los errores y el
             // chat no abría, dejando al usuario sin feedback.
             throw e;
           }
@@ -459,12 +452,11 @@ export const useChatStore = create<ChatState>()(
           }
 
           set((state) => {
-            // Descarta chats locales heredados con ID no persistente
-            // (cada navegador generaba uno diferente, incompatibles entre sí).
+            const persistentIds = new Set(persistentChats.map((persistent) => persistent.id));
             const compatibleLocalChats = state.chats.filter(
               (chat) =>
                 (chat.id.startsWith("chat_squad_") || chat.id.startsWith("chat_match_")) &&
-                !persistentChats.some((persistent) => persistent.id === chat.id),
+                !persistentIds.has(chat.id),
             );
             const nextChats = [...persistentChats, ...compatibleLocalChats];
             const activeStillExists = nextChats.some(
@@ -536,14 +528,13 @@ export const useChatStore = create<ChatState>()(
         const existing = get().chats.some((c) => c.id === chatId);
         if (existing) return;
 
-        const sportEmoji =
-          match.sport === "Fútbol"
-            ? "⚽"
-            : match.sport === "Tenis"
-              ? "🎾"
-              : match.sport === "Pádel"
-                ? "🏓"
-                : "🏆";
+        const getSportEmoji = (sport: string): string => {
+          if (sport === "Fútbol") return "⚽";
+          if (sport === "Tenis") return "🎾";
+          if (sport === "Pádel") return "🏓";
+          return "🏆";
+        };
+        const sportEmoji = getSportEmoji(match.sport);
 
         const newChat: Chat = {
           id: chatId,
@@ -637,19 +628,16 @@ export const useChatStore = create<ChatState>()(
           useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
 
         if (isDemo) {
+          const markAsSeenLocal = (c: any) => {
+            if (c.id !== chatId) return c;
+            const updateSeen = (m: any) => m.sender_id !== user.id ? { ...m, metadata: { ...m.metadata, seen: true } } : m;
+            return {
+              ...c,
+              messages: c.messages.map(updateSeen),
+            };
+          };
           set((state) => ({
-            chats: state.chats.map((c) => {
-              if (c.id !== chatId) return c;
-              return {
-                ...c,
-                messages: c.messages.map((m) => {
-                  if (m.sender_id !== user.id) {
-                    return { ...m, metadata: { ...m.metadata, seen: true } };
-                  }
-                  return m;
-                }),
-              };
-            }),
+            chats: state.chats.map(markAsSeenLocal),
           }));
           return;
         }
@@ -677,20 +665,20 @@ export const useChatStore = create<ChatState>()(
 
           // Refleja la lectura de inmediato.
           // El evento UPDATE de Realtime actualizará los dobles checks en la sesión del remitente.
+          const markAsSeenReal = (chat: any) => {
+            if (chat.id !== chatId) return chat;
+            const updateSeen = (message: any) => {
+              if (message.sender_id === user.id) return message;
+              return { ...message, metadata: { ...message.metadata, seen: true } };
+            };
+            return {
+              ...chat,
+              unread: 0,
+              messages: chat.messages.map(updateSeen),
+            };
+          };
           set((state) => ({
-            chats: state.chats.map((chat) =>
-              chat.id === chatId
-                ? {
-                    ...chat,
-                    unread: 0,
-                    messages: chat.messages.map((message) =>
-                      message.sender_id !== user.id
-                        ? { ...message, metadata: { ...message.metadata, seen: true } }
-                        : message,
-                    ),
-                  }
-                : chat,
-            ),
+            chats: state.chats.map(markAsSeenReal),
           }));
         } catch (e) {
           console.warn("Failed to mark messages as seen:", e);
@@ -736,12 +724,16 @@ export const useChatStore = create<ChatState>()(
             const row = payload as ChatMessage & { chat_id: string };
             if (row.sender_id === useAuthStore.getState().user?.id) return;
 
+            const appendMessage = (chat: any) => {
+              const matchesChat = chat.id === row.chat_id;
+              const hasMessage = chat.messages.some((message: any) => message.id === row.id);
+              if (matchesChat && !hasMessage) {
+                return { ...chat, messages: [...chat.messages, row] };
+              }
+              return chat;
+            };
             set((state) => ({
-              chats: state.chats.map((chat) =>
-                chat.id === row.chat_id && !chat.messages.some((message) => message.id === row.id)
-                  ? { ...chat, messages: [...chat.messages, row] }
-                  : chat,
-              ),
+              chats: state.chats.map(appendMessage),
             }));
           })
           .on("broadcast", { event: "typing" }, ({ payload }) => {
@@ -814,23 +806,25 @@ export const useChatStore = create<ChatState>()(
                 chatId: row.chat_id,
                 messageId: row.id,
               });
-              set((state) => ({
-                chats: state.chats.map((chat) => {
-                  if (chat.id !== row.chat_id || chat.messages.some((m) => m.id === row.id)) {
+              const handleInboxInsert = (state: any) => {
+                const mapChat = (chat: any) => {
+                  const hasMessage = chat.messages.some((m: any) => m.id === row.id);
+                  if (chat.id !== row.chat_id || hasMessage) {
                     return chat;
                   }
+                  const isUnread = row.sender_id !== currentUser?.id && state.activeConversationId !== row.chat_id;
                   return {
                     ...chat,
                     messages: [...chat.messages, incomingMessage],
-                    unread:
-                      row.sender_id !== currentUser?.id &&
-                      state.activeConversationId !== row.chat_id
-                        ? chat.unread + 1
-                        : chat.unread,
+                    unread: isUnread ? chat.unread + 1 : chat.unread,
                   };
-                }),
-                lastDiagnostic: `Mensaje recibido en vivo en ${row.chat_id}.`,
-              }));
+                };
+                return {
+                  chats: state.chats.map(mapChat),
+                  lastDiagnostic: `Mensaje recibido en vivo en ${row.chat_id}.`,
+                };
+              };
+              set(handleInboxInsert);
 
               if (row.sender_id !== currentUser?.id && get().activeConversationId === row.chat_id) {
                 void get().markMessagesAsSeen(row.chat_id);
@@ -842,18 +836,20 @@ export const useChatStore = create<ChatState>()(
             { event: "UPDATE", schema: "public", table: "messages" },
             (payload) => {
               const row = payload.new as ChatMessage & { chat_id: string };
-              set((state) => ({
-                chats: state.chats.map((chat) =>
-                  chat.id === row.chat_id
-                    ? {
-                        ...chat,
-                        messages: chat.messages.map((message) =>
-                          message.id === row.id ? { ...message, ...row } : message,
-                        ),
-                      }
-                    : chat,
-                ),
-              }));
+              const handleInboxUpdate = (state: any) => {
+                const mapChat = (chat: any) => {
+                  if (chat.id !== row.chat_id) return chat;
+                  const updateMessage = (message: any) => message.id === row.id ? { ...message, ...row } : message;
+                  return {
+                    ...chat,
+                    messages: chat.messages.map(updateMessage),
+                  };
+                };
+                return {
+                  chats: state.chats.map(mapChat),
+                };
+              };
+              set(handleInboxUpdate);
             },
           )
           .subscribe((status, error) => {

@@ -55,9 +55,9 @@ interface SupabaseReaction {
 
 /** Almacena comentarios mock: { postId: PostComment[] } */
 function getMockComments(): Record<string, PostComment[]> {
-  if (typeof window === "undefined") return {};
+  if (typeof globalThis.window === "undefined") return {};
   try {
-    const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY_COMMENTS);
+    const saved = globalThis.window.localStorage.getItem(LOCAL_STORAGE_KEY_COMMENTS);
     return saved ? JSON.parse(saved) : {};
   } catch {
     return {};
@@ -65,9 +65,9 @@ function getMockComments(): Record<string, PostComment[]> {
 }
 
 function saveMockComments(comments: Record<string, PostComment[]>) {
-  if (typeof window === "undefined") return;
+  if (typeof globalThis.window === "undefined") return;
   try {
-    window.localStorage.setItem(LOCAL_STORAGE_KEY_COMMENTS, JSON.stringify(comments));
+    globalThis.window.localStorage.setItem(LOCAL_STORAGE_KEY_COMMENTS, JSON.stringify(comments));
   } catch {
     console.warn("Failed to save mock comments to localStorage");
   }

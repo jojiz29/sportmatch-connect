@@ -86,8 +86,8 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
   languageRef.current = options.language;
 
   const hasWebSpeechSupport =
-    typeof window !== "undefined" &&
-    ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+    typeof globalThis.window !== "undefined" &&
+    ("webkitSpeechRecognition" in globalThis.window || "SpeechRecognition" in globalThis.window);
 
   /**
    * Verifica permisos de micrófono antes de iniciar cualquier captura.
@@ -96,7 +96,7 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
   const checkMicrophonePermission = useCallback(async (): Promise<boolean> => {
     if (typeof navigator === "undefined" || !navigator.permissions) return true;
     try {
-      const result = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      const result = await navigator.permissions.query({ name: "microphone" });
       return result.state !== "denied";
     } catch {
       // Algunos navegadores no soportan permissions API para micrófono.
@@ -109,8 +109,8 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
   /** Detecta silencio en MediaRecorder usando AudioContext + AnalyserNode */
   const startSilenceDetection = useCallback(
     (stream: MediaStream, onSilence: () => void) => {
-      if (typeof window === "undefined" || !window.AudioContext) return;
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (typeof globalThis.window === "undefined" || !globalThis.window.AudioContext) return;
+      const audioContext = new (globalThis.window.AudioContext || (globalThis.window as any).webkitAudioContext)();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
@@ -129,9 +129,9 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
           onSilence();
           return;
         }
-        silenceTimerRef.current = window.setTimeout(checkSilence, 200);
+        silenceTimerRef.current = globalThis.setTimeout(checkSilence, 200) as any;
       };
-      silenceTimerRef.current = window.setTimeout(checkSilence, 200);
+      silenceTimerRef.current = globalThis.setTimeout(checkSilence, 200) as any;
     },
     [silenceTimeoutMs],
   );
@@ -228,9 +228,15 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
           resolve("error");
           return;
         }
-        const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognitionCtor = globalThis.window.SpeechRecognition || globalThis.window.webkitSpeechRecognition;
         const recognition = new SpeechRecognitionCtor();
-        recognition.lang = language === "pt" ? "pt-BR" : language === "en" ? "en-US" : "es-ES";
+        
+        const getLangCode = (lang: string) => {
+          if (lang === "pt") return "pt-BR";
+          if (lang === "en") return "en-US";
+          return "es-ES";
+        };
+        recognition.lang = getLangCode(language);
         recognition.continuous = false;
         recognition.interimResults = true;
 
@@ -272,9 +278,9 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
         };
 
         // Timeout: si en N ms no hubo resultado, fallback
-        webSpeechTimeoutRef.current = window.setTimeout(() => {
+        webSpeechTimeoutRef.current = globalThis.setTimeout(() => {
           safeResolve("timeout");
-        }, webSpeechTimeoutMs);
+        }, webSpeechTimeoutMs) as any;
 
         try {
           recognition.start();
@@ -316,35 +322,25 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
     setState("recording");
     const result = await startWebSpeech(language);
 
-    if (result === "success" || result === "no-speech") {
-      // Web Speech funcionó (o terminó sin resultado)
-      if (result === "success" && transcriptRef.current) {
+    // Detener el recognition si sigue activo
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        /* ignore */
+      }
+      recognitionRef.current = null;
+    }
+
+    if (result === "success") {
+      if (transcriptRef.current) {
         onTranscriptRef.current?.(transcriptRef.current, 0.9);
       }
       setState("idle");
-      // Detener el recognition si sigue activo
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          /* ignore */
-        }
-        recognitionRef.current = null;
-      }
-      return;
-    }
-
-    // 4. Web Speech falló con un error de fallback → usar Google Cloud
-    if (result === "error" || result === "timeout") {
-      // Detener el recognition de Web Speech
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          /* ignore */
-        }
-        recognitionRef.current = null;
-      }
+    } else if (result === "no-speech") {
+      setState("idle");
+    } else {
+      // result === "error" || result === "timeout"
       await startMediaRecorderFallback(language);
     }
   }, [checkMicrophonePermission, hasWebSpeechSupport, startWebSpeech, startMediaRecorderFallback]);

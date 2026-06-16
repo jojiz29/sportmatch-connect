@@ -9,7 +9,7 @@ import { CreatePostDto, UpdatePostDto, CreateCommentDto, CreateReactionDto } fro
 
 @Injectable()
 export class PostsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(sport?: string) {
     const where = sport ? { sport } : {};

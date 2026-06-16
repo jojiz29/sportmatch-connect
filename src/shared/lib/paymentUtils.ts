@@ -51,16 +51,16 @@ export function detectCardBrand(value: string): "Visa" | "Mastercard" | "Unknown
 /**
  * validateLuhn(): Algoritmo de Luhn (algoritmo de módulo 10)
  * usado para validar números de tarjetas de crédito/débito.
- * Duplica cada segundo dígito desde la derecha, suma todo,
+ * Duplica cada segundo dígito desde la derecha, obtiene la suma total,
  * verifica que sea divisible por 10.
  */
 export function validateLuhn(value: string): boolean {
   const digits = value.replace(/\D/g, "");
-  if (!/^[0-9]+$/.test(digits)) return false;
+  if (!/^\d+$/.test(digits)) return false;
   let sum = 0;
   let shouldDouble = false;
   for (let i = digits.length - 1; i >= 0; i -= 1) {
-    let digit = parseInt(digits[i], 10);
+    let digit = Number.parseInt(digits[i], 10);
     if (shouldDouble) {
       digit *= 2;
       if (digit > 9) digit -= 9;
@@ -79,8 +79,8 @@ export function validateExpiry(value: string): boolean {
   const sanitized = value.replace(/\s/g, "");
   const parts = sanitized.split("/");
   if (parts.length !== 2) return false;
-  const month = parseInt(parts[0], 10);
-  const year = parseInt(parts[1], 10);
+  const month = Number.parseInt(parts[0], 10);
+  const year = Number.parseInt(parts[1], 10);
   if (!month || !year || month < 1 || month > 12) return false;
   const now = new Date();
   const expiryYear = year < 100 ? 2000 + year : year;

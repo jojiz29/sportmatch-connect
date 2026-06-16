@@ -11,7 +11,7 @@ import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 @ApiTags("Bookings")
 @Controller("bookings")
 export class BookingsController {
-  constructor(private bookingsService: BookingsService) {}
+  constructor(private readonly bookingsService: BookingsService) {}
 
   @Get()
   @ApiOperation({ summary: "Get bookings by court and date" })

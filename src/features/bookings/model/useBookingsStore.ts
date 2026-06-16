@@ -65,12 +65,10 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
       toast.success("Reserva creada");
       return booking;
     } catch (err) {
-      const msg =
-        err instanceof Error && err.message.includes("duplicate")
-          ? "Ese horario ya esta reservado"
-          : err instanceof Error
-            ? err.message
-            : "Error al crear reserva";
+      let msg = "Error al crear reserva";
+      if (err instanceof Error) {
+        msg = err.message.includes("duplicate") ? "Ese horario ya esta reservado" : err.message;
+      }
       set({ error: msg, saving: false });
       toast.error(msg);
       return null;

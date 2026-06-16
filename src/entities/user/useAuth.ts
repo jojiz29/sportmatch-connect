@@ -91,7 +91,7 @@ export function purgeAllStores() {
 // con MOCK_USERS. Incluye una recarga forzada de caché si faltan
 // los nuevos perfiles B2B de negocio.
 const getDemoUsers = (): User[] => {
-  if (typeof window === "undefined") return MOCK_USERS;
+  if (typeof globalThis.window === "undefined") return MOCK_USERS;
   const stored = localStorage.getItem("sportmatch_demo_users");
   if (!stored) {
     localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
@@ -113,54 +113,153 @@ const getDemoUsers = (): User[] => {
 
 // Persiste los usuarios simulados en localStorage
 const saveDemoUsers = (users: User[]) => {
-  if (typeof window !== "undefined") {
+  if (typeof globalThis.window !== "undefined") {
     localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
   }
 };
 
+// Helper: Realiza la búsqueda de usuario mock para login
+const findMockUser = (email: string, users: User[]): User => {
+  const emailLower = email.toLowerCase();
+  const found = users.find(
+    (u) => u.email?.toLowerCase() === emailLower || u.id === email,
+  );
+  if (found) return found;
+  if (email === "ejuniorfloress@gmail.com") {
+    return users.find((u) => u.id === "user-edwin-master") || users[0];
+  }
+  if (email === "fabiola@sportmatch.app") {
+    return users.find((u) => u.id === "user-fabiola") || users[0];
+  }
+  if (email === "puka@puka.com") {
+    return users.find((u) => u.id === "user-puka-power") || users[0];
+  }
+  return users[0];
+};
+
+// Helper: Ejecuta el login mock
+const executeMockSignIn = (email: string | undefined, store: any) => {
+  store.setDemoMode(true);
+  const users = getDemoUsers();
+  let mockUser: User = email ? findMockUser(email, users) : users[0];
+
+  // Sincroniza el saldo del usuario con los balances persistidos en demo
+  const storedBalances = localStorage.getItem("sportmatch_demo_balances");
+  const balances = storedBalances ? JSON.parse(storedBalances) : {};
+  const actualBalance =
+    balances[mockUser.id] === undefined ? mockUser.fitcoins_balance : balances[mockUser.id];
+  mockUser = { ...mockUser, fitcoins_balance: actualBalance };
+
+  store.login(mockUser);
+};
+
+// Helper: Carga perfil desde NestJS o Supabase
+const fetchProfile = async (userId: string, token?: string): Promise<User> => {
+  let profile: User | null = null;
+  if (token && import.meta.env.VITE_API_URL) {
+    try {
+      const response = await backendApi.auth.getProfile(token);
+      if (response.data) {
+        profile = response.data as User;
+      }
+    } catch (backendError) {
+      if (import.meta.env.DEV)
+        console.warn("Backend profile fetch failed, falling back to Supabase:", backendError);
+    }
+  }
+
+  if (!profile) {
+    const { data: supabaseProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (profileError) {
+      if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
+      throw profileError;
+    }
+    profile = supabaseProfile as User;
+  }
+  return profile;
+};
+
+// Helper: Inserta o actualiza perfil en Supabase
+const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promise<User> => {
+  let profile: User | null = null;
+  for (let i = 0; i < 5; i++) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUserId)
+      .single();
+    if (data) {
+      profile = data as User;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  if (profile) {
+    // Actualiza campos extra que el trigger automático podría no haber incluido
+    const { data: updated } = await supabase
+      .from("profiles")
+      .update({
+        age: newUser.age,
+        city: newUser.city,
+        bio: newUser.bio,
+        trust_score: newUser.trust_score ?? 50,
+        fitcoins_balance: newUser.fitcoins_balance ?? 0,
+        level: newUser.level ?? "Intermedio",
+        preferred_sports: newUser.preferred_sports ?? [],
+        sport_preferences: newUser.sport_preferences,
+      })
+      .eq("id", authUserId)
+      .select()
+      .single();
+    if (updated) {
+      profile = updated as User;
+    }
+  } else {
+    // Si el trigger no se ha ejecutado, insertamos la fila manualmente
+    const { data: inserted, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: authUserId,
+        name: newUser.name,
+        avatar_url: newUser.avatar_url,
+        user_role: newUser.user_role || "PLAYER",
+        trust_score: newUser.trust_score ?? 50,
+        fitcoins_balance: newUser.fitcoins_balance ?? 0,
+        level: newUser.level ?? "Intermedio",
+        preferred_sports: newUser.preferred_sports ?? [],
+        sport_preferences: newUser.sport_preferences,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      if (import.meta.env.DEV) console.error("Error manually inserting profile:", insertError);
+      throw insertError;
+    }
+    profile = inserted as User;
+  }
+  return profile;
+};
+
 // === BLOQUE: HOOK PRINCIPAL DE AUTENTICACIÓN ===
 // Expone las funciones signIn, signUp, register y signOut.
-// En modo demo o mock todo el flujo opera contra localStorage;
+// En modo demo o mock el flujo completo opera contra localStorage;
 // en modo real usa Supabase Auth + backend NestJS.
 export function useAuth() {
   const store = useAuthStore();
 
   // === INICIO DE SESIÓN ===
-  // Soporta tres modos:
-  //   1. Mock/Demo — login con email sin contraseña contra usuarios locales
-  //   2. Supabase Auth + backend NestJS — login real con credenciales
-  //   3. Invitado — login anónimo con usuario demo genérico
   const signIn = async (email?: string, password?: string) => {
     // E2E / Mock login bypass
     const isMockAttempt = !!(email && !password);
     if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true" || isMockAttempt) {
-      store.setDemoMode(true);
-      const users = getDemoUsers();
-      let mockUser: User = users[0];
-
-      if (email) {
-        const found = users.find(
-          (u) => u.email?.toLowerCase() === email.toLowerCase() || u.id === email,
-        );
-        if (found) {
-          mockUser = found;
-        } else if (email === "ejuniorfloress@gmail.com") {
-          mockUser = users.find((u) => u.id === "user-edwin-master") || users[0];
-        } else if (email === "fabiola@sportmatch.app") {
-          mockUser = users.find((u) => u.id === "user-fabiola") || users[0];
-        } else if (email === "puka@puka.com") {
-          mockUser = users.find((u) => u.id === "user-puka-power") || users[0];
-        }
-      }
-
-      // Sincroniza el saldo del usuario con los balances persistidos en demo
-      const storedBalances = localStorage.getItem("sportmatch_demo_balances");
-      const balances = storedBalances ? JSON.parse(storedBalances) : {};
-      const actualBalance =
-        balances[mockUser.id] !== undefined ? balances[mockUser.id] : mockUser.fitcoins_balance;
-      mockUser = { ...mockUser, fitcoins_balance: actualBalance };
-
-      store.login(mockUser);
+      executeMockSignIn(email, store);
       return;
     }
 
@@ -180,39 +279,10 @@ export function useAuth() {
         throw new Error("Usuario no encontrado");
       }
 
-      const token = authData.session?.access_token;
-      let profile = null;
-
-      // Intenta obtener el perfil desde el backend NestJS primero
-      if (token && import.meta.env.VITE_API_URL) {
-        try {
-          const response = await backendApi.auth.getProfile(token);
-          if (response.data) {
-            profile = response.data;
-          }
-        } catch (backendError) {
-          if (import.meta.env.DEV)
-            console.warn("Backend profile fetch failed, falling back to Supabase:", backendError);
-        }
-      }
-
-      // Fallback: obtiene el perfil directamente desde Supabase
-      if (!profile) {
-        const { data: supabaseProfile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", authData.user.id)
-          .single();
-
-        if (profileError) {
-          if (import.meta.env.DEV) console.error("Error loading profile:", profileError);
-          throw profileError;
-        }
-        profile = supabaseProfile;
-      }
+      const profile = await fetchProfile(authData.user.id, authData.session?.access_token);
 
       store.setDemoMode(false);
-      store.login(profile as User);
+      store.login(profile);
       return;
     }
 
@@ -243,9 +313,6 @@ export function useAuth() {
   };
 
   // === REGISTRO ===
-  // En modo demo crea un usuario mock local; en modo real registra en Supabase Auth,
-  // espera el trigger handle_new_user y hace hasta 5 reintentos para obtener el perfil.
-  // Si el trigger no se ejecutó, inserta manualmente la fila en public.profiles.
   const signUp = async (newUser: User) => {
     if (!newUser.email || !newUser.password) {
       throw new Error("Email y contraseña son obligatorios");
@@ -295,66 +362,7 @@ export function useAuth() {
         throw new Error("El registro en Supabase Auth falló.");
       }
 
-      // El trigger handle_new_user de Supabase debería crear public.profiles automáticamente.
-      // Reintentamos hasta 5 veces con 500ms de espera entre cada intento.
-      let profile = null;
-      for (let i = 0; i < 5; i++) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", authData.user.id)
-          .single();
-        if (data) {
-          profile = data;
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-
-      // Si el trigger no se ha ejecutado, insertamos la fila manualmente
-      if (!profile) {
-        const { data: inserted, error: insertError } = await supabase
-          .from("profiles")
-          .insert({
-            id: authData.user.id,
-            name: newUser.name,
-            avatar_url: newUser.avatar_url,
-            user_role: newUser.user_role || "PLAYER",
-            trust_score: newUser.trust_score ?? 50,
-            fitcoins_balance: newUser.fitcoins_balance ?? 0,
-            level: newUser.level ?? "Intermedio",
-            preferred_sports: newUser.preferred_sports ?? [],
-            sport_preferences: newUser.sport_preferences,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          if (import.meta.env.DEV) console.error("Error manually inserting profile:", insertError);
-          throw insertError;
-        }
-        profile = inserted;
-      } else {
-        // Actualiza campos extra que el trigger automático podría no haber incluido
-        const { data: updated } = await supabase
-          .from("profiles")
-          .update({
-            age: newUser.age,
-            city: newUser.city,
-            bio: newUser.bio,
-            trust_score: newUser.trust_score ?? 50,
-            fitcoins_balance: newUser.fitcoins_balance ?? 0,
-            level: newUser.level ?? "Intermedio",
-            preferred_sports: newUser.preferred_sports ?? [],
-            sport_preferences: newUser.sport_preferences,
-          })
-          .eq("id", authData.user.id)
-          .select()
-          .single();
-        if (updated) {
-          profile = updated;
-        }
-      }
+      const profile = await upsertProfileInSupabase(newUser, authData.user.id);
 
       // Establece la sesión en Supabase para que el usuario quede autenticado
       if (authData.session) {
@@ -364,27 +372,23 @@ export function useAuth() {
         });
       }
 
-      store.register(profile as User);
+      store.register(profile);
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error durante registro:", err);
       throw err;
     }
   };
 
-  // Alias público de signUp para compatibilidad con la interfaz AuthState
   const register = async (newUser: User) => {
     return await signUp(newUser);
   };
 
-  // === CIERRE DE SESIÓN ===
-  // Cierra sesión en Supabase Auth (ignorando errores) y purga todas las stores.
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
     } catch (e) {
       if (import.meta.env.DEV) console.warn("Supabase Auth signOut warning:", e);
     }
-    // Purga todas las stores Zustand y claves de localStorage
     purgeAllStores();
   };
 

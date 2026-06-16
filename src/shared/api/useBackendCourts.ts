@@ -115,7 +115,7 @@ export function useBackendCourts() {
   });
 
   return {
-    courts: courtsQuery.data || [],
+    courts: courtsQuery.data ?? [],
     isLoading: courtsQuery.isLoading,
     error: courtsQuery.error,
     createCourt: createCourtMutation.mutate,

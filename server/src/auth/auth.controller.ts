@@ -19,14 +19,14 @@ import { SupabaseAuthGuard } from "./guards/supabase-auth.guard";
 @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Get("profile")
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current user profile from Supabase token" })
   async getProfile(@Headers("authorization") authHeader: string) {
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Missing or invalid authorization header");
     }
     const token = authHeader.substring(7);
@@ -41,7 +41,7 @@ export class AuthController {
     @Headers("authorization") authHeader: string,
     @Body() data: { name?: string; bio?: string; avatar_url?: string },
   ) {
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Missing or invalid authorization header");
     }
     const token = authHeader.substring(7);
@@ -51,7 +51,7 @@ export class AuthController {
   @Get("verify")
   @ApiOperation({ summary: "Verify Supabase token" })
   async verifyToken(@Headers("authorization") authHeader: string) {
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Missing or invalid authorization header");
     }
     const token = authHeader.substring(7);

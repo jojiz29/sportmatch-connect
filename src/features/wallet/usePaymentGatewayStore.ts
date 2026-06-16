@@ -45,6 +45,97 @@ interface PaymentGatewayState {
   resetPayment: () => void;
 }
 
+const buildSupabaseFunctionsUrl = (): string => {
+  const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
+  const supabaseUrl = supabaseUrlRaw
+    .replace(/\/(?:rest\/v1|functions\/v1)\/?$/, "")
+    .replace(/\/+$/, "");
+  return (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined) ?? `${supabaseUrl}/functions/v1`;
+};
+
+const handleStripePaymentFlow = async (
+  payload: PaymentPayload,
+  stripe: Stripe | null | undefined,
+  elements: StripeElements | null | undefined,
+): Promise<{ success: boolean; errorCode?: string; errorMessage?: string }> => {
+  if (!stripe || !elements) {
+    return {
+      success: false,
+      errorCode: "STRIPE_NOT_READY",
+      errorMessage: "Stripe no está listo. Recarga la página y vuelve a intentar.",
+    };
+  }
+
+  const supabaseFunctionsUrl = buildSupabaseFunctionsUrl();
+  const response = await fetch(`${supabaseFunctionsUrl}/create-stripe-payment-intent`, {
+    method: "POST",
+    mode: "cors",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      amount: payload.amount,
+      monto_cancha: payload.amount / 1.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    return {
+      success: false,
+      errorCode: "STRIPE_INTENT_ERROR",
+      errorMessage: `No se pudo crear el PaymentIntent: ${responseBody}`,
+    };
+  }
+
+  const { clientSecret } = await response.json();
+  if (!clientSecret) {
+    return {
+      success: false,
+      errorCode: "STRIPE_SECRET_MISSING",
+      errorMessage: "No se recibió client_secret de Stripe.",
+    };
+  }
+
+  const cardElement = elements.getElement(CardElement);
+  if (!cardElement) {
+    return {
+      success: false,
+      errorCode: "CARD_ELEMENT_MISSING",
+      errorMessage: "No se pudo leer los datos de la tarjeta.",
+    };
+  }
+
+  const confirmResult = await stripe.confirmCardPayment(clientSecret, {
+    payment_method: {
+      card: cardElement,
+      billing_details: {
+        name: payload.cardHolderName?.trim() || "Cliente SportMatch",
+      },
+    },
+  });
+
+  if (confirmResult.error) {
+    return {
+      success: false,
+      errorCode: "STRIPE_PAYMENT_FAILED",
+      errorMessage: confirmResult.error.message || "El pago fue rechazado.",
+    };
+  }
+
+  if (confirmResult.paymentIntent?.status !== "succeeded") {
+    return {
+      success: false,
+      errorCode: "STRIPE_PAYMENT_INCOMPLETE",
+      errorMessage: "El pago no se completó correctamente.",
+    };
+  }
+
+  return { success: true };
+};
+
 // === BLOQUE: STORE DE PASARELA DE PAGOS ===
 // Procesa pagos con tarjeta (Stripe), Yape/Plin y descuento con FitCoins.
 // No se persiste en localStorage (el estado es transaccional).
@@ -114,89 +205,11 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
         };
       }
 
-      // Stripe no está inicializado
-      if (!stripe || !elements) {
-        const errorCode = "STRIPE_NOT_READY";
-        const error = "Stripe no está listo. Recarga la página y vuelve a intentar.";
-        set({ isProcessing: false, status: "failed", error, errorCode });
-        logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-        return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
-
-      // Construye la URL de la función Supabase para crear el PaymentIntent
-      const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
-      const supabaseUrl = supabaseUrlRaw
-        .replace(/\/(?:rest\/v1|functions\/v1)\/?$/, "")
-        .replace(/\/+$/, "");
-      const supabaseFunctionsUrl =
-        (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined) ??
-        `${supabaseUrl}/functions/v1`;
-
       try {
-        // Llama a la función serverless de Supabase que crea el PaymentIntent
-        const response = await fetch(`${supabaseFunctionsUrl}/create-stripe-payment-intent`, {
-          method: "POST",
-          mode: "cors",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            amount: payload.amount,
-            monto_cancha: payload.amount / 1.1,
-          }),
-        });
-
-        if (!response.ok) {
-          const responseBody = await response.text();
-          const errorCode = "STRIPE_INTENT_ERROR";
-          const error = `No se pudo crear el PaymentIntent: ${responseBody}`;
-          set({ isProcessing: false, status: "failed", error, errorCode });
-          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-        }
-
-        const { clientSecret } = await response.json();
-        if (!clientSecret) {
-          const errorCode = "STRIPE_SECRET_MISSING";
-          const error = "No se recibió client_secret de Stripe.";
-          set({ isProcessing: false, status: "failed", error, errorCode });
-          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-        }
-
-        // Obtiene el elemento CardElement para confirmar el pago
-        const cardElement = elements.getElement(CardElement);
-        if (!cardElement) {
-          const errorCode = "CARD_ELEMENT_MISSING";
-          const error = "No se pudo leer los datos de la tarjeta.";
-          set({ isProcessing: false, status: "failed", error, errorCode });
-          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-        }
-
-        // Confirma el pago con Stripe.js
-        const confirmResult = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: {
-            card: cardElement,
-            billing_details: {
-              name: payload.cardHolderName.trim() || "Cliente SportMatch",
-            },
-          },
-        });
-
-        if (confirmResult.error) {
-          const errorCode = "STRIPE_PAYMENT_FAILED";
-          const error = confirmResult.error.message || "El pago fue rechazado.";
-          set({ isProcessing: false, status: "failed", error, errorCode });
-          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-        }
-
-        if (!confirmResult.paymentIntent || confirmResult.paymentIntent.status !== "succeeded") {
-          const errorCode = "STRIPE_PAYMENT_INCOMPLETE";
-          const error = "El pago no se completó correctamente.";
+        const stripeRes = await handleStripePaymentFlow(payload, stripe, elements);
+        if (!stripeRes.success) {
+          const errorCode = stripeRes.errorCode || "STRIPE_ERROR";
+          const error = stripeRes.errorMessage || "Error al procesar el pago.";
           set({ isProcessing: false, status: "failed", error, errorCode });
           logPaymentAttempt({ ...attempt, status: "failed", errorCode });
           return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
@@ -216,7 +229,7 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
 
     // ── Flujo: Pago con Yape o Plin ──────────────────────────────────────
     if (payload.method === "yape" || payload.method === "plin") {
-      if (!payload.phone || !/^[0-9]{9}$/.test(payload.phone)) {
+      if (!payload.phone || !/^\d{9}$/.test(payload.phone)) {
         const errorCode = "PHONE_INVALID";
         const error = "Número de celular inválido";
         set({ isProcessing: false, status: "failed", error, errorCode });
