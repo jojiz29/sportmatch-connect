@@ -26,6 +26,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "sonar:up": "docker compose -f docker-compose.sonar.yml up -d",
+    "sonar:down": "docker compose -f docker-compose.sonar.yml down",
+    "sonar:scan": "npx sonarqube-scanner",
     "prepare": "husky",
     "start": "cd server && npm install && npm run build && npm run start:prod"
   },
