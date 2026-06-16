@@ -1,8 +1,4 @@
-# ============================================================
-# .gitignore — Archivos ignorados por Git (frontend + server)
-# ============================================================
-
-# Logs
+﻿# Logs
 logs
 *.log
 npm-debug.log*
@@ -13,7 +9,6 @@ lerna-debug.log*
 
 # Environment files
 .env
-
 node_modules
 dist
 dist-ssr
@@ -27,7 +22,7 @@ dist-ssr
 .wrangler/
 .dev.vars
 
-# Editor directories and files
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -38,11 +33,16 @@ dist-ssr
 *.sln
 *.sw?
 
-# Test & developer utilities
+# Test utilities
 playwright-report/
 test-results/
 scratch/
 
-# Supabase (sensitive connection info)
-supabase/.temp/pooler-url
-.vercel
+# Coverage reports
+coverage/
+
+# SonarQube scanner
+.scannerwork/
+
+# opencode plans
+.opencode/
