@@ -1,8 +1,3 @@
-// ============================================================
-// courts.controller.ts — Controlador de canchas
-// CRUD completo + creación de reseñas con rating
-// ============================================================
-
 import {
   Controller,
   Get,
@@ -19,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger"
 import { CourtsService } from "./courts.service";
 import { CreateCourtDto, UpdateCourtDto } from "./dto";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
+import { AdminGuard } from "../auth/guards/admin.guard";
 
 @ApiTags("Courts")
 @Controller("courts")
@@ -26,7 +22,7 @@ export class CourtsController {
   constructor(private readonly courtsService: CourtsService) {}
 
   @Get()
-  @ApiOperation({ summary: "Get all courts" })
+  @ApiOperation({ summary: "Get all courts (public)" })
   @ApiQuery({ name: "sport", required: false })
   @ApiQuery({ name: "district", required: false })
   async findAll(@Query("sport") sport?: string, @Query("district") district?: string) {
@@ -34,31 +30,31 @@ export class CourtsController {
   }
 
   @Get(":id")
-  @ApiOperation({ summary: "Get court by ID" })
+  @ApiOperation({ summary: "Get court by ID (public)" })
   async findOne(@Param("id") id: string) {
     return this.courtsService.findOne(id);
   }
 
   @Post()
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Create a new court" })
+  @ApiOperation({ summary: "Create a new court (admin only)" })
   async create(@Body() dto: CreateCourtDto) {
     return this.courtsService.create(dto);
   }
 
   @Patch(":id")
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Update a court" })
+  @ApiOperation({ summary: "Update a court (admin only)" })
   async update(@Param("id") id: string, @Body() dto: UpdateCourtDto) {
     return this.courtsService.update(id, dto);
   }
 
   @Delete(":id")
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, AdminGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Delete a court" })
+  @ApiOperation({ summary: "Delete a court (admin only)" })
   async delete(@Param("id") id: string) {
     return this.courtsService.delete(id);
   }
@@ -66,7 +62,7 @@ export class CourtsController {
   @Post(":id/reviews")
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Create a review for a court" })
+  @ApiOperation({ summary: "Create a review for a court (authenticated users)" })
   async createReview(
     @Param("id") id: string,
     @Body() data: { rating: number; comment?: string },
