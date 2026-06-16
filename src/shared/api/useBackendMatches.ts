@@ -119,7 +119,7 @@ export function useMatchOperations() {
       const { data: result, error } = await backendApi.matches.update(
         "",
         id,
-        data as Parameters<typeof backendApi.matches.update>[2],
+        data,
       );
       if (error) throw new Error(error);
       return result;

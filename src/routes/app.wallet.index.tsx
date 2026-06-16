@@ -29,6 +29,8 @@ import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { Reward } from "@/services/walletService";
 import { TransferFitCoinsModal } from "@/features/wallet/ui/TransferFitCoinsModal";
+import { WeeklyChallengesCard } from "@/features/wallet/ui/WeeklyChallengesCard";
+import { SportyRecommendations } from "@/features/ai-assistant/ui/SportyRecommendations";
 
 export const Route = createFileRoute("/app/wallet/")({
   head: () => ({ meta: [{ title: "FitCoins — SportMatch" }] }),
@@ -311,72 +313,7 @@ function Wallet() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* === BLOQUE: Desafíos gamificados === */}
-          <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-neon" /> {t("wallet.challenges")}
-            </h3>
-            <div className="space-y-3">
-              {challenges?.map((c) => {
-                const isCompleted = c.progress >= c.total;
-                return (
-                  <div
-                    key={c.id}
-                    className="bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="font-medium text-sm">{c.name}</div>
-                        {c.claimed && (
-                          <span className="text-[10px] text-neon bg-neon/10 border border-neon/20 px-2 py-0.5 rounded-full mt-1 inline-block">
-                            {t("wallet.claimed")}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-neon flex items-center gap-1 font-semibold">
-                        <Trophy className="h-3 w-3" /> +{c.reward}
-                      </div>
-                    </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden mb-3">
-                      <div
-                        className="h-full bg-gradient-neon"
-                        style={{ width: `${(c.progress / c.total) * 100}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {c.progress} / {c.total}
-                      </span>
-                      {!c.claimed ? (
-                        <div className="flex gap-2">
-                          {c.progress < c.total && (
-                            <button
-                              onClick={() => progressChallenge(c.id)}
-                              className="px-2.5 py-1 rounded-lg bg-accent text-[11px] font-semibold hover:bg-accent/80 transition-colors cursor-pointer"
-                            >
-                              {t("wallet.advance")}
-                            </button>
-                          )}
-                          {isCompleted && (
-                            <button
-                              onClick={() => claimChallenge(c.id)}
-                              className="px-2.5 py-1 rounded-lg bg-gradient-neon text-neon-foreground text-[11px] font-bold hover:shadow-neon transition-shadow cursor-pointer"
-                            >
-                              {t("wallet.claim")}
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic font-semibold text-neon">
-                          {t("wallet.completed")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <WeeklyChallengesCard />
 
           {/* === BLOQUE: Recompensas oficiales === */}
           <div id="rewards-section">
@@ -462,8 +399,11 @@ function Wallet() {
           </div>
         </div>
 
+        {/* === BLOQUE: Sporty Coach (sidebar) === */}
+        <SportyRecommendations />
+
         {/* === BLOQUE: Tabla de líderes (sidebar) === */}
-        <div>
+        <div className="mt-6">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
             <Crown className="h-4 w-4 text-warning" /> {t("wallet.ranking")}
           </h3>

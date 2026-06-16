@@ -53,7 +53,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [challengeTarget, setChallengeTarget] = useState<User | null>(null);
   const [challengeMessage, setChallengeMessage] = useState("");
-  const [pendingChallengeUserIds, setPendingChallengeUserIds] = useState<string[]>([]);
   const [isSavingConnection, setIsSavingConnection] = useState(false);
   const [isSendingChallenge, setIsSendingChallenge] = useState(false);
   const [receivedChallenges, setReceivedChallenges] = useState<PlayerChallenge[]>([]);
@@ -131,7 +130,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   // Geolocalización del usuario actual.
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
-    if (typeof window !== "undefined" && navigator.geolocation) {
+    if (globalThis.window !== undefined && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) =>
           setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude }),
@@ -173,11 +172,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
     let active = true;
     const handleSentChallenges = (challenges: PlayerChallenge[]) => {
       if (!active) return;
-      const filteredChallengedIds = challenges
-        .filter((c) => activeSport === "Todos" || c.sport === activeSport)
-        .map((c) => c.challenged_id);
-      setPendingChallengeUserIds(filteredChallengedIds);
-
       const allChallengedIds = challenges.map((c) => c.challenged_id);
       setContactedUserIds((current) => Array.from(new Set([...current, ...allChallengedIds])));
     };
@@ -313,9 +307,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
         sport: challengeSport,
         message: challengeMessage,
       });
-      setPendingChallengeUserIds((current) =>
-        current.includes(challengeTarget.id) ? current : [...current, challengeTarget.id],
-      );
       setContactedUserIds((current) =>
         current.includes(challengeTarget.id) ? current : [...current, challengeTarget.id],
       );
@@ -368,6 +359,249 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
     }
   };
 
+  const renderStackContent = () => {
+    if (isLoading) {
+      return <div className="absolute inset-0 bg-muted animate-pulse rounded-3xl" />;
+    }
+    if (rankedStack.length === 0) {
+      return (
+        <div className="absolute inset-0 grid place-items-center bg-gradient-card border border-border rounded-3xl">
+          <div className="text-center">
+            <Sparkles className="h-10 w-10 mx-auto text-neon mb-3" />
+            <div className="font-semibold">{t("matchmaking.empty_stack")}</div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <AnimatePresence>
+        {(rankedStack || [])
+          .slice(0, 3)
+          .reverse()
+          .map((p, i, arr) => {
+            const idx = arr.length - 1 - i;
+            const isTop = idx === 0;
+            const dist =
+              baseLocation && p.user.last_location_lat && p.user.last_location_lng
+                ? calculateDistance(
+                    baseLocation.lat,
+                    baseLocation.lng,
+                    p.user.last_location_lat,
+                    p.user.last_location_lng,
+                  )
+                : p.distanceKm || 0;
+
+            const matrix = p.user.sport_preferences?.sports_matrix;
+            const sportLevel = matrix?.[activeSport]?.level || p.user.level;
+            const getDisplayLevel = (sLevel: string | undefined): string => {
+              if (!sLevel) return "";
+              if (sLevel === "Amateur") return t("skills.amateur", "Amateur");
+              if (sLevel === "Intermediate" || sLevel === "Intermedio")
+                return t("skills.intermedio", "Intermedio");
+              if (sLevel === "Advanced" || sLevel === "Avanzado")
+                return t("skills.avanzado", "Avanzado");
+              if (sLevel === "Pro") return t("skills.pro", "Pro");
+              return sLevel;
+            };
+            const displayLevel = getDisplayLevel(sportLevel);
+
+            return (
+              <motion.div
+                key={p.user.id}
+                drag={isTop ? "x" : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={1}
+                onDragEnd={(e, info) => {
+                  if (info.offset.x > 100) swipe(p.user.id, "like");
+                  else if (info.offset.x < -100) swipe(p.user.id, "pass");
+                }}
+                className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
+                style={{
+                  transform: `translateY(${idx * 12}px) scale(${1 - idx * 0.03})`,
+                  zIndex: 10 - idx,
+                  opacity: 1 - idx * 0.1,
+                }}
+                animate={isTop ? { x: 0, rotate: 0 } : undefined}
+                exit={{ x: isTop ? 200 : 0, opacity: 0, transition: { duration: 0.2 } }}
+                whileDrag={{ rotate: 5, scale: 1.05 }}
+              >
+                {/* Badges del encabezado */}
+                <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
+                  <span className="px-3 py-1.5 rounded-lg bg-primary/15 border border-primary/35 text-primary text-[11px] font-black uppercase tracking-widest font-mono shadow-glow">
+                    {Math.round(70 + (p.user.trust_score || 0) * 0.28)}% MATCH
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground text-[10px] font-semibold backdrop-blur-sm">
+                    {p.user.trust_score || 0}% Trust Score
+                  </span>
+                </div>
+
+                {/* Avatar con anillo degradado y punto de estado */}
+                <div className="flex justify-center items-center py-4 relative z-10">
+                  <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-primary/30 to-primary-foreground/10 opacity-30 blur-lg pointer-events-none" />
+                  <div className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center bg-gradient-to-br from-primary via-primary/60 to-primary-foreground/20">
+                    <div className="h-full w-full rounded-full overflow-hidden border-2 border-background bg-muted">
+                      <Link
+                        to="/app/profile/$userId"
+                        params={{ userId: p.user.id }}
+                        className="block h-full w-full"
+                      >
+                        <img
+                          src={p.user.avatar_url}
+                          alt={p.user.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </Link>
+                    </div>
+                    <span className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-primary border-[3px] border-card flex items-center justify-center shadow-glow">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Información del perfil: nombre, edad, deporte, nivel, ubicación */}
+                <div className="px-5 pb-2 space-y-2 z-10 relative">
+                  <div className="flex items-baseline justify-center gap-2 text-center">
+                    <h2 className="text-xl font-black text-foreground flex items-center justify-center gap-1.5">
+                      {p.user.company_name || p.user.name || t("matchmaking.user_default")}
+                      {p.user.dni_verificado && <VerifiedBadge />}
+                    </h2>
+                    {p.user.user_role !== "BUSINESS" && (
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        {p.user.age || "?"}a
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badges de deporte, nivel y distancia */}
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    <span className="px-2.5 py-1 rounded-md bg-secondary/15 border border-secondary/30 text-secondary text-[10px] font-extrabold uppercase tracking-wide">
+                      {p.matchedSport || activeSport}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
+                      {displayLevel}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
+                      <MapPin className="h-2.5 w-2.5 text-primary" />{" "}
+                      {dist == null
+                        ? p.user.city || "Sin ubicación"
+                        : `${dist.toFixed(1)} km`}
+                    </span>
+                  </div>
+
+                  {p.user.bio && (
+                    <p className="text-xs text-muted-foreground leading-relaxed italic text-center line-clamp-2 px-2">
+                      "{p.user.bio}"
+                    </p>
+                  )}
+
+                  {/* Hashtags según trust_score */}
+                  <div className="flex flex-wrap justify-center gap-1 pt-0.5">
+                    {(p.user.trust_score || 0) >= 90 && (
+                      <span className="text-[9px] px-2 py-0.5 rounded bg-primary/10 border border-primary/15 text-primary/80 font-semibold">
+                        #Confiable
+                      </span>
+                    )}
+                    {(p.user.trust_score || 0) >= 80 && (
+                      <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
+                        #BuenNivel
+                      </span>
+                    )}
+                    <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
+                      #Puntual
+                    </span>
+                  </div>
+                </div>
+
+                {/* Botones de acción: swipe, info, conectar */}
+                {isTop && (
+                  <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
+                    <button
+                      onClick={() => swipe(p.user.id, "pass")}
+                      className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
+                      aria-label={t("matchmaking.keep_swiping")}
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                    <button
+                      onClick={() => setInspectedUser(p.user)}
+                      className="h-10 w-10 rounded-full border border-border bg-muted/80 hover:bg-muted active:scale-95 text-foreground/75 flex items-center justify-center transition-all duration-200 cursor-pointer"
+                      aria-label={t("matchmaking.view_profile")}
+                    >
+                      <Info className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => void handleConnect(p.user)}
+                      disabled={isSavingConnection}
+                      className="h-14 px-5 rounded-full border border-primary/35 bg-primary/10 hover:bg-primary/20 active:scale-90 text-primary flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-glow"
+                      aria-label={`Conectar con ${p.user.name}`}
+                    >
+                      <Users className="h-5 w-5" />
+                      <span className="text-xs font-bold">Conectar</span>
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+      </AnimatePresence>
+    );
+  };
+
+  const renderRecentHistory = () => {
+    if (isLoadingMatches) {
+      return (
+        <div className="space-y-2">
+          <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
+          <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
+        </div>
+      );
+    }
+    const matches = inspectedUserMatches || [];
+    if (matches.length > 0) {
+      return matches.map((m) => {
+        const getStatusBadgeClass = (status: string) => {
+          if (status === "Finished") return "bg-muted text-muted-foreground";
+          if (status === "IN_PROGRESS")
+            return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+          return "bg-primary/20 text-primary-foreground border border-primary/30";
+        };
+        const getStatusLabel = (status: string) => {
+          if (status === "Finished")
+            return t("profile.status_finished", { defaultValue: "Finalizado" });
+          if (status === "IN_PROGRESS")
+            return t("profile.status_in_progress", { defaultValue: "En Curso" });
+          return t("profile.status_open", { defaultValue: "Abierto" });
+        };
+        return (
+          <div
+            key={m.id}
+            className="flex items-center gap-3 text-xs p-2 rounded-xl hover:bg-accent/50 transition-colors border border-border/20"
+          >
+            <div className="h-7 w-7 rounded-lg bg-gradient-primary grid place-items-center text-[10px] font-bold">
+              {m.sport.slice(0, 2)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">{m.title}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {new Date(m.date).toLocaleDateString()}
+              </div>
+            </div>
+            <span
+              className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getStatusBadgeClass(m.status || "")}`}
+            >
+              {getStatusLabel(m.status || "")}
+            </span>
+          </div>
+        );
+      });
+    }
+    return (
+      <div className="text-center py-4 text-xs text-muted-foreground">
+        {t("profile.no_matches_yet")}
+      </div>
+    );
+  };
+
   // === BLOQUE: RENDERIZADO PRINCIPAL ===
   return (
     <div className="grid lg:grid-cols-3 gap-8">
@@ -394,188 +628,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
       {/* ── Carrusel de tarjetas swipe ── */}
       <div className="lg:col-span-2 flex justify-center">
         <div className="relative w-full max-w-md h-[560px]">
-          {isLoading ? (
-            <div className="absolute inset-0 bg-muted animate-pulse rounded-3xl" />
-          ) : rankedStack.length === 0 ? (
-            <div className="absolute inset-0 grid place-items-center bg-gradient-card border border-border rounded-3xl">
-              <div className="text-center">
-                <Sparkles className="h-10 w-10 mx-auto text-neon mb-3" />
-                <div className="font-semibold">{t("matchmaking.empty_stack")}</div>
-              </div>
-            </div>
-          ) : (
-            <AnimatePresence>
-              {(rankedStack || [])
-                .slice(0, 3)
-                .reverse()
-                .map((p, i, arr) => {
-                  const idx = arr.length - 1 - i;
-                  const isTop = idx === 0;
-                  const dist =
-                    baseLocation && p.user.last_location_lat && p.user.last_location_lng
-                      ? calculateDistance(
-                          baseLocation.lat,
-                          baseLocation.lng,
-                          p.user.last_location_lat,
-                          p.user.last_location_lng,
-                        )
-                      : p.distanceKm || 0;
-
-                  return (
-                    <motion.div
-                      key={p.user.id}
-                      drag={isTop ? "x" : false}
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={1}
-                      onDragEnd={(e, info) => {
-                        if (info.offset.x > 100) swipe(p.user.id, "like");
-                        else if (info.offset.x < -100) swipe(p.user.id, "pass");
-                      }}
-                      className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
-                      style={{
-                        transform: `translateY(${idx * 12}px) scale(${1 - idx * 0.03})`,
-                        zIndex: 10 - idx,
-                        opacity: 1 - idx * 0.1,
-                      }}
-                      animate={isTop ? { x: 0, rotate: 0 } : undefined}
-                      exit={{ x: isTop ? 200 : 0, opacity: 0, transition: { duration: 0.2 } }}
-                      whileDrag={{ rotate: 5, scale: 1.05 }}
-                    >
-                      {/* Badges del encabezado */}
-                      <div className="flex items-center justify-between px-5 pt-5 pb-2 z-10 relative">
-                        <span className="px-3 py-1.5 rounded-lg bg-primary/15 border border-primary/35 text-primary text-[11px] font-black uppercase tracking-widest font-mono shadow-glow">
-                          {Math.round(70 + (p.user.trust_score || 0) * 0.28)}% MATCH
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full bg-muted border border-border text-muted-foreground text-[10px] font-semibold backdrop-blur-sm">
-                          {p.user.trust_score || 0}% Trust Score
-                        </span>
-                      </div>
-
-                      {/* Avatar con anillo degradado y punto de estado */}
-                      <div className="flex justify-center items-center py-4 relative z-10">
-                        <div className="absolute h-[136px] w-[136px] rounded-full bg-gradient-to-br from-primary/30 to-primary-foreground/10 opacity-30 blur-lg pointer-events-none" />
-                        <div className="h-[130px] w-[130px] rounded-full p-[3px] relative flex items-center justify-center bg-gradient-to-br from-primary via-primary/60 to-primary-foreground/20">
-                          <div className="h-full w-full rounded-full overflow-hidden border-2 border-background bg-muted">
-                            <Link
-                              to="/app/profile/$userId"
-                              params={{ userId: p.user.id }}
-                              className="block h-full w-full"
-                            >
-                              <img
-                                src={p.user.avatar_url}
-                                alt={p.user.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </Link>
-                          </div>
-                          <span className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded-full bg-primary border-[3px] border-card flex items-center justify-center shadow-glow">
-                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Información del perfil: nombre, edad, deporte, nivel, ubicación */}
-                      <div className="px-5 pb-2 space-y-2 z-10 relative">
-                        <div className="flex items-baseline justify-center gap-2 text-center">
-                          <h2 className="text-xl font-black text-foreground flex items-center justify-center gap-1.5">
-                            {p.user.company_name || p.user.name || t("matchmaking.user_default")}
-                            {p.user.dni_verificado && <VerifiedBadge />}
-                          </h2>
-                          {p.user.user_role !== "BUSINESS" && (
-                            <span className="text-sm font-semibold text-muted-foreground">
-                              {p.user.age || "?"}a
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Badges de deporte, nivel y distancia */}
-                        {(() => {
-                          const matrix = p.user.sport_preferences?.sports_matrix;
-                          const sportLevel = matrix?.[activeSport]?.level || p.user.level;
-                          const getDisplayLevel = (sportLevel: string | undefined): string => {
-                            if (!sportLevel) return "";
-                            if (sportLevel === "Amateur") return t("skills.amateur", "Amateur");
-                            if (sportLevel === "Intermediate" || sportLevel === "Intermedio") return t("skills.intermedio", "Intermedio");
-                            if (sportLevel === "Advanced" || sportLevel === "Avanzado") return t("skills.avanzado", "Avanzado");
-                            if (sportLevel === "Pro") return t("skills.pro", "Pro");
-                            return sportLevel;
-                          };
-                          const displayLevel = getDisplayLevel(sportLevel);
-                          return (
-                            <div className="flex flex-wrap justify-center gap-1.5">
-                              <span className="px-2.5 py-1 rounded-md bg-secondary/15 border border-secondary/30 text-secondary text-[10px] font-extrabold uppercase tracking-wide">
-                                {p.matchedSport || activeSport}
-                              </span>
-                              <span className="px-2.5 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-500 dark:text-violet-300 text-[10px] font-bold">
-                                {displayLevel}
-                              </span>
-                              <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
-                                <MapPin className="h-2.5 w-2.5 text-primary" />{" "}
-                                {dist == null
-                                  ? p.user.city || "Sin ubicación"
-                                  : `${dist.toFixed(1)} km`}
-                              </span>
-                            </div>
-                          );
-                        })()}
-
-                        {p.user.bio && (
-                          <p className="text-xs text-muted-foreground leading-relaxed italic text-center line-clamp-2 px-2">
-                            "{p.user.bio}"
-                          </p>
-                        )}
-
-                        {/* Hashtags según trust_score */}
-                        <div className="flex flex-wrap justify-center gap-1 pt-0.5">
-                          {(p.user.trust_score || 0) >= 90 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded bg-primary/10 border border-primary/15 text-primary/80 font-semibold">
-                              #Confiable
-                            </span>
-                          )}
-                          {(p.user.trust_score || 0) >= 80 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
-                              #BuenNivel
-                            </span>
-                          )}
-                          <span className="text-[9px] px-2 py-0.5 rounded bg-muted border border-border text-muted-foreground font-semibold">
-                            #Puntual
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Botones de acción: swipe, info, conectar */}
-                      {isTop && (
-                        <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
-                          <button
-                            onClick={() => swipe(p.user.id, "pass")}
-                            className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
-                            aria-label={t("matchmaking.keep_swiping")}
-                          >
-                            <X className="h-6 w-6" />
-                          </button>
-                          <button
-                            onClick={() => setInspectedUser(p.user)}
-                            className="h-10 w-10 rounded-full border border-border bg-muted/80 hover:bg-muted active:scale-95 text-foreground/75 flex items-center justify-center transition-all duration-200 cursor-pointer"
-                            aria-label={t("matchmaking.view_profile")}
-                          >
-                            <Info className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => void handleConnect(p.user)}
-                            disabled={isSavingConnection}
-                            className="h-14 px-5 rounded-full border border-primary/35 bg-primary/10 hover:bg-primary/20 active:scale-90 text-primary flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-glow"
-                            aria-label={`Conectar con ${p.user.name}`}
-                          >
-                            <Users className="h-5 w-5" />
-                            <span className="text-xs font-bold">Conectar</span>
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-            </AnimatePresence>
-          )}
+          {renderStackContent()}
         </div>
       </div>
 
@@ -979,11 +1032,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                       {inspectedUser.trust_score ?? 0}%
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {(inspectedUser.trust_score || 0) >= 90
-                        ? t("profile.trust_level_excellent")
-                        : (inspectedUser.trust_score || 0) >= 70
-                          ? t("profile.trust_level_good")
-                          : t("profile.trust_level_risk")}
+                      {getTrustLevelLabel(inspectedUser.trust_score ?? 0, t)}
                     </div>
                   </div>
                   <div className="mt-4 space-y-2 text-xs">
@@ -996,50 +1045,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 <div className="glass rounded-2xl p-4">
                   <h3 className="font-semibold text-sm mb-3">{t("profile.recent_history")}</h3>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                    {isLoadingMatches ? (
-                      <div className="space-y-2">
-                        <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
-                        <div className="h-10 w-full bg-muted animate-pulse rounded-lg" />
-                      </div>
-                    ) : (inspectedUserMatches || []).length > 0 ? (
-                      (inspectedUserMatches || []).map((m) => {
-                        const getStatusBadgeClass = (status: string) => {
-                          if (status === "Finished") return "bg-muted text-muted-foreground";
-                          if (status === "IN_PROGRESS") return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-                          return "bg-primary/20 text-primary-foreground border border-primary/30";
-                        };
-                        const getStatusLabel = (status: string) => {
-                          if (status === "Finished") return t("profile.status_finished", { defaultValue: "Finalizado" });
-                          if (status === "IN_PROGRESS") return t("profile.status_in_progress", { defaultValue: "En Curso" });
-                          return t("profile.status_open", { defaultValue: "Abierto" });
-                        };
-                        return (
-                          <div
-                            key={m.id}
-                            className="flex items-center gap-3 text-xs p-2 rounded-xl hover:bg-accent/50 transition-colors border border-border/20"
-                          >
-                            <div className="h-7 w-7 rounded-lg bg-gradient-primary grid place-items-center text-[10px] font-bold">
-                              {m.sport.slice(0, 2)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">{m.title}</div>
-                              <div className="text-[10px] text-muted-foreground">
-                                {new Date(m.date).toLocaleDateString()}
-                              </div>
-                            </div>
-                            <span
-                              className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getStatusBadgeClass(m.status || "")}`}
-                            >
-                              {getStatusLabel(m.status || "")}
-                            </span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="text-center py-4 text-xs text-muted-foreground">
-                        {t("profile.no_matches_yet")}
-                      </div>
-                    )}
+                    {renderRecentHistory()}
                   </div>
                 </div>
               </div>
@@ -1098,4 +1104,10 @@ function Bar({ label, value }: Readonly<{ label: string; value: number }>) {
       </div>
     </div>
   );
+}
+
+function getTrustLevelLabel(score: number, t: any): string {
+  if (score >= 90) return t("profile.trust_level_excellent");
+  if (score >= 70) return t("profile.trust_level_good");
+  return t("profile.trust_level_risk");
 }

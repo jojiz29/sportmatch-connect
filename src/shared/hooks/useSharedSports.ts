@@ -28,7 +28,7 @@ export function useSharedSports() {
         if (e) {
           setError(e.message);
         } else {
-          setSports((data as Sport[]) || []);
+          setSports(data || []);
         }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Error");

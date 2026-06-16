@@ -737,7 +737,7 @@ export const apiClient = {
       return {
         ...data,
         current_players: [],
-      } as unknown as Match;
+      };
     },
   },
 

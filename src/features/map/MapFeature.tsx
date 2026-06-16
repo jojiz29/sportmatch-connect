@@ -293,7 +293,7 @@ function BusinessPopup({ player, onViewCommercialSheet }: BusinessPopupProps) {
       <div className="font-bold text-sm text-foreground">{player.company_name || player.name}</div>
       <div className="text-xs text-muted-foreground mt-0.5">
         {isBusiness ? `${player.business_category} · ` : ""}
-        {player.distance_km !== undefined ? `${player.distance_km.toFixed(1)} km` : "Cerca de ti"}
+        {player.distance_km === undefined ? "Cerca de ti" : `${player.distance_km.toFixed(1)} km`}
       </div>
       {isBusiness && (
         <div className="flex flex-col gap-1.5 mt-3">
@@ -415,7 +415,7 @@ export function MapFeature({
     });
   }, [players, onViewCommercialSheet]);
 
-  if (!mounted || typeof globalThis.window === "undefined") {
+  if (!mounted || globalThis.window === undefined) {
     return <div className="h-[600px] min-h-[500px] w-full bg-muted animate-pulse rounded-3xl" />;
   }
 

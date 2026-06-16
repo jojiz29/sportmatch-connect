@@ -2,7 +2,9 @@ import { supabase } from "@/shared/api/supabase";
 
 export async function signInWithGoogle() {
   const redirectTo =
-    typeof globalThis.window !== "undefined" ? `${globalThis.window.location.origin}/app` : "http://localhost:5173/app";
+    globalThis.window === undefined
+      ? "http://localhost:5173/app"
+      : `${globalThis.window.location.origin}/app`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",

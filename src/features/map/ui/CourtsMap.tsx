@@ -15,6 +15,7 @@ import { Crosshair, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { useCourtsMap, type CourtOnMap } from "../model/useCourtsMap";
 import { cn } from "@/lib/utils";
+import { FavoriteButton } from "@/features/courts/ui/FavoriteButton";
 
 // Fix para los iconos de Leaflet en Vite
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -224,8 +225,11 @@ export function CourtsMap({ className, onCourtClick }: CourtsMapProps) {
                     </span>
                     <span className="text-muted-foreground">{court.distance_km.toFixed(1)} km</span>
                   </div>
-                  <div className="mt-1 font-bold text-primary">{court.price_per_hour} FC/h</div>
-                </div>
+        <div className="mt-1 font-bold text-primary">{court.price_per_hour} FC/h</div>
+        <div className="mt-2 flex justify-end">
+          <FavoriteButton courtId={court.id} size="sm" />
+        </div>
+      </div>
               </Popup>
             </Marker>
           ))}

@@ -769,5 +769,60 @@
   },
   "offline": {
     "banner": "Offline. Showing the last saved data."
+  },
+  "share": {
+    "button": "Share",
+    "copied": "Copied!",
+    "levelUp": "I just reached level {level} ({label}) in SportMatch! 🏆",
+    "matchCompleted": "Great game! {sport} completed on SportMatch",
+    "challengeCompleted": "I completed the '{name}' challenge on SportMatch!",
+    "hashtags": "#SportMatch #Sports #FitCoins"
+  },
+  "levelUp": {
+    "title": "You leveled up!",
+    "message": "Congratulations! You reached level {label}. Keep it up!",
+    "close": "Close"
+  },
+  "weeklyChallenges": {
+    "title": "Weekly Challenges",
+    "empty": "No challenges this week. Come back Monday!",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "progress": "{current}/{goal}",
+    "reward": "{xp} XP · {fc} FitCoins",
+    "types": {
+      "play_matches": "Play {goal} matches",
+      "win_matches": "Win {goal} matches",
+      "book_courts": "Book {goal} courts",
+      "invite_friends": "Invite {goal} friend",
+      "maintain_streak": "Maintain {goal}-day streak",
+      "earn_xp": "Earn {goal} XP"
+    }
+  },
+  "favorites": {
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "filter": "Favorites only",
+    "empty": "You have no favorite courts"
+  },
+  "wallet": {
+    "sporty_coach": "Sporty Coach",
+    "coach_sport_placeholder": "Which sport?",
+    "coach_location_placeholder": "Where do you want to play?",
+    "coach_level_placeholder": "Skill level",
+    "coach_level_beginner": "Beginner",
+    "coach_level_intermediate": "Intermediate",
+    "coach_level_advanced": "Advanced",
+    "coach_prefs_placeholder": "Preferences (e.g. indoor, lighting)",
+    "coach_ask": "Ask Sporty",
+    "coach_loading": "Sporty is thinking..."
+  },
+  "challengeInvite": {
+    "title": "You've been challenged!",
+    "expired": "This challenge has expired",
+    "notFound": "Challenge not found",
+    "selfChallenge": "You can't challenge yourself",
+    "acceptRegister": "Accept Challenge — Sign Up",
+    "acceptLogin": "I have an account — Log In"
   }
 }

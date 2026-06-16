@@ -86,7 +86,7 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
   languageRef.current = options.language;
 
   const hasWebSpeechSupport =
-    typeof globalThis.window !== "undefined" &&
+    globalThis.window !== undefined &&
     ("webkitSpeechRecognition" in globalThis.window || "SpeechRecognition" in globalThis.window);
 
   /**
@@ -109,8 +109,10 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
   /** Detecta silencio en MediaRecorder usando AudioContext + AnalyserNode */
   const startSilenceDetection = useCallback(
     (stream: MediaStream, onSilence: () => void) => {
-      if (typeof globalThis.window === "undefined" || !globalThis.window.AudioContext) return;
-      const audioContext = new (globalThis.window.AudioContext || (globalThis.window as any).webkitAudioContext)();
+      if (globalThis.window?.AudioContext === undefined) return;
+      const audioContext = new (
+        globalThis.window.AudioContext || (globalThis.window as any).webkitAudioContext
+      )();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
@@ -228,9 +230,10 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
           resolve("error");
           return;
         }
-        const SpeechRecognitionCtor = globalThis.window.SpeechRecognition || globalThis.window.webkitSpeechRecognition;
+        const SpeechRecognitionCtor =
+          globalThis.window.SpeechRecognition || globalThis.window.webkitSpeechRecognition;
         const recognition = new SpeechRecognitionCtor();
-        
+
         const getLangCode = (lang: string) => {
           if (lang === "pt") return "pt-BR";
           if (lang === "en") return "en-US";

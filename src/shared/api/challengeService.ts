@@ -69,7 +69,7 @@ export interface CounterProposalInput {
 }
 
 function getDemoChallenges(): PlayerChallenge[] {
-  if (typeof globalThis.window === "undefined") return [];
+  if (globalThis.window === undefined) return [];
   try {
     const saved = localStorage.getItem(DEMO_STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
@@ -80,7 +80,7 @@ function getDemoChallenges(): PlayerChallenge[] {
 }
 
 function saveDemoChallenges(challenges: PlayerChallenge[]): void {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
   localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(challenges));
 }
 

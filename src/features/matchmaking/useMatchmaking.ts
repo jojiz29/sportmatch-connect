@@ -4,6 +4,7 @@ import { supabase } from "@/shared/api/supabase";
 import { User } from "@/entities/types";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { secureRandom } from "@/shared/lib/crypto";
 
 export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => void) {
   const queryClient = useQueryClient();
@@ -51,7 +52,7 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
     },
     onSuccess: (data, variables, context) => {
       if (data.action === "like") {
-        const isMatch = Math.random() > 0.4;
+        const isMatch = secureRandom() > 0.4;
         if (isMatch && onMatch && context?.previousStack) {
           const matchedUser = context.previousStack.find((u) => u.id === data.userId);
           if (matchedUser) {

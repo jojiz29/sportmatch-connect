@@ -14,6 +14,7 @@ import { supabase } from "./supabase";
 import { Squad, User } from "@/entities/types";
 import { withTimeout } from "./timeoutHelper";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { cryptoSecureRandomString } from "@/shared/lib/crypto";
 
 const LOCAL_STORAGE_KEY_SQUADS = "sportmatch_demo_squads";
 const LOCAL_STORAGE_KEY_MEMBERSHIPS = "sportmatch_demo_memberships";
@@ -53,7 +54,7 @@ const DEFAULT_MEMBERSHIPS: Record<string, string[]> = {
 // ==============================================================
 
 function getMockSquads(): Squad[] {
-  if (typeof globalThis.window === "undefined") return DEFAULT_MOCK_SQUADS;
+  if (globalThis.window === undefined) return DEFAULT_MOCK_SQUADS;
   try {
     const saved = globalThis.window.localStorage.getItem(LOCAL_STORAGE_KEY_SQUADS);
     if (saved) return JSON.parse(saved);
@@ -64,7 +65,7 @@ function getMockSquads(): Squad[] {
 }
 
 function saveMockSquads(squads: Squad[]) {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
   try {
     globalThis.window.localStorage.setItem(LOCAL_STORAGE_KEY_SQUADS, JSON.stringify(squads));
   } catch (e) {
@@ -73,7 +74,7 @@ function saveMockSquads(squads: Squad[]) {
 }
 
 function getMockMemberships(): Record<string, string[]> {
-  if (typeof globalThis.window === "undefined") return DEFAULT_MEMBERSHIPS;
+  if (globalThis.window === undefined) return DEFAULT_MEMBERSHIPS;
   try {
     const saved = globalThis.window.localStorage.getItem(LOCAL_STORAGE_KEY_MEMBERSHIPS);
     if (saved) return JSON.parse(saved);
@@ -84,9 +85,12 @@ function getMockMemberships(): Record<string, string[]> {
 }
 
 function saveMockMemberships(memberships: Record<string, string[]>) {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
   try {
-    globalThis.window.localStorage.setItem(LOCAL_STORAGE_KEY_MEMBERSHIPS, JSON.stringify(memberships));
+    globalThis.window.localStorage.setItem(
+      LOCAL_STORAGE_KEY_MEMBERSHIPS,
+      JSON.stringify(memberships),
+    );
   } catch (e) {
     console.warn("Failed to save mock memberships to localStorage:", e);
   }
@@ -177,7 +181,7 @@ export async function createSquad(
 
   // 3. Inyecta mensaje de sistema en el chat del squad
   try {
-    const systemMsgId = `msg_system_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const systemMsgId = `msg_system_${Date.now()}_${cryptoSecureRandomString(5)}`;
     await supabase.from("messages").insert({
       id: systemMsgId,
       chat_id: `chat_squad_${squad.id}`,
@@ -332,7 +336,7 @@ export async function getSquadMembers(squadId: string): Promise<User[]> {
         matches_played: 12,
         last_location_lat: -12.14,
         last_location_lng: -76.995,
-      } as User,
+      },
     ];
   }
 

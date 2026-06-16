@@ -53,39 +53,32 @@ function getAlertConfig(daysSince: number): {
   // 14+ days
   return {
     level: 1,
-    message:
-      "¡Te extrañamos! Te regalamos 50 FitCoins para tu próximo partido. 🎁",
+    message: "¡Te extrañamos! Te regalamos 50 FitCoins para tu próximo partido. 🎁",
     fitcoinBonus: 50,
   };
 }
 
-async function sendPushNotification(
-  pushToken: string,
-  message: string,
-): Promise<boolean> {
+async function sendPushNotification(pushToken: string, message: string): Promise<boolean> {
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
     console.warn("OneSignal not configured; skipping push notification.");
     return false;
   }
 
   try {
-    const response = await fetch(
-      "https://onesignal.com/api/v1/notifications",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`,
-        },
-        body: JSON.stringify({
-          app_id: ONESIGNAL_APP_ID,
-          include_subscription_ids: [pushToken],
-          headings: { en: "¡Te extrañamos! 🏟️", es: "¡Te extrañamos! 🏟️" },
-          contents: { en: message, es: message },
-          url: "https://sportmatch-connect.vercel.app/app",
-        }),
+    const response = await fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`,
       },
-    );
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        include_subscription_ids: [pushToken],
+        headings: { en: "¡Te extrañamos! 🏟️", es: "¡Te extrañamos! 🏟️" },
+        contents: { en: message, es: message },
+        url: "https://sportmatch-connect.vercel.app/app",
+      }),
+    });
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -177,9 +170,7 @@ serve(async (req) => {
     // POST: execute detection
     if (method === "POST") {
       const body = await req.json().catch(() => ({}));
-      const simulateDate = body?.simulate_date
-        ? new Date(body.simulate_date)
-        : new Date();
+      const simulateDate = body?.simulate_date ? new Date(body.simulate_date) : new Date();
       const dryRun = body?.dry_run === true;
 
       // Query inactive users via the view
@@ -191,9 +182,7 @@ serve(async (req) => {
         // Fallback: query profiles directly
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select(
-            "id, name, email, avatar_url, last_login_at, push_token, is_admin, deleted_at",
-          )
+          .select("id, name, email, avatar_url, last_login_at, push_token, is_admin, deleted_at")
           .is("deleted_at", null)
           .or(
             "last_login_at.lt." +
@@ -211,16 +200,16 @@ serve(async (req) => {
           );
         }
 
-        inactiveUsers = (profiles || []).map((p) => ({
-          ...p,
-          inactivity_days: p.last_login_at
-            ? Math.floor(
-                (simulateDate.getTime() -
-                  new Date(p.last_login_at).getTime()) /
-                  86400000,
-              )
-            : 999,
-        })).filter((u) => !u.is_admin);
+        inactiveUsers = (profiles || [])
+          .map((p) => ({
+            ...p,
+            inactivity_days: p.last_login_at
+              ? Math.floor(
+                  (simulateDate.getTime() - new Date(p.last_login_at).getTime()) / 86400000,
+                )
+              : 999,
+          }))
+          .filter((u) => !u.is_admin);
       }
 
       const users: InactiveUser[] = (inactiveUsers || []) as InactiveUser[];
@@ -271,10 +260,7 @@ serve(async (req) => {
 
           // 2. Send push notification
           if (user.push_token) {
-            const pushSent = await sendPushNotification(
-              user.push_token,
-              config.message,
-            );
+            const pushSent = await sendPushNotification(user.push_token, config.message);
             result.push_sent = pushSent;
           }
 
@@ -305,14 +291,16 @@ serve(async (req) => {
         JSON.stringify({
           ok: true,
           summary,
-          results: dryRun ? results : results.map((r) => ({
-            user_id: r.user_id,
-            alert_level: r.alert_level,
-            days_since: r.days_since,
-            push_sent: r.push_sent,
-            fitcoin_bonus: r.fitcoin_bonus,
-            error: r.error || null,
-          })),
+          results: dryRun
+            ? results
+            : results.map((r) => ({
+                user_id: r.user_id,
+                alert_level: r.alert_level,
+                days_since: r.days_since,
+                push_sent: r.push_sent,
+                fitcoin_bonus: r.fitcoin_bonus,
+                error: r.error || null,
+              })),
           dry_run: dryRun,
           timestamp: simulateDate.toISOString(),
         }),
@@ -320,16 +308,16 @@ serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: "Method not allowed. Use GET or POST." }),
-      { status: 405, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed. Use GET or POST." }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error("Error in detect-inactive-users Edge Function:", err);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 });

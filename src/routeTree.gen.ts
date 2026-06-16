@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as OnboardingSportsRouteImport } from './routes/onboarding.sports'
+import { Route as ChallengeTokenRouteImport } from './routes/challenge.$token'
 import { Route as AppTournamentsRouteImport } from './routes/app.tournaments'
 import { Route as AppSquadsRouteImport } from './routes/app.squads'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
@@ -64,6 +65,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const OnboardingSportsRoute = OnboardingSportsRouteImport.update({
   id: '/onboarding/sports',
   path: '/onboarding/sports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChallengeTokenRoute = ChallengeTokenRouteImport.update({
+  id: '/challenge/$token',
+  path: '/challenge/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppTournamentsRoute = AppTournamentsRouteImport.update({
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AppSettingsRoute
   '/app/squads': typeof AppSquadsRoute
   '/app/tournaments': typeof AppTournamentsRoute
+  '/challenge/$token': typeof ChallengeTokenRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
   '/app/': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AppSettingsRoute
   '/app/squads': typeof AppSquadsRoute
   '/app/tournaments': typeof AppTournamentsRoute
+  '/challenge/$token': typeof ChallengeTokenRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
   '/app': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/app/settings': typeof AppSettingsRoute
   '/app/squads': typeof AppSquadsRoute
   '/app/tournaments': typeof AppTournamentsRoute
+  '/challenge/$token': typeof ChallengeTokenRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
   '/app/': typeof AppIndexRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/squads'
     | '/app/tournaments'
+    | '/challenge/$token'
     | '/onboarding/sports'
     | '/app/'
     | '/app/courts/$courtId'
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/squads'
     | '/app/tournaments'
+    | '/challenge/$token'
     | '/onboarding/sports'
     | '/app'
     | '/app/courts/$courtId'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/squads'
     | '/app/tournaments'
+    | '/challenge/$token'
     | '/onboarding/sports'
     | '/app/'
     | '/app/courts/$courtId'
@@ -338,6 +350,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   DemoRoute: typeof DemoRoute
   LoginRoute: typeof LoginRoute
+  ChallengeTokenRoute: typeof ChallengeTokenRoute
   OnboardingSportsRoute: typeof OnboardingSportsRoute
 }
 
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/sports'
       fullPath: '/onboarding/sports'
       preLoaderRoute: typeof OnboardingSportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/challenge/$token': {
+      id: '/challenge/$token'
+      path: '/challenge/$token'
+      fullPath: '/challenge/$token'
+      preLoaderRoute: typeof ChallengeTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/tournaments': {
@@ -613,6 +633,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   DemoRoute: DemoRoute,
   LoginRoute: LoginRoute,
+  ChallengeTokenRoute: ChallengeTokenRoute,
   OnboardingSportsRoute: OnboardingSportsRoute,
 }
 export const routeTree = rootRouteImport

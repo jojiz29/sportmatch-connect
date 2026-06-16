@@ -63,7 +63,13 @@ function generateId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
-  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let fallback = "";
+  const time = Date.now();
+  for (let i = 0; i < 9; i++) {
+    fallback += chars[(time + i) % chars.length];
+  }
+  return `id-${Date.now()}-${fallback}`;
 }
 
 // === BLOQUE: RESOLUCIÓN DE IDIOMA POR DEFECTO ===

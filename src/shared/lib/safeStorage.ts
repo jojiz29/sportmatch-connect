@@ -28,7 +28,7 @@ export const createSafeStorage = (): StateStorage => {
   return {
     getItem: (name: string): string | null => {
       try {
-        const value = typeof globalThis.window === "undefined" ? null : localStorage.getItem(name);
+        const value = globalThis.window === undefined ? null : localStorage.getItem(name);
         if (value) {
           // Valida que el JSON sea parseable (stress test de hidratación)
           JSON.parse(value);
@@ -41,7 +41,7 @@ export const createSafeStorage = (): StateStorage => {
         );
         // Limpia la key corrupta si es posible
         try {
-          if (typeof globalThis.window !== "undefined") {
+          if (globalThis.window !== undefined) {
             localStorage.removeItem(name);
           }
         } catch (removeError) {
@@ -52,7 +52,7 @@ export const createSafeStorage = (): StateStorage => {
     },
     setItem: (name: string, value: string): void => {
       try {
-        if (typeof globalThis.window !== "undefined") {
+        if (globalThis.window !== undefined) {
           localStorage.setItem(name, value);
         }
       } catch (error) {
@@ -62,7 +62,7 @@ export const createSafeStorage = (): StateStorage => {
     },
     removeItem: (name: string): void => {
       try {
-        if (typeof globalThis.window !== "undefined") {
+        if (globalThis.window !== undefined) {
           localStorage.removeItem(name);
         }
       } catch (error) {

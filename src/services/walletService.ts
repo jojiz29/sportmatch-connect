@@ -93,7 +93,7 @@ export function handleWalletError(err: unknown): boolean {
     err && typeof err === "object"
       ? (err as { message?: string; details?: string })?.message ||
         (err as { message?: string; details?: string })?.details ||
-        String(err)
+        JSON.stringify(err)
       : String(err);
 
   if (message.includes("Insufficient FitCoins balance for this transaction")) {

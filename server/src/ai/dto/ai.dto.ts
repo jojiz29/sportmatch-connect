@@ -161,6 +161,62 @@ export class ModerateTextDto {
   context?: "post" | "comment" | "bio" | "ad";
 }
 
+// ==============================================================
+// COACH — Court Recommendations
+// ==============================================================
+
+export class CoachRecommendationDto {
+  @ApiProperty({
+    description: "Deporte preferido del usuario",
+    example: "pádel",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  sport?: string;
+
+  @ApiProperty({
+    description: "Ubicación preferida (ciudad/distrito)",
+    example: "Miraflores",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  location?: string;
+
+  @ApiProperty({
+    description: "Nivel de juego",
+    example: "intermedio",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  level?: string;
+
+  @ApiProperty({
+    description: "Preferencias adicionales (ej. 'techada', 'iluminación')",
+    example: "techada",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  preferences?: string;
+
+  @ApiProperty({
+    description: "Idioma del usuario",
+    example: "es",
+    enum: ["es", "en", "pt"],
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(["es", "en", "pt"])
+  language?: "es" | "en" | "pt";
+}
+
 export class ModerationResultDto {
   @ApiProperty({ description: "Si el texto es seguro según las políticas", example: true })
   safe!: boolean;

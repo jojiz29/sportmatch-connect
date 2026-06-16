@@ -17,6 +17,8 @@ import { BookingsModule } from "./bookings/bookings.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AiModule } from "./ai/ai.module";
 import { SettingsModule } from "./settings/settings.module";
+import { SocialModule } from "./social/social.module";
+import { MatchmakingModule } from "./matchmaking/matchmaking.module";
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { SettingsModule } from "./settings/settings.module";
     BookingsModule,
     AiModule,
     SettingsModule,
+    SocialModule,
+    MatchmakingModule,
   ],
   controllers: [HealthController],
 })

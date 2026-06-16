@@ -50,8 +50,10 @@ export interface ChatMessage {
   text: string;
 }
 
+export type SupportedLanguage = "es" | "en" | "pt";
+
 export interface SendMessageOptions {
-  language?: "es" | "en" | "pt";
+  language?: SupportedLanguage;
   history?: ChatMessage[];
 }
 
@@ -183,9 +185,7 @@ async function handleHttpError(response: Response): Promise<never> {
   if (response.status === 429) {
     throw new Error("Has enviado demasiados mensajes. Espera un momento.");
   }
-  const errorPayload = await response
-    .json()
-    .catch(() => ({ message: `HTTP ${response.status}` }));
+  const errorPayload = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
   throw new Error(
     errorPayload.message || `Error al contactar con el asistente (HTTP ${response.status})`,
   );
@@ -196,6 +196,48 @@ async function handleHttpError(response: Response): Promise<never> {
  * ------------------------------------------------------------------
  * Soporta multi-idioma y memoria conversacional.
  */
+export interface CoachPreferences {
+  sport?: string;
+  location?: string;
+  level?: string;
+  preferences?: string;
+  language?: "es" | "en" | "pt";
+}
+
+export async function fetchCoachRecommendations(
+  prefs: CoachPreferences,
+): Promise<AiChatResponse> {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!isAllowedApiHost(apiBaseUrl)) {
+    throw new Error("Configuración inválida: VITE_API_URL no apunta a un backend válido.");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+
+  const response = await fetchWithTimeout(
+    `${apiBaseUrl}/api/v1/ai/coach/recommend`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(prefs),
+    },
+    30000,
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("No autorizado. Inicia sesión de nuevo.");
+    if (response.status === 429) throw new Error("Demasiadas solicitudes. Espera un momento.");
+    const errPayload = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
+    throw new Error(errPayload.message || `Error del coach (HTTP ${response.status})`);
+  }
+
+  return (await response.json()) as AiChatResponse;
+}
+
 export async function sendMessageToAI(
   message: string,
   options: SendMessageOptions = {},

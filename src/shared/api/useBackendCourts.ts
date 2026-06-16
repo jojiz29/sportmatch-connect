@@ -79,7 +79,7 @@ export function useBackendCourts() {
       const { data: result, error } = await backendApi.courts.update(
         "",
         id,
-        data as Parameters<typeof backendApi.courts.update>[2],
+        data,
       );
       if (error) throw new Error(error);
       return result;

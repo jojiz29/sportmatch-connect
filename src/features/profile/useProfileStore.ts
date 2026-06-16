@@ -58,13 +58,13 @@ const buildProfilePayload = (updated: User): Record<string, unknown> => {
 };
 
 const extractMissingColumn = (msg: string): string | undefined => {
-  let match = (/Could not find the '(\w+)' column/).exec(msg);
+  let match = /Could not find the '(\w+)' column/.exec(msg);
   if (match) return match[1];
 
-  match = (/column\s+"(\w+)"\s+of\s+relation/).exec(msg);
+  match = /column\s+"(\w+)"\s+of\s+relation/.exec(msg);
   if (match) return match[1];
 
-  match = (/column\s+profiles\.(\w+)\s+does\s+not\s+exist/).exec(msg);
+  match = /column\s+profiles\.(\w+)\s+does\s+not\s+exist/.exec(msg);
   if (match) return match[1];
 
   return undefined;

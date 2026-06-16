@@ -14,7 +14,7 @@ export function useOnlineStatus(): OnlineStatus {
   });
 
   useEffect(() => {
-    if (typeof globalThis.window === "undefined") return;
+    if (globalThis.window === undefined) return;
 
     const handleOnline = () => setStatus("online");
     const handleOffline = () => setStatus("offline");

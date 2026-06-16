@@ -6,6 +6,7 @@ import { logPaymentAttempt } from "@/services/paymentService";
 import { PaymentMethod } from "@/shared/lib/paymentUtils";
 import type { Stripe, StripeElements } from "@stripe/stripe-js";
 import { CardElement } from "@stripe/react-stripe-js";
+import { cryptoSecureRandomString } from "@/shared/lib/crypto";
 
 // === BLOQUE: PAYLOAD DE PAGO ===
 // Datos necesarios para procesar un pago: método, monto, uso de FitCoins y datos del titular.
@@ -47,10 +48,23 @@ interface PaymentGatewayState {
 
 const buildSupabaseFunctionsUrl = (): string => {
   const supabaseUrlRaw = (import.meta.env.VITE_SUPABASE_URL || "") as string;
-  const supabaseUrl = supabaseUrlRaw
-    .replace(/\/(?:rest\/v1|functions\/v1)\/?$/, "")
-    .replace(/\/+$/, "");
-  return (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined) ?? `${supabaseUrl}/functions/v1`;
+  let supabaseUrl = supabaseUrlRaw;
+  if (supabaseUrl.endsWith("/rest/v1")) {
+    supabaseUrl = supabaseUrl.slice(0, -8);
+  } else if (supabaseUrl.endsWith("/rest/v1/")) {
+    supabaseUrl = supabaseUrl.slice(0, -9);
+  } else if (supabaseUrl.endsWith("/functions/v1")) {
+    supabaseUrl = supabaseUrl.slice(0, -13);
+  } else if (supabaseUrl.endsWith("/functions/v1/")) {
+    supabaseUrl = supabaseUrl.slice(0, -14);
+  }
+  while (supabaseUrl.endsWith("/")) {
+    supabaseUrl = supabaseUrl.slice(0, -1);
+  }
+  return (
+    (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined) ??
+    `${supabaseUrl}/functions/v1`
+  );
 };
 
 const handleStripePaymentFlow = async (
@@ -139,6 +153,96 @@ const handleStripePaymentFlow = async (
 // === BLOQUE: STORE DE PASARELA DE PAGOS ===
 // Procesa pagos con tarjeta (Stripe), Yape/Plin y descuento con FitCoins.
 // No se persiste en localStorage (el estado es transaccional).
+// Helpers para procesar flujos de pago reduciendo la complejidad cognitiva
+const failPayment = (
+  set: any,
+  attempt: any,
+  errorCode: string,
+  error: string,
+) => {
+  set({ isProcessing: false, status: "failed", error, errorCode });
+  logPaymentAttempt({ ...attempt, status: "failed", errorCode });
+  return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+};
+
+const processCardPayment = async (
+  set: any,
+  payload: any,
+  attempt: any,
+  isDemo: boolean,
+  stripe: any,
+  elements: any,
+) => {
+  if (!payload.cardHolderName || payload.cardHolderName.trim().length < 3) {
+    return failPayment(
+      set,
+      attempt,
+      "CARD_HOLDER_INVALID",
+      "El nombre del titular debe tener al menos 3 letras.",
+    );
+  }
+
+  if (isDemo) {
+    const txId = `TXN-DEMO-${cryptoSecureRandomString(9).toUpperCase()}`;
+    set({
+      isProcessing: false,
+      status: "success",
+      transactionId: txId,
+      error: null,
+      errorCode: null,
+      lastPaymentMethod: payload.method,
+    });
+    logPaymentAttempt({ ...attempt, status: "success", errorCode: undefined });
+    return {
+      success: true,
+      transactionId: txId,
+      amountCharged: payload.amount,
+      fitcoinsUsed: payload.fitcoinsToUse,
+    };
+  }
+
+  try {
+    const stripeRes = await handleStripePaymentFlow(payload, stripe, elements);
+    if (!stripeRes.success) {
+      const errorCode = stripeRes.errorCode || "STRIPE_ERROR";
+      const error = stripeRes.errorMessage || "Error al procesar el pago.";
+      return failPayment(set, attempt, errorCode, error);
+    }
+    return null;
+  } catch (err) {
+    const errorCode = "STRIPE_REQUEST_FAILED";
+    let error = err instanceof Error ? err.message : "Error al procesar el pago con Stripe.";
+    if (error === "Failed to fetch" || error.includes("NetworkError")) {
+      error =
+        "No se pudo conectar con el servidor de pagos. Verifica la configuración de CORS y la URL de la función de Stripe.";
+    }
+    return failPayment(set, attempt, errorCode, error);
+  }
+};
+
+const processYapePlinPayment = (set: any, payload: any, attempt: any) => {
+  if (!payload.phone || !/^\d{9}$/.test(payload.phone)) {
+    return failPayment(set, attempt, "PHONE_INVALID", "Número de celular inválido");
+  }
+  return null;
+};
+
+const processFitcoinsPayment = async (payload: any, courtName: string, isDemo: boolean, set: any, attempt: any) => {
+  const ledgerDesc = `Reserva: ${courtName}`;
+  const ledgerSuccess = await useWalletStore
+    .getState()
+    .redeem(payload.fitcoinsToUse, ledgerDesc);
+  if (!ledgerSuccess && !isDemo) {
+    return failPayment(
+      set,
+      attempt,
+      "FITCOINS_INSUFFICIENT",
+      "Saldo de FitCoins insuficiente para completar esta transacción.",
+    );
+  }
+  return null;
+};
+
 export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
   isProcessing: false,
   status: "idle",
@@ -161,9 +265,8 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       transactionId: null,
     });
 
-    // Registro del intento de pago para auditoría
     const attempt = {
-      id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: `pay-${Date.now()}-${cryptoSecureRandomString(6)}`,
       timestamp: new Date().toISOString(),
       courtName,
       method: payload.method,
@@ -176,85 +279,24 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
 
     // ── Flujo: Pago con tarjeta (Stripe) ────────────────────────────────
     if (payload.method === "card" && payload.amount > 0) {
-      // Valida que el nombre del titular tenga al menos 3 caracteres
-      if (!payload.cardHolderName || payload.cardHolderName.trim().length < 3) {
-        const errorCode = "CARD_HOLDER_INVALID";
-        const error = "El nombre del titular debe tener al menos 3 letras.";
-        set({ isProcessing: false, status: "failed", error, errorCode });
-        logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-        return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
-
-      // Modo demo: simula éxito sin llamar a Stripe
-      if (isDemo) {
-        const txId = `TXN-DEMO-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
-        set({
-          isProcessing: false,
-          status: "success",
-          transactionId: txId,
-          error: null,
-          errorCode: null,
-          lastPaymentMethod: payload.method,
-        });
-        logPaymentAttempt({ ...attempt, status: "success", errorCode: undefined });
-        return {
-          success: true,
-          transactionId: txId,
-          amountCharged: payload.amount,
-          fitcoinsUsed: payload.fitcoinsToUse,
-        };
-      }
-
-      try {
-        const stripeRes = await handleStripePaymentFlow(payload, stripe, elements);
-        if (!stripeRes.success) {
-          const errorCode = stripeRes.errorCode || "STRIPE_ERROR";
-          const error = stripeRes.errorMessage || "Error al procesar el pago.";
-          set({ isProcessing: false, status: "failed", error, errorCode });
-          logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-          return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-        }
-      } catch (err) {
-        const errorCode = "STRIPE_REQUEST_FAILED";
-        let error = err instanceof Error ? err.message : "Error al procesar el pago con Stripe.";
-        if (error === "Failed to fetch" || error.includes("NetworkError")) {
-          error =
-            "No se pudo conectar con el servidor de pagos. Verifica la configuración de CORS y la URL de la función de Stripe.";
-        }
-        set({ isProcessing: false, status: "failed", error, errorCode });
-        logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-        return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
+      const cardResult = await processCardPayment(set, payload, attempt, isDemo, stripe, elements);
+      if (cardResult) return cardResult;
     }
 
     // ── Flujo: Pago con Yape o Plin ──────────────────────────────────────
     if (payload.method === "yape" || payload.method === "plin") {
-      if (!payload.phone || !/^\d{9}$/.test(payload.phone)) {
-        const errorCode = "PHONE_INVALID";
-        const error = "Número de celular inválido";
-        set({ isProcessing: false, status: "failed", error, errorCode });
-        logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-        return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
+      const yapePlinResult = processYapePlinPayment(set, payload, attempt);
+      if (yapePlinResult) return yapePlinResult;
     }
 
     // ── Flujo: Descuento con FitCoins ────────────────────────────────────
     if (payload.useFitcoins && payload.fitcoinsToUse > 0) {
-      const ledgerDesc = `Reserva: ${courtName}`;
-      const ledgerSuccess = await useWalletStore
-        .getState()
-        .redeem(payload.fitcoinsToUse, ledgerDesc);
-      if (!ledgerSuccess && !isDemo) {
-        const errorCode = "FITCOINS_INSUFFICIENT";
-        const error = "Saldo de FitCoins insuficiente para completar esta transacción.";
-        set({ isProcessing: false, status: "failed", error, errorCode });
-        logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-        return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
-      }
+      const fitcoinsResult = await processFitcoinsPayment(payload, courtName, isDemo, set, attempt);
+      if (fitcoinsResult) return fitcoinsResult;
     }
 
     // Éxito: genera un ID de transacción y actualiza el estado
-    const txId = `TXN-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+    const txId = `TXN-${cryptoSecureRandomString(9).toUpperCase()}`;
     set({
       isProcessing: false,
       status: "success",

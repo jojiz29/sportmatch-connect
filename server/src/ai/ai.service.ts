@@ -12,7 +12,7 @@ import {
 } from "@nestjs/common";
 import { VertexAiService, VertexAiGenerationResult } from "./vertex-ai.service";
 import { ChatResponseDto } from "./dto/chat.dto";
-import { ChatMessageDto, ModerationResultDto } from "./dto/ai.dto";
+import { ChatMessageDto, ModerationResultDto, CoachRecommendationDto } from "./dto/ai.dto";
 
 interface UserRateLimit {
   count: number;
@@ -179,6 +179,67 @@ Reglas estrictas:
     const tags = this.parseHashtagsList(result.text, maxTags);
     return {
       tags,
+      metadata: { tokens: result.tokens, model: result.model, latencyMs: result.latencyMs },
+    };
+  }
+
+  async recommendCourts(
+    userId: string,
+    preferences: CoachRecommendationDto,
+    language: "es" | "en" | "pt" = "es",
+  ): Promise<ChatResponseDto> {
+    this.checkRateLimit(userId, "chat");
+
+    const promptLang =
+      language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish";
+    const parts: string[] = [];
+    if (preferences.sport) parts.push(`Sport: ${preferences.sport}`);
+    if (preferences.location) parts.push(`Location: ${preferences.location}`);
+    if (preferences.level) parts.push(`Level: ${preferences.level}`);
+    if (preferences.preferences) parts.push(`Preferences: ${preferences.preferences}`);
+    const userContext = parts.length > 0 ? parts.join(", ") : "no specific preferences";
+
+    const prompt = `You are Sporty, an expert sports coach giving court recommendations. A user with these preferences — ${userContext} — wants your advice.
+
+Keep your response short (max 80 words), natural, and conversational. Sound like a friend giving tips, not a corporate bot.
+
+Structure your response as:
+1. A brief personal recommendation (2-3 sentences)
+2. A suggestion of what type of court to look for
+3. A practical tip (e.g. best time to book, what to bring)
+
+Respond in ${promptLang} only. Do NOT list courts by name.`;
+
+    let result: VertexAiGenerationResult;
+    try {
+      result = await this.vertexAiService.generateContent(prompt, {
+        language,
+        temperature: 0.7,
+      });
+    } catch (err) {
+      const rawError = err instanceof Error ? err.message : String(err);
+      throw new InternalServerErrorException(this.parseVertexAiError(rawError));
+    }
+
+    return {
+      reply: result.text,
+      suggestions: [
+        language === "en"
+          ? "Show me available courts"
+          : language === "pt"
+            ? "Mostrar quadras disponíveis"
+            : "Mostrar canchas disponibles",
+        language === "en"
+          ? "I need a different sport"
+          : language === "pt"
+            ? "Quero outro esporte"
+            : "Necesito otro deporte",
+        language === "en"
+          ? "More details please"
+          : language === "pt"
+            ? "Mais detalhes por favor"
+            : "Más detalles por favor",
+      ],
       metadata: { tokens: result.tokens, model: result.model, latencyMs: result.latencyMs },
     };
   }

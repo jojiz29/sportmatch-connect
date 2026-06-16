@@ -91,7 +91,7 @@ export function purgeAllStores() {
 // con MOCK_USERS. Incluye una recarga forzada de caché si faltan
 // los nuevos perfiles B2B de negocio.
 const getDemoUsers = (): User[] => {
-  if (typeof globalThis.window === "undefined") return MOCK_USERS;
+  if (globalThis.window === undefined) return MOCK_USERS;
   const stored = localStorage.getItem("sportmatch_demo_users");
   if (!stored) {
     localStorage.setItem("sportmatch_demo_users", JSON.stringify(MOCK_USERS));
@@ -113,7 +113,7 @@ const getDemoUsers = (): User[] => {
 
 // Persiste los usuarios simulados en localStorage
 const saveDemoUsers = (users: User[]) => {
-  if (typeof globalThis.window !== "undefined") {
+  if (globalThis.window !== undefined) {
     localStorage.setItem("sportmatch_demo_users", JSON.stringify(users));
   }
 };
@@ -121,9 +121,7 @@ const saveDemoUsers = (users: User[]) => {
 // Helper: Realiza la búsqueda de usuario mock para login
 const findMockUser = (email: string, users: User[]): User => {
   const emailLower = email.toLowerCase();
-  const found = users.find(
-    (u) => u.email?.toLowerCase() === emailLower || u.id === email,
-  );
+  const found = users.find((u) => u.email?.toLowerCase() === emailLower || u.id === email);
   if (found) return found;
   if (email === "ejuniorfloress@gmail.com") {
     return users.find((u) => u.id === "user-edwin-master") || users[0];
@@ -188,11 +186,7 @@ const fetchProfile = async (userId: string, token?: string): Promise<User> => {
 const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promise<User> => {
   let profile: User | null = null;
   for (let i = 0; i < 5; i++) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUserId)
-      .single();
+    const { data } = await supabase.from("profiles").select("*").eq("id", authUserId).single();
     if (data) {
       profile = data as User;
       break;

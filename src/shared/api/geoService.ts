@@ -77,7 +77,9 @@ export async function searchNearbyCourts(
     const list = await apiClient.venues.getAll();
     const courts = list.map((c) => ({
       ...c,
-      distance_km: Number.parseFloat(calculateDistance(latitude, longitude, c.lat, c.lng).toFixed(2)),
+      distance_km: Number.parseFloat(
+        calculateDistance(latitude, longitude, c.lat, c.lng).toFixed(2),
+      ),
     }));
     return courts.sort((a, b) => a.distance_km - b.distance_km);
   }
@@ -114,7 +116,7 @@ export async function searchNearbyCourts(
       id: string;
       created_at: string;
       name: string;
-      sport: string;
+      sport: Court["sport"];
       price_per_hour: string | number;
       rating: string | number;
       reviews_count: string | number;
@@ -131,7 +133,7 @@ export async function searchNearbyCourts(
       id: row.id,
       created_at: row.created_at,
       name: row.name,
-      sport: row.sport as Court["sport"],
+      sport: row.sport,
       price_per_hour: Number.parseFloat(String(row.price_per_hour)),
       rating: Number.parseFloat(String(row.rating)),
       reviews_count: Number.parseInt(String(row.reviews_count), 10),

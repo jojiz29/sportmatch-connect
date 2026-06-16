@@ -7,6 +7,7 @@
 //   - "detailed": barra + label + level + xp actual/next + restantes
 // ============================================================
 
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Trophy } from "lucide-react";
 import { motion } from "framer-motion";
@@ -34,6 +35,7 @@ interface XpBarProps {
   showLabel?: boolean;
   animateOnLevelUp?: boolean;
   customInfo?: XpBarInfo;
+  onLevelUp?: (prevLevel: number, newLevel: number) => void;
 }
 
 export function XpBar({
@@ -43,9 +45,20 @@ export function XpBar({
   showLabel = true,
   animateOnLevelUp = true,
   customInfo,
+  onLevelUp,
 }: XpBarProps) {
   const { t } = useTranslation();
   const liveInfo = useXpLevel();
+  const prevLevelRef = useRef(liveInfo?.level);
+
+  useEffect(() => {
+    if (!liveInfo || !onLevelUp) return;
+    const prev = prevLevelRef.current;
+    if (prev !== undefined && liveInfo.level > prev) {
+      onLevelUp(prev, liveInfo.level);
+    }
+    prevLevelRef.current = liveInfo.level;
+  }, [liveInfo?.level, onLevelUp]);
 
   // Unificamos XpInfo y customInfo en un solo shape
   const info: XpBarInfo | null = customInfo
