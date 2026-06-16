@@ -6,6 +6,18 @@
 - **Backend:** NestJS + Prisma backend located in `/server/`.
 - **Database:** Supabase PostgreSQL with Row Level Security (RLS) enabled.
 
+## 📐 Architecture Decision Records (ADR)
+
+Las decisiones arquitectónicas se documentan en `docs/adr/`. Cualquier decisión
+técnica difícil de revertir debe tener su ADR antes de mergear a `main`.
+
+- [ADR-001](docs/adr/ADR-001-database-persistence.md): PostgreSQL/Supabase como persistencia principal.
+- [Índice completo](docs/adr/README.md).
+
+**Cuándo crear una ADR:** decisión arquitectónica, difícil de revertir, con
+alternativas razonables, que afecta a más de un componente. Ver
+`docs/adr/README.md` para la guía completa.
+
 ## ⚠️ High-Signal Quirks & Developer Commands
 
 - **Frontend Dev Server:** Run `npx vite`. (Do NOT run `npm run dev` for the frontend!)
