@@ -10,6 +10,8 @@ import { getFollowStats } from "@/shared/api/socialService";
 // === BLOQUE: HELPER FUNCTIONS FOR PROFILE UPDATE ===
 // Se excluyen columnas de solo lectura o protegidas por triggers (trust_score, fitcoins_balance, user_role, is_admin)
 // para evitar que el payload de UPDATE cause excepciones de integridad o RLS en Supabase.
+// Se excluye "level" porque ahora es una columna INTEGER en la BD que maneja el XP.
+// Mapeamos el string "level" del cliente a "level_label" en la BD.
 const VALID_PROFILE_COLUMNS = new Set([
   "id",
   "name",
@@ -17,7 +19,7 @@ const VALID_PROFILE_COLUMNS = new Set([
   "city",
   "avatar_url",
   "bio",
-  "level",
+  "level_label",
   "preferred_sports",
   "matches_played",
   "last_location_lat",
@@ -34,6 +36,7 @@ const VALID_PROFILE_COLUMNS = new Set([
 const buildProfilePayload = (updated: User): Record<string, unknown> => {
   const normalizedPayload = {
     ...updated,
+    level_label: updated.level, // Mapeo de string "level" a "level_label"
     user_sports: Array.isArray(updated.user_sports) ? updated.user_sports : [],
     sport_preferences: {
       sports_matrix: updated.sport_preferences?.sports_matrix || {},

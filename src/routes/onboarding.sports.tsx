@@ -162,7 +162,14 @@ function OnboardingSports() {
       navigate({ to: "/app" });
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("Error saving onboarding sports:", err);
-      const errMsg = err instanceof Error ? err.message : "Error desconocido al guardar el perfil.";
+
+      let errMsg = "Error desconocido al guardar el perfil.";
+      if (err instanceof Error) {
+        errMsg = err.message;
+      } else if (err && typeof err === "object" && "message" in err) {
+        errMsg = String((err as { message: unknown }).message);
+      }
+
       // Si el store agotó reintentos por columnas faltantes, muestra hint de migración.
       if (errMsg.includes("migración SQL") || errMsg.includes("varios intentos")) {
         toast.error(

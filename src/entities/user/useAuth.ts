@@ -209,7 +209,7 @@ const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promi
           bio: newUser.bio,
           trust_score: newUser.trust_score ?? 50,
           fitcoins_balance: newUser.fitcoins_balance ?? 0,
-          level: newUser.level ?? "Intermedio",
+          level_label: newUser.level ?? "Intermedio",
           preferred_sports: newUser.preferred_sports ?? [],
           sport_preferences: newUser.sport_preferences,
         })
@@ -230,7 +230,7 @@ const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promi
           user_role: newUser.user_role || "PLAYER",
           trust_score: newUser.trust_score ?? 50,
           fitcoins_balance: newUser.fitcoins_balance ?? 0,
-          level: newUser.level ?? "Intermedio",
+          level_label: newUser.level ?? "Intermedio",
           preferred_sports: newUser.preferred_sports ?? [],
           sport_preferences: newUser.sport_preferences,
         })
