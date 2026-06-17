@@ -25,6 +25,7 @@ const ALLOWED_DOMAINS = [
   "icloud.com",
   "protonmail.com",
   "sportmatch.app",
+  "sportmatch.com",
   "puka.com",
 ];
 
