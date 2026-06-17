@@ -8,6 +8,8 @@ import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { getFollowStats } from "@/shared/api/socialService";
 
 // === BLOQUE: HELPER FUNCTIONS FOR PROFILE UPDATE ===
+// Se excluyen columnas de solo lectura o protegidas por triggers (trust_score, fitcoins_balance, user_role, is_admin)
+// para evitar que el payload de UPDATE cause excepciones de integridad o RLS en Supabase.
 const VALID_PROFILE_COLUMNS = new Set([
   "id",
   "name",
@@ -15,18 +17,14 @@ const VALID_PROFILE_COLUMNS = new Set([
   "city",
   "avatar_url",
   "bio",
-  "trust_score",
-  "fitcoins_balance",
   "level",
   "preferred_sports",
   "matches_played",
   "last_location_lat",
   "last_location_lng",
-  "user_role",
   "company_name",
   "business_category",
   "is_sponsored",
-  "is_admin",
   "gender",
   "user_sports",
   "sport_preferences",
