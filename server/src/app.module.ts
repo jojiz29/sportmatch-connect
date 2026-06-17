@@ -16,6 +16,7 @@ import { SportsModule } from "./sports/sports.module";
 import { BookingsModule } from "./bookings/bookings.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AiModule } from "./ai/ai.module";
+import { B2bAiModule } from "./ai/b2b/b2b-ai.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SocialModule } from "./social/social.module";
 import { MatchmakingModule } from "./matchmaking/matchmaking.module";
@@ -33,6 +34,7 @@ import { MatchmakingModule } from "./matchmaking/matchmaking.module";
     SportsModule,
     BookingsModule,
     AiModule,
+    B2bAiModule,
     SettingsModule,
     SocialModule,
     MatchmakingModule,
