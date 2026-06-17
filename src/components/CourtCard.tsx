@@ -79,7 +79,7 @@ export function CourtCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute top-3 right-3 flex items-center gap-1">
           <FavoriteButton courtId={court.id} size="sm" />
-          
+
           {court.is_available ? (
             <span className="px-2 py-1 rounded-full bg-neon/90 text-neon-foreground text-xs font-semibold">
               Disponible

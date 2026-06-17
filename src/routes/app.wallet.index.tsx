@@ -5,18 +5,7 @@
 // de transferencia de FitCoins.
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  Trophy,
-  Gift,
-  Zap,
-  Crown,
-  X,
-  ShoppingBag,
-  Loader2,
-  Send,
-  History,
-  Award,
-} from "lucide-react";
+import { Trophy, Gift, Crown, X, ShoppingBag, Loader2, Send, History, Award } from "lucide-react";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -54,8 +43,7 @@ function getRewardEmoji(category: string | null, title: string): string {
 
 function Wallet() {
   const { t } = useTranslation();
-  const { balance, redeem, initWallet, challenges, progressChallenge, claimChallenge } =
-    useWalletStore();
+  const { balance, redeem, initWallet } = useWalletStore();
 
   // === BLOQUE: Estados de UI ===
   const [transferOpen, setTransferOpen] = useState(false);

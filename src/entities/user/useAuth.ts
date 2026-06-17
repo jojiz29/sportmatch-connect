@@ -136,7 +136,10 @@ const findMockUser = (email: string, users: User[]): User => {
 };
 
 // Helper: Ejecuta el login mock
-const executeMockSignIn = (email: string | undefined, store: any) => {
+const executeMockSignIn = (
+  email: string | undefined,
+  store: { setDemoMode: (val: boolean) => void; login: (user: User) => void },
+) => {
   store.setDemoMode(true);
   const users = getDemoUsers();
   let mockUser: User = email ? findMockUser(email, users) : users[0];

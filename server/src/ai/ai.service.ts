@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from "@nestjs/common";
 import { VertexAiService, VertexAiGenerationResult } from "./vertex-ai.service";
+import { AiConfigService } from "./ai-config.service";
 import { ChatResponseDto } from "./dto/chat.dto";
 import { ChatMessageDto, ModerationResultDto, CoachRecommendationDto } from "./dto/ai.dto";
 
@@ -34,7 +35,10 @@ export class AiService {
     moderation: 100,
   };
 
-  constructor(private readonly vertexAiService: VertexAiService) {}
+  constructor(
+    private readonly vertexAiService: VertexAiService,
+    private readonly aiConfigService: AiConfigService,
+  ) {}
 
   async chat(
     userId: string,
@@ -190,8 +194,7 @@ Reglas estrictas:
   ): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
-    const promptLang =
-      language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish";
+    const promptLang = language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish";
     const parts: string[] = [];
     if (preferences.sport) parts.push(`Sport: ${preferences.sport}`);
     if (preferences.location) parts.push(`Location: ${preferences.location}`);
@@ -484,4 +487,236 @@ Reglas:
       preview: originalText.slice(0, 80),
     };
   }
+
+  /**
+   * Health check del módulo Vertex AI.
+   *
+   * - Si AiConfigService está degradado → retorna status: "degraded"
+   * - Si el cliente Vertex AI no está disponible → retorna status: "degraded"
+   * - Si la generación de respuesta mínima falla → retorna status: "error"
+   * - Si la generación es exitosa → retorna status: "ok"
+   *
+   * Realiza una prueba de carga real generando 1 palabra para confirmar
+   * que la API de aiplatform tiene permisos de ejecución completos.
+   */
+  async healthCheck(): Promise<{ status: string; message: string }> {
+    if (!this.aiConfigService.isHealthy()) {
+      return {
+        status: "degraded",
+        message: this.aiConfigService.getDegradedReason() || "Vertex AI not configured",
+      };
+    }
+
+    if (!this.vertexAiService.isAvailable()) {
+      return { status: "degraded", message: "Vertex AI client not initialized" };
+    }
+
+    try {
+      const result = await this.vertexAiService.generateContent("Di 'ok'", {
+        temperature: 0,
+      });
+      if (result.text && result.text.length > 0) {
+        return { status: "ok", message: "Vertex AI connected" };
+      }
+      return { status: "error", message: "Vertex AI returned empty response" };
+    } catch (err) {
+      this.logger.error(
+        `Health check failed: ${err instanceof Error ? err.message : "unknown error"}`,
+      );
+      return { status: "error", message: "Vertex AI generation failed — model unreachable" };
+    }
+  }
+
+  /**
+   * Prueba de integración completa del pipeline Vertex AI.
+   * Ejecuta 4 pruebas — chat, coach, hashtags, moderación — y retorna
+   * un reporte con el estado individual de cada una.
+   *
+   * Si una prueba falla, captura el error técnico de Google (código + mensaje)
+   * para diagnóstico IAM sin tirar el servidor.
+   */
+  async testFullIntegration(): Promise<IntegrationTestReport> {
+    const errors: IntegrationTestError[] = [];
+    let chatTest: "success" | "failed" = "success";
+    let coachTest: "success" | "failed" = "success";
+    let hashtagsTest: "success" | "failed" = "success";
+    let moderationTest: "success" | "failed" = "success";
+
+    // ── Test 1: Chat simple ──
+    try {
+      const chatResult = await this.vertexAiService.generateContent(
+        "Hola, ¿me escuchas? Responde solo 'sí'.",
+        { temperature: 0 },
+      );
+      if (!chatResult.text || chatResult.text.length === 0) {
+        throw new Error("Empty response from model");
+      }
+    } catch (err) {
+      chatTest = "failed";
+      errors.push({
+        test: "chat",
+        error: err instanceof Error ? err.message : String(err),
+        raw: this.extractGoogleError(err),
+      });
+    }
+
+    // ── Test 2: Coach recommendation (prompt complejo) ──
+    try {
+      const coachResult = await this.vertexAiService.generateContent(
+        "Recomiéndame canchas de fútbol para nivel intermedio en Lima. Responde en 2 frases en español.",
+        { temperature: 0.3 },
+      );
+      if (!coachResult.text || coachResult.text.length === 0) {
+        throw new Error("Empty response from model");
+      }
+    } catch (err) {
+      coachTest = "failed";
+      errors.push({
+        test: "coach",
+        error: err instanceof Error ? err.message : String(err),
+        raw: this.extractGoogleError(err),
+      });
+    }
+
+    // ── Test 3: Hashtags ──
+    try {
+      const hashtagResult = await this.vertexAiService.generateContent(
+        "Genera 3 hashtags en español para un post sobre un partido de fútbol. Responde SOLO los hashtags, uno por línea, con #.",
+        { temperature: 0 },
+      );
+      if (!hashtagResult.text || hashtagResult.text.length === 0) {
+        throw new Error("Empty response from model");
+      }
+    } catch (err) {
+      hashtagsTest = "failed";
+      errors.push({
+        test: "hashtags",
+        error: err instanceof Error ? err.message : String(err),
+        raw: this.extractGoogleError(err),
+      });
+    }
+
+    // ── Test 4: Moderación ──
+    try {
+      const moderationResult = await this.vertexAiService.generateContent(
+        `Analiza si este texto es ofensivo: "Buen partido ayer, felicitaciones al equipo rival". Responde SOLO en JSON: {"safe": true/false, "reason": "breve explicación"}.`,
+        { temperature: 0 },
+      );
+      if (!moderationResult.text || moderationResult.text.length === 0) {
+        throw new Error("Empty response from model");
+      }
+    } catch (err) {
+      moderationTest = "failed";
+      errors.push({
+        test: "moderation",
+        error: err instanceof Error ? err.message : String(err),
+        raw: this.extractGoogleError(err),
+      });
+    }
+
+    const allPassed = errors.length === 0;
+
+    return { chatTest, coachTest, hashtagsTest, moderationTest, allPassed, errors };
+  }
+
+  /**
+   * Extrae el error estructurado de Google Gen AI SDK.
+   *
+   * El SDK de @google/genai puede devolver errores en varias formas:
+   *   1. err.error = { code, status, message, details[] }   (objeto directo)
+   *   2. err.message = '{"error":{"code":403,...}}'          (JSON string)
+   *   3. err.status + err.statusMessage                       (HTTP wrapper)
+   *
+   * Este método intenta todas las variantes y retorna la info
+   * relevante para diagnóstico IAM sin exponer credenciales.
+   */
+  private extractGoogleError(err: unknown): Record<string, unknown> | null {
+    if (!err || typeof err !== "object") return null;
+
+    const e = err as Record<string, unknown>;
+
+    // Variante 1: err.error es un objeto directo
+    if (e.error && typeof e.error === "object") {
+      const g = e.error as Record<string, unknown>;
+      return this.sanitizeGoogleError(g);
+    }
+
+    // Variante 2: err.message contiene un JSON stringificado
+    if (typeof e.message === "string") {
+      try {
+        const parsed = JSON.parse(e.message);
+        if (parsed.error && typeof parsed.error === "object") {
+          return this.sanitizeGoogleError(parsed.error);
+        }
+        if (parsed.code || parsed.status) {
+          return this.sanitizeGoogleError(parsed);
+        }
+
+        // Caso especial: error es un array de errores
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].error) {
+          return this.sanitizeGoogleError(parsed[0].error);
+        }
+      } catch {
+        // no es JSON parseable, devolver el mensaje plano
+        return { rawMessage: e.message.slice(0, 500) };
+      }
+    }
+
+    // Variante 3: HTTP status wrapper con statusText
+    if (e.status || e.statusMessage) {
+      return {
+        httpStatus: e.status,
+        statusText: e.statusMessage,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Sanitiza el objeto de error de Google: extrae solo campos
+   * seguros (code, status, message, reason, permission, resource).
+   */
+  private sanitizeGoogleError(g: Record<string, unknown>): Record<string, unknown> {
+    const details = Array.isArray(g.details) ? g.details : [];
+
+    // Extraer info IAM específica de los details
+    const iamInfo = details
+      .filter((d: unknown) => typeof d === "object" && d !== null)
+      .map((d: Record<string, unknown>) => {
+        const metadata = d.metadata as Record<string, unknown> | undefined;
+        return {
+          type: d["@type"],
+          reason: d.reason,
+          domain: d.domain,
+          permission: metadata?.permission,
+          resource: metadata?.resource,
+          service: metadata?.service,
+          consumer: metadata?.consumer,
+        };
+      });
+
+    return {
+      code: g.code,
+      status: g.status,
+      reason: g.reason,
+      message: typeof g.message === "string" ? g.message.slice(0, 400) : undefined,
+      iamDetails: iamInfo.length > 0 ? iamInfo : undefined,
+    };
+  }
+}
+
+interface IntegrationTestError {
+  test: string;
+  error: string;
+  raw: Record<string, unknown> | null;
+}
+
+export interface IntegrationTestReport {
+  chatTest: "success" | "failed";
+  coachTest: "success" | "failed";
+  hashtagsTest: "success" | "failed";
+  moderationTest: "success" | "failed";
+  allPassed: boolean;
+  errors: IntegrationTestError[];
 }

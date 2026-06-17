@@ -2,6 +2,11 @@
 // vertex-ai.service.ts — Capa de infraestructura
 // Encapsula el SDK de Google Gen AI (soporta local + serverless)
 // Multi-idioma + slang + history-aware
+//
+// Si las credenciales no están disponibles (AiConfigService degraded),
+// el cliente Vertex AI se salta la inicialización sin bloquear el
+// arranque del servidor. El endpoint de health check reporta el estado
+// real y el resto de la app sigue funcionando.
 // ============================================================
 
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
@@ -25,29 +30,66 @@ export interface VertexAiOptions {
 @Injectable()
 export class VertexAiService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(VertexAiService.name);
-  private genAi!: GoogleGenAI;
-  private config!: VertexAiConfig;
+  private genAi: GoogleGenAI | null = null;
+  private config: VertexAiConfig | null = null;
 
   constructor(private readonly configService: AiConfigService) {}
 
   onModuleInit(): void {
-    this.config = this.configService.getConfig();
-
-    const googleAuthOptions: Record<string, unknown> = {};
-    if (this.config.credentialsJson) {
-      googleAuthOptions.credentials = this.config.credentialsJson;
-    } else if (this.config.credentialsPath) {
-      googleAuthOptions.keyFile = this.config.credentialsPath;
+    if (!this.configService.isHealthy()) {
+      this.logger.warn(
+        `Vertex AI client not initialized: ${this.configService.getDegradedReason()}`,
+      );
+      return;
     }
 
-    this.genAi = new GoogleGenAI({
-      vertexai: true,
-      project: this.config.projectId,
-      location: this.config.location,
-      googleAuthOptions,
-    });
+    this.config = this.configService.getConfig();
 
-    this.logger.log("Google Gen AI (Vertex) client initialized");
+    if (this.config.apiKey) {
+      // --- Modo Directo (Google AI Studio Key) ---
+      this.genAi = new GoogleGenAI({
+        apiKey: this.config.apiKey,
+      });
+      this.logger.log("Google Gen AI client initialized using API Key (Direct Mode)");
+    } else {
+      // --- Modo Corporativo (GCP Service Account JSON) ---
+      const googleAuthOptions: Record<string, unknown> = {};
+      if (this.config.credentialsJson) {
+        googleAuthOptions.credentials = this.config.credentialsJson;
+      } else if (this.config.credentialsPath) {
+        googleAuthOptions.keyFile = this.config.credentialsPath;
+      }
+
+      this.genAi = new GoogleGenAI({
+        vertexai: true,
+        project: this.config.projectId,
+        location: this.config.location,
+        googleAuthOptions,
+      });
+      this.logger.log("Google Gen AI (Vertex) client initialized using Service Account JSON");
+    }
+  }
+
+  isAvailable(): boolean {
+    return this.genAi !== null && this.config !== null;
+  }
+
+  /**
+   * Ping básico a Vertex AI para health checks.
+   * Envía "ping" con maxOutputTokens=1 para minimizar coste y latencia.
+   */
+  async ping(): Promise<boolean> {
+    if (!this.genAi || !this.config) return false;
+    try {
+      await this.genAi.models.generateContent({
+        model: this.config.modelId,
+        contents: "ping",
+        config: { maxOutputTokens: 1 },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -64,6 +106,10 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     userMessage: string,
     options: VertexAiOptions = {},
   ): Promise<VertexAiGenerationResult> {
+    if (!this.genAi || !this.config) {
+      throw new Error("Vertex AI client not available — module is degraded");
+    }
+
     const startTime = Date.now();
     const language = options.language ?? "es";
     const temperature = options.temperature ?? this.config.temperature;
