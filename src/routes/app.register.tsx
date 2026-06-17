@@ -148,7 +148,10 @@ function RegisterPage() {
     },
     onSubmit: async (vals) => {
       const newUser = {
-        id: crypto.randomUUID(),
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         created_at: new Date().toISOString(),
         name: role === "BUSINESS" ? vals.companyName : vals.fullName,
         age: role === "BUSINESS" ? 0 : 25,

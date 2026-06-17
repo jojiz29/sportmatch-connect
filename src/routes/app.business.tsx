@@ -82,7 +82,11 @@ async function uploadVenueImage(imageValue: string, businessId: string): Promise
   const imageBlob = await fetch(imageValue).then((response) => response.blob());
   const extension =
     imageBlob.type === "image/png" ? "png" : imageBlob.type === "image/webp" ? "webp" : "jpg";
-  const filePath = `${businessId}/${crypto.randomUUID()}.${extension}`;
+  const uuid =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  const filePath = `${businessId}/${uuid}.${extension}`;
   const { error } = await withTimeout(
     supabase.storage.from("venue-images").upload(filePath, imageBlob, {
       contentType: imageBlob.type || "image/webp",

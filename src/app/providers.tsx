@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
 // VITE_API_URL configured: https://sportmatch-connect.onrender.com
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { supabase } from "@/shared/api/supabase";
+import { supabase, USE_SUPABASE } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
 import { I18nextProvider } from "react-i18next";
@@ -35,8 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    const isDemo = useAuthStore.getState().isDemoMode;
+    const isDemo = useAuthStore.getState().isDemoMode || !USE_SUPABASE;
     if (isDemo) {
+      if (!useAuthStore.getState().isDemoMode) {
+        useAuthStore.getState().setDemoMode(true);
+      }
       setIsLoading(false);
       return;
     }
