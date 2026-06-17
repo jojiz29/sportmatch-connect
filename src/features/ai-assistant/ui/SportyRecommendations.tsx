@@ -1,13 +1,21 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bot, MapPin, Target, Sparkles, Loader2 } from "lucide-react";
-import { fetchCoachRecommendations, type CoachPreferences, type AiChatResponse } from "../api/sportyAiAPI";
+import {
+  fetchCoachRecommendations,
+  type CoachPreferences,
+  type AiChatResponse,
+} from "../api/sportyAiAPI";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { cn } from "@/lib/utils";
 
 export function SportyRecommendations() {
   const { t, i18n } = useTranslation();
-  const language = i18n.language?.startsWith("es") ? "es" : i18n.language?.startsWith("pt") ? "pt" : "en";
+  const language = i18n.language?.startsWith("es")
+    ? "es"
+    : i18n.language?.startsWith("pt")
+      ? "pt"
+      : "en";
   const user = useAuthStore((s) => s.user);
 
   const [sport, setSport] = useState(user?.preferred_sports?.[0] || "");

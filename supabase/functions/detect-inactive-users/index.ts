@@ -174,7 +174,7 @@ serve(async (req) => {
       const dryRun = body?.dry_run === true;
 
       // Query inactive users via the view
-      let { data: inactiveUsers, error: queryError } = await supabase
+      const { data: inactiveUsers, error: queryError } = await supabase
         .from("view_inactive_users")
         .select("*");
 
