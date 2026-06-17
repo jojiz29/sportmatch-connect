@@ -805,7 +805,7 @@ function Profile() {
                   </DialogTrigger>
                   <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 text-foreground">
                     <DialogHeader>
-                      <DialogTitle className="text-lg font-black text-white">
+                      <DialogTitle className="text-lg font-black text-foreground">
                         Verificar mi identidad (DNI)
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">

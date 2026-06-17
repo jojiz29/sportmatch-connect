@@ -175,7 +175,7 @@ function Login() {
             <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-glow mb-5 ring-1 ring-white/10">
               <MapPin className="h-7 w-7 text-primary-foreground" />
             </div>
-            <h1 className="font-heading text-4xl tracking-wide text-white">
+            <h1 className="font-heading text-4xl tracking-wide text-foreground">
               {t("login.title_signin")}
             </h1>
             <p className="text-muted-foreground mt-2 text-sm">{t("login.subtitle")}</p>
@@ -247,7 +247,7 @@ function Login() {
             <button
               type="button"
               onClick={() => setIsDemoModalOpen(true)}
-              className="w-full py-3.5 glass text-white font-bold rounded-xl cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all duration-300 text-sm border border-white/5"
+              className="w-full py-3.5 glass text-foreground font-bold rounded-xl cursor-pointer hover:bg-muted/20 active:scale-[0.98] transition-all duration-300 text-sm border border-border/10"
             >
               {t("login.btn_demo")}
             </button>
@@ -264,7 +264,7 @@ function Login() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/40 text-white font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] group"
+              className="w-full py-3.5 bg-muted/10 hover:bg-muted/20 border border-border/10 hover:border-primary/40 text-foreground font-bold rounded-xl flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] group"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
                 <path
@@ -310,7 +310,7 @@ function Login() {
       <Dialog open={isDemoModalOpen} onOpenChange={setIsDemoModalOpen}>
         <DialogContent className="sm:max-w-md bg-gradient-card border border-border/60 rounded-3xl p-6 backdrop-blur-md text-foreground">
           <DialogHeader className="text-center">
-            <DialogTitle className="font-heading text-2xl tracking-wide text-white">
+            <DialogTitle className="font-heading text-2xl tracking-wide text-foreground">
               Modo Demo: Selecciona tu Rol
             </DialogTitle>
             <DialogDescription className="text-muted-foreground mt-1 text-sm">
@@ -328,7 +328,7 @@ function Login() {
               <div className="h-12 w-12 rounded-xl bg-gradient-primary grid place-items-center mb-3 shadow-glow group-hover:scale-110 transition-transform">
                 <UserIcon className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-sm text-white group-hover:text-primary transition-colors">
+              <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
                 Jugador
               </span>
               <span className="text-[10px] text-muted-foreground text-center mt-1 leading-normal">
@@ -344,7 +344,7 @@ function Login() {
               <div className="h-12 w-12 rounded-xl bg-gradient-neon grid place-items-center mb-3 shadow-glow-neon group-hover:scale-110 transition-transform">
                 <Store className="h-6 w-6 text-black" />
               </div>
-              <span className="font-bold text-sm text-white group-hover:text-neon transition-colors">
+              <span className="font-bold text-sm text-foreground group-hover:text-neon transition-colors">
                 Empresa
               </span>
               <span className="text-[10px] text-muted-foreground text-center mt-1 leading-normal">
