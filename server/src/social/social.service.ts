@@ -30,10 +30,7 @@ export class SocialService {
   // ==============================================================
   // FOLLOW
   // ==============================================================
-  async follow(
-    followerId: string,
-    followingId: string,
-  ): Promise<FollowUserResponse> {
+  async follow(followerId: string, followingId: string): Promise<FollowUserResponse> {
     if (!followerId || !followingId) {
       throw new BadRequestException("followerId y followingId son obligatorios");
     }
@@ -100,11 +97,7 @@ export class SocialService {
   // ==============================================================
   // GET FOLLOWERS (lista paginada)
   // ==============================================================
-  async getFollowers(
-    userId: string,
-    page = 1,
-    limit = 20,
-  ) {
+  async getFollowers(userId: string, page = 1, limit = 20) {
     if (!userId) throw new BadRequestException("userId es obligatorio");
     const skip = (page - 1) * limit;
 
@@ -146,11 +139,7 @@ export class SocialService {
   // ==============================================================
   // GET FOLLOWING (lista paginada)
   // ==============================================================
-  async getFollowing(
-    userId: string,
-    page = 1,
-    limit = 20,
-  ) {
+  async getFollowing(userId: string, page = 1, limit = 20) {
     if (!userId) throw new BadRequestException("userId es obligatorio");
     const skip = (page - 1) * limit;
 
