@@ -5,25 +5,29 @@
 
 import { Test, TestingModule } from "@nestjs/testing";
 import { AiService } from "./ai.service";
+import { AiConfigService } from "./ai-config.service";
 import { VertexAiService } from "./vertex-ai.service";
 import { InternalServerErrorException, HttpException, HttpStatus } from "@nestjs/common";
 
 describe("AiService", () => {
   let service: AiService;
   let vertexAiServiceMock: any;
+  let aiConfigServiceMock: any;
 
   beforeEach(async () => {
     vertexAiServiceMock = {
       generateContent: jest.fn(),
     };
+    aiConfigServiceMock = {
+      isHealthy: jest.fn().mockReturnValue(true),
+      getDegradedReason: jest.fn().mockReturnValue(""),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiService,
-        {
-          provide: VertexAiService,
-          useValue: vertexAiServiceMock,
-        },
+        { provide: VertexAiService, useValue: vertexAiServiceMock },
+        { provide: AiConfigService, useValue: aiConfigServiceMock },
       ],
     }).compile();
 

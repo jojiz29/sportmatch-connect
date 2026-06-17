@@ -31,11 +31,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 import { MatchmakingService } from "./matchmaking.service";
-import {
-  EnterQueueDto,
-  SwipeDto,
-  ReportResultDto,
-} from "./dto/matchmaking.dto";
+import { EnterQueueDto, SwipeDto, ReportResultDto } from "./dto/matchmaking.dto";
 
 @ApiTags("Matchmaking")
 @Controller("matchmaking")
@@ -50,10 +46,7 @@ export class MatchmakingController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Entrar a la cola de matchmaking para un deporte" })
   @HttpCode(HttpStatus.CREATED)
-  async enterQueue(
-    @Body() dto: EnterQueueDto,
-    @Request() req: { user: { userId: string } },
-  ) {
+  async enterQueue(@Body() dto: EnterQueueDto, @Request() req: { user: { userId: string } }) {
     return this.matchmakingService.enterQueue(req.user.userId, dto);
   }
 
@@ -64,10 +57,7 @@ export class MatchmakingController {
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Salir de la cola de matchmaking para un deporte" })
-  async leaveQueue(
-    @Param("sport") sport: string,
-    @Request() req: { user: { userId: string } },
-  ) {
+  async leaveQueue(@Param("sport") sport: string, @Request() req: { user: { userId: string } }) {
     return this.matchmakingService.leaveQueue(req.user.userId, sport);
   }
 
@@ -93,10 +83,7 @@ export class MatchmakingController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Buscar partido en la cola (debe estar WAITING)" })
   @HttpCode(HttpStatus.OK)
-  async findMatch(
-    @Param("sport") sport: string,
-    @Request() req: { user: { userId: string } },
-  ) {
+  async findMatch(@Param("sport") sport: string, @Request() req: { user: { userId: string } }) {
     return this.matchmakingService.findMatch(req.user.userId, sport);
   }
 
@@ -108,10 +95,7 @@ export class MatchmakingController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Registrar swipe (LIKE/PASS) y detectar mutual_like" })
   @HttpCode(HttpStatus.CREATED)
-  async recordSwipe(
-    @Body() dto: SwipeDto,
-    @Request() req: { user: { userId: string } },
-  ) {
+  async recordSwipe(@Body() dto: SwipeDto, @Request() req: { user: { userId: string } }) {
     return this.matchmakingService.recordSwipe(req.user.userId, dto);
   }
 
@@ -122,10 +106,7 @@ export class MatchmakingController {
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Reportar resultado de partido (dispara Elo update)" })
-  async reportResult(
-    @Body() dto: ReportResultDto,
-    @Request() req: { user: { userId: string } },
-  ) {
+  async reportResult(@Body() dto: ReportResultDto, @Request() req: { user: { userId: string } }) {
     return this.matchmakingService.reportResult(req.user.userId, dto);
   }
 
@@ -136,10 +117,7 @@ export class MatchmakingController {
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Obtener mi rating Elo para un deporte" })
-  async getElo(
-    @Param("sport") sport: string,
-    @Request() req: { user: { userId: string } },
-  ) {
+  async getElo(@Param("sport") sport: string, @Request() req: { user: { userId: string } }) {
     return this.matchmakingService.getElo(req.user.userId, sport);
   }
 
@@ -160,10 +138,7 @@ export class MatchmakingController {
   @Get("leaderboard/:sport")
   @ApiOperation({ summary: "Top 50 jugadores por Elo en un deporte (público)" })
   @ApiQuery({ name: "limit", required: false, type: Number })
-  async getLeaderboard(
-    @Param("sport") sport: string,
-    @Query("limit") limit?: number,
-  ) {
+  async getLeaderboard(@Param("sport") sport: string, @Query("limit") limit?: number) {
     return this.matchmakingService.getLeaderboard(sport, limit || 50);
   }
 }

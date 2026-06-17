@@ -317,7 +317,11 @@ async function generateAndInsertHashtags(postId: string, content: string): Promi
   }
 }
 
-async function notifyFollowersAboutNewPost(userId: string, content: string, author: any): Promise<void> {
+async function notifyFollowersAboutNewPost(
+  userId: string,
+  content: string,
+  author: { company_name?: string | null; name?: string | null },
+): Promise<void> {
   try {
     const businessName = author.company_name || author.name;
 

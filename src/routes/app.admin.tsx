@@ -6,7 +6,17 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { Court, User } from "@/entities/types";
-import { Users, DollarSign, CalendarCheck, Activity, Star, MoreHorizontal, Plus, Edit3, Trash2 } from "lucide-react";
+import {
+  Users,
+  DollarSign,
+  CalendarCheck,
+  Activity,
+  Star,
+  MoreHorizontal,
+  Plus,
+  Edit3,
+  Trash2,
+} from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -52,7 +62,12 @@ function Admin() {
   const [courtsList, setCourtsList] = useState<Court[]>([]);
   const [showCourtForm, setShowCourtForm] = useState(false);
   const [editingCourt, setEditingCourt] = useState<Court | null>(null);
-  const [courtForm, setCourtForm] = useState({ name: "", sport: "", address: "", price_per_hour: 0 });
+  const [courtForm, setCourtForm] = useState({
+    name: "",
+    sport: "",
+    address: "",
+    price_per_hour: 0,
+  });
   const [savingCourt, setSavingCourt] = useState(false);
 
   // === BLOQUE: Carga de datos ===
@@ -150,15 +165,29 @@ function Admin() {
       if (editingCourt) {
         const { error } = await supabase
           .from("courts")
-          .update({ name: courtForm.name, sport: courtForm.sport, address: courtForm.address, price_per_hour: courtForm.price_per_hour })
+          .update({
+            name: courtForm.name,
+            sport: courtForm.sport,
+            address: courtForm.address,
+            price_per_hour: courtForm.price_per_hour,
+          })
           .eq("id", editingCourt.id);
         if (error) throw error;
-        setCourtsList(courtsList.map((c) => (c.id === editingCourt.id ? { ...c, ...courtForm } : c)));
+        setCourtsList(
+          courtsList.map((c) => (c.id === editingCourt.id ? { ...c, ...courtForm } : c)),
+        );
         toast.success("Cancha actualizada");
       } else {
         const { data, error } = await supabase
           .from("courts")
-          .insert([{ name: courtForm.name, sport: courtForm.sport, address: courtForm.address, price_per_hour: courtForm.price_per_hour }])
+          .insert([
+            {
+              name: courtForm.name,
+              sport: courtForm.sport,
+              address: courtForm.address,
+              price_per_hour: courtForm.price_per_hour,
+            },
+          ])
           .select()
           .single();
         if (error) throw error;
@@ -384,7 +413,9 @@ function Admin() {
               />
               <input
                 value={courtForm.price_per_hour}
-                onChange={(e) => setCourtForm({ ...courtForm, price_per_hour: Number(e.target.value) })}
+                onChange={(e) =>
+                  setCourtForm({ ...courtForm, price_per_hour: Number(e.target.value) })
+                }
                 placeholder="Precio/h (FC)"
                 type="number"
                 className="w-32 px-3 py-2 rounded-lg bg-background border border-border text-sm"
@@ -398,7 +429,10 @@ function Admin() {
             />
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => { setShowCourtForm(false); setEditingCourt(null); }}
+                onClick={() => {
+                  setShowCourtForm(false);
+                  setEditingCourt(null);
+                }}
                 className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-accent transition-colors cursor-pointer"
               >
                 Cancelar
@@ -437,13 +471,19 @@ function Admin() {
                   <tr key={c.id} className="border-t border-border">
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <img src={c.image_url} alt="" className="h-8 w-8 rounded-lg object-cover bg-muted" />
+                        <img
+                          src={c.image_url}
+                          alt=""
+                          className="h-8 w-8 rounded-lg object-cover bg-muted"
+                        />
                         <span className="font-medium">{c.name}</span>
                       </div>
                     </td>
                     <td>{c.sport}</td>
                     <td>{c.price_per_hour} FC</td>
-                    <td className="text-muted-foreground max-w-[200px] truncate">{c.address || "—"}</td>
+                    <td className="text-muted-foreground max-w-[200px] truncate">
+                      {c.address || "—"}
+                    </td>
                     <td>
                       <div className="flex items-center gap-1">
                         <button

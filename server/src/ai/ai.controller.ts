@@ -5,13 +5,16 @@
 // POST /api/v1/ai/text/comment-suggestion  → Feature #2 Smart Comments
 // POST /api/v1/ai/text/hashtags      → Feature #3 Auto-Hashtags
 // POST /api/v1/ai/text/moderate      → Feature #6 Content Moderation
-// Todos protegidos por SupabaseAuthGuard
+// GET  /api/v1/ai/health             → Health check (público)
+// Todos los endpoints protegidos por SupabaseAuthGuard excepto /health
 // ============================================================
 
-import { Body, Controller, Post, Request, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Request, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
+import { Public } from "../auth/decorators/public.decorator";
 import { AiService } from "./ai.service";
+import type { IntegrationTestReport } from "./ai.service";
 import { ChatRequestDto, ChatResponseDto, WelcomeRequestDto } from "./dto/chat.dto";
 import {
   CommentSuggestionDto,
@@ -119,5 +122,22 @@ export class AiController {
   ): Promise<ModerationResultDto> {
     const userId = req.user.sub;
     return this.aiService.moderateContent(userId, dto.text, dto.context ?? "post");
+  }
+
+  // TODO: Eliminar antes de producción
+  @Public()
+  @Post("test-full-integration")
+  @ApiOperation({
+    summary: "Test de integración completa del pipeline Vertex AI — TEMPORAL",
+  })
+  async testFullIntegration(): Promise<IntegrationTestReport> {
+    return this.aiService.testFullIntegration();
+  }
+
+  @Public()
+  @Get("health")
+  @ApiOperation({ summary: "Health check de Vertex AI (público)" })
+  async health(): Promise<{ status: string; message: string }> {
+    return this.aiService.healthCheck();
   }
 }

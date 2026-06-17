@@ -53,6 +53,7 @@ describe("useAiAssistantStore — loadWelcome idempotente (Fix A)", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it("estado inicial NO contiene un WELCOME hardcoded (SCRUM-345)", () => {
@@ -183,6 +184,82 @@ describe("useAiAssistantStore — loadWelcome idempotente (Fix A)", () => {
     expect(state.messages[1].role).toBe("system");
     expect(state.messages[1].variant).toBe("error");
     expect(state.messages[1].text).toContain("Backend timeout");
+  });
+
+  it("openChat, closeChat y toggleChat controlan isOpen", () => {
+    useAiAssistantStore.getState().openChat();
+    expect(useAiAssistantStore.getState().isOpen).toBe(true);
+
+    useAiAssistantStore.getState().closeChat();
+    expect(useAiAssistantStore.getState().isOpen).toBe(false);
+
+    useAiAssistantStore.getState().toggleChat();
+    expect(useAiAssistantStore.getState().isOpen).toBe(true);
+    useAiAssistantStore.getState().toggleChat();
+    expect(useAiAssistantStore.getState().isOpen).toBe(false);
+  });
+
+  it("setLanguage actualiza el idioma del chat", () => {
+    useAiAssistantStore.getState().setLanguage("pt");
+    expect(useAiAssistantStore.getState().language).toBe("pt");
+  });
+
+  it("sendMessage() con texto vacío no agrega mensajes", async () => {
+    await useAiAssistantStore.getState().sendMessage("   ");
+    expect(useAiAssistantStore.getState().messages).toHaveLength(0);
+  });
+
+  it("sendMessage() agrega respuesta del asistente en caso de éxito", async () => {
+    vi.spyOn(sportyAiAPI, "sendMessageToAI").mockResolvedValue({
+      reply: "¡Claro! Puedo ayudarte con eso.",
+      suggestions: ["Buscar canchas", "Ver retos"],
+      metadata: { tokens: 50, model: "gemini-2.5-flash", latencyMs: 400 },
+    });
+
+    await useAiAssistantStore.getState().sendMessage("¿Qué puedes hacer?");
+
+    const state = useAiAssistantStore.getState();
+    expect(state.messages).toHaveLength(2);
+    expect(state.messages[1].role).toBe("assistant");
+    expect(state.messages[1].text).toContain("Puedo ayudarte");
+    expect(state.messages[1].suggestions).toEqual(["Buscar canchas", "Ver retos"]);
+    expect(state.isTyping).toBe(false);
+  });
+
+  it("dismissError limpia el error del estado", () => {
+    useAiAssistantStore.setState({ error: "Algo falló" });
+    useAiAssistantStore.getState().dismissError();
+    expect(useAiAssistantStore.getState().error).toBeNull();
+  });
+
+  it("resolveDefaultLanguage usa VITE_CHAT_DEFAULT_LANG cuando está definido", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_CHAT_DEFAULT_LANG", "pt");
+    const { useAiAssistantStore: freshStore } = await import("../model/useAiAssistantStore");
+    expect(freshStore.getState().language).toBe("pt");
+    vi.unstubAllEnvs();
+  });
+
+  it("generateId usa fallback cuando crypto.randomUUID no existe", async () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: (arr: Uint8Array) => crypto.getRandomValues(arr),
+    });
+    vi.resetModules();
+    vi.stubEnv("VITE_API_URL", BACKEND_URL);
+
+    const sportyModule = await import("../api/sportyAiAPI");
+    vi.spyOn(sportyModule, "sendMessageToAI").mockResolvedValue({
+      reply: "ok",
+      suggestions: [],
+      metadata: { tokens: 1, model: "test", latencyMs: 1 },
+    });
+
+    const { useAiAssistantStore: freshStore } = await import("../model/useAiAssistantStore");
+    await freshStore.getState().sendMessage("test id fallback");
+    expect(freshStore.getState().messages[0].id).toMatch(/^id-/);
+
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 });
 

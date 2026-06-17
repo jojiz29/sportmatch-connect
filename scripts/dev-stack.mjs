@@ -12,7 +12,7 @@
 import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -147,6 +147,44 @@ if (!envOk) {
   error("Faltan variables de entorno críticas. Revisa server/.env antes de continuar.");
   process.exit(1);
 }
+
+// ============================================================
+// Paso 4.5: Liberar puertos colgados si están en uso (Windows)
+// ============================================================
+function killPort(port) {
+  try {
+    const stdout = execSync(`netstat -ano | findstr :${port}`, { stdio: "pipe" }).toString().trim();
+    if (!stdout) return;
+
+    const lines = stdout.split("\n");
+    const pids = new Set();
+
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      const pid = parts[parts.length - 1];
+      if (pid && /^\d+$/.test(pid)) {
+        pids.add(pid);
+      }
+    }
+
+    for (const pid of pids) {
+      if (pid === "0" || pid === process.pid.toString()) continue;
+      try {
+        execSync(`taskkill /F /PID ${pid}`, { stdio: "ignore" });
+        success(`Puerto ${port} liberado (PID ${pid} terminado)`);
+      } catch {
+        // ignorar fallos de taskkill individual
+      }
+    }
+  } catch {
+    // netstat devuelve código 1 si no encuentra coincidencia, es normal
+  }
+}
+
+info("Verificando y liberando puertos 5173 y 3000...");
+killPort(5173);
+killPort(3000);
+console.log("");
 
 // ============================================================
 // Paso 5: Lanzar ambos procesos con concurrently

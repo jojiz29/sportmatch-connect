@@ -61,13 +61,12 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
       }
       return { previousStack };
     },
-    onSuccess: (result) => {
+    onSuccess: (result, _variables, context) => {
       if (result.action === "like") {
         const { mutual_like } = result.data ?? {};
 
         if (mutual_like && onMatch) {
-          const stack = queryClient.getQueryData<User[]>(["matchmaking", "stack"]);
-          const matchedUser = stack?.find((u) => u.id === result.userId);
+          const matchedUser = context?.previousStack?.find((u) => u.id === result.userId);
           if (matchedUser) {
             onMatch(matchedUser);
             return;
