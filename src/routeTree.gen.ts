@@ -28,14 +28,20 @@ import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
 import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
+import { Route as AppAiVisionRouteImport } from './routes/app.ai-vision'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppWalletIndexRouteImport } from './routes/app.wallet.index'
 import { Route as AppProfileIndexRouteImport } from './routes/app.profile.index'
 import { Route as AppMatchIndexRouteImport } from './routes/app.match.index'
+import { Route as AppAiVisionIndexRouteImport } from './routes/app.ai-vision.index'
 import { Route as AppWalletHistoryRouteImport } from './routes/app.wallet.history'
 import { Route as AppProfileUserIdRouteImport } from './routes/app.profile.$userId'
 import { Route as AppMatchUserIdRouteImport } from './routes/app.match.$userId'
 import { Route as AppCourtsCourtIdRouteImport } from './routes/app.courts.$courtId'
+import { Route as AppArPreviewCourtIdRouteImport } from './routes/app.ar-preview.$courtId'
+import { Route as AppAiVisionFormAnalyzerRouteImport } from './routes/app.ai-vision.form-analyzer'
+import { Route as AppAiVisionFakeProfileRouteImport } from './routes/app.ai-vision.fake-profile'
+import { Route as AppAiVisionDniVerifyRouteImport } from './routes/app.ai-vision.dni-verify'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -132,6 +138,11 @@ const AppBusinessRoute = AppBusinessRouteImport.update({
   path: '/business',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiVisionRoute = AppAiVisionRouteImport.update({
+  id: '/ai-vision',
+  path: '/ai-vision',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -151,6 +162,11 @@ const AppMatchIndexRoute = AppMatchIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppMatchRoute,
+} as any)
+const AppAiVisionIndexRoute = AppAiVisionIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAiVisionRoute,
 } as any)
 const AppWalletHistoryRoute = AppWalletHistoryRouteImport.update({
   id: '/wallet/history',
@@ -172,6 +188,26 @@ const AppCourtsCourtIdRoute = AppCourtsCourtIdRouteImport.update({
   path: '/$courtId',
   getParentRoute: () => AppCourtsRoute,
 } as any)
+const AppArPreviewCourtIdRoute = AppArPreviewCourtIdRouteImport.update({
+  id: '/ar-preview/$courtId',
+  path: '/ar-preview/$courtId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAiVisionFormAnalyzerRoute = AppAiVisionFormAnalyzerRouteImport.update({
+  id: '/form-analyzer',
+  path: '/form-analyzer',
+  getParentRoute: () => AppAiVisionRoute,
+} as any)
+const AppAiVisionFakeProfileRoute = AppAiVisionFakeProfileRouteImport.update({
+  id: '/fake-profile',
+  path: '/fake-profile',
+  getParentRoute: () => AppAiVisionRoute,
+} as any)
+const AppAiVisionDniVerifyRoute = AppAiVisionDniVerifyRouteImport.update({
+  id: '/dni-verify',
+  path: '/dni-verify',
+  getParentRoute: () => AppAiVisionRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -179,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/ai-vision': typeof AppAiVisionRouteWithChildren
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
@@ -194,10 +231,15 @@ export interface FileRoutesByFullPath {
   '/challenge/$token': typeof ChallengeTokenRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
   '/app/': typeof AppIndexRoute
+  '/app/ai-vision/dni-verify': typeof AppAiVisionDniVerifyRoute
+  '/app/ai-vision/fake-profile': typeof AppAiVisionFakeProfileRoute
+  '/app/ai-vision/form-analyzer': typeof AppAiVisionFormAnalyzerRoute
+  '/app/ar-preview/$courtId': typeof AppArPreviewCourtIdRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
   '/app/profile/$userId': typeof AppProfileUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
+  '/app/ai-vision/': typeof AppAiVisionIndexRoute
   '/app/match/': typeof AppMatchIndexRoute
   '/app/profile/': typeof AppProfileIndexRoute
   '/app/wallet/': typeof AppWalletIndexRoute
@@ -220,10 +262,15 @@ export interface FileRoutesByTo {
   '/challenge/$token': typeof ChallengeTokenRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
   '/app': typeof AppIndexRoute
+  '/app/ai-vision/dni-verify': typeof AppAiVisionDniVerifyRoute
+  '/app/ai-vision/fake-profile': typeof AppAiVisionFakeProfileRoute
+  '/app/ai-vision/form-analyzer': typeof AppAiVisionFormAnalyzerRoute
+  '/app/ar-preview/$courtId': typeof AppArPreviewCourtIdRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
   '/app/profile/$userId': typeof AppProfileUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
+  '/app/ai-vision': typeof AppAiVisionIndexRoute
   '/app/match': typeof AppMatchIndexRoute
   '/app/profile': typeof AppProfileIndexRoute
   '/app/wallet': typeof AppWalletIndexRoute
@@ -235,6 +282,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/app/admin': typeof AppAdminRoute
+  '/app/ai-vision': typeof AppAiVisionRouteWithChildren
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
@@ -250,10 +298,15 @@ export interface FileRoutesById {
   '/challenge/$token': typeof ChallengeTokenRoute
   '/onboarding/sports': typeof OnboardingSportsRoute
   '/app/': typeof AppIndexRoute
+  '/app/ai-vision/dni-verify': typeof AppAiVisionDniVerifyRoute
+  '/app/ai-vision/fake-profile': typeof AppAiVisionFakeProfileRoute
+  '/app/ai-vision/form-analyzer': typeof AppAiVisionFormAnalyzerRoute
+  '/app/ar-preview/$courtId': typeof AppArPreviewCourtIdRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
   '/app/profile/$userId': typeof AppProfileUserIdRoute
   '/app/wallet/history': typeof AppWalletHistoryRoute
+  '/app/ai-vision/': typeof AppAiVisionIndexRoute
   '/app/match/': typeof AppMatchIndexRoute
   '/app/profile/': typeof AppProfileIndexRoute
   '/app/wallet/': typeof AppWalletIndexRoute
@@ -266,6 +319,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/app/admin'
+    | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
@@ -281,10 +335,15 @@ export interface FileRouteTypes {
     | '/challenge/$token'
     | '/onboarding/sports'
     | '/app/'
+    | '/app/ai-vision/dni-verify'
+    | '/app/ai-vision/fake-profile'
+    | '/app/ai-vision/form-analyzer'
+    | '/app/ar-preview/$courtId'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
     | '/app/profile/$userId'
     | '/app/wallet/history'
+    | '/app/ai-vision/'
     | '/app/match/'
     | '/app/profile/'
     | '/app/wallet/'
@@ -307,10 +366,15 @@ export interface FileRouteTypes {
     | '/challenge/$token'
     | '/onboarding/sports'
     | '/app'
+    | '/app/ai-vision/dni-verify'
+    | '/app/ai-vision/fake-profile'
+    | '/app/ai-vision/form-analyzer'
+    | '/app/ar-preview/$courtId'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
     | '/app/profile/$userId'
     | '/app/wallet/history'
+    | '/app/ai-vision'
     | '/app/match'
     | '/app/profile'
     | '/app/wallet'
@@ -321,6 +385,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/app/admin'
+    | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
@@ -336,10 +401,15 @@ export interface FileRouteTypes {
     | '/challenge/$token'
     | '/onboarding/sports'
     | '/app/'
+    | '/app/ai-vision/dni-verify'
+    | '/app/ai-vision/fake-profile'
+    | '/app/ai-vision/form-analyzer'
+    | '/app/ar-preview/$courtId'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
     | '/app/profile/$userId'
     | '/app/wallet/history'
+    | '/app/ai-vision/'
     | '/app/match/'
     | '/app/profile/'
     | '/app/wallet/'
@@ -489,6 +559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBusinessRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ai-vision': {
+      id: '/app/ai-vision'
+      path: '/ai-vision'
+      fullPath: '/app/ai-vision'
+      preLoaderRoute: typeof AppAiVisionRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/admin': {
       id: '/app/admin'
       path: '/admin'
@@ -516,6 +593,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/match/'
       preLoaderRoute: typeof AppMatchIndexRouteImport
       parentRoute: typeof AppMatchRoute
+    }
+    '/app/ai-vision/': {
+      id: '/app/ai-vision/'
+      path: '/'
+      fullPath: '/app/ai-vision/'
+      preLoaderRoute: typeof AppAiVisionIndexRouteImport
+      parentRoute: typeof AppAiVisionRoute
     }
     '/app/wallet/history': {
       id: '/app/wallet/history'
@@ -545,8 +629,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCourtsCourtIdRouteImport
       parentRoute: typeof AppCourtsRoute
     }
+    '/app/ar-preview/$courtId': {
+      id: '/app/ar-preview/$courtId'
+      path: '/ar-preview/$courtId'
+      fullPath: '/app/ar-preview/$courtId'
+      preLoaderRoute: typeof AppArPreviewCourtIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ai-vision/form-analyzer': {
+      id: '/app/ai-vision/form-analyzer'
+      path: '/form-analyzer'
+      fullPath: '/app/ai-vision/form-analyzer'
+      preLoaderRoute: typeof AppAiVisionFormAnalyzerRouteImport
+      parentRoute: typeof AppAiVisionRoute
+    }
+    '/app/ai-vision/fake-profile': {
+      id: '/app/ai-vision/fake-profile'
+      path: '/fake-profile'
+      fullPath: '/app/ai-vision/fake-profile'
+      preLoaderRoute: typeof AppAiVisionFakeProfileRouteImport
+      parentRoute: typeof AppAiVisionRoute
+    }
+    '/app/ai-vision/dni-verify': {
+      id: '/app/ai-vision/dni-verify'
+      path: '/dni-verify'
+      fullPath: '/app/ai-vision/dni-verify'
+      preLoaderRoute: typeof AppAiVisionDniVerifyRouteImport
+      parentRoute: typeof AppAiVisionRoute
+    }
   }
 }
+
+interface AppAiVisionRouteChildren {
+  AppAiVisionDniVerifyRoute: typeof AppAiVisionDniVerifyRoute
+  AppAiVisionFakeProfileRoute: typeof AppAiVisionFakeProfileRoute
+  AppAiVisionFormAnalyzerRoute: typeof AppAiVisionFormAnalyzerRoute
+  AppAiVisionIndexRoute: typeof AppAiVisionIndexRoute
+}
+
+const AppAiVisionRouteChildren: AppAiVisionRouteChildren = {
+  AppAiVisionDniVerifyRoute: AppAiVisionDniVerifyRoute,
+  AppAiVisionFakeProfileRoute: AppAiVisionFakeProfileRoute,
+  AppAiVisionFormAnalyzerRoute: AppAiVisionFormAnalyzerRoute,
+  AppAiVisionIndexRoute: AppAiVisionIndexRoute,
+}
+
+const AppAiVisionRouteWithChildren = AppAiVisionRoute._addFileChildren(
+  AppAiVisionRouteChildren,
+)
 
 interface AppCourtsRouteChildren {
   AppCourtsCourtIdRoute: typeof AppCourtsCourtIdRoute
@@ -590,6 +720,7 @@ const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
+  AppAiVisionRoute: typeof AppAiVisionRouteWithChildren
   AppBusinessRoute: typeof AppBusinessRoute
   AppChatRoute: typeof AppChatRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
@@ -603,12 +734,14 @@ interface AppRouteChildren {
   AppSquadsRoute: typeof AppSquadsRoute
   AppTournamentsRoute: typeof AppTournamentsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppArPreviewCourtIdRoute: typeof AppArPreviewCourtIdRoute
   AppWalletHistoryRoute: typeof AppWalletHistoryRoute
   AppWalletIndexRoute: typeof AppWalletIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
+  AppAiVisionRoute: AppAiVisionRouteWithChildren,
   AppBusinessRoute: AppBusinessRoute,
   AppChatRoute: AppChatRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,
@@ -622,6 +755,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSquadsRoute: AppSquadsRoute,
   AppTournamentsRoute: AppTournamentsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppArPreviewCourtIdRoute: AppArPreviewCourtIdRoute,
   AppWalletHistoryRoute: AppWalletHistoryRoute,
   AppWalletIndexRoute: AppWalletIndexRoute,
 }

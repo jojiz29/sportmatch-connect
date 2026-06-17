@@ -19,10 +19,21 @@ export interface VertexAiGenerationResult {
   latencyMs: number;
 }
 
+export interface VertexAiMediaPart {
+  inlineData: {
+    mimeType: string;
+    data: string; // base64
+  };
+}
+
 export interface VertexAiOptions {
   language?: "es" | "en" | "pt";
   temperature?: number;
   history?: ChatMessageDto[];
+}
+
+export interface VertexAiMediaOptions extends VertexAiOptions {
+  mediaParts?: VertexAiMediaPart[];
 }
 
 @Injectable()
@@ -207,6 +218,112 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
         const delay = baseDelayMs * Math.pow(3, attempt);
         this.logger.warn(
           `Vertex AI REST attempt ${attempt + 1} failed with retryable error, retrying in ${delay}ms: ${errorMsg}`,
+        );
+        await this.sleep(delay);
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Genera contenido multimodal (texto + imágenes/video frames).
+   * Permite enviar imágenes inlineData a Gemini para análisis visual.
+   */
+  async generateContentWithMedia(
+    userMessage: string,
+    options: VertexAiMediaOptions = {},
+  ): Promise<VertexAiGenerationResult> {
+    if (!this.auth || !this.config) {
+      throw new Error("Vertex AI REST client not available - module is degraded");
+    }
+
+    const config = this.config;
+    const startTime = Date.now();
+    const language = options.language ?? "es";
+    const temperature = options.temperature ?? config.temperature;
+    const systemInstruction = this.buildSystemInstruction(language, options.history);
+
+    const maxRetries = 3;
+    const baseDelayMs = 500;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      try {
+        const token = await this.getAccessToken();
+        const url = `https://aiplatform.googleapis.com/v1/projects/${config.projectId}/locations/${config.location}/publishers/google/models/${config.modelId}:generateContent`;
+        const parts: Array<{ text: string } | VertexAiMediaPart> = [{ text: userMessage }];
+        if (options.mediaParts) {
+          parts.push(...options.mediaParts);
+        }
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts }],
+            systemInstruction: {
+              role: "system",
+              parts: [{ text: systemInstruction }],
+            },
+            generationConfig: {
+              maxOutputTokens: config.maxTokens,
+              temperature,
+              topP: 0.9,
+            },
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(JSON.stringify(data));
+        }
+
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const usage = data.usageMetadata;
+        const tokens = usage?.totalTokenCount ?? 0;
+        const latencyMs = Date.now() - startTime;
+
+        if (attempt > 0) {
+          this.logger.log(
+            `Vertex AI vision REST succeeded on retry #${attempt} after ${latencyMs}ms`,
+          );
+        }
+
+        return { text, tokens, model: config.modelId, latencyMs };
+      } catch (err) {
+        lastError = err;
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const lower = errorMsg.toLowerCase();
+
+        const isRetryable =
+          lower.includes("503") ||
+          lower.includes("502") ||
+          lower.includes("500") ||
+          lower.includes("504") ||
+          lower.includes("deadline_exceeded") ||
+          lower.includes("timeout") ||
+          lower.includes("resource_exhausted") ||
+          lower.includes("429") ||
+          lower.includes("econnrefused") ||
+          lower.includes("enotfound") ||
+          lower.includes("network") ||
+          lower.includes("fetch failed") ||
+          lower.includes("temporarily unavailable");
+
+        if (!isRetryable || attempt === maxRetries) {
+          this.logger.error(
+            `Vertex AI vision REST failed (attempt ${attempt + 1}/${maxRetries + 1}): ${errorMsg}`,
+          );
+          throw err;
+        }
+
+        const delay = baseDelayMs * Math.pow(3, attempt);
+        this.logger.warn(
+          `Vertex AI vision REST attempt ${attempt + 1} failed with retryable error, retrying in ${delay}ms: ${errorMsg}`,
         );
         await this.sleep(delay);
       }

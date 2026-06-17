@@ -12,11 +12,12 @@ import { AiController } from "./ai.controller";
 import { AiService } from "./ai.service";
 import { AiCoreModule } from "./ai-core.module";
 import { VoiceModule } from "./voice/voice.module";
+import { VisionModule } from "./vision/vision.module";
 
 @Module({
-  imports: [AuthModule, AiCoreModule, VoiceModule],
+  imports: [AuthModule, AiCoreModule, VoiceModule, VisionModule],
   controllers: [AiController],
   providers: [AiService],
-  exports: [AiService, VoiceModule],
+  exports: [AiService, VoiceModule, VisionModule],
 })
 export class AiModule {}

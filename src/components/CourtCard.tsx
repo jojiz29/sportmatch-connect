@@ -1,4 +1,4 @@
-import { Star, MapPin } from "lucide-react";
+import { Star, MapPin, Box } from "lucide-react";
 import { Court } from "@/entities/types";
 import { calculateDistance } from "@/shared/api/geoService";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
@@ -104,6 +104,14 @@ export function CourtCard({
             <span>· S/ {court.price_per_hour}/h</span>
           </div>
         </div>
+        <a
+          href={`/app/ar-preview/${court.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-3 left-3 h-8 w-8 rounded-lg bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-accent transition-colors cursor-pointer"
+          title="Vista 3D"
+        >
+          <Box className="h-4 w-4 text-foreground" />
+        </a>
       </div>
       <div className="p-3">
         <div className="flex flex-wrap gap-1">

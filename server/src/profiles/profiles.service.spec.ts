@@ -34,6 +34,7 @@ describe("ProfilesService", () => {
 
     service = module.get<ProfilesService>(ProfilesService);
     process.env.VITE_USE_MOCKS = "true"; // default to mock mode for tests
+    process.env.VERIFICAPE_API_KEY = "test-api-key"; // set fake key for real-mode tests
   });
 
   afterEach(() => {

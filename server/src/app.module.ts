@@ -20,6 +20,7 @@ import { B2bAiModule } from "./ai/b2b/b2b-ai.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SocialModule } from "./social/social.module";
 import { MatchmakingModule } from "./matchmaking/matchmaking.module";
+import { ArModule } from "./ar/ar.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { MatchmakingModule } from "./matchmaking/matchmaking.module";
     SettingsModule,
     SocialModule,
     MatchmakingModule,
+    ArModule,
   ],
   controllers: [HealthController],
 })

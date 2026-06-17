@@ -99,7 +99,7 @@ function createFallbackClient(): SupabaseClient {
   return new Proxy(
     {},
     {
-      get(target, prop) {
+      get(_target, prop) {
         // --- MÓDULO AUTH: login, registro, sesión ---
         if (prop === "auth") {
           return {
@@ -107,6 +107,8 @@ function createFallbackClient(): SupabaseClient {
             getSession: () => Promise.resolve({ data: { session: null } }),
             signInWithPassword: () =>
               Promise.resolve({ error: new Error("Supabase not configured") }),
+            signInWithOAuth: () =>
+              Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
             signUp: () => Promise.resolve({ error: new Error("Supabase not configured") }),
             signOut: () => Promise.resolve({ error: null }),
           };
