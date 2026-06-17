@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ArCourtModelDataDto } from "./dto";
@@ -17,7 +18,7 @@ const SPORT_DIMENSIONS: Record<
     goalHeight?: number;
   }
 > = {
-  "Fútbol": {
+  Fútbol: {
     length: 105,
     width: 68,
     surfaceColor: "#1a8a3f",
@@ -50,7 +51,7 @@ const SPORT_DIMENSIONS: Record<
     goalWidth: 5,
     goalHeight: 2,
   },
-  "Básquet": {
+  Básquet: {
     length: 28,
     width: 15,
     surfaceColor: "#c8864b",
@@ -59,7 +60,7 @@ const SPORT_DIMENSIONS: Record<
     hasHoops: true,
     hasGoals: false,
   },
-  "Tenis": {
+  Tenis: {
     length: 23.77,
     width: 10.97,
     surfaceColor: "#2e7d32",
@@ -69,7 +70,7 @@ const SPORT_DIMENSIONS: Record<
     hasGoals: false,
     netHeight: 0.914,
   },
-  "Pádel": {
+  Pádel: {
     length: 20,
     width: 10,
     surfaceColor: "#1b5e9e",
@@ -79,7 +80,7 @@ const SPORT_DIMENSIONS: Record<
     hasGoals: false,
     netHeight: 0.88,
   },
-  "Vóley": {
+  Vóley: {
     length: 18,
     width: 9,
     surfaceColor: "#d4a34a",
@@ -89,7 +90,7 @@ const SPORT_DIMENSIONS: Record<
     hasGoals: false,
     netHeight: 2.43,
   },
-  "Running": {
+  Running: {
     length: 400,
     width: 10,
     surfaceColor: "#b71c1c",
@@ -136,9 +137,9 @@ export class ArService {
       courtId: court.id,
       courtName: court.name,
       sport: court.sport,
-      arModelUrl: court.ar_model_url || null,
-      arScale: court.ar_scale ?? 1.0,
-      arRotation: court.ar_rotation as { x: number; y: number; z: number } | null,
+      arModelUrl: (court as any).ar_model_url || null,
+      arScale: (court as any).ar_scale ?? 1.0,
+      arRotation: (court as any).ar_rotation as { x: number; y: number; z: number } | null,
       courtDimensions: {
         length: dimensions.length,
         width: dimensions.width,

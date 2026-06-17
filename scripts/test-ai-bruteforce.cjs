@@ -277,6 +277,60 @@ async function runTests() {
   }
 
   // ---------------------------------------------------------------------------
+  // MÉTODO 5: Vertex AI Express Mode (API Key Directa)
+  // ---------------------------------------------------------------------------
+  console.log(`${COLORS.bold}--- running Método 5 (Vertex AI Express Mode con Key)... ---${COLORS.reset}`);
+  if (!apiKey) {
+    results.push({
+      method: "Método 5: Vertex AI Express Mode (API Key)",
+      status: "FAILED",
+      details: "Falta GOOGLE_GENAI_API_KEY en las variables de entorno.",
+    });
+    console.log(`${COLORS.red}✕ Skip: No API Key${COLORS.reset}\n`);
+  } else {
+    try {
+      const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          }
+        ],
+        generationConfig: {
+          maxOutputTokens: 200,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    console.log("Raw Response Method 5:", JSON.stringify(data, null, 2));
+    if (!res.ok) {
+      throw new Error(JSON.stringify(data));
+    }
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    results.push({
+      method: "Método 5: Vertex AI Express Mode (API Key)",
+      status: "SUCCESS",
+      details: `Respuesta: "${text}"`,
+    });
+    console.log(`${COLORS.green}✅ SUCCESS: Respuesta: "${text}"${COLORS.reset}\n`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    results.push({
+      method: "Método 5: Vertex AI Express Mode (API Key)",
+      status: "FAILED",
+      details: msg,
+    });
+    console.log(`${COLORS.red}✕ FAILED: ${msg}${COLORS.reset}\n`);
+  }
+}
+
+  // ---------------------------------------------------------------------------
   // MOSTRAR RESUMEN FINAL
   // ---------------------------------------------------------------------------
   console.log(`${COLORS.bold}${COLORS.cyan}============================================================`);

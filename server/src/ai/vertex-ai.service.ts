@@ -62,7 +62,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
       const credentialsJsonRaw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
       this.auth = new GoogleAuth({
-        keyFile: credentialsJsonRaw ? undefined : this.config.credentialsPath,
+        keyFile: credentialsJsonRaw ? undefined : "./credentials/google-cloud-credentials.json",
         credentials: credentialsJsonRaw ? JSON.parse(credentialsJsonRaw) : undefined,
         scopes: ["https://www.googleapis.com/auth/cloud-platform"],
       });
