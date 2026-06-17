@@ -61,10 +61,7 @@ export class MediaService {
       );
 
       for (let i = 1; i <= frameCount; i++) {
-        const framePath = path.join(
-          tmpDir,
-          `frame-${String(i).padStart(3, "0")}.${format}`,
-        );
+        const framePath = path.join(tmpDir, `frame-${String(i).padStart(3, "0")}.${format}`);
         if (fs.existsSync(framePath)) {
           frames.push(await readFile(framePath));
         }

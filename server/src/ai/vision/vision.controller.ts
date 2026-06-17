@@ -103,14 +103,19 @@ export class VisionController {
   @Post("form-analyze")
   @ApiOperation({
     summary: "#8 — Analiza postura deportiva desde frames de video",
-    description: "Recibe hasta 15 frames extraídos del video en el cliente. Devuelve score, análisis, recomendaciones y nivel detectado.",
+    description:
+      "Recibe hasta 15 frames extraídos del video en el cliente. Devuelve score, análisis, recomendaciones y nivel detectado.",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
       type: "object",
       properties: {
-        frames: { type: "array", items: { type: "string", format: "binary" }, description: "Frames del video (JPEG, hasta 15)" },
+        frames: {
+          type: "array",
+          items: { type: "string", format: "binary" },
+          description: "Frames del video (JPEG, hasta 15)",
+        },
         sport: { type: "string", description: "Deporte a analizar (fútbol, tenis, etc.)" },
         prompt: { type: "string" },
         language: { type: "string", enum: ["es", "en", "pt"] },
@@ -146,7 +151,8 @@ export class VisionController {
   @Post("fake-profile")
   @ApiOperation({
     summary: "#26 — Detecta si una foto de perfil fue generada por IA",
-    description: "Analiza la foto y devuelve score de autenticidad, explicación y señales detectadas.",
+    description:
+      "Analiza la foto y devuelve score de autenticidad, explicación y señales detectadas.",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
@@ -185,20 +191,32 @@ export class VisionController {
       type: "object",
       properties: {
         selfie: { type: "string", format: "binary", description: "Selfie actual del usuario" },
-        dniImage: { type: "string", format: "binary", description: "Foto del DNI (la que tiene la cara)" },
+        dniImage: {
+          type: "string",
+          format: "binary",
+          description: "Foto del DNI (la que tiene la cara)",
+        },
         language: { type: "string", enum: ["es", "en", "pt"] },
       },
     },
   })
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: "selfie", maxCount: 1 },
-      { name: "dni", maxCount: 1 },
-    ], { limits: { fileSize: MAX_IMAGE_SIZE } }),
+    FileFieldsInterceptor(
+      [
+        { name: "selfie", maxCount: 1 },
+        { name: "dni", maxCount: 1 },
+      ],
+      { limits: { fileSize: MAX_IMAGE_SIZE } },
+    ),
   )
   async dniVerify(
     @UploadedFiles()
-    files: { selfie?: { buffer: Buffer; mimetype: string; size: number }[]; dni?: { buffer: Buffer; mimetype: string; size: number }[] } | undefined,
+    files:
+      | {
+          selfie?: { buffer: Buffer; mimetype: string; size: number }[];
+          dni?: { buffer: Buffer; mimetype: string; size: number }[];
+        }
+      | undefined,
     @Body("language") language?: string,
   ): Promise<DniVerifyResponseDto> {
     const selfie = files?.selfie?.[0];
@@ -221,5 +239,4 @@ export class VisionController {
       lang,
     );
   }
-
 }

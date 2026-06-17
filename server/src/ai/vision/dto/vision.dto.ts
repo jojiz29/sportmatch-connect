@@ -1,5 +1,6 @@
+/* eslint-disable no-control-regex */
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsNotEmpty, IsOptional, IsEnum, MaxLength, MinLength } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional, IsEnum, MaxLength } from "class-validator";
 import { Transform, TransformFnParams } from "class-transformer";
 
 function sanitizeVisionText({ value }: TransformFnParams): string {
@@ -91,13 +92,22 @@ export class FormAnalyzeResponseDto {
   @ApiProperty({ description: "Score de técnica deportiva 0-100", example: 78 })
   score!: number;
 
-  @ApiProperty({ description: "Análisis detallado de la postura", example: "Buena alineación corporal pero la rodilla está muy flexionada..." })
+  @ApiProperty({
+    description: "Análisis detallado de la postura",
+    example: "Buena alineación corporal pero la rodilla está muy flexionada...",
+  })
   analysis!: string;
 
-  @ApiProperty({ description: "Recomendaciones específicas", example: ["Flexiona menos la rodilla al impactar", "Mantén el torso erguido"] })
+  @ApiProperty({
+    description: "Recomendaciones específicas",
+    example: ["Flexiona menos la rodilla al impactar", "Mantén el torso erguido"],
+  })
   recommendations!: string[];
 
-  @ApiProperty({ description: "Puntos clave identificados", example: ["hombros alineados", "cadera estable"] })
+  @ApiProperty({
+    description: "Puntos clave identificados",
+    example: ["hombros alineados", "cadera estable"],
+  })
   keyPoints!: string[];
 
   @ApiProperty({ description: "Nivel detectado", example: "intermedio" })
@@ -120,13 +130,20 @@ export class FakeProfileResponseDto {
   @ApiProperty({ description: "Score de autenticidad 0-100 (mayor = más auténtica)", example: 92 })
   authenticityScore!: number;
 
-  @ApiProperty({ description: "Explicación del análisis", example: "La imagen presenta textura natural de piel, sombras coherentes y detalles realistas en los ojos." })
+  @ApiProperty({
+    description: "Explicación del análisis",
+    example:
+      "La imagen presenta textura natural de piel, sombras coherentes y detalles realistas en los ojos.",
+  })
   explanation!: string;
 
   @ApiProperty({ description: "Nivel de confianza 0-1", example: 0.95 })
   confidence!: number;
 
-  @ApiProperty({ description: "Señales específicas detectadas", example: ["textura de piel natural", "sombras coherentes", "detalles de ojos realistas"] })
+  @ApiProperty({
+    description: "Señales específicas detectadas",
+    example: ["textura de piel natural", "sombras coherentes", "detalles de ojos realistas"],
+  })
   signals!: string[];
 
   @ApiProperty() latencyMs!: number;
@@ -145,13 +162,24 @@ export class DniVerifyResponseDto {
   @ApiProperty({ description: "Nivel de confianza del face match 0-1", example: 0.97 })
   confidence!: number;
 
-  @ApiProperty({ description: "Mensaje descriptivo del resultado", example: "El rostro coincide con el DNI proporcionado. Identidad verificada." })
+  @ApiProperty({
+    description: "Mensaje descriptivo del resultado",
+    example: "El rostro coincide con el DNI proporcionado. Identidad verificada.",
+  })
   message!: string;
 
-  @ApiProperty({ description: "Nivel de calidad del selfie", example: "good", enum: ["poor", "fair", "good", "excellent"] })
+  @ApiProperty({
+    description: "Nivel de calidad del selfie",
+    example: "good",
+    enum: ["poor", "fair", "good", "excellent"],
+  })
   selfieQuality!: string;
 
-  @ApiProperty({ description: "Nivel de calidad del DNI", example: "good", enum: ["poor", "fair", "good", "excellent"] })
+  @ApiProperty({
+    description: "Nivel de calidad del DNI",
+    example: "good",
+    enum: ["poor", "fair", "good", "excellent"],
+  })
   dniQuality!: string;
 
   @ApiProperty({ description: "Sugerencias si la calidad es baja", required: false })

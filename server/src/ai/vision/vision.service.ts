@@ -45,8 +45,8 @@ export class VisionService {
     const defaultPrompt =
       prompt ||
       "Analiza este video frame a frame. Evalúa la postura deportiva, técnica y movimientos. " +
-      "Proporciona un score del 0-100 y 3 recomendaciones específicas para mejorar. " +
-      "Responde en formato JSON con los campos: analysis (string), score (number 0-100), recommendations (string[]).";
+        "Proporciona un score del 0-100 y 3 recomendaciones específicas para mejorar. " +
+        "Responde en formato JSON con los campos: analysis (string), score (number 0-100), recommendations (string[]).";
 
     const mediaParts = frames.map((frame) => ({
       inlineData: { mimeType, data: frame.toString("base64") },
@@ -94,13 +94,13 @@ export class VisionService {
     const promptText =
       prompt ||
       `Eres un entrenador deportivo experto en ${sport}. Analiza estos frames de video y evalúa la técnica del jugador. ` +
-      "Responde ESTRICTAMENTE en formato JSON sin markdown ni texto adicional externo con los siguientes campos:\n" +
-      '  "score": number 0-100,\n' +
-      '  "analysis": string (descripción detallada en 2-3 oraciones),\n' +
-      '  "recommendations": string[] (3 recomendaciones específicas para mejorar),\n' +
-      '  "keyPoints": string[] (3-5 puntos clave observados),\n' +
-      '  "detectedLevel": "principiante" | "intermedio" | "avanzado" | "profesional"\n' +
-      "}";
+        "Responde ESTRICTAMENTE en formato JSON sin markdown ni texto adicional externo con los siguientes campos:\n" +
+        '  "score": number 0-100,\n' +
+        '  "analysis": string (descripción detallada en 2-3 oraciones),\n' +
+        '  "recommendations": string[] (3 recomendaciones específicas para mejorar),\n' +
+        '  "keyPoints": string[] (3-5 puntos clave observados),\n' +
+        '  "detectedLevel": "principiante" | "intermedio" | "avanzado" | "profesional"\n' +
+        "}";
 
     const mediaParts = frames.map((frame) => ({
       inlineData: { mimeType, data: frame.toString("base64") },
@@ -152,33 +152,33 @@ export class VisionService {
       es:
         "Eres un experto en detección de imágenes generadas por IA. Analiza esta foto de perfil y determina si fue generada por IA o es una foto real. " +
         "Responde ESTRICTAMENTE en formato JSON sin markdown ni texto adicional:\n" +
-        '{\n' +
+        "{\n" +
         '  "isFake": boolean (true si parece generada por IA),\n' +
         '  "authenticityScore": number 0-100 (100 = totalmente real, 0 = totalmente fake),\n' +
         '  "explanation": string (explicación del análisis en 2-3 oraciones),\n' +
         '  "confidence": number 0-1 (nivel de confianza del análisis),\n' +
         '  "signals": string[] (señales específicas que sustentan la decisión, ej: "textura de piel artificial", "iluminación incoherente", "dedos distorsionados")\n' +
-        '}',
+        "}",
       en:
         "You are an expert in detecting AI-generated images. Analyze this profile photo and determine if it was AI-generated or real. " +
         "Respond STRICTLY in JSON format without markdown:\n" +
-        '{\n' +
+        "{\n" +
         '  "isFake": boolean,\n' +
         '  "authenticityScore": number 0-100,\n' +
         '  "explanation": string (2-3 sentences),\n' +
         '  "confidence": number 0-1,\n' +
         '  "signals": string[]\n' +
-        '}',
+        "}",
       pt:
         "Você é um especialista em detecção de imagens geradas por IA. Analise esta foto de perfil e determine se foi gerada por IA ou é real. " +
         "Responda ESTRITAMENTE em formato JSON sem markdown:\n" +
-        '{\n' +
+        "{\n" +
         '  "isFake": boolean,\n' +
         '  "authenticityScore": number 0-100,\n' +
         '  "explanation": string,\n' +
         '  "confidence": number 0-1,\n' +
         '  "signals": string[]\n' +
-        '}',
+        "}",
     };
 
     const promptText = promptByLang[lang] || promptByLang.es;
@@ -231,38 +231,38 @@ export class VisionService {
         "Eres un experto en verificación biométrica facial. Compara el SELFIE (primera imagen) con la foto del DNI (segunda imagen). " +
         "Analiza si son la misma persona evaluando: forma del rostro, distribución de ojos/nariz/boca, estructura ósea. " +
         "Responde ESTRICTAMENTE en formato JSON sin markdown:\n" +
-        '{\n' +
+        "{\n" +
         '  "match": boolean (true si es la misma persona),\n' +
         '  "confidence": number 0-1 (nivel de confianza del match),\n' +
         '  "message": string (mensaje descriptivo),' +
         '  "selfieQuality": "poor" | "fair" | "good" | "excellent",\n' +
         '  "dniQuality": "poor" | "fair" | "good" | "excellent",\n' +
         '  "suggestions": string[] (sugerencias si la calidad es baja)\n' +
-        '}',
+        "}",
       en:
         "You are a biometric facial verification expert. Compare the SELFIE (first image) with the DNI/ID photo (second image). " +
         "Analyze if they are the same person by evaluating: face shape, eye/nose/mouth layout, bone structure. " +
         "Respond STRICTLY in JSON format without markdown:\n" +
-        '{\n' +
+        "{\n" +
         '  "match": boolean,\n' +
         '  "confidence": number 0-1,\n' +
         '  "message": string,\n' +
         '  "selfieQuality": "poor" | "fair" | "good" | "excellent",\n' +
         '  "dniQuality": "poor" | "fair" | "good" | "excellent",\n' +
         '  "suggestions": string[]\n' +
-        '}',
+        "}",
       pt:
         "Você é um especialista em verificação biométrica facial. Compare a SELFIE (primeira imagem) com a foto do RG (segunda imagem). " +
         "Analise se são a mesma pessoa avaliando: formato do rosto, distribuição dos olhos/nariz/boca, estrutura óssea. " +
         "Responda ESTRITAMENTE em formato JSON sem markdown:\n" +
-        '{\n' +
+        "{\n" +
         '  "match": boolean,\n' +
         '  "confidence": number 0-1,\n' +
         '  "message": string,\n' +
         '  "selfieQuality": "poor" | "fair" | "good" | "excellent",\n' +
         '  "dniQuality": "poor" | "fair" | "good" | "excellent",\n' +
         '  "suggestions": string[]\n' +
-        '}',
+        "}",
     };
 
     const promptText = promptByLang[lang] || promptByLang.es;
@@ -280,7 +280,9 @@ export class VisionService {
       return {
         match: parsed.match ?? false,
         confidence: parsed.confidence ?? 0,
-        message: parsed.message || (parsed.match ? "Identidad verificada." : "El rostro no coincide con el DNI."),
+        message:
+          parsed.message ||
+          (parsed.match ? "Identidad verificada." : "El rostro no coincide con el DNI."),
         selfieQuality: parsed.selfieQuality || "fair",
         dniQuality: parsed.dniQuality || "fair",
         suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
