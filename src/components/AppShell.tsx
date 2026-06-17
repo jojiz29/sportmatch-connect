@@ -79,6 +79,8 @@ function LanguageSelector() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
+  const { theme } = useThemeStore();
+  const isLightTheme = theme === "light";
   const routerState = useRouterState();
   const path = routerState.location.pathname;
   const isRegister = path === "/app/register";
@@ -274,7 +276,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background bg-[url('/images/sports/fondo-sportmatch-app-final.webp')] bg-cover bg-center bg-fixed relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md -z-10" />
+      <div
+        className={`absolute inset-0 transition-all duration-500 -z-10 ${
+          isLightTheme
+            ? "bg-background/96 backdrop-blur-3xl"
+            : "bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md"
+        }`}
+      />
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
