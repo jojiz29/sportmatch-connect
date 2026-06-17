@@ -77,7 +77,6 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
       throw new Error("Google REST Auth is not initialized");
     }
     const client = await this.auth.getClient();
-    this.logger.log(`Generated client email inside NestJS: ${(client as any).email || (client as any).client_email || "unknown"}`);
     const tokenResponse = await client.getAccessToken();
     if (!tokenResponse.token) {
       throw new Error("Failed to generate Google OAuth2 Access Token");
@@ -132,12 +131,12 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    try {
-      const token = await this.getAccessToken();
-      const url = `https://aiplatform.googleapis.com/v1/projects/${this.config.projectId}/locations/${this.config.location}/publishers/google/models/${this.config.modelId}:generateContent`;
+      try {
+        const token = await this.getAccessToken();
+        const url = `https://aiplatform.googleapis.com/v1/projects/${this.config.projectId}/locations/${this.config.location}/publishers/google/models/${this.config.modelId}:generateContent`;
 
-      this.logger.log(`Making REST call to URL: ${url}`);
-      const contentsPayload = this.buildContentsPayload(userMessage, options.history);
+        this.logger.log(`Making REST call to URL: ${url}`);
+        const contentsPayload = this.buildContentsPayload(userMessage, options.history);
 
         const res = await fetch(url, {
           method: "POST",
@@ -148,7 +147,6 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
           body: JSON.stringify({
             contents: contentsPayload,
             systemInstruction: {
-              role: "system",
               parts: [{ text: systemInstruction }],
             },
             generationConfig: {

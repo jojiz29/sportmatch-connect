@@ -242,6 +242,10 @@ async function runTests() {
               parts: [{ text: prompt }],
             }
           ],
+          systemInstruction: {
+            role: "system",
+            parts: [{ text: "Eres un asistente deportivo." }],
+          },
           generationConfig: {
             maxOutputTokens: 200,
           },
