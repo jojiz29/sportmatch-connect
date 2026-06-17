@@ -81,7 +81,9 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
   useEffect(() => {
     if (!isOpen) return;
     loadWelcomeRef.current();
-    // Watchdog: si pasan 15s y el LLM no responde, mostramos error.
+    // Watchdog: si pasan 45s y el LLM no responde, mostramos error.
+    // Damos un margen generoso (45s) para contemplar el arranque en frío (Cold Start)
+    // de servidores en la capa gratuita de Render, previniendo falsos positivos de timeout.
     const watchdog = setTimeout(() => {
       const state = useAiAssistantStore.getState();
       if (state.isTyping && state.messages.length === 0) {
@@ -100,7 +102,7 @@ export function ChatInterface({ isOpen, onClose }: ChatInterfaceProps) {
           ],
         });
       }
-    }, 15000);
+    }, 45000);
     return () => clearTimeout(watchdog);
   }, [isOpen]);
 
