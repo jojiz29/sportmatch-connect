@@ -65,8 +65,83 @@ export class AiConfigService implements OnModuleInit {
   private validateAndLoadConfig(): void {
     const modelId = process.env.VERTEX_AI_MODEL_ID || "gemini-3.5-flash";
     const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+    const credentialsJsonRaw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-    // --- MODO 1: API KEY DIRECTO (Opción ultrarrápida y libre de IAM) ---
+    // --- PRIORIZAR SERVICE ACCOUNT (Vertex AI tradicional con OAuth2 Bearer Tokens) ---
+    // Si existen credenciales de Cuenta de Servicio, DEBEMOS usarlas obligatoriamente,
+    // ya que VertexAiService requiere de un Service Account para generar tokens REST OAuth2.
+    if (credentialsJsonRaw || credentialsPath) {
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+      const location = process.env.VERTEX_AI_LOCATION || "global";
+
+      if (!projectId) {
+        throw new Error(
+          "Falta GOOGLE_CLOUD_PROJECT en las variables de entorno para Vertex AI tradicional.",
+        );
+      }
+
+      let resolvedJson: Record<string, unknown> | undefined;
+      let resolvedPath: string | undefined;
+
+      if (credentialsJsonRaw) {
+        try {
+          const parsed: Record<string, unknown> = JSON.parse(credentialsJsonRaw);
+          if (!parsed.type || parsed.type !== "service_account") {
+            throw new Error("El JSON no parece ser un Service Account válido (falta 'type')");
+          }
+          resolvedJson = parsed;
+        } catch (err) {
+          throw new Error(
+            `GOOGLE_APPLICATION_CREDENTIALS_JSON no es un JSON válido: ${
+              err instanceof Error ? err.message : "Unknown"
+            }`,
+          );
+        }
+      } else if (credentialsPath) {
+        const absolutePath = path.isAbsolute(credentialsPath)
+          ? credentialsPath
+          : path.resolve(process.cwd(), credentialsPath);
+
+        if (!fs.existsSync(absolutePath)) {
+          throw new Error(
+            "El archivo de credenciales de Vertex AI no existe. " +
+              "Verifica la variable GOOGLE_APPLICATION_CREDENTIALS.",
+          );
+        }
+
+        try {
+          fs.accessSync(absolutePath, fs.constants.R_OK);
+        } catch {
+          throw new Error(
+            "El archivo de credenciales existe pero no es legible. " +
+              "Verifica los permisos del sistema de archivos (chmod 600).",
+          );
+        }
+
+        resolvedPath = absolutePath;
+        // Forzar la variable de entorno del proceso con la ruta absoluta para evitar
+        // problemas de resolución de rutas relativas bajo spawners como concurrently.
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = absolutePath;
+      }
+
+      this.config = {
+        projectId,
+        location,
+        modelId,
+        maxTokens: this.parseNumber(process.env.VERTEX_AI_MAX_TOKENS, 1024),
+        temperature: this.parseNumber(process.env.VERTEX_AI_TEMPERATURE, 0.7),
+        maxRetries: this.parseNumber(process.env.VERTEX_AI_MAX_RETRIES, 3),
+        timeoutMs: this.parseNumber(process.env.VERTEX_AI_TIMEOUT_MS, 30000),
+        rateLimitPerMinute: this.parseNumber(process.env.VERTEX_AI_RATE_LIMIT_PER_MINUTE, 20),
+        credentialsJson: resolvedJson,
+        credentialsPath: resolvedPath,
+      };
+      this.logger.log("Credenciales de Cuenta de Servicio cargadas (Modo Vertex AI)");
+      return;
+    }
+
+    // --- MODO FALLBACK: API KEY DIRECTO (Opción ultrarrápida y libre de IAM) ---
     if (apiKey && apiKey.trim().length > 0) {
       this.config = {
         modelId,
@@ -81,82 +156,10 @@ export class AiConfigService implements OnModuleInit {
       return;
     }
 
-    // --- MODO 2 & 3: SERVICE ACCOUNT JSON (Vertex AI tradicional) ---
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT;
-    const location = process.env.VERTEX_AI_LOCATION || "global";
-
-    if (!projectId) {
-      throw new Error(
-        "Falta GOOGLE_CLOUD_PROJECT en las variables de entorno para Vertex AI tradicional.",
-      );
-    }
-
-    const credentialsJsonRaw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
-    let resolvedJson: Record<string, unknown> | undefined;
-    let resolvedPath: string | undefined;
-
-    if (credentialsJsonRaw) {
-      try {
-        const parsed: Record<string, unknown> = JSON.parse(credentialsJsonRaw);
-        if (!parsed.type || parsed.type !== "service_account") {
-          throw new Error("El JSON no parece ser un Service Account válido (falta 'type')");
-        }
-        resolvedJson = parsed;
-      } catch (err) {
-        throw new Error(
-          `GOOGLE_APPLICATION_CREDENTIALS_JSON no es un JSON válido: ${
-            err instanceof Error ? err.message : "Unknown"
-          }`,
-        );
-      }
-    } else if (credentialsPath) {
-      const absolutePath = path.isAbsolute(credentialsPath)
-        ? credentialsPath
-        : path.resolve(process.cwd(), credentialsPath);
-
-      if (!fs.existsSync(absolutePath)) {
-        throw new Error(
-          "El archivo de credenciales de Vertex AI no existe. " +
-            "Verifica la variable GOOGLE_APPLICATION_CREDENTIALS.",
-        );
-      }
-
-      try {
-        fs.accessSync(absolutePath, fs.constants.R_OK);
-      } catch {
-        throw new Error(
-          "El archivo de credenciales existe pero no es legible. " +
-            "Verifica los permisos del sistema de archivos (chmod 600).",
-        );
-      }
-
-      resolvedPath = absolutePath;
-      // Forzar la variable de entorno del proceso con la ruta absoluta para evitar
-      // problemas de resolución de rutas relativas bajo spawners como concurrently.
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = absolutePath;
-    } else {
-      throw new Error(
-        "No se encontraron credenciales de Vertex AI ni GOOGLE_GENAI_API_KEY. " +
-          "Por favor configura tu API Key o tu JSON de cuenta de servicio.",
-      );
-    }
-
-    this.config = {
-      projectId,
-      location,
-      modelId,
-      maxTokens: this.parseNumber(process.env.VERTEX_AI_MAX_TOKENS, 1024),
-      temperature: this.parseNumber(process.env.VERTEX_AI_TEMPERATURE, 0.7),
-      maxRetries: this.parseNumber(process.env.VERTEX_AI_MAX_RETRIES, 3),
-      timeoutMs: this.parseNumber(process.env.VERTEX_AI_TIMEOUT_MS, 30000),
-      rateLimitPerMinute: this.parseNumber(process.env.VERTEX_AI_RATE_LIMIT_PER_MINUTE, 20),
-      credentialsJson: resolvedJson,
-      credentialsPath: resolvedPath,
-    };
-
-    this.logger.log("Credenciales cargadas y conectadas");
+    throw new Error(
+      "No se encontraron credenciales de Vertex AI ni GOOGLE_GENAI_API_KEY. " +
+        "Por favor configura tu API Key o tu JSON de cuenta de servicio.",
+    );
   }
 
   private parseNumber(value: string | undefined, defaultValue: number): number {
