@@ -316,7 +316,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div
         className={`absolute inset-0 transition-all duration-500 -z-10 ${
           isLightTheme
-            ? "bg-background/96 backdrop-blur-3xl"
+            ? "bg-background/90 backdrop-blur-3xl"
             : "bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md"
         }`}
       />
