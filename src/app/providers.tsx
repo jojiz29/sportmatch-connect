@@ -141,6 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
+      // Si estamos en modo demo/mock, ignoramos los eventos de Supabase Auth
+      // para evitar que deslogueen o limpien la sesión local activa.
+      if (useAuthStore.getState().isDemoMode) return;
       // Skip INITIAL_SESSION — already handled synchronously by initAuth()
       if (!initializedRef.current) return;
 

@@ -376,14 +376,17 @@ export function useAuth() {
         throw new Error("El registro en Supabase Auth falló.");
       }
 
-      const profile = await upsertProfileInSupabase(newUser, authData.user.id);
-
-      // Establece la sesión en Supabase para que el usuario quede autenticado
+      // Establece la sesión en Supabase para que el usuario quede autenticado ANTES de persistir el perfil
       if (authData.session) {
         await supabase.auth.setSession({
           access_token: authData.session.access_token,
           refresh_token: authData.session.refresh_token,
         });
+      }
+
+      const profile = await upsertProfileInSupabase(newUser, authData.user.id);
+
+      if (authData.session) {
         store.register(profile);
       } else {
         // Si no hay sesión (ej. confirmación de email requerida),
