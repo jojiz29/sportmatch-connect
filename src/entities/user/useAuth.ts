@@ -188,77 +188,60 @@ const fetchProfile = async (userId: string, token?: string): Promise<User> => {
 
 // Helper: Inserta o actualiza perfil en Supabase
 const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promise<User> => {
-  let profile: User | null = null;
   try {
-    for (let i = 0; i < 5; i++) {
-      const { data } = await supabase.from("profiles").select("*").eq("id", authUserId).single();
-      if (data) {
-        profile = data as User;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    // 1. Intentamos actualizar el perfil directamente (asumiendo que el trigger ya lo creó)
+    // Excluimos "trust_score" y "fitcoins_balance" ya que los triggers de seguridad de la BD
+    // bloquean cualquier intento del cliente de modificarlos (restricciones de saldo/trust).
+    const { data: updated, error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        age: newUser.age,
+        city: newUser.city,
+        bio: newUser.bio,
+        level_label: newUser.level ?? "Intermedio",
+        preferred_sports: newUser.preferred_sports ?? [],
+        sport_preferences: newUser.sport_preferences,
+      })
+      .eq("id", authUserId)
+      .select()
+      .single();
+
+    if (updated && !updateError) {
+      return updated as User;
     }
 
-    if (profile) {
-      // Actualiza campos extra que el trigger automático podría no haber incluido
-      const { data: updated } = await supabase
-        .from("profiles")
-        .update({
-          age: newUser.age,
-          city: newUser.city,
-          bio: newUser.bio,
-          trust_score: newUser.trust_score ?? 50,
-          fitcoins_balance: newUser.fitcoins_balance ?? 0,
-          level_label: newUser.level ?? "Intermedio",
-          preferred_sports: newUser.preferred_sports ?? [],
-          sport_preferences: newUser.sport_preferences,
-        })
-        .eq("id", authUserId)
-        .select()
-        .single();
-      if (updated) {
-        profile = updated as User;
-      }
-    } else {
-      // Si el trigger no se ha ejecutado, insertamos la fila manualmente
-      const { data: inserted, error: insertError } = await supabase
-        .from("profiles")
-        .insert({
-          id: authUserId,
-          name: newUser.name,
-          avatar_url: newUser.avatar_url,
-          user_role: newUser.user_role || "PLAYER",
-          trust_score: newUser.trust_score ?? 50,
-          fitcoins_balance: newUser.fitcoins_balance ?? 0,
-          level_label: newUser.level ?? "Intermedio",
-          preferred_sports: newUser.preferred_sports ?? [],
-          sport_preferences: newUser.sport_preferences,
-        })
-        .select()
-        .single();
+    // 2. Si no se pudo actualizar (ej. no existe la fila aún), la insertamos manualmente
+    const { data: inserted, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: authUserId,
+        name: newUser.name,
+        avatar_url: newUser.avatar_url,
+        user_role: newUser.user_role || "PLAYER",
+        level_label: newUser.level ?? "Intermedio",
+        preferred_sports: newUser.preferred_sports ?? [],
+        sport_preferences: newUser.sport_preferences,
+      })
+      .select()
+      .single();
 
-      if (insertError) {
-        if (import.meta.env.DEV) console.error("Error manually inserting profile:", insertError);
-        throw insertError;
-      }
-      profile = inserted as User;
+    if (inserted && !insertError) {
+      return inserted as User;
+    }
+
+    if (insertError) {
+      throw insertError;
     }
   } catch (err) {
     console.error("Resilient fallback: failed to upsert profile in Supabase:", err);
-    // Retorna un perfil simulado para no interrumpir el flujo del usuario
-    return {
-      ...newUser,
-      id: authUserId,
-      onboarding_completed: false,
-    };
   }
-  return (
-    profile || {
-      ...newUser,
-      id: authUserId,
-      onboarding_completed: false,
-    }
-  );
+
+  // Fallback definitivo para no interrumpir el flujo del usuario
+  return {
+    ...newUser,
+    id: authUserId,
+    onboarding_completed: false,
+  };
 };
 
 // === BLOQUE: HOOK PRINCIPAL DE AUTENTICACIÓN ===
@@ -374,14 +357,6 @@ export function useAuth() {
 
       if (!authData.user) {
         throw new Error("El registro en Supabase Auth falló.");
-      }
-
-      // Establece la sesión en Supabase para que el usuario quede autenticado ANTES de persistir el perfil
-      if (authData.session) {
-        await supabase.auth.setSession({
-          access_token: authData.session.access_token,
-          refresh_token: authData.session.refresh_token,
-        });
       }
 
       const profile = await upsertProfileInSupabase(newUser, authData.user.id);
