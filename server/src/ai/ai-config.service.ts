@@ -133,6 +133,9 @@ export class AiConfigService implements OnModuleInit {
       }
 
       resolvedPath = absolutePath;
+      // Forzar la variable de entorno del proceso con la ruta absoluta para evitar
+      // problemas de resolución de rutas relativas bajo spawners como concurrently.
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = absolutePath;
     } else {
       throw new Error(
         "No se encontraron credenciales de Vertex AI ni GOOGLE_GENAI_API_KEY. " +
