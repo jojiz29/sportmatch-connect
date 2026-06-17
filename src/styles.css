@@ -276,14 +276,14 @@
 }
 
 .light {
-  --background: #f8fafc; /* Slate 50 clean backdrop */
+  --background: 210 40% 98%; /* Slate 50 clean backdrop (represented as HSL for hsl() wrapper) */
   --foreground: #0f172a; /* Deep Slate/Black text for maximum WCAG contrast */
-  --card: #ffffff; /* Pure White card surface */
+  --card: 0 0% 100%; /* Pure White card surface (HSL) */
   --card-foreground: #0f172a;
-  --popover: #ffffff;
+  --popover: 0 0% 100%; /* HSL */
   --popover-foreground: #0f172a;
-  --primary: #ff5722; /* Fiery Orange energetic primary */
-  --primary-foreground: #ffffff;
+  --primary: 14 100% 57%; /* Fiery Orange energetic primary (HSL) */
+  --primary-foreground: 0 0% 100%; /* HSL */
   --secondary: #00e676; /* Electric Green secondary */
   --secondary-foreground: #0f172a;
   --muted: #e2e8f0;
@@ -294,7 +294,7 @@
   --destructive-foreground: #ffffff;
   --border: #cbd5e1;
   --input: #f1f5f9;
-  --ring: #ff5722;
+  --ring: 14 100% 57%; /* HSL */
   --neon: #00e676;
   --neon-foreground: #ffffff;
   --electric: #ff5722;
@@ -320,12 +320,12 @@
   --chart-5: #ff1744;
   --sidebar: #ffffff;
   --sidebar-foreground: #475569;
-  --sidebar-primary: #ff5722;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary: 14 100% 57%; /* HSL */
+  --sidebar-primary-foreground: 0 0% 100%; /* HSL */
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #cbd5e1;
-  --sidebar-ring: #ff5722;
+  --sidebar-ring: 14 100% 57%; /* HSL */
 
   /* AI Chat tokens — Light (Clean White + Fiery Orange) */
   --chat-surface: rgba(255, 255, 255, 0.97);
