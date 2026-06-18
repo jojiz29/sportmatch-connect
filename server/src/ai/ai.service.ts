@@ -721,16 +721,25 @@ Reglas:
     let messageCount = 0;
     let telemetryContext: Array<{ deporte: string; fecha: string; hora: string; cancha: string }> =
       [];
+    let userProfile: any = null;
 
     if (isDbHealthy) {
       try {
-        // 1. Verificar si el usuario es PREMIUM
-        const profile = await this.prisma.profiles.findUnique({
+        // 1. Verificar si el usuario es PREMIUM y obtener su perfil
+        userProfile = await this.prisma.profiles.findUnique({
           where: { id: userId },
-          select: { tier: true },
+          select: {
+            name: true,
+            tier: true,
+            city: true,
+            preferred_sports: true,
+            level: true,
+            last_location_lat: true,
+            last_location_lng: true,
+          },
         });
 
-        isPremium = profile?.tier === "PREMIUM";
+        isPremium = userProfile?.tier === "PREMIUM";
 
         // 2. Límite diario: 20 mensajes al día (últimas 24 horas)
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -789,17 +798,37 @@ Reglas:
     }
     */
 
-    // 4. Prompt de Vertex AI
-    const coachPrompt = `Eres Sporty Coach, un entrenador e instructor de alto rendimiento deportivo. Estás chateando 1-a-1 con un atleta PREMIUM de SportMatch Connect.
-Tus respuestas deben ser motivadoras, analíticas, profesionales y llenas de energía.
+    // 4. Prompt de Vertex AI con Datos de Perfil completos para personalización inteligente
+    const userProfileContext = {
+      nombre: userProfile?.name || "Atleta",
+      ciudad: userProfile?.city || "No especificada",
+      deportes_preferidos: userProfile?.preferred_sports || ["Fútbol", "Pádel"],
+      nivel: userProfile?.level || "No especificado",
+      coordenadas:
+        userProfile?.last_location_lat && userProfile?.last_location_lng
+          ? `${userProfile.last_location_lat}, ${userProfile.last_location_lng}`
+          : "No especificadas",
+    };
 
-Información y telemetría de sus últimos partidos:
+    const coachPrompt = `Eres Sporty Coach, un entrenador e instructor de alto rendimiento deportivo de SportMatch Connect.
+Estás chateando 1-a-1 con un atleta y necesitas darle respuestas personalizadas basadas en su perfil, ubicación y contexto.
+
+INFORMACIÓN DEL ATLETA:
+- Nombre: ${userProfileContext.nombre}
+- Ciudad: ${userProfileContext.ciudad}
+- Deportes de Interés: ${userProfileContext.deportes_preferidos.join(", ")}
+- Nivel de juego general: ${userProfileContext.nivel}
+- Ubicación actual (coordenadas GPS): ${userProfileContext.coordenadas}
+
+Información y telemetría de sus últimos partidos jugados:
 ${telemetryContext.length > 0 ? JSON.stringify(telemetryContext, null, 2) : "Aún no ha participado en partidos recientemente."}
+
+Tus respuestas deben ser altamente motivadoras, profesionales y llenas de energía. Dirígete a él o ella usando su nombre y haz referencia a su ciudad o a sus deportes preferidos si es pertinente, demostrando que tienes acceso a su contexto. ¡Nunca digas que no tienes acceso o que no conoces de qué ciudad es o qué deportes prefiere!
 
 Mensaje del atleta: "${message}"
 
 Responde en el idioma ${language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish"}.
-Mantén la respuesta concisa y al grano (máx 150 palabras). Da consejos prácticos basados en el deporte que practica o el tema de su pregunta.`;
+Mantén la respuesta concisa y al grano (máx 150 palabras). Da consejos prácticos y altamente personalizados.`;
 
     let result: VertexAiGenerationResult;
     try {
@@ -811,8 +840,9 @@ Mantén la respuesta concisa y al grano (máx 150 palabras). Da consejos prácti
     } catch (err) {
       // Fallback local por si Vertex AI falla o no está configurado (por ejemplo, en modo Demo sin API keys)
       this.logger.warn(`Vertex AI coachChat failed, using local mock fallback: ${err}`);
+      const fallbackText = `¡Hola ${userProfileContext.nombre}! Como tu Coach Sporty en ${userProfileContext.ciudad}, veo que te apasiona el ${userProfileContext.deportes_preferidos[0] || "deporte"}. Te recomiendo enfocar tu entrenamiento en mejorar la agilidad y táctica para tus partidos de nivel ${userProfileContext.nivel}. ¡Mantén el alto rendimiento!`;
       result = {
-        text: `¡Hola! Como tu Coach Sporty, veo que has estado activo. Basado en tu desempeño, te recomiendo mantener una buena hidratación y enfocar tu entrenamiento en la agilidad y técnica de tu deporte. ¡Sigue así!`,
+        text: fallbackText,
         tokens: 50,
         model: "mock-gemini",
         latencyMs: 150,
