@@ -59,13 +59,18 @@ export interface VertexAiMediaOptions extends VertexAiOptions {
 @Injectable()
 export class VertexAiService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(VertexAiService.name);
-  private genAi!: GoogleGenAI;
+  private genAi?: GoogleGenAI;
   private config!: VertexAiConfig;
 
   constructor(private readonly configService: AiConfigService) {}
 
   onModuleInit(): void {
     this.config = this.configService.getConfig();
+
+    if (!this.config.isAvailable) {
+      this.logger.warn(`Google Gen AI (Vertex) no inicializado: ${this.config.unavailableReason}`);
+      return;
+    }
 
     const googleAuthOptions: Record<string, unknown> = {};
     if (this.config.credentialsJson) {
@@ -98,6 +103,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     userMessage: string,
     options: VertexAiOptions = {},
   ): Promise<VertexAiGenerationResult> {
+    const genAi = this.ensureAvailable();
     const startTime = Date.now();
     const language = options.language ?? "es";
     const temperature = options.temperature ?? this.config.temperature;
@@ -113,7 +119,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       try {
-        const response = await this.genAi.models.generateContent({
+        const response = await genAi.models.generateContent({
           model: this.config.modelId,
           contents: this.buildContentsWithHistory(userMessage, options.history),
           config: {
@@ -182,6 +188,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     userMessage: string,
     options: VertexAiMediaOptions,
   ): Promise<VertexAiGenerationResult> {
+    const genAi = this.ensureAvailable();
     const startTime = Date.now();
     const language = options.language ?? "es";
     const temperature = options.temperature ?? this.config.temperature;
@@ -199,7 +206,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       try {
-        const response = await this.genAi.models.generateContent({
+        const response = await genAi.models.generateContent({
           model: this.config.modelId,
           contents,
           config: {
@@ -269,6 +276,20 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  private ensureAvailable(): GoogleGenAI {
+    if (!this.config?.isAvailable || !this.genAi) {
+      // Este error es intencional: permite que los servicios superiores usen
+      // sus fallbacks locales sin que el backend completo se caiga al arrancar.
+      throw new Error(
+        `Vertex AI no esta disponible en este entorno: ${
+          this.config?.unavailableReason ?? "cliente no inicializado"
+        }`,
+      );
+    }
+
+    return this.genAi;
+  }
+
   /**
    * Genera contenido con archivos de medios (imágenes, video, etc.) usando el SDK.
    */
@@ -279,12 +300,13 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
       mediaParts: Array<{ inlineData: { mimeType: string; data: string } }>;
     },
   ): Promise<VertexAiGenerationResult> {
+    const genAi = this.ensureAvailable();
     const startTime = Date.now();
     const language = options.language ?? "es";
     const systemInstruction = this.buildSystemInstruction(language);
 
     try {
-      const response = await this.genAi.models.generateContent({
+      const response = await genAi.models.generateContent({
         model: this.config.modelId,
         contents: [userMessage, ...options.mediaParts],
         config: {

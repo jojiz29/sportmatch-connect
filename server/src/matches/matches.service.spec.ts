@@ -91,7 +91,12 @@ describe("MatchesService", () => {
 
   describe("create", () => {
     it("debe crear el partido con creator_id y status OPEN", async () => {
-      const dto = { title: "Partido", sport: "tenis" } as any;
+      const dto = {
+        title: "Partido",
+        sport: "tenis",
+        date: "2026-06-19",
+        time: "18:00",
+      } as any;
       prismaMock.matches.create.mockResolvedValue({ id: "m1", ...dto });
 
       const res = await service.create(dto, "u1");
@@ -101,8 +106,9 @@ describe("MatchesService", () => {
           sport: "tenis",
           creator_id: "u1",
           status: "OPEN",
-          date: expect.any(Date),
-          time: expect.any(Date),
+          // El schema remoto guarda estos campos como texto, no como Date.
+          date: "2026-06-19",
+          time: "18:00",
         },
       });
       expect(res).toEqual({ id: "m1", ...dto });
