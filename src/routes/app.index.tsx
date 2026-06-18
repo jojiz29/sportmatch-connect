@@ -39,6 +39,7 @@ import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import { MiniCalendar } from "@/features/matchmaking/ui/MiniCalendar";
 import type { PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
+import { WeeklyChallengesCard } from "@/features/wallet/ui/WeeklyChallengesCard";
 
 // === BLOQUE: Ruta /app/ — createFileRoute con loader ===
 // Carga datos iniciales desde backendApi (con timeout de 8s por llamada):
@@ -818,6 +819,9 @@ function Dashboard() {
               </Link>
             </div>
           </div>
+
+          {/* Retos semanales: permanecen en Home para el flujo principal del cliente. */}
+          <WeeklyChallengesCard maxItems={2} />
 
           {/* Racha semanal y gráfico de contribución SVG */}
           <div className="bg-gradient-card border border-border/60 rounded-2xl p-5 shadow-card card-lift">
