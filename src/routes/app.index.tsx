@@ -40,6 +40,7 @@ import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import {
+  getAiRecommendations,
   getEngagementChallenges,
   getTodayAiRecommendations,
   saveEngagementChallenge,
@@ -345,6 +346,56 @@ function buildSingleWeeklyChallengeRefresh(
   return pair[challengeIndex] ?? pair[0];
 }
 
+function isLegacyWeeklyChallengeDraft(challenge: WeeklyChallengeDraft | undefined): boolean {
+  if (!challenge) return true;
+  const normalizedText = `${challenge.title} ${challenge.description}`.toLowerCase();
+  return [
+    "mision duelo amistoso",
+    "reto validable en sede",
+    "coordina una actividad fisica",
+    "realiza una actividad fisica en una cancha",
+  ].some((legacyText) => normalizedText.includes(legacyText));
+}
+
+function buildWeeklyChallengeFromAi(
+  aiPlan: AiRecommendationResponse,
+  challengeIndex: number,
+  fallbackPlan: AiRecommendationResponse | null,
+): WeeklyChallengeDraft {
+  const challengeCards = aiPlan.recommendations.filter((item) => item.type === "challenge");
+  const selectedCard = challengeCards[challengeIndex] ?? challengeCards[0];
+
+  if (selectedCard?.title && selectedCard.description) {
+    return {
+      title: selectedCard.title,
+      description: selectedCard.description,
+      reward:
+        typeof selectedCard.metadata?.rewardHint === "string"
+          ? selectedCard.metadata.rewardHint
+          : `+${challengeIndex === 0 ? 60 : 45} FitCoins sugeridos si completas la mision y la sede la valida.`,
+    };
+  }
+
+  if (challengeIndex === 0 && aiPlan.dailyChallenge.title && aiPlan.dailyChallenge.description) {
+    return {
+      title: aiPlan.dailyChallenge.title,
+      description: aiPlan.dailyChallenge.description,
+      reward: aiPlan.dailyChallenge.rewardHint,
+    };
+  }
+
+  // Fallback defensivo: solo se usa si Vertex responde sin retos estructurados.
+  return buildSingleWeeklyChallengeRefresh(fallbackPlan, challengeIndex, challengeIndex + 1);
+}
+
+async function generateWeeklyChallengeWithVertex(
+  challengeIndex: number,
+  fallbackPlan: AiRecommendationResponse | null,
+): Promise<WeeklyChallengeDraft> {
+  const aiPlan = await getAiRecommendations({ type: "challenges", limit: 4, language: "es" });
+  return buildWeeklyChallengeFromAi(aiPlan, challengeIndex, fallbackPlan);
+}
+
 function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
   return {
     id: publicMatch.id,
@@ -527,6 +578,8 @@ function Dashboard() {
   const [challengeRefreshCounts, setChallengeRefreshCounts] = useState<number[]>(
     user ? getWeeklyRefreshCounts(user.id) : [0, 0],
   );
+  const [refreshingChallengeIndexes, setRefreshingChallengeIndexes] = useState<number[]>([]);
+  const [weeklyChallengesRestored, setWeeklyChallengesRestored] = useState(false);
   const [overrideChallenges, setOverrideChallenges] = useState<WeeklyChallengeDraft[]>(
     user ? getWeeklyOverrideChallenges(user.id) : [],
   );
@@ -543,10 +596,15 @@ function Dashboard() {
     setChallengeRefreshCounts(getWeeklyRefreshCounts(user.id));
     setOverrideChallenges(getWeeklyOverrideChallenges(user.id));
     setSelectedWeeklyVenueIds(getWeeklySelectedVenues(user.id));
+    setWeeklyChallengesRestored(false);
   }, [user]);
 
   useEffect(() => {
-    if (!user || useAuthStore.getState().isDemoMode) return;
+    if (!user) return;
+    if (useAuthStore.getState().isDemoMode) {
+      setWeeklyChallengesRestored(true);
+      return;
+    }
     let active = true;
     getEngagementChallenges()
       .then((challenges) => {
@@ -563,9 +621,11 @@ function Dashboard() {
           setChallengeRefreshCounts(refreshCounts);
           setWeeklyRefreshCounts(user.id, refreshCounts);
         }
+        setWeeklyChallengesRestored(true);
       })
       .catch((error) => {
         if (import.meta.env.DEV) console.warn("No se pudieron restaurar retos persistidos:", error);
+        if (active) setWeeklyChallengesRestored(true);
       });
     return () => {
       active = false;
@@ -573,14 +633,29 @@ function Dashboard() {
   }, [user]);
 
   const handleRefreshWeeklyChallenge = async (challengeIndex: number) => {
-    if (!user || challengeRefreshCounts[challengeIndex] >= 1) return;
+    if (
+      !user ||
+      challengeRefreshCounts[challengeIndex] >= 1 ||
+      refreshingChallengeIndexes.includes(challengeIndex)
+    ) {
+      return;
+    }
+    setRefreshingChallengeIndexes((current) => [...new Set([...current, challengeIndex])]);
     const nextCounts = [...challengeRefreshCounts];
     nextCounts[challengeIndex] = (nextCounts[challengeIndex] ?? 0) + 1;
-    const nextChallenge = buildSingleWeeklyChallengeRefresh(
-      dailyPlan,
-      challengeIndex,
-      nextCounts[challengeIndex],
-    );
+    let nextChallenge: WeeklyChallengeDraft;
+    try {
+      // El refresh manual consume Vertex para proponer una mision nueva,
+      // personalizada y menos repetitiva que las plantillas locales.
+      nextChallenge = await generateWeeklyChallengeWithVertex(challengeIndex, dailyPlan);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("Vertex no pudo actualizar el reto:", error);
+      nextChallenge = buildSingleWeeklyChallengeRefresh(
+        dailyPlan,
+        challengeIndex,
+        nextCounts[challengeIndex],
+      );
+    }
     const nextChallenges = [...overrideChallenges];
     nextChallenges[challengeIndex] = nextChallenge;
     setWeeklyRefreshCounts(user.id, nextCounts);
@@ -597,10 +672,13 @@ function Dashboard() {
         weekKey: getWeeklyChallengeKey(user.id),
         challengeIndex,
         refreshCount: nextCounts[challengeIndex],
+        generationMode: "vertex_manual_refresh",
       },
     }).catch((error) => {
       if (import.meta.env.DEV) console.warn("No se pudo persistir reto actualizado:", error);
     });
+
+    setRefreshingChallengeIndexes((current) => current.filter((index) => index !== challengeIndex));
 
     toast.success(`Reto ${challengeIndex + 1} actualizado`, {
       description: "Se genero una nueva mision usando tu perfil deportivo.",
@@ -657,6 +735,80 @@ function Dashboard() {
   }, [dailyPlanRefreshKey, user]);
 
   // === BLOQUE: Racha deportiva y días de asistencia ===
+  useEffect(() => {
+    if (!user || useAuthStore.getState().isDemoMode) return;
+    if (!weeklyChallengesRestored || dailyPlanStatus !== "ready") return;
+    if (
+      !isLegacyWeeklyChallengeDraft(overrideChallenges[0]) &&
+      !isLegacyWeeklyChallengeDraft(overrideChallenges[1])
+    ) {
+      return;
+    }
+
+    let active = true;
+    const missingIndexes = [0, 1].filter((index) =>
+      isLegacyWeeklyChallengeDraft(overrideChallenges[index]),
+    );
+    setRefreshingChallengeIndexes((current) => [...new Set([...current, ...missingIndexes])]);
+
+    // Generamos retos creativos con Vertex solo si no hay retos guardados para
+    // esta semana. Luego se persisten para no consumir tokens en cada visita.
+    Promise.all(
+      missingIndexes.map(async (challengeIndex) => ({
+        challengeIndex,
+        challenge: await generateWeeklyChallengeWithVertex(challengeIndex, dailyPlan),
+      })),
+    )
+      .then(async (generatedChallenges) => {
+        if (!active) return;
+        const nextChallenges = [...overrideChallenges];
+        for (const { challengeIndex, challenge } of generatedChallenges) {
+          nextChallenges[challengeIndex] = challenge;
+        }
+        setOverrideChallenges(nextChallenges);
+        setWeeklyOverrideChallenges(user.id, nextChallenges);
+
+        await Promise.all(
+          generatedChallenges.map(({ challengeIndex, challenge }) =>
+            saveEngagementChallenge({
+              title: challenge.title,
+              description: challenge.description,
+              rewardHint: challenge.reward,
+              metadata: {
+                source: "home_weekly_challenge",
+                weekKey: getWeeklyChallengeKey(user.id),
+                challengeIndex,
+                refreshCount: challengeRefreshCounts[challengeIndex] ?? 0,
+                generationMode: "vertex_initial_weekly",
+              },
+            }).catch((error) => {
+              if (import.meta.env.DEV) console.warn("No se pudo persistir reto IA:", error);
+            }),
+          ),
+        );
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) console.warn("No se pudieron generar retos con Vertex:", error);
+      })
+      .finally(() => {
+        if (!active) return;
+        setRefreshingChallengeIndexes((current) =>
+          current.filter((index) => !missingIndexes.includes(index)),
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    challengeRefreshCounts,
+    dailyPlan,
+    dailyPlanStatus,
+    overrideChallenges,
+    user,
+    weeklyChallengesRestored,
+  ]);
+
   const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
   const [attendanceDays, setAttendanceDays] = useState<string[]>([]);
 
@@ -1245,6 +1397,7 @@ function Dashboard() {
         onRetry={() => setDailyPlanRefreshKey((current) => current + 1)}
         overrideChallenges={overrideChallenges}
         refreshesRemaining={challengeRefreshCounts.map((count) => Math.max(0, 1 - count))}
+        refreshingChallengeIndexes={refreshingChallengeIndexes}
         onRefreshChallenge={handleRefreshWeeklyChallenge}
         venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
         selectedVenueIds={selectedWeeklyVenueIds}
@@ -1761,6 +1914,7 @@ function DailySportsPlan({
   onRetry,
   overrideChallenges,
   refreshesRemaining,
+  refreshingChallengeIndexes,
   onRefreshChallenge,
   venues,
   selectedVenueIds,
@@ -1771,6 +1925,7 @@ function DailySportsPlan({
   onRetry: () => void;
   overrideChallenges: WeeklyChallengeDraft[];
   refreshesRemaining: number[];
+  refreshingChallengeIndexes: number[];
   onRefreshChallenge: (challengeIndex: number) => void;
   venues: Court[];
   selectedVenueIds: string[];
@@ -1789,6 +1944,28 @@ function DailySportsPlan({
   const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
   const primaryOverride = overrideChallenges[0];
   const venueOverride = overrideChallenges[1];
+  const isChallengeRefreshing = (challengeIndex: number) =>
+    refreshingChallengeIndexes.includes(challengeIndex);
+  const primaryStatusLabel = isChallengeRefreshing(0)
+    ? "Generando con IA"
+    : selectedVenues[0]
+      ? primaryOverride
+        ? "Actualizado con sede"
+        : "Sede seleccionada"
+      : primaryOverride
+        ? "Actualizado"
+        : plan
+          ? "Pendiente de sede"
+          : isLoading
+            ? "Cargando"
+            : "No cargado";
+  const venueStatusLabel = isChallengeRefreshing(1)
+    ? "Generando con IA"
+    : selectedVenues[1]
+      ? "Sede seleccionada"
+      : isLoading
+        ? "Cargando"
+        : "Pendiente de sede";
   const weeklyChallenges = [
     {
       title: primaryOverride?.title ?? plan?.dailyChallenge.title ?? "Preparando reto principal",
@@ -1800,18 +1977,8 @@ function DailySportsPlan({
         primaryOverride?.reward ??
         plan?.dailyChallenge.rewardHint ??
         "Se mostrara cuando el reto este listo",
-      statusLabel: selectedVenues[0]
-        ? primaryOverride
-          ? "Actualizado con sede"
-          : "Sede seleccionada"
-        : primaryOverride
-          ? "Actualizado"
-          : plan
-            ? "Pendiente de sede"
-            : isLoading
-              ? "Cargando"
-              : "No cargado",
-      canRefresh: Boolean(plan) && (refreshesRemaining[0] ?? 0) > 0,
+      statusLabel: primaryStatusLabel,
+      canRefresh: Boolean(plan) && (refreshesRemaining[0] ?? 0) > 0 && !isChallengeRefreshing(0),
     },
     {
       title: venueOverride?.title ?? "Reto validable en sede",
@@ -1821,12 +1988,8 @@ function DailySportsPlan({
           ? `Realiza una actividad fisica en una sede como ${venueRecommendation.title}. La empresa responsable validara el cumplimiento.`
           : "Realiza una actividad fisica en una cancha, establecimiento o gym. La empresa responsable validara si cumpliste la actividad."),
       reward: venueOverride?.reward ?? "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
-      statusLabel: selectedVenues[1]
-        ? "Sede seleccionada"
-        : isLoading
-          ? "Cargando"
-          : "Pendiente de sede",
-      canRefresh: Boolean(plan) && (refreshesRemaining[1] ?? 0) > 0,
+      statusLabel: venueStatusLabel,
+      canRefresh: Boolean(plan) && (refreshesRemaining[1] ?? 0) > 0 && !isChallengeRefreshing(1),
     },
   ];
 
@@ -1947,7 +2110,11 @@ function DailySportsPlan({
                   disabled={!challenge.canRefresh}
                   className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {challenge.canRefresh ? `Actualizar reto ${index + 1}` : "Sin actualizaciones"}
+                  {isChallengeRefreshing(index)
+                    ? "Generando con IA..."
+                    : challenge.canRefresh
+                      ? `Actualizar reto ${index + 1}`
+                      : "Sin actualizaciones"}
                 </button>
               </div>
             </div>
