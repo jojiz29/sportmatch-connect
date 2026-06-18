@@ -86,9 +86,9 @@ export class MatchesService {
       return await this.prisma.matches.create({
         data: {
           ...data,
-          // La API recibe texto desde el formulario, pero la BD real guarda date/time tipados.
-          date: this.toDatabaseDate(data.date),
-          time: this.toDatabaseTime(data.time),
+          // La API y el schema Prisma actual guardan date/time como texto estable.
+          date: data.date,
+          time: data.time,
           creator_id: creatorId,
           status: "OPEN",
         },
@@ -117,9 +117,9 @@ export class MatchesService {
         where: { id },
         data: {
           ...data,
-          // Convertimos solo cuando el usuario envia cambios de fecha u hora.
-          date: data.date ? this.toDatabaseDate(data.date) : undefined,
-          time: data.time ? this.toDatabaseTime(data.time) : undefined,
+          // Mantener string evita errores P2032 cuando Supabase devuelve DATE/TIME serializados.
+          date: data.date,
+          time: data.time,
         },
       });
     } catch (error) {
@@ -212,22 +212,5 @@ export class MatchesService {
       console.error("MatchesService.leave error:", error);
       throw error;
     }
-  }
-
-  /**
-   * PostgreSQL guarda matches.date como DATE. Usamos mediodia UTC para evitar
-   * cambios de dia por zona horaria al serializar el Date en Node.
-   */
-  private toDatabaseDate(value: string): Date {
-    return new Date(`${value}T12:00:00.000Z`);
-  }
-
-  /**
-   * PostgreSQL guarda matches.time como TIME. Prisma lo representa como Date,
-   * por eso fijamos una fecha neutra y conservamos solo hora/minuto/segundo.
-   */
-  private toDatabaseTime(value: string): Date {
-    const normalized = value.length === 5 ? `${value}:00` : value;
-    return new Date(`1970-01-01T${normalized}.000Z`);
   }
 }
