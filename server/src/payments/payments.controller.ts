@@ -28,6 +28,7 @@ export class PaymentsController {
     @Req() req: PaymentRequest,
     @Body("successUrl") successUrl: string,
     @Body("cancelUrl") cancelUrl: string,
+    @Body("tier") tier?: string,
   ) {
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
@@ -38,7 +39,7 @@ export class PaymentsController {
       throw new BadRequestException("successUrl y cancelUrl son requeridos");
     }
 
-    return this.paymentsService.createCheckoutSession(userId, successUrl, cancelUrl);
+    return this.paymentsService.createCheckoutSession(userId, successUrl, cancelUrl, tier);
   }
 
   @UseGuards(SupabaseAuthGuard)
@@ -75,14 +76,19 @@ export class PaymentsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Post("mock-upgrade")
-  async mockUpgrade(@Req() req: PaymentRequest) {
+  async mockUpgrade(@Req() req: PaymentRequest, @Body("tier") tier?: string) {
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
       throw new BadRequestException("Usuario no autenticado");
     }
 
-    await this.paymentsService.upgradeUserMock(userId);
-    return { success: true, message: "Usuario ascendido a PREMIUM exitosamente (modo demo)" };
+    const planTier = tier || "INICIAL";
+    await this.paymentsService.upgradeUserMock(userId, planTier);
+    return {
+      success: true,
+      message: `Usuario ascendido a ${planTier} exitosamente (modo demo)`,
+      tier: planTier,
+    };
   }
 
   @UseGuards(SupabaseAuthGuard)

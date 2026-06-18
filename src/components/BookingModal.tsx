@@ -241,8 +241,8 @@ export function BookingModal({
   const totalCost = baseCourtPrice + commissionAmount;
   const pricePerPerson = totalCost;
   const cost = Math.ceil(pricePerPerson);
-  const selectedDiscount = paymentSelection?.fitcoinsToUse ?? 0;
-  const totalPaid = paymentResult?.amountCharged ?? Math.max(0, cost - selectedDiscount);
+  const selectedDiscount = 0;
+  const totalPaid = paymentResult?.amountCharged ?? cost;
   const paymentMethodLabel =
     paymentSelection?.method === "fitcoins"
       ? "FitCoins"
@@ -279,7 +279,7 @@ export function BookingModal({
 
       const paymentPayload: PaymentPayload = {
         ...selection,
-        amount: Math.max(0, cost - selection.fitcoinsToUse),
+        amount: cost,
       };
 
       currentPaymentResult = await processPayment(paymentPayload, court.name, stripe, elements);
@@ -368,8 +368,7 @@ export function BookingModal({
           timestamp: new Date().toISOString(),
           courtName: court.name,
           method: selection.method,
-          amount: Math.max(0, cost - selection.fitcoinsToUse),
-          fitcoinsUsed: selection.fitcoinsToUse,
+          amount: cost,
           status: "partial_failure",
           errorCode: "BOOKING_PARTIAL_FAILURE",
         });
@@ -594,7 +593,6 @@ export function BookingModal({
                 </DialogHeader>
                 <PaymentCheckout
                   cost={cost}
-                  userBalance={user.fitcoins_balance}
                   onConfirm={handlePaymentConfirm}
                   isProcessing={isProcessing}
                   disabled={isBooking}

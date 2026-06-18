@@ -7,14 +7,11 @@ import { useAuthStore } from "@/entities/user/useAuth";
 
 export interface PaymentSelection {
   method: PaymentMethod;
-  useFitcoins: boolean;
-  fitcoinsToUse: number;
   cardHolderName?: string;
 }
 
 interface PaymentCheckoutProps {
   cost: number;
-  userBalance: number;
   onConfirm: (
     selection: PaymentSelection,
     stripe?: Stripe | null,
@@ -43,28 +40,17 @@ const cardElementOptions = {
   hidePostalCode: true,
 };
 
-function PaymentCheckoutForm({
-  cost,
-  userBalance,
-  onConfirm,
-  isProcessing,
-  disabled,
-}: PaymentCheckoutProps) {
+function PaymentCheckoutForm({ onConfirm, isProcessing, disabled }: PaymentCheckoutProps) {
   const stripe = useStripe();
   const elements = useElements();
-  const [useFitcoins, setUseFitcoins] = useState(userBalance > 0);
   const [cardHolder, setCardHolder] = useState("");
   const [cardComplete, setCardComplete] = useState(false);
   const [cardError, setCardError] = useState("");
   const [cardHolderTouched, setCardHolderTouched] = useState(false);
 
   const CARD_HOLDER_MAX_LENGTH = 30;
-  const availableFitcoins = Math.min(userBalance, cost);
-  const fitcoinsToUse = useFitcoins ? availableFitcoins : 0;
-  const amountToCharge = Math.max(0, cost - fitcoinsToUse);
-  const cardHolderValid = amountToCharge === 0 || cardHolder.trim().length >= 3;
+  const cardHolderValid = cardHolder.trim().length >= 3;
   const cardHolderError = (() => {
-    if (amountToCharge === 0) return "";
     if (!cardHolderTouched && !cardHolder) return "";
 
     const trimmed = cardHolder.trim();
@@ -73,16 +59,13 @@ function PaymentCheckoutForm({
     return "";
   })();
 
-  const paymentDisabled =
-    disabled || isProcessing || (amountToCharge > 0 && (!cardComplete || !cardHolderValid));
+  const paymentDisabled = disabled || isProcessing || !cardComplete || !cardHolderValid;
 
   const handleConfirm = () => {
     if (paymentDisabled) return;
     onConfirm(
       {
         method: "card",
-        useFitcoins,
-        fitcoinsToUse,
         cardHolderName: cardHolder.trim(),
       },
       stripe,
@@ -184,41 +167,6 @@ function PaymentCheckoutForm({
             )}
             {cardError ? <p className="mt-2 text-[11px] text-rose-500">{cardError}</p> : null}
           </label>
-          {amountToCharge === 0 ? (
-            <div className="rounded-2xl bg-emerald-900/10 border border-emerald-500/30 p-3 text-sm text-emerald-300">
-              El total está cubierto con FitCoins. No se requiere tarjeta para completar este pago.
-            </div>
-          ) : null}
-
-          {userBalance > 0 && (
-            <button
-              type="button"
-              className="inline-flex items-center justify-between w-full rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm font-semibold text-foreground"
-              onClick={() => setUseFitcoins((prev) => !prev)}
-            >
-              <span>Usar mis FitCoins disponibles como descuento</span>
-              <span
-                className={`rounded-full px-2 py-1 text-[11px] font-semibold ${useFitcoins ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}
-              >
-                {useFitcoins ? "Activado" : "Desactivado"}
-              </span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-border/70 p-4 bg-background/80 space-y-3 text-xs">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Costo total</span>
-          <span className="font-semibold">S/ {cost.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">FitCoins aplicados</span>
-          <span className="font-semibold text-emerald-500">-S/ {fitcoinsToUse.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between border-t border-border/50 pt-3 font-semibold">
-          <span>Total a pagar</span>
-          <span>S/ {amountToCharge.toFixed(2)}</span>
         </div>
       </div>
 

@@ -741,7 +741,7 @@ Reglas:
           },
         });
 
-        isPremium = userProfile?.tier === "PREMIUM";
+        isPremium = userProfile?.tier !== "FREE" && userProfile?.tier != null;
 
         // 2. Límite diario: 20 mensajes al día (últimas 24 horas)
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -820,15 +820,21 @@ Reglas:
       );
     }
 
-    // Limit check bypassed as requested by user
-    /*
-    if (messageCount >= 20) {
+    // Rate limiting por tier
+    const tierLimits: Record<string, number> = {
+      FREE: 0,
+      INICIAL: 15,
+      PLATA: 50,
+      ELITE: 9999,
+    };
+    const tierLimit = tierLimits[userProfile?.tier || "FREE"] ?? 0;
+
+    if (messageCount >= tierLimit) {
       throw new HttpException(
-        "Has superado el límite diario de 20 mensajes con el Coach IA.",
+        `Has superado el límite de ${tierLimit} mensajes diarios con el Coach IA en tu plan ${userProfile?.tier || "FREE"}.`,
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    */
 
     // 4. Prompt de Vertex AI con Datos de Perfil completos para personalización inteligente
     const userProfileContext = {
@@ -967,7 +973,7 @@ Mantén la respuesta concisa y al grano (máx 150 palabras). Da consejos prácti
           select: { tier: true },
         });
 
-        isPremium = profile?.tier === "PREMIUM";
+        isPremium = profile?.tier !== "FREE" && profile?.tier != null;
       } catch (dbErr) {
         this.logger.error(`Database query failed in recommendSnack: ${dbErr.message}`);
       }

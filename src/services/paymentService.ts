@@ -6,7 +6,6 @@ export interface PaymentAttemptLog {
   courtName: string;
   method: PaymentMethod;
   amount: number;
-  fitcoinsUsed: number;
   status: "success" | "failed" | "partial_failure";
   errorCode?: string;
 }

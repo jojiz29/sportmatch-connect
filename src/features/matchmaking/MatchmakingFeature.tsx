@@ -261,15 +261,12 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
     if (!currentUser || isSavingConnection) return;
 
     // Verificar límites diarios de Me Gusta (Freemium)
-    const isPremium = currentUser.tier === "PREMIUM";
-    const plan = localStorage.getItem(`sportmatch_subscription_plan_${currentUser.id}`) || "free";
+    const tier = currentUser.tier || "FREE";
 
     let likesLimit = 5;
-    if (isPremium) {
-      if (plan === "bronce") likesLimit = 20;
-      else if (plan === "plata") likesLimit = 50;
-      else likesLimit = 9999; // oro es ilimitado
-    }
+    if (tier === "INICIAL") likesLimit = 20;
+    else if (tier === "PLATA") likesLimit = 50;
+    else if (tier === "ELITE") likesLimit = 9999;
 
     const todayStr = new Date().toISOString().split("T")[0];
     const likesKey = `sportmatch_daily_likes_${currentUser.id}`;

@@ -279,7 +279,7 @@ function CourtDetail() {
 
       const paymentPayload: PaymentPayload = {
         ...selection,
-        amount: Math.max(0, Math.ceil(pricePerPerson) - selection.fitcoinsToUse),
+        amount: Math.ceil(pricePerPerson),
       };
 
       currentPaymentResult = await processPayment(paymentPayload, court.name, stripe, elements);
@@ -344,8 +344,7 @@ function CourtDetail() {
           timestamp: new Date().toISOString(),
           courtName: court.name,
           method: selection.method,
-          amount: Math.max(0, Math.ceil(pricePerPerson) - selection.fitcoinsToUse),
-          fitcoinsUsed: selection.fitcoinsToUse,
+          amount: Math.ceil(pricePerPerson),
           status: "partial_failure",
           errorCode: "BOOKING_PARTIAL_FAILURE",
         });
@@ -375,9 +374,8 @@ function CourtDetail() {
     "21:00",
   ];
 
-  const holdPaymentDiscount = paymentSelection?.fitcoinsToUse ?? 0;
-  const chargeAmount =
-    paymentResult?.amountCharged ?? Math.max(0, Math.ceil(pricePerPerson) - holdPaymentDiscount);
+  const holdPaymentDiscount = 0;
+  const chargeAmount = paymentResult?.amountCharged ?? Math.ceil(pricePerPerson);
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -520,7 +518,6 @@ function CourtDetail() {
               {/* === BLOQUE: Checkout de pago === */}
               <PaymentCheckout
                 cost={Math.ceil(pricePerPerson)}
-                userBalance={user.fitcoins_balance}
                 onConfirm={handlePaymentConfirm}
                 isProcessing={isProcessing}
                 disabled={isBooking || confirmed}

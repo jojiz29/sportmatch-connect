@@ -46,7 +46,7 @@ model profiles {
   dni_hash             String?   @map("dni_hash")
   dni_intentos         Int?      @default(0) @map("dni_intentos")
   fecha_verificacion   DateTime? @map("fecha_verificacion")
-  tier                 String?   @default("FREE")
+  tier                 String?   @default("FREE") // Valores: FREE | INICIAL | PLATA | ELITE
   last_login_at        DateTime? @map("last_login_at")
 
   posts                               posts[]
@@ -386,7 +386,7 @@ model subscriptions {
   stripe_subscription_id String?   @map("stripe_subscription_id")
   status                 String
   price_id               String?   @map("price_id")
-  tier                   String?   @default("FREE")
+  tier                   String?   @default("FREE") // Valores: FREE | INICIAL | PLATA | ELITE
   current_period_end     DateTime? @map("current_period_end")
   created_at             DateTime  @default(now()) @map("created_at")
   updated_at             DateTime  @updatedAt @map("updated_at")

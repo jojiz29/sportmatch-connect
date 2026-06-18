@@ -804,15 +804,10 @@ function BusinessPage() {
   ) => {
     try {
       setPublishingAd(true);
-      const netAmount = Math.max(
-        0,
-        adCashCost - (selection.useFitcoins ? selection.fitcoinsToUse : 0),
-      );
       const paymentPayload = {
         method: selection.method,
-        amount: netAmount,
-        useFitcoins: selection.useFitcoins,
-        fitcoinsToUse: selection.fitcoinsToUse,
+        amount: adCashCost,
+        cardHolderName: selection.cardHolderName,
       };
 
       const result = await processAdPayment(
@@ -839,19 +834,6 @@ function BusinessPage() {
         is_featured: adFeatured,
         is_premium: adPremium,
       });
-
-      if (selection.useFitcoins && selection.fitcoinsToUse > 0) {
-        const newBalance = (user.fitcoins_balance || 0) - selection.fitcoinsToUse;
-        apiClient.wallet.updateBalance(user.id, newBalance);
-        apiClient.wallet.saveTransaction(user.id, {
-          id: `tx-ad-${Date.now()}`,
-          user_id: user.id,
-          amount: -selection.fitcoinsToUse,
-          description: `Descuento en destaque: ${adTitle}`,
-          type: "SPEND",
-          created_at: new Date().toISOString(),
-        });
-      }
 
       toast.success("¡Pago recibido y anuncio promocionado publicado!");
       setPaymentDialogOpen(false);
@@ -1319,7 +1301,6 @@ function BusinessPage() {
               </DialogHeader>
               <PaymentCheckout
                 cost={adCashCost}
-                userBalance={user.fitcoins_balance || 0}
                 onConfirm={handleAdPaymentConfirm}
                 isProcessing={isAdPaying}
                 disabled={publishingAd}

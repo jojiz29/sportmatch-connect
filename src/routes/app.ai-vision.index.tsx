@@ -39,10 +39,10 @@ function AiVisionOverview() {
   const handleCardClick = (toolKey: "form_analyzer" | "ar_preview", targetRoute: string) => {
     if (!user) return;
 
-    const isPremium = user.tier === "PREMIUM";
+    const hasPaidPlan = user.tier !== "FREE" && user.tier != null;
     const usedCount = trials[toolKey] || 0;
 
-    if (isPremium) {
+    if (hasPaidPlan) {
       navigate({ to: targetRoute });
     } else {
       if (usedCount < 1) {
@@ -98,18 +98,18 @@ function AiVisionOverview() {
           <div className="flex items-center gap-1.5 mt-1.5">
             <span
               className={`h-2.5 w-2.5 rounded-full ${
-                userTier === "PREMIUM" ? "bg-amber-400 animate-pulse" : "bg-muted-foreground"
+                userTier !== "FREE" ? "bg-amber-400 animate-pulse" : "bg-muted-foreground"
               }`}
             />
             <span className="text-sm font-bold uppercase tracking-wider">
-              {userTier === "PREMIUM" ? "🏆 PREMIUM" : "🆓 PLAN GRATUITO"}
+              {userTier !== "FREE" ? `🏆 ${userTier}` : "🆓 PLAN GRATUITO"}
             </span>
           </div>
         </div>
       </div>
 
       {/* Free Trial Banner Notice */}
-      {userTier !== "PREMIUM" && (
+      {userTier === "FREE" && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-5 flex items-start gap-4 shadow-sm">
           <Sparkles className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
@@ -133,7 +133,7 @@ function AiVisionOverview() {
           className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
         >
           <div className="absolute right-6 top-6 flex items-center gap-1.5">
-            {userTier === "PREMIUM" ? (
+            {userTier !== "FREE" ? (
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
                 ILIMITADO
               </span>
@@ -174,7 +174,7 @@ function AiVisionOverview() {
           className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
         >
           <div className="absolute right-6 top-6 flex items-center gap-1.5">
-            {userTier === "PREMIUM" ? (
+            {userTier !== "FREE" ? (
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
                 ILIMITADO
               </span>

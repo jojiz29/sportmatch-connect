@@ -525,11 +525,15 @@ export const backendApi = {
       });
     },
 
-    async mockUpgrade(token: string) {
-      return fetchApi<{ success: boolean; message: string }>("/payments/mock-upgrade", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    async mockUpgrade(token: string, tier?: string) {
+      return fetchApi<{ success: boolean; message: string; tier?: string }>(
+        "/payments/mock-upgrade",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tier: tier || "INICIAL" }),
+        },
+      );
     },
 
     async mockDowngrade(token: string) {

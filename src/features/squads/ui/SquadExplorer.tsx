@@ -776,24 +776,24 @@ export function SquadExplorer() {
             ) : (
               // RETOS SQUAD VS SQUAD TAB
               <div className="flex-1 flex flex-col overflow-hidden space-y-3">
-                {currentUser.tier !== "PREMIUM" ? (
+                {currentUser.tier === "FREE" || !currentUser.tier ? (
                   // Locked State for non-premium
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
                     <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                       <Lock className="h-6 w-6 animate-pulse" />
                     </div>
                     <h4 className="font-bold text-sm text-foreground">
-                      Retos de Competición requiere Premium
+                      Retos de Competición requiere un plan pago
                     </h4>
                     <p className="text-xs text-muted-foreground max-w-sm">
                       Para poder retar a otros equipos y apostar FitCoins en encuentros oficiales,
-                      debes tener una suscripción Premium activa.
+                      debes tener una suscripción activa.
                     </p>
                     <button
                       onClick={() => navigate({ to: "/app/coach" })}
                       className="px-4 py-2 rounded-xl bg-gradient-primary text-white font-bold text-xs shadow-glow cursor-pointer"
                     >
-                      Obtener Premium ★
+                      Ver Planes ★
                     </button>
                   </div>
                 ) : (

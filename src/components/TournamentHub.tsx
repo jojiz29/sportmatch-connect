@@ -121,7 +121,7 @@ export function TournamentHub() {
 
   const filteredUsers = useMemo(() => {
     if (!userSearchQuery.trim()) return [];
-    return registeredUsers.filter((u) =>
+    return registeredUsers.filter((u: User) =>
       u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()),
     );
   }, [registeredUsers, userSearchQuery]);
@@ -816,7 +816,7 @@ export function TournamentHub() {
                 />
               </div>
               <div className="space-y-2">
-                {filteredUsers.map((u) => (
+                {filteredUsers.map((u: User) => (
                   <div
                     key={u.id}
                     className="flex items-center justify-between p-2 bg-background/30 border border-border/40 rounded-xl"

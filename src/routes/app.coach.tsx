@@ -30,7 +30,6 @@ import {
 import { PaymentCheckout, PaymentSelection } from "@/components/PaymentCheckout";
 import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
 import type { Stripe, StripeElements } from "@stripe/stripe-js";
-import { apiClient } from "@/shared/api/apiClient";
 
 export const Route = createFileRoute("/app/coach")({
   head: () => ({ meta: [{ title: "Coach IA Premium — SportMatch" }] }),
@@ -126,8 +125,8 @@ const PLANS: PricingPlan[] = [
     },
   },
   {
-    id: "oro",
-    name: "Plan Oro / Elite",
+    id: "elite",
+    name: "Plan Elite",
     price: 24.99,
     period: "Anual",
     badge: "ELITE",
@@ -191,15 +190,9 @@ function CoachPage() {
     setLoading(true);
     try {
       const planPrice = selectedPlan.price;
-      const netAmount = Math.max(
-        0,
-        planPrice - (selection.useFitcoins ? selection.fitcoinsToUse : 0),
-      );
       const paymentPayload = {
         method: selection.method,
-        amount: netAmount,
-        useFitcoins: selection.useFitcoins,
-        fitcoinsToUse: selection.fitcoinsToUse,
+        amount: planPrice,
         cardHolderName: selection.cardHolderName,
       };
 
@@ -215,49 +208,25 @@ function CoachPage() {
         return;
       }
 
-      // Descontar FitCoins si se usaron
-      if (selection.useFitcoins && selection.fitcoinsToUse > 0) {
-        const newBalance = (user.fitcoins_balance || 0) - selection.fitcoinsToUse;
-        if (!isDemoMode) {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const token = sessionData?.session?.access_token;
-          if (token) {
-            await backendApi.wallet.createTransaction(token, {
-              user_id: user.id,
-              amount: -selection.fitcoinsToUse,
-              description: `Suscripción ${selectedPlan.name} con FitCoins`,
-              type: "SPEND",
-            });
-          }
-        } else {
-          apiClient.wallet.updateBalance(user.id, newBalance);
-          apiClient.wallet.saveTransaction(user.id, {
-            id: `tx-premium-${Date.now()}`,
-            user_id: user.id,
-            amount: -selection.fitcoinsToUse,
-            description: `Suscripción ${selectedPlan.name} con FitCoins (Demo)`,
-            type: "SPEND",
-            created_at: new Date().toISOString(),
-          });
-        }
-        login({ ...user, fitcoins_balance: newBalance });
-      }
+      // Mapear plan ID a tier de BD
+      const tierMap: Record<string, string> = {
+        free: "FREE",
+        bronce: "INICIAL",
+        plata: "PLATA",
+        elite: "ELITE",
+      };
+      const tier = tierMap[selectedPlan.id] || "INICIAL";
 
-      // Guardar plan contratado de forma local
-      localStorage.setItem(`sportmatch_subscription_plan_${user.id}`, selectedPlan.id);
-
-      // Activar PREMIUM
+      // Activar el tier específico
       if (isDemoMode) {
-        const upgradedUser = { ...useAuthStore.getState().user!, tier: "PREMIUM" as const };
+        const upgradedUser = { ...useAuthStore.getState().user!, tier: tier as any };
         login(upgradedUser);
 
         try {
           const storedUsers = localStorage.getItem("sportmatch_demo_users");
           if (storedUsers) {
             const users = JSON.parse(storedUsers);
-            const updatedUsers = users.map((u: any) =>
-              u.id === user.id ? { ...u, tier: "PREMIUM" } : u,
-            );
+            const updatedUsers = users.map((u: any) => (u.id === user.id ? { ...u, tier } : u));
             localStorage.setItem("sportmatch_demo_users", JSON.stringify(updatedUsers));
           }
         } catch (e) {
@@ -275,12 +244,12 @@ function CoachPage() {
           return;
         }
 
-        const response = await backendApi.payments.mockUpgrade(token);
+        const response = await backendApi.payments.mockUpgrade(token, tier);
         if (response.error) {
           toast.error(response.error);
         } else {
           logFunnelEvent("payment_completed");
-          const upgradedUser = { ...useAuthStore.getState().user!, tier: "PREMIUM" as const };
+          const upgradedUser = { ...useAuthStore.getState().user!, tier: tier as any };
           login(upgradedUser);
           toast.success(`¡Suscripción ${selectedPlan.name} activada exitosamente!`);
           setPaymentDialogOpen(false);
@@ -296,12 +265,16 @@ function CoachPage() {
   // Check query params for payments redirection success/cancel
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("payment_success") === "true" || params.get("mock_payment_success") === "true") {
+    const mockSuccess = params.get("mock_payment_success") === "true";
+    const paySuccess = params.get("payment_success") === "true";
+
+    if (mockSuccess || paySuccess) {
+      const queryTier = params.get("tier") || "INICIAL";
       logFunnelEvent("payment_completed");
-      if (user && user.tier !== "PREMIUM") {
-        login({ ...user, tier: "PREMIUM" });
+      if (user && user.tier === "FREE") {
+        login({ ...user, tier: queryTier as any });
       }
-      toast.success("¡Suscripción Premium activada! Disfruta de tus ventajas.");
+      toast.success(`¡Suscripción ${queryTier} activada! Disfruta de tus ventajas.`);
       // Clean query params
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (params.get("payment_canceled") === "true") {
@@ -311,8 +284,8 @@ function CoachPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // If Free user, render locking screen
-  if (!user || user.tier !== "PREMIUM") {
+  // If Free user or not logged in, render locking screen
+  if (!user || user.tier === "FREE") {
     const userTier = user?.tier || "FREE";
     return (
       <div className="flex-1 p-4 lg:p-8 flex flex-col items-center justify-start space-y-12 relative min-h-[85vh] overflow-y-auto max-w-7xl mx-auto w-full">
@@ -379,8 +352,10 @@ function CoachPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full pt-4">
           {PLANS.map((plan) => {
             const isCurrent =
-              (plan.id === "free" && userTier !== "PREMIUM") ||
-              (plan.id !== "free" && userTier === "PREMIUM");
+              (plan.id === "free" && userTier === "FREE") ||
+              (plan.id === "bronce" && userTier === "INICIAL") ||
+              (plan.id === "plata" && userTier === "PLATA") ||
+              (plan.id === "elite" && userTier === "ELITE");
 
             return (
               <div
@@ -494,7 +469,7 @@ function CoachPage() {
                   <th className="py-3 px-4">Gratuito</th>
                   <th className="py-3 px-4 text-amber-400">Bronce (S/ 5.99)</th>
                   <th className="py-3 px-4">Plata (S/ 19.99)</th>
-                  <th className="py-3 px-4">Oro / Elite (S/ 24.99)</th>
+                  <th className="py-3 px-4">Elite (S/ 24.99)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20 text-muted-foreground">
@@ -580,7 +555,6 @@ function CoachPage() {
               <div className="py-4">
                 <PaymentCheckout
                   cost={selectedPlan.price}
-                  userBalance={user?.fitcoins_balance || 0}
                   onConfirm={handlePaymentConfirm}
                   isProcessing={loading}
                 />
@@ -606,7 +580,15 @@ function CoachPage() {
               <div className="text-xs font-semibold text-primary uppercase tracking-wider">
                 Plan Activo
               </div>
-              <div className="text-base font-bold text-foreground">SportMatch Premium ★</div>
+              <div className="text-base font-bold text-foreground">
+                {user?.tier === "ELITE"
+                  ? "Elite ★"
+                  : user?.tier === "PLATA"
+                    ? "Plata"
+                    : user?.tier === "INICIAL"
+                      ? "Inicial"
+                      : "Free"}
+              </div>
             </div>
           </div>
           <button
@@ -728,15 +710,11 @@ function CoachChatTab() {
 
   useEffect(() => {
     if (user) {
-      const isPremium = user.tier === "PREMIUM";
-      const plan = localStorage.getItem(`sportmatch_subscription_plan_${user.id}`) || "free";
-
+      const tier = user.tier || "FREE";
       let limit = 3;
-      if (isPremium) {
-        if (plan === "bronce") limit = 15;
-        else if (plan === "plata") limit = 50;
-        else limit = 9999;
-      }
+      if (tier === "INICIAL") limit = 15;
+      else if (tier === "PLATA") limit = 50;
+      else if (tier === "ELITE") limit = 9999;
       setChatLimit(limit);
 
       const todayStr = new Date().toISOString().split("T")[0];
@@ -838,15 +816,12 @@ function CoachChatTab() {
     if (!messageText.trim()) return;
 
     // Verificar límites de interacciones con el Chatbot (Freemium)
-    const isPremium = user?.tier === "PREMIUM";
-    const plan = localStorage.getItem(`sportmatch_subscription_plan_${user?.id}`) || "free";
+    const tier = user?.tier || "FREE";
 
     let limit = 3;
-    if (isPremium) {
-      if (plan === "bronce") limit = 15;
-      else if (plan === "plata") limit = 50;
-      else limit = 9999;
-    }
+    if (tier === "INICIAL") limit = 15;
+    else if (tier === "PLATA") limit = 50;
+    else if (tier === "ELITE") limit = 9999;
 
     const todayStr = new Date().toISOString().split("T")[0];
     const chatKey = `sportmatch_chat_usage_${user?.id}`;
@@ -858,7 +833,7 @@ function CoachChatTab() {
     }
 
     if (limit < 9999) {
-      if (plan === "free" && chatData.count >= limit) {
+      if (tier === "FREE" && chatData.count >= limit) {
         toast.error(
           "Has alcanzado tu límite de prueba de 3 interacciones gratuitas con el Coach Sporty. Suscríbete para continuar conversando.",
           { duration: 5000 },

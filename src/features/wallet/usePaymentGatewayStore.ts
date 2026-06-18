@@ -2,7 +2,6 @@
 // === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { useAuthStore } from "@/entities/user/useAuth";
-import { useWalletStore } from "@/features/wallet/useWalletStore";
 import { logPaymentAttempt } from "@/services/paymentService";
 import { PaymentMethod } from "@/shared/lib/paymentUtils";
 import type { Stripe, StripeElements } from "@stripe/stripe-js";
@@ -10,12 +9,10 @@ import { CardElement } from "@stripe/react-stripe-js";
 import { cryptoSecureRandomString } from "@/shared/lib/crypto";
 
 // === BLOQUE: PAYLOAD DE PAGO ===
-// Datos necesarios para procesar un pago: método, monto, uso de FitCoins y datos del titular.
+// Datos necesarios para procesar un pago: método, monto y datos del titular.
 export interface PaymentPayload {
   method: PaymentMethod;
   amount: number;
-  useFitcoins: boolean;
-  fitcoinsToUse: number;
   cardHolderName?: string;
   phone?: string;
 }
@@ -26,7 +23,6 @@ export interface PaymentResult {
   success: boolean;
   transactionId?: string;
   amountCharged: number;
-  fitcoinsUsed: number;
   errorCode?: string;
 }
 
@@ -158,7 +154,7 @@ const handleStripePaymentFlow = async (
 const failPayment = (set: any, attempt: any, errorCode: string, error: string) => {
   set({ isProcessing: false, status: "failed", error, errorCode });
   logPaymentAttempt({ ...attempt, status: "failed", errorCode });
-  return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
+  return { success: false, amountCharged: 0, errorCode };
 };
 
 const processCardPayment = async (
@@ -193,7 +189,6 @@ const processCardPayment = async (
       success: true,
       transactionId: txId,
       amountCharged: payload.amount,
-      fitcoinsUsed: payload.fitcoinsToUse,
     };
   }
 
@@ -219,26 +214,6 @@ const processCardPayment = async (
 const processYapePlinPayment = (set: any, payload: any, attempt: any) => {
   if (!payload.phone || !/^\d{9}$/.test(payload.phone)) {
     return failPayment(set, attempt, "PHONE_INVALID", "Número de celular inválido");
-  }
-  return null;
-};
-
-const processFitcoinsPayment = async (
-  payload: any,
-  courtName: string,
-  isDemo: boolean,
-  set: any,
-  attempt: any,
-) => {
-  const ledgerDesc = `Reserva: ${courtName}`;
-  const ledgerSuccess = await useWalletStore.getState().redeem(payload.fitcoinsToUse, ledgerDesc);
-  if (!ledgerSuccess && !isDemo) {
-    return failPayment(
-      set,
-      attempt,
-      "FITCOINS_INSUFFICIENT",
-      "Saldo de FitCoins insuficiente para completar esta transacción.",
-    );
   }
   return null;
 };
@@ -271,7 +246,6 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       courtName,
       method: payload.method,
       amount: payload.amount,
-      fitcoinsUsed: payload.fitcoinsToUse,
       status: "failed" as const,
     };
 
@@ -289,12 +263,6 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       if (yapePlinResult) return yapePlinResult;
     }
 
-    // ── Flujo: Descuento con FitCoins ────────────────────────────────────
-    if (payload.useFitcoins && payload.fitcoinsToUse > 0) {
-      const fitcoinsResult = await processFitcoinsPayment(payload, courtName, isDemo, set, attempt);
-      if (fitcoinsResult) return fitcoinsResult;
-    }
-
     // Éxito: genera un ID de transacción y actualiza el estado
     const txId = `TXN-${cryptoSecureRandomString(9).toUpperCase()}`;
     set({
@@ -310,7 +278,6 @@ export const usePaymentGatewayStore = create<PaymentGatewayState>((set) => ({
       success: true,
       transactionId: txId,
       amountCharged: payload.amount,
-      fitcoinsUsed: payload.fitcoinsToUse,
     };
   },
 

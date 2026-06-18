@@ -130,7 +130,7 @@ export interface User {
   xp?: number;
   xp_level?: number;
   xp_to_next_level?: number;
-  tier?: "FREE" | "PREMIUM";
+  tier?: "FREE" | "INICIAL" | "PLATA" | "ELITE";
 }
 
 // === BLOQUE: SEDE / CANCHA DEPORTIVA ===

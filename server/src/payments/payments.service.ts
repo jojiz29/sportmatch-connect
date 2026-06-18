@@ -46,17 +46,34 @@ export class PaymentsService {
     }
   }
 
+  // Precios por tier en céntimos PEN
+  private readonly TIER_PRICES: Record<
+    string,
+    { unit_amount: number; interval: "month" | "year"; name_suffix: string }
+  > = {
+    INICIAL: { unit_amount: 599, interval: "month", name_suffix: "Inicial (Mensual)" },
+    PLATA: { unit_amount: 1999, interval: "month", name_suffix: "Plata (Semestral)" },
+    ELITE: { unit_amount: 2499, interval: "year", name_suffix: "Elite (Anual)" },
+  };
+
   async createCheckoutSession(
     userId: string,
     successUrl: string,
     cancelUrl: string,
+    tier?: string,
   ): Promise<{ url: string; mock?: boolean }> {
     if (!this.stripe) {
       this.logger.log(`[Mock Payments] Creating mock checkout session for user: ${userId}`);
-      // Return a URL that redirects back to the app with a success query param
-      const url = `${successUrl}${successUrl.includes("?") ? "&" : "?"}mock_payment_success=true&user_id=${userId}`;
+      const params = new URLSearchParams();
+      params.set("mock_payment_success", "true");
+      params.set("user_id", userId);
+      if (tier) params.set("tier", tier);
+      const url = `${successUrl}${successUrl.includes("?") ? "&" : "?"}${params.toString()}`;
       return { url, mock: true };
     }
+
+    const priceConfig =
+      tier && this.TIER_PRICES[tier] ? this.TIER_PRICES[tier] : this.TIER_PRICES.INICIAL;
 
     try {
       const session = await this.stripe.checkout.sessions.create({
@@ -66,13 +83,13 @@ export class PaymentsService {
             price_data: {
               currency: "pen",
               product_data: {
-                name: "SportMatch Connect Premium",
+                name: `SportMatch Connect — Plan ${priceConfig.name_suffix}`,
                 description:
-                  "Acceso ilimitado a recomendaciones del Coach IA, nutrición inteligente y retos entre Squads.",
+                  "Acceso a Coach IA, nutrición inteligente, matchmaking premium y retos entre Squads.",
               },
-              unit_amount: 5000, // S/ 50.00 PEN
+              unit_amount: priceConfig.unit_amount,
               recurring: {
-                interval: "month",
+                interval: priceConfig.interval,
               },
             },
             quantity: 1,
@@ -81,6 +98,7 @@ export class PaymentsService {
         mode: "subscription",
         metadata: {
           userId,
+          tier: tier || "INICIAL",
         },
         success_url: successUrl,
         cancel_url: cancelUrl,
@@ -153,6 +171,7 @@ export class PaymentsService {
       case "checkout.session.completed": {
         const session = event.data.object as StripeCheckoutSession;
         const userId = session.metadata?.userId;
+        const tier = session.metadata?.tier || "INICIAL";
         const stripeCustomerId =
           typeof session.customer === "string" ? session.customer : session.customer?.id;
         const stripeSubscriptionId =
@@ -161,13 +180,7 @@ export class PaymentsService {
             : session.subscription?.id;
 
         if (userId && stripeCustomerId && stripeSubscriptionId) {
-          await this.upgradeUser(
-            userId,
-            stripeCustomerId,
-            stripeSubscriptionId,
-            "Premium Month",
-            "PREMIUM",
-          );
+          await this.upgradeUser(userId, stripeCustomerId, stripeSubscriptionId, tier, tier);
         }
         break;
       }
@@ -186,23 +199,28 @@ export class PaymentsService {
             ? new Date(subscription.current_period_end * 1000)
             : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+          const newTier =
+            status === "active" ? (subRecord.tier !== "FREE" ? subRecord.tier : "INICIAL") : "FREE";
+
           await this.prisma.subscriptions.update({
             where: { id: subRecord.id },
             data: {
               status,
               current_period_end: currentPeriodEnd,
-              tier: status === "active" ? "PREMIUM" : "FREE",
+              tier: newTier,
             },
           });
 
           await this.prisma.profiles.update({
             where: { id: subRecord.user_id },
             data: {
-              tier: status === "active" ? "PREMIUM" : "FREE",
+              tier: newTier,
             },
           });
 
-          this.logger.log(`Subscription updated for user ${subRecord.user_id} to status ${status}`);
+          this.logger.log(
+            `Subscription updated for user ${subRecord.user_id} to status ${status}, tier ${newTier}`,
+          );
         }
         break;
       }
@@ -239,9 +257,15 @@ export class PaymentsService {
     return { received: true };
   }
 
-  async upgradeUserMock(userId: string): Promise<void> {
-    this.logger.log(`[Mock Payments] Upgrading user ${userId} to PREMIUM tier`);
-    await this.upgradeUser(userId, "cus_mock_12345", "sub_mock_12345", "price_mock_999", "PREMIUM");
+  async upgradeUserMock(userId: string, tier: string = "INICIAL"): Promise<void> {
+    this.logger.log(`[Mock Payments] Upgrading user ${userId} to ${tier} tier`);
+    await this.upgradeUser(
+      userId,
+      "cus_mock_12345",
+      "sub_mock_12345",
+      `price_mock_${tier.toLowerCase()}`,
+      tier,
+    );
   }
 
   async downgradeUserMock(userId: string): Promise<void> {
