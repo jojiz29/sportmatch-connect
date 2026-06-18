@@ -224,20 +224,25 @@ function setWeeklyOverrideChallenges(userId: string, challenges: WeeklyChallenge
   );
 }
 
-function getWeeklySelectedVenue(userId: string): string {
-  if (typeof window === "undefined") return "";
-  return (
-    window.localStorage.getItem(
-      `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`,
-    ) ?? ""
-  );
+function getWeeklySelectedVenues(userId: string): string[] {
+  if (typeof window === "undefined") return ["", ""];
+  const key = `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`;
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return ["", ""];
+  try {
+    const parsed = JSON.parse(raw) as string | string[];
+    if (Array.isArray(parsed)) return [parsed[0] ?? "", parsed[1] ?? ""];
+  } catch {
+    // Compatibilidad con versiones anteriores que guardaban un solo id como texto plano.
+  }
+  return [raw, ""];
 }
 
-function setWeeklySelectedVenue(userId: string, venueId: string) {
+function setWeeklySelectedVenues(userId: string, venueIds: string[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(
     `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`,
-    venueId,
+    JSON.stringify([venueIds[0] ?? "", venueIds[1] ?? ""]),
   );
 }
 
@@ -481,8 +486,8 @@ function Dashboard() {
   const [overrideChallenges, setOverrideChallenges] = useState<WeeklyChallengeDraft[]>(
     user ? getWeeklyOverrideChallenges(user.id) : [],
   );
-  const [selectedWeeklyVenueId, setSelectedWeeklyVenueId] = useState(
-    user ? getWeeklySelectedVenue(user.id) : "",
+  const [selectedWeeklyVenueIds, setSelectedWeeklyVenueIds] = useState<string[]>(
+    user ? getWeeklySelectedVenues(user.id) : ["", ""],
   );
 
   useEffect(() => {
@@ -493,7 +498,7 @@ function Dashboard() {
     if (!user) return;
     setChallengeRefreshCount(getWeeklyRefreshCount(user.id));
     setOverrideChallenges(getWeeklyOverrideChallenges(user.id));
-    setSelectedWeeklyVenueId(getWeeklySelectedVenue(user.id));
+    setSelectedWeeklyVenueIds(getWeeklySelectedVenues(user.id));
   }, [user]);
 
   const handleRefreshWeeklyChallenge = () => {
@@ -509,10 +514,12 @@ function Dashboard() {
     });
   };
 
-  const handleSelectWeeklyVenue = (venueId: string) => {
+  const handleSelectWeeklyVenue = (challengeIndex: number, venueId: string) => {
     if (!user) return;
-    setWeeklySelectedVenue(user.id, venueId);
-    setSelectedWeeklyVenueId(venueId);
+    const nextVenueIds = [...selectedWeeklyVenueIds];
+    nextVenueIds[challengeIndex] = venueId;
+    setWeeklySelectedVenues(user.id, nextVenueIds);
+    setSelectedWeeklyVenueIds(nextVenueIds);
     const venue = closestCourts.find((court) => court.id === venueId);
     toast.success("Sede seleccionada para el reto", {
       description: venue
@@ -1147,7 +1154,7 @@ function Dashboard() {
         refreshesRemaining={Math.max(0, 1 - challengeRefreshCount)}
         onRefreshChallenge={handleRefreshWeeklyChallenge}
         venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
-        selectedVenueId={selectedWeeklyVenueId}
+        selectedVenueIds={selectedWeeklyVenueIds}
         onSelectVenue={handleSelectWeeklyVenue}
       />
 
@@ -1663,7 +1670,7 @@ function DailySportsPlan({
   refreshesRemaining,
   onRefreshChallenge,
   venues,
-  selectedVenueId,
+  selectedVenueIds,
   onSelectVenue,
 }: {
   plan: AiRecommendationResponse | null;
@@ -1673,14 +1680,19 @@ function DailySportsPlan({
   refreshesRemaining: number;
   onRefreshChallenge: () => void;
   venues: Court[];
-  selectedVenueId: string;
-  onSelectVenue: (venueId: string) => void;
+  selectedVenueIds: string[];
+  onSelectVenue: (challengeIndex: number, venueId: string) => void;
 }) {
   const isLoading = status === "loading";
   const isError = status === "error";
   const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
+  const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
+  const activeSelectedVenueId = selectedVenueIds[activeChallengeIndex] ?? "";
   const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
-  const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
+  const selectedVenues = selectedVenueIds.map((venueId) =>
+    venues.find((venue) => venue.id === venueId),
+  );
+  const activeSelectedVenue = selectedVenues[activeChallengeIndex];
   const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
   const primaryOverride = overrideChallenges[0];
   const venueOverride = overrideChallenges[1];
@@ -1695,7 +1707,7 @@ function DailySportsPlan({
         primaryOverride?.reward ??
         plan?.dailyChallenge.rewardHint ??
         "Se mostrara cuando el reto este listo",
-      statusLabel: selectedVenue
+      statusLabel: selectedVenues[0]
         ? primaryOverride
           ? "Actualizado con sede"
           : "Sede seleccionada"
@@ -1716,7 +1728,7 @@ function DailySportsPlan({
           ? `Realiza una actividad fisica en una sede como ${venueRecommendation.title}. La empresa responsable validara el cumplimiento.`
           : "Realiza una actividad fisica en una cancha, establecimiento o gym. La empresa responsable validara si cumpliste la actividad."),
       reward: venueOverride?.reward ?? "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
-      statusLabel: selectedVenue
+      statusLabel: selectedVenues[1]
         ? "Sede seleccionada"
         : isLoading
           ? "Cargando"
@@ -1811,19 +1823,22 @@ function DailySportsPlan({
               <div className="mt-3 space-y-2">
                 <button
                   type="button"
-                  onClick={() => setIsVenuePickerOpen(true)}
+                  onClick={() => {
+                    setActiveChallengeIndex(index);
+                    setIsVenuePickerOpen(true);
+                  }}
                   disabled={venues.length === 0}
                   className="w-full rounded-xl border border-border bg-background px-3 py-2 text-left text-xs text-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
                 >
-                  {selectedVenue
-                    ? selectedVenue.name
+                  {selectedVenues[index]
+                    ? selectedVenues[index]?.name
                     : venues.length > 0
                       ? "Escoger sede para validacion"
                       : "No hay sedes fisicas disponibles"}
                 </button>
                 <p className="text-[11px] text-muted-foreground">
-                  {selectedVenue
-                    ? `${selectedVenue.name} quedara como sede responsable de validacion.`
+                  {selectedVenues[index]
+                    ? `${selectedVenues[index]?.name} quedara como sede responsable de validacion.`
                     : "La empresa de la sede seleccionada podra aprobar o rechazar el cumplimiento."}
                 </p>
               </div>
@@ -1861,11 +1876,11 @@ function DailySportsPlan({
             <div className="mt-4">
               <ChallengeVenueMap
                 venues={venues}
-                selectedVenueId={selectedVenueId}
-                onSelectVenue={(venueId) => {
-                  onSelectVenue(venueId);
-                  setIsVenuePickerOpen(false);
-                }}
+                selectedVenueId={activeSelectedVenueId}
+                selectedVenue={activeSelectedVenue}
+                challengeLabel={`Reto ${activeChallengeIndex + 1}`}
+                onSelectVenue={(venueId) => onSelectVenue(activeChallengeIndex, venueId)}
+                onConfirm={() => setIsVenuePickerOpen(false)}
               />
             </div>
           </DialogContent>
@@ -1891,13 +1906,19 @@ function DailySportsPlan({
 function ChallengeVenueMap({
   venues,
   selectedVenueId,
+  selectedVenue,
+  challengeLabel,
   onSelectVenue,
+  onConfirm,
 }: {
   venues: Court[];
   selectedVenueId: string;
+  selectedVenue: Court | undefined;
+  challengeLabel: string;
   onSelectVenue: (venueId: string) => void;
+  onConfirm: () => void;
 }) {
-  const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
+  const [isMapReady, setIsMapReady] = useState(false);
   const center: [number, number] = selectedVenue
     ? [selectedVenue.lat, selectedVenue.lng]
     : venues[0]
@@ -1919,41 +1940,77 @@ function ChallengeVenueMap({
   }
 
   return (
-    <div className="h-[460px] overflow-hidden rounded-2xl border border-border bg-muted">
-      <MapContainer
-        center={center}
-        zoom={13}
-        className="h-full w-full"
-        scrollWheelZoom={false}
-        dragging
-      >
-        <MapResizer />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {venues.map((venue) => {
-          const isSelected = venue.id === selectedVenueId;
-          return (
-            <Marker
-              key={venue.id}
-              position={[venue.lat, venue.lng]}
-              icon={createChallengeVenueIcon(venue.sport, isSelected)}
-              eventHandlers={{ click: () => onSelectVenue(venue.id) }}
-            >
-              <Popup>
-                <div className="min-w-[180px] text-sm">
-                  <div className="font-bold text-foreground">{venue.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{venue.sport}</div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    Empresa responsable de validacion
+    <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+      <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border bg-muted">
+        {!isMapReady && (
+          <div className="absolute inset-0 z-[500] grid place-items-center bg-background/80 backdrop-blur-sm">
+            <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground shadow-card">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Cargando sedes...
+            </div>
+          </div>
+        )}
+        <MapContainer
+          center={center}
+          zoom={13}
+          className="h-full w-full"
+          scrollWheelZoom={false}
+          dragging
+          whenReady={() => setIsMapReady(true)}
+        >
+          <MapResizer />
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {venues.map((venue) => {
+            const isSelected = venue.id === selectedVenueId;
+            return (
+              <Marker
+                key={venue.id}
+                position={[venue.lat, venue.lng]}
+                icon={createChallengeVenueIcon(venue.sport, isSelected)}
+                eventHandlers={{ click: () => onSelectVenue(venue.id) }}
+              >
+                <Popup>
+                  <div className="min-w-[180px] text-sm">
+                    <div className="font-bold text-foreground">{venue.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{venue.sport}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      Empresa responsable de validacion
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
+
+      <aside className="rounded-2xl border border-border bg-card p-4 shadow-card">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
+          {challengeLabel}
+        </div>
+        <h3 className="mt-2 font-heading text-xl tracking-wide">
+          {selectedVenue ? selectedVenue.name : "Selecciona una sede"}
+        </h3>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {selectedVenue
+            ? `${selectedVenue.sport} · ${selectedVenue.district || selectedVenue.address || "Sede deportiva"}`
+            : "Haz click en un pin del mapa para asignar la empresa que validara este reto."}
+        </p>
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3 text-[11px] text-muted-foreground">
+          La empresa de esta sede revisara si el usuario cumplio el reto.
+        </div>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!selectedVenue}
+          className="mt-4 w-full rounded-xl bg-gradient-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Confirmar sede
+        </button>
+      </aside>
     </div>
   );
 }
