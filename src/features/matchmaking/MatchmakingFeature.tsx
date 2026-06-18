@@ -40,12 +40,50 @@ import {
 import { getPlayerConnections, createPlayerConnection } from "@/shared/api/connectionService";
 import { MatchResultModal } from "./ui/MatchResultModal";
 import type { QueueStatus } from "@/entities/types";
-import { getTodayAiRecommendations, type AiRecommendationCard } from "@/features/engagement-ai";
+import {
+  getTodayAiRecommendations,
+  type AiRecommendationCard,
+  type AiRecommendationResponse,
+} from "@/features/engagement-ai";
 
 // === BLOQUE: COMPONENTE PRINCIPAL DE MATCHMAKING ===
 // Carrusel de recomendaciones de jugadores con swipe, conexión y desafío.
 interface MatchmakingFeatureProps {
   readonly initialStack: User[];
+}
+
+function getMatchmakingSuggestionCacheKey(userId: string) {
+  const dateKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return `sportmatch_match_suggestions_${userId}_${dateKey}`;
+}
+
+function readCachedMatchmakingSuggestions(userId: string): AiRecommendationCard[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(getMatchmakingSuggestionCacheKey(userId));
+    if (!raw) return null;
+    return JSON.parse(raw) as AiRecommendationCard[];
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedMatchmakingSuggestions(userId: string, response: AiRecommendationResponse) {
+  if (typeof window === "undefined") return;
+  const relevantTypes: AiRecommendationCard["type"][] = ["player", "sport", "challenge", "venue"];
+  const suggestions = response.recommendations
+    .filter((item) => relevantTypes.includes(item.type))
+    .slice(0, 3);
+  window.localStorage.setItem(
+    getMatchmakingSuggestionCacheKey(userId),
+    JSON.stringify(suggestions),
+  );
+  return suggestions;
 }
 
 export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
@@ -73,29 +111,32 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   } | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [smartSuggestions, setSmartSuggestions] = useState<AiRecommendationCard[]>([]);
+  const [isLoadingSmartSuggestions, setIsLoadingSmartSuggestions] = useState(false);
 
   // === BLOQUE: SUGERENCIAS CONTEXTUALES ===
   // Reutiliza el snapshot diario para mostrar pistas utiles dentro del matchmaking.
   // No crea un modulo separado: complementa la decision desde esta pantalla.
   useEffect(() => {
     if (!currentUser || useAuthStore.getState().isDemoMode) return;
+    const cachedSuggestions = readCachedMatchmakingSuggestions(currentUser.id);
+    if (cachedSuggestions) {
+      setSmartSuggestions(cachedSuggestions);
+      return;
+    }
+
     let active = true;
+    setIsLoadingSmartSuggestions(true);
     getTodayAiRecommendations()
       .then((response) => {
         if (!active) return;
-        const relevantTypes: AiRecommendationCard["type"][] = [
-          "player",
-          "sport",
-          "challenge",
-          "venue",
-        ];
-        setSmartSuggestions(
-          response.recommendations.filter((item) => relevantTypes.includes(item.type)).slice(0, 3),
-        );
+        setSmartSuggestions(writeCachedMatchmakingSuggestions(currentUser.id, response) ?? []);
       })
       .catch((error) => {
         if (import.meta.env.DEV)
           console.warn("No se pudieron cargar sugerencias para matchmaking:", error);
+      })
+      .finally(() => {
+        if (active) setIsLoadingSmartSuggestions(false);
       });
     return () => {
       active = false;
@@ -750,37 +791,53 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
 
       {/* ── Panel lateral de compatibilidad y desafíos ── */}
       <div className="space-y-4">
-        {smartSuggestions.length > 0 && (
+        {(isLoadingSmartSuggestions || smartSuggestions.length > 0) && (
           <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5">
             <h3 className="font-semibold flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-neon" /> Sugerencias para conectar
+              {isLoadingSmartSuggestions ? (
+                <Loader2 className="h-4 w-4 text-neon animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 text-neon" />
+              )}{" "}
+              Sugerencias para conectar
             </h3>
             <div className="mt-4 space-y-3">
-              {smartSuggestions.map((suggestion) => (
-                <div
-                  key={suggestion.id}
-                  className="rounded-xl bg-muted/30 border border-border/50 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-foreground">
-                        {suggestion.title}
+              {isLoadingSmartSuggestions
+                ? Array.from({ length: 2 }).map((_, index) => (
+                    <div
+                      key={`smart-suggestion-loading-${index}`}
+                      className="rounded-xl bg-muted/30 border border-border/50 p-3 animate-pulse"
+                    >
+                      <div className="h-3 w-2/3 rounded bg-muted" />
+                      <div className="mt-2 h-2 w-full rounded bg-muted" />
+                      <div className="mt-1 h-2 w-4/5 rounded bg-muted" />
+                    </div>
+                  ))
+                : smartSuggestions.map((suggestion) => (
+                    <div
+                      key={suggestion.id}
+                      className="rounded-xl bg-muted/30 border border-border/50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-foreground">
+                            {suggestion.title}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {suggestion.description}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">
+                          {Math.round(suggestion.score)}%
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {suggestion.description}
-                      </p>
+                      {suggestion.reasons[0] && (
+                        <div className="mt-2 text-[11px] text-muted-foreground">
+                          {suggestion.reasons[0]}
+                        </div>
+                      )}
                     </div>
-                    <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">
-                      {Math.round(suggestion.score)}%
-                    </span>
-                  </div>
-                  {suggestion.reasons[0] && (
-                    <div className="mt-2 text-[11px] text-muted-foreground">
-                      {suggestion.reasons[0]}
-                    </div>
-                  )}
-                </div>
-              ))}
+                  ))}
             </div>
           </div>
         )}

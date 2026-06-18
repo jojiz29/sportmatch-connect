@@ -16,6 +16,7 @@ import {
   Sparkles,
   Plus,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -193,6 +194,23 @@ function setWeeklyOverrideChallenge(
   );
 }
 
+function getWeeklySelectedVenue(userId: string): string {
+  if (typeof window === "undefined") return "";
+  return (
+    window.localStorage.getItem(
+      `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`,
+    ) ?? ""
+  );
+}
+
+function setWeeklySelectedVenue(userId: string, venueId: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`,
+    venueId,
+  );
+}
+
 function buildWeeklyChallengeRefresh(plan: AiRecommendationResponse | null, count: number) {
   const venue = plan?.recommendations.find((item) => item.type === "venue")?.title;
   const variants = [
@@ -293,6 +311,23 @@ function isLegacyDailyPlan(plan: AiRecommendationResponse): boolean {
   );
 }
 
+function isPhysicalVenueSport(sport: string | null | undefined): boolean {
+  const normalized = (sport ?? "").toLowerCase();
+  const virtualKeywords = [
+    "iracing",
+    "simracing",
+    "sim racing",
+    "f1 sim",
+    "simulador",
+    "simulator",
+    "e-sport",
+    "esport",
+    "gaming",
+    "videojuego",
+  ];
+  return !virtualKeywords.some((keyword) => normalized.includes(keyword));
+}
+
 // === BLOQUE: Cache local del plan diario ===
 // Evita consultar el backend cada vez que se entra al Home durante el mismo dia.
 // El backend sigue siendo la fuente real; localStorage solo evita parpadeos y llamadas repetidas.
@@ -331,7 +366,7 @@ function writeCachedDailyPlan(userId: string, plan: AiRecommendationResponse) {
 function Dashboard() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [selectedSport, setSelectedSport] = useState<string>("Todos");
   const user = useAuthStore((state) => state.user);
   const { balance: walletBalance, initWallet } = useWalletStore();
   const publicMatches = usePublicMatchStore((state) => state.publicMatches);
@@ -347,6 +382,9 @@ function Dashboard() {
   const [overrideChallenge, setOverrideChallenge] = useState(
     user ? getWeeklyOverrideChallenge(user.id) : null,
   );
+  const [selectedWeeklyVenueId, setSelectedWeeklyVenueId] = useState(
+    user ? getWeeklySelectedVenue(user.id) : "",
+  );
 
   useEffect(() => {
     initWallet();
@@ -356,6 +394,7 @@ function Dashboard() {
     if (!user) return;
     setChallengeRefreshCount(getWeeklyRefreshCount(user.id));
     setOverrideChallenge(getWeeklyOverrideChallenge(user.id));
+    setSelectedWeeklyVenueId(getWeeklySelectedVenue(user.id));
   }, [user]);
 
   const handleRefreshWeeklyChallenge = () => {
@@ -368,6 +407,18 @@ function Dashboard() {
     setOverrideChallenge(nextChallenge);
     toast.success("Reto actualizado", {
       description: "Usaste tu actualizacion semanal disponible.",
+    });
+  };
+
+  const handleSelectWeeklyVenue = (venueId: string) => {
+    if (!user) return;
+    setWeeklySelectedVenue(user.id, venueId);
+    setSelectedWeeklyVenueId(venueId);
+    const venue = closestCourts.find((court) => court.id === venueId);
+    toast.success("Sede seleccionada para el reto", {
+      description: venue
+        ? `${venue.name} validara tu actividad cuando la completes.`
+        : "La empresa responsable validara tu actividad.",
     });
   };
 
@@ -730,9 +781,14 @@ function Dashboard() {
     );
   }, [liveMatches, publicMatchesForDashboard, user]);
 
-  const filteredMatches = selectedSport
-    ? recommendedMatches.filter((m) => m.sport === selectedSport)
-    : recommendedMatches;
+  const filteredMatches =
+    selectedSport !== "Todos"
+      ? recommendedMatches.filter((m) => m.sport === selectedSport)
+      : recommendedMatches;
+  const isResolvingRecommendedMatches =
+    recommendedMatches.length === 0 &&
+    liveMatches.length === 0 &&
+    publicMatchesForDashboard.length === 0;
 
   // Canchas más cercanas según ubicación base.
   const closestCourts = useMemo(() => {
@@ -746,15 +802,17 @@ function Dashboard() {
       .slice(0, 5);
   }, [courts, baseLocation]);
 
-  const SPORTS =
-    sports.length > 0
+  const SPORTS = [
+    { name: "Todos", emoji: "◎" },
+    ...(sports.length > 0
       ? sports.map((s) => ({ name: s.name, emoji: getSportEmoji(s.name) }))
       : [
           { name: "Pádel", emoji: "🏓" },
           { name: "Fútbol", emoji: "⚽" },
           { name: "Tenis", emoji: "🎾" },
           { name: "Running", emoji: "🏃" },
-        ];
+        ]),
+  ];
 
   // === BLOQUE: Estados para el modal de creación de partido ===
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -952,7 +1010,7 @@ function Dashboard() {
         {SPORTS.map((s) => (
           <button
             key={s.name}
-            onClick={() => setSelectedSport(selectedSport === s.name ? null : s.name)}
+            onClick={() => setSelectedSport(s.name)}
             className={`shrink-0 px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-all ${
               selectedSport === s.name
                 ? "bg-gradient-neon text-neon-foreground shadow-neon font-semibold"
@@ -971,6 +1029,9 @@ function Dashboard() {
         overrideChallenge={overrideChallenge}
         refreshesRemaining={Math.max(0, 1 - challengeRefreshCount)}
         onRefreshChallenge={handleRefreshWeeklyChallenge}
+        venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
+        selectedVenueId={selectedWeeklyVenueId}
+        onSelectVenue={handleSelectWeeklyVenue}
       />
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -1053,7 +1114,9 @@ function Dashboard() {
                   Partidos recomendados
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Basado en partidos públicos, tu deporte y tu nivel
+                  {selectedSport === "Todos"
+                    ? "Basado en partidos públicos, tu deporte y tu nivel"
+                    : `Mostrando solo partidos de ${selectedSport}`}
                 </p>
               </div>
               <button
@@ -1064,7 +1127,17 @@ function Dashboard() {
               </button>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
-              {filteredMatches.length > 0 ? (
+              {isResolvingRecommendedMatches ? (
+                <div className="col-span-2 p-10 text-center glass rounded-2xl border border-border/40">
+                  <Loader2 className="h-8 w-8 mx-auto mb-3 text-primary animate-spin" />
+                  <p className="text-sm font-medium text-foreground">
+                    Cargando partidos recomendados...
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Estamos revisando partidos públicos y compatibilidad.
+                  </p>
+                </div>
+              ) : filteredMatches.length > 0 ? (
                 filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
               ) : (
                 <div className="col-span-2 p-10 text-center text-muted-foreground/60 glass rounded-2xl border border-border/40">
@@ -1457,6 +1530,9 @@ function DailySportsPlan({
   overrideChallenge,
   refreshesRemaining,
   onRefreshChallenge,
+  venues,
+  selectedVenueId,
+  onSelectVenue,
 }: {
   plan: AiRecommendationResponse | null;
   status: DailyPlanStatus;
@@ -1464,10 +1540,14 @@ function DailySportsPlan({
   overrideChallenge: { title: string; description: string; reward: string } | null;
   refreshesRemaining: number;
   onRefreshChallenge: () => void;
+  venues: Court[];
+  selectedVenueId: string;
+  onSelectVenue: (venueId: string) => void;
 }) {
   const isLoading = status === "loading";
   const isError = status === "error";
   const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
+  const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
   const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
   const weeklyChallenges = [
     {
@@ -1495,7 +1575,7 @@ function DailySportsPlan({
         ? `Elige una sede cercana como ${venueRecommendation.title} para realizar una actividad fisica. La empresa responsable validara el cumplimiento.`
         : "Elige una cancha, establecimiento o gym cercano para realizar el reto. La empresa responsable validara si cumpliste la actividad.",
       reward: "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
-      statusLabel: "Pendiente de sede",
+      statusLabel: selectedVenue ? "Sede seleccionada" : "Pendiente de sede",
       canRefresh: false,
     },
   ];
@@ -1583,6 +1663,35 @@ function DailySportsPlan({
               <div className="mt-3 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-xs text-primary">
                 Recompensa: {challenge.reward}
               </div>
+              {index === 1 && (
+                <div className="mt-3 space-y-2">
+                  <label className="text-[11px] font-bold text-muted-foreground">
+                    Sede donde realizaras el reto
+                  </label>
+                  <select
+                    value={selectedVenueId}
+                    onChange={(event) => onSelectVenue(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                    disabled={venues.length === 0}
+                  >
+                    <option value="">
+                      {venues.length > 0
+                        ? "Selecciona una sede cercana"
+                        : "No hay sedes disponibles por ahora"}
+                    </option>
+                    {venues.map((venue) => (
+                      <option key={venue.id} value={venue.id}>
+                        {venue.name} · {venue.district || venue.sport}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-muted-foreground">
+                    {selectedVenue
+                      ? `${selectedVenue.name} quedara como sede responsable de validacion.`
+                      : "Cuando elijas una sede, la empresa asociada podra validar el cumplimiento."}
+                  </p>
+                </div>
+              )}
               {index === 0 && (
                 <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <span className="text-[11px] text-muted-foreground">
@@ -1615,12 +1724,6 @@ function DailySportsPlan({
               </div>
             )}
           </div>
-          <Link
-            to="/app/map"
-            className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-sm shadow-glow hover:scale-105 active:scale-95 transition-all"
-          >
-            Explorar sedes <ArrowRight className="h-4 w-4" />
-          </Link>
         </div>
       </div>
     </div>
