@@ -14,6 +14,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import { calculateDistance } from "@/shared/api/geoService";
 import { Match, Squad, User, Venue } from "@/entities/types";
 import { CommercialSheetModal } from "@/features/business/ui/CommercialSheetModal";
+import { VenueDetailModal } from "@/features/business/ui/VenueDetailModal";
 import { useTranslation } from "react-i18next";
 import { MapPin, MessageSquare, Shield, Swords, UserPlus, Users, X } from "lucide-react";
 import { rankMatchCandidates } from "@/features/matchmaking/matchmakingScore";
@@ -507,6 +508,7 @@ function MapPage() {
   const user = useAuthStore((state) => state.user);
   const [selectedBusinessForSheet, setSelectedBusinessForSheet] = useState<User | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [selectedVenueDetail, setSelectedVenueDetail] = useState<Venue | null>(null);
   const [venueActivities, setVenueActivities] = useState<VenueActivity[]>([]);
   const [connectionIds, setConnectionIds] = useState<string[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -659,6 +661,7 @@ function MapPage() {
               selectedDistrictCenter={selectedDistrictCenter}
               onViewCommercialSheet={(b) => setSelectedBusinessForSheet(b)}
               onOpenVenueActivity={setSelectedVenue}
+              onViewVenueDetails={setSelectedVenueDetail}
             />
           </ErrorBoundary>
         </div>
@@ -691,6 +694,19 @@ function MapPage() {
         business={selectedBusinessForSheet}
         isOpen={selectedBusinessForSheet !== null}
         onOpenChange={(open) => !open && setSelectedBusinessForSheet(null)}
+      />
+
+      <VenueDetailModal
+        venue={selectedVenueDetail}
+        owner={
+          selectedVenueDetail
+            ? (data.businesses || []).find(
+                (business) => business.id === selectedVenueDetail.owner_id,
+              )
+            : null
+        }
+        isOpen={selectedVenueDetail !== null}
+        onOpenChange={(open) => !open && setSelectedVenueDetail(null)}
       />
 
       {selectedVenue && user && (

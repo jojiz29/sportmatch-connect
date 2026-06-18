@@ -10,6 +10,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/PageHeader";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { VenueLocationPicker } from "@/features/map/VenueLocationPicker";
+import { VenueDetailModal } from "@/features/business/ui/VenueDetailModal";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
 import { useState, useEffect, useMemo } from "react";
@@ -39,6 +40,7 @@ import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
 import { apiClient, MOCK_VENUES } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
+import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 import {
   Plus,
   Trash2,
@@ -182,6 +184,10 @@ function BusinessPage() {
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [sportsList, setSportsList] = useState<SportCatalog[]>([]);
   const [venueFormOpen, setVenueFormOpen] = useState(false);
+  const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
+  const [selectedVenueDetail, setSelectedVenueDetail] = useState<Venue | null>(null);
+
+  // Estados del formulario de sedes. Se reutilizan para crear y editar.
   const [venueName, setVenueName] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
   const [venueDistrict, setVenueDistrict] = useState("");
@@ -195,6 +201,42 @@ function BusinessPage() {
   const [venueDescription, setVenueDescription] = useState("");
   const [venueHours, setVenueHours] = useState("");
   const [registeringVenue, setRegisteringVenue] = useState(false);
+
+  const openVenueEditor = (venue: Venue) => {
+    // Reutilizamos el formulario de registro para mantener una sola fuente de edición.
+    setEditingVenueId(venue.id);
+    setVenueName(venue.name);
+    setVenueAddress(venue.address || "");
+    setVenueDistrict(venue.district || "");
+    setVenueLat(venue.lat);
+    setVenueLng(venue.lng);
+    setVenuePrice(venue.price_per_hour);
+    setVenueSport(venue.sport);
+    setVenueMaxPlayers(venue.max_players || 4);
+    setVenueAmenities((venue.amenities || []).join(", "));
+    setVenueImage(venue.image_url || "");
+    setVenueDescription(venue.description || "");
+    setVenueHours(venue.operating_hours?.[0] || "");
+    setSelectedVenueDetail(null);
+    setVenueFormOpen(true);
+  };
+
+  const openNewVenueForm = () => {
+    setEditingVenueId(null);
+    setVenueName("");
+    setVenueAddress("");
+    setVenueDistrict("");
+    setVenueLat("");
+    setVenueLng("");
+    setVenuePrice("");
+    setVenueSport("");
+    setVenueMaxPlayers("");
+    setVenueAmenities("");
+    setVenueImage("");
+    setVenueDescription("");
+    setVenueHours("");
+    setVenueFormOpen(true);
+  };
 
   // Estados para Catálogo
   const [name, setName] = useState("");
@@ -299,7 +341,7 @@ function BusinessPage() {
       const hoursVal = venueHours ? [venueHours] : ["08:00 - 22:00"];
 
       const newVenue: Venue = {
-        id: `venue-${Date.now()}`,
+        id: editingVenueId || `venue-${Date.now()}`,
         created_at: new Date().toISOString(),
         name: venueName,
         sport: venueSport || "Deporte General",
@@ -310,7 +352,7 @@ function BusinessPage() {
         district: venueDistrict || compDistrict || "Surco",
         max_players: maxPlayersVal,
         operating_hours: hoursVal,
-        image_url: venueImage || "https://images.unsplash.com/photo-1554068865-24cecd4e34b8",
+        image_url: venueImage || getSportFallbackImage(venueSport),
         amenities: venueAmenities
           ? venueAmenities
               .split(",")
@@ -326,52 +368,60 @@ function BusinessPage() {
 
       if (useAuthStore.getState().isDemoMode) {
         const stored = localStorage.getItem("sportmatch_demo_venues");
-        const list: Venue[] = stored
-          ? (() => {
-              try {
-                return JSON.parse(stored);
-              } catch {
-                return [...MOCK_VENUES];
-              }
-            })()
-          : [...MOCK_VENUES];
-        list.push(newVenue);
+        let list: Venue[] = [];
+        if (stored) {
+          try {
+            list = JSON.parse(stored);
+          } catch {
+            list = [...MOCK_VENUES];
+          }
+        } else {
+          list = [...MOCK_VENUES];
+        }
+        list = editingVenueId
+          ? list.map((venue) => (venue.id === editingVenueId ? newVenue : venue))
+          : [...list, newVenue];
         localStorage.setItem("sportmatch_demo_venues", JSON.stringify(list));
-        setVenues((prev) => [...prev, newVenue]);
-        toast.success("¡Sede registrada con éxito en modo Demo!");
+        setVenues((prev) =>
+          editingVenueId
+            ? prev.map((venue) => (venue.id === editingVenueId ? newVenue : venue))
+            : [...prev, newVenue],
+        );
+        toast.success(editingVenueId ? "Sede actualizada correctamente" : "Sede registrada");
       } else {
         // Los archivos locales se suben a Storage; PostgreSQL conserva únicamente su URL pública.
         const imageUrl = venueImage
           ? await uploadVenueImage(venueImage, user.id)
-          : "https://images.unsplash.com/photo-1554068865-24cecd4e34b8";
+          : getSportFallbackImage(venueSport);
 
         console.info("[venue-register] court-insert:start", {
           ownerId: user.id,
           name: venueName,
         });
+        const venuePayload = {
+          name: venueName,
+          sport: venueSport || "Deporte General",
+          price_per_hour: priceVal,
+          lat: latVal,
+          lng: lngVal,
+          location: `POINT(${lngVal} ${latVal})`,
+          address: venueAddress,
+          max_players: maxPlayersVal,
+          operating_hours: hoursVal,
+          image_url: imageUrl,
+          amenities: newVenue.amenities,
+          owner_id: user.id,
+          is_available: true,
+          rating: 5.0,
+          reviews_count: 0,
+          district: venueDistrict || compDistrict || "Surco",
+          description: venueDescription || null,
+        };
+        const venueMutation = editingVenueId
+          ? supabase.from("courts").update(venuePayload).eq("id", editingVenueId)
+          : supabase.from("courts").insert(venuePayload);
         const { data: createdVenue, error: insertErr } = await withTimeout(
-          supabase
-            .from("courts")
-            .insert({
-              name: venueName,
-              sport: venueSport || "Deporte General",
-              price_per_hour: priceVal,
-              lat: latVal,
-              lng: lngVal,
-              location: `POINT(${lngVal} ${latVal})`,
-              address: venueAddress,
-              max_players: maxPlayersVal,
-              operating_hours: hoursVal,
-              image_url: imageUrl,
-              amenities: newVenue.amenities,
-              owner_id: user.id,
-              is_available: true,
-              rating: 5.0,
-              reviews_count: 0,
-              district: venueDistrict || compDistrict || "Surco",
-            })
-            .select()
-            .single(),
+          venueMutation.select().single(),
         );
 
         if (insertErr) {
@@ -383,8 +433,12 @@ function BusinessPage() {
         }
 
         console.info("[venue-register] court-insert:success", { venueId: createdVenue.id });
-        setVenues((prev) => [...prev, createdVenue as Venue]);
-        toast.success("¡Sede registrada con éxito!");
+        setVenues((prev) =>
+          editingVenueId
+            ? prev.map((venue) => (venue.id === editingVenueId ? (createdVenue as Venue) : venue))
+            : [...prev, createdVenue as Venue],
+        );
+        toast.success(editingVenueId ? "Sede actualizada correctamente" : "Sede registrada");
       }
 
       setVenueName("");
@@ -400,6 +454,7 @@ function BusinessPage() {
       setVenueDescription("");
       setVenueHours("");
       setVenueFormOpen(false);
+      setEditingVenueId(null);
     } catch (err: unknown) {
       console.error("[venue-register] failed", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -1574,7 +1629,7 @@ function BusinessPage() {
               </p>
             </div>
             <button
-              onClick={() => setVenueFormOpen(true)}
+              onClick={openNewVenueForm}
               className="px-5 py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0 flex items-center gap-2"
             >
               <Plus className="h-4 w-4" /> Registrar Nueva Sede
@@ -1593,12 +1648,16 @@ function BusinessPage() {
                   key={venue.id}
                   className="premium-card overflow-hidden hover:ring-glow transition-all relative group flex flex-col h-full"
                 >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-muted border-b border-border/40 shrink-0">
+                  {/* Imagen de la sede: abre el detalle sin entrar al formulario. */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedVenueDetail(venue)}
+                    onKeyDown={(event) => event.key === "Enter" && setSelectedVenueDetail(venue)}
+                    className="relative aspect-[16/10] overflow-hidden bg-muted border-b border-border/40 shrink-0 cursor-pointer text-left"
+                  >
                     <img
-                      src={
-                        venue.image_url ||
-                        "https://images.unsplash.com/photo-1554068865-24cecd4e34b8"
-                      }
+                      src={venue.image_url || getSportFallbackImage(venue.sport)}
                       alt={venue.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -1606,9 +1665,13 @@ function BusinessPage() {
                       {venue.sport}
                     </span>
                     <button
-                      onClick={() => handleDeleteVenue(venue.id)}
                       className="h-8 w-8 rounded-lg bg-red-500/20 hover:bg-red-500/80 text-red-400 hover:text-white grid place-items-center opacity-0 group-hover:opacity-100 transition-all absolute right-3 top-3 border-0 cursor-pointer shadow-md"
                       title="Eliminar sede"
+                      id={`delete-venue-${venue.id}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDeleteVenue(venue.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1646,6 +1709,12 @@ function BusinessPage() {
                       <MapPin className="h-3 w-3 text-neon" />
                       <span>Ubicación configurada en el mapa</span>
                     </div>
+                    <button
+                      onClick={() => openVenueEditor(venue)}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-bold cursor-pointer"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" /> Editar información
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1667,7 +1736,7 @@ function BusinessPage() {
             <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-3xl p-6 text-left">
               <DialogHeader className="mb-4">
                 <DialogTitle className="text-xl font-bold text-foreground">
-                  Registrar Nueva Sede
+                  {editingVenueId ? "Editar sede" : "Registrar Nueva Sede"}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-muted-foreground">
                   Completa el formulario para mostrar este establecimiento en el mapa en vivo de los
@@ -1833,7 +1902,11 @@ function BusinessPage() {
                     className="flex-1 py-3 bg-gradient-primary hover:scale-[1.02] active:scale-[0.98] text-primary-foreground font-bold rounded-xl shadow-glow transition-all text-sm cursor-pointer border-0"
                     id="venue-register-submit"
                   >
-                    {registeringVenue ? "Registrando..." : "Registrar Nueva Sede"}
+                    {registeringVenue
+                      ? "Guardando..."
+                      : editingVenueId
+                        ? "Guardar cambios"
+                        : "Registrar Nueva Sede"}
                   </button>
                 </div>
               </form>
@@ -1841,6 +1914,14 @@ function BusinessPage() {
           </Dialog>
         </div>
       )}
+
+      <VenueDetailModal
+        venue={selectedVenueDetail}
+        owner={user}
+        isOpen={selectedVenueDetail !== null}
+        onOpenChange={(open) => !open && setSelectedVenueDetail(null)}
+        onEdit={openVenueEditor}
+      />
 
       {/* === BLOQUE: Pestaña Settings === */}
       {activeTab === "settings" && (
