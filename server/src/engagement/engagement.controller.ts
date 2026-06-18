@@ -7,6 +7,7 @@ import {
   SaveEngagementChallengeDto,
   SaveEngagementContentDto,
   SaveSmartNotificationDto,
+  UpdateBusinessChallengeValidationDto,
 } from "./dto";
 import { EngagementService } from "./engagement.service";
 
@@ -76,6 +77,26 @@ export class EngagementController {
   @ApiOperation({ summary: "Lista los retos de engagement del usuario" })
   listChallenges(@Request() req: AuthenticatedRequest) {
     return this.engagementService.listChallenges(req.user.userId);
+  }
+
+  @Get("business/venue-challenges")
+  @ApiOperation({ summary: "Lista retos pendientes de validar en sedes de la empresa" })
+  listBusinessVenueChallenges(@Request() req: AuthenticatedRequest): Promise<unknown> {
+    return this.engagementService.listBusinessVenueChallenges(req.user.userId);
+  }
+
+  @Post("business/venue-challenges/:challengeId/status")
+  @ApiOperation({ summary: "Aprueba o rechaza un reto realizado en una sede propia" })
+  updateBusinessVenueChallengeStatus(
+    @Request() req: AuthenticatedRequest,
+    @Param("challengeId") challengeId: string,
+    @Body() dto: UpdateBusinessChallengeValidationDto,
+  ): Promise<unknown> {
+    return this.engagementService.updateBusinessVenueChallengeStatus(
+      req.user.userId,
+      challengeId,
+      dto,
+    );
   }
 
   @Post("challenges/:challengeId/complete")

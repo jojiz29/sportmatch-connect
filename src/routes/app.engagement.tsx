@@ -46,6 +46,8 @@ import {
 } from "@/features/engagement-ai";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useNotificationStore } from "@/features/notifications/model/useNotificationStore";
+import { backendApi } from "@/shared/api/backendApi";
+import type { Court } from "@/entities/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/engagement")({
@@ -91,6 +93,8 @@ function EngagementAiPage() {
   const [savedContents, setSavedContents] = useState<EngagementContent[]>([]);
   const [diagnostics, setDiagnostics] = useState<EngagementDiagnostics | null>(null);
   const [recommendations, setRecommendations] = useState<AiRecommendationResponse | null>(null);
+  const [validationVenues, setValidationVenues] = useState<Court[]>([]);
+  const [selectedValidationVenueId, setSelectedValidationVenueId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dailyChallengeStatus, setDailyChallengeStatus] = useState<
@@ -142,6 +146,8 @@ function EngagementAiPage() {
       setWeeklyBriefSaved(false);
       setTourNarrativeSaved(false);
       setCardFeedback({});
+      const courtsResponse = await backendApi.courts.getAll().catch(() => null);
+      setValidationVenues(Array.isArray(courtsResponse?.data) ? courtsResponse.data : []);
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo cargar Engagement AI.";
       setError(message);
@@ -233,6 +239,9 @@ function EngagementAiPage() {
 
     if (!challenge) {
       // Persistimos el reto para que pueda retomarse y no quede solo como evento.
+      const selectedVenue = validationVenues.find(
+        (venue) => venue.id === selectedValidationVenueId,
+      );
       challenge = await saveEngagementChallenge({
         title: recommendations.dailyChallenge.title,
         description: recommendations.dailyChallenge.description,
@@ -240,6 +249,12 @@ function EngagementAiPage() {
         metadata: {
           model: recommendations.metadata.model,
           experimentVariant: recommendations.metadata.experimentVariant,
+          selectedVenueId: selectedVenue?.id,
+          selectedVenueName: selectedVenue?.name,
+          validationStatus: selectedVenue ? "pending" : undefined,
+          rewardFitcoins: 50,
+          trophyName: `Trofeo ${recommendations.dailyChallenge.title}`,
+          source: "engagement_daily_challenge",
         },
       });
       setSavedChallenge(challenge);
@@ -528,6 +543,28 @@ function EngagementAiPage() {
               <p className="mt-2 text-sm text-muted-foreground">
                 {recommendations.dailyChallenge.description}
               </p>
+              <div className="mt-4 rounded-2xl border border-border bg-background/50 p-3">
+                <label className="mb-2 block text-xs font-bold text-foreground">
+                  Sede para validacion empresarial
+                </label>
+                <select
+                  value={selectedValidationVenueId}
+                  onChange={(event) => setSelectedValidationVenueId(event.target.value)}
+                  disabled={dailyChallengeStatus !== "idle"}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary disabled:opacity-60"
+                >
+                  <option value="">Sin sede por ahora</option>
+                  {validationVenues.slice(0, 40).map((venue) => (
+                    <option key={venue.id} value={venue.id}>
+                      {venue.name} {venue.district ? `- ${venue.district}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                  Si eliges una sede, la empresa responsable vera este reto en su panel para
+                  aprobarlo o rechazarlo.
+                </p>
+              </div>
               <span className="mt-4 inline-flex rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary">
                 {recommendations.dailyChallenge.rewardHint}
               </span>

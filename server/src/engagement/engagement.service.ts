@@ -9,6 +9,7 @@ import {
   SaveEngagementChallengeDto,
   SaveEngagementContentDto,
   SaveSmartNotificationDto,
+  UpdateBusinessChallengeValidationDto,
 } from "./dto";
 
 interface RecommendationCard {
@@ -70,6 +71,21 @@ interface CrossSportSuggestion {
 interface DailyRecommendationCronOptions {
   limit?: number;
   dryRun?: boolean;
+}
+
+interface VenueChallengeMetadata extends Record<string, unknown> {
+  selectedVenueId?: string;
+  challengeIndex?: number;
+  weekKey?: string;
+  validationStatus?: "pending" | "approved" | "rejected";
+  rewardFitcoins?: number;
+  trophyName?: string;
+  validationNote?: string;
+  validatedAt?: string;
+  validatedByBusinessId?: string;
+  rewardGrantedAt?: string;
+  rejectedAt?: string;
+  retryAllowed?: boolean;
 }
 
 @Injectable()
@@ -651,6 +667,190 @@ export class EngagementService {
   }
 
   /**
+   * Muestra a la empresa los retos que usuarios asignaron a sus sedes.
+   * La relacion se guarda en metadata.selectedVenueId para no crear una tabla extra en el MVP.
+   */
+  async listBusinessVenueChallenges(businessId: string) {
+    const venues = await this.prisma.courts.findMany({
+      where: { owner_id: businessId },
+      select: {
+        id: true,
+        name: true,
+        sport: true,
+        district: true,
+        address: true,
+      },
+    });
+    const venueById = new Map(venues.map((venue) => [venue.id, venue]));
+
+    if (venueById.size === 0) return [];
+
+    const recentChallenges = await this.prisma.engagement_challenges.findMany({
+      orderBy: { started_at: "desc" },
+      take: 150,
+      select: {
+        id: true,
+        user_id: true,
+        title: true,
+        description: true,
+        reward_hint: true,
+        status: true,
+        source: true,
+        metadata: true,
+        started_at: true,
+        completed_at: true,
+      },
+    });
+
+    const venueChallenges = recentChallenges
+      .map((challenge) => {
+        const metadata = this.asVenueChallengeMetadata(challenge.metadata);
+        const venue = metadata.selectedVenueId ? venueById.get(metadata.selectedVenueId) : null;
+        return venue ? { challenge, metadata, venue } : null;
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    const userIds = [...new Set(venueChallenges.map((item) => item.challenge.user_id))];
+    const users = await this.prisma.profiles.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        name: true,
+        avatar_url: true,
+        city: true,
+        level: true,
+        preferred_sports: true,
+      },
+    });
+    const userById = new Map(users.map((profile) => [profile.id, profile]));
+
+    return venueChallenges.map(({ challenge, metadata, venue }) => ({
+      id: challenge.id,
+      title: challenge.title,
+      description: challenge.description,
+      reward_hint: challenge.reward_hint,
+      status: challenge.status,
+      validationStatus: metadata.validationStatus ?? "pending",
+      validationNote: metadata.validationNote ?? null,
+      rewardFitcoins: this.getChallengeReward(metadata),
+      started_at: challenge.started_at,
+      completed_at: challenge.completed_at,
+      metadata,
+      user: userById.get(challenge.user_id) ?? null,
+      venue,
+    }));
+  }
+
+  /**
+   * Permite a la empresa aprobar/rechazar un reto asociado a una sede propia.
+   * Al aprobar, se suman FitCoins y se crea un trofeo desbloqueado para el perfil.
+   */
+  async updateBusinessVenueChallengeStatus(
+    businessId: string,
+    challengeId: string,
+    dto: UpdateBusinessChallengeValidationDto,
+  ) {
+    const challenge = await this.prisma.engagement_challenges.findUniqueOrThrow({
+      where: { id: challengeId },
+    });
+    const metadata = this.asVenueChallengeMetadata(challenge.metadata);
+
+    if (!metadata.selectedVenueId) {
+      throw new Error("El reto no tiene una sede seleccionada para validar.");
+    }
+
+    const venue = await this.prisma.courts.findFirst({
+      where: { id: metadata.selectedVenueId, owner_id: businessId },
+      select: { id: true, name: true },
+    });
+
+    if (!venue) {
+      throw new Error("No tienes permisos para validar retos de esta sede.");
+    }
+
+    const nowIso = new Date().toISOString();
+    const nextMetadata: VenueChallengeMetadata = {
+      ...metadata,
+      validationStatus: dto.status,
+      validationNote: dto.note,
+      validatedAt: nowIso,
+      validatedByBusinessId: businessId,
+      retryAllowed: dto.status === "rejected",
+    };
+
+    if (dto.status === "rejected") {
+      nextMetadata.rejectedAt = nowIso;
+    }
+
+    const shouldGrantReward = dto.status === "approved" && !metadata.rewardGrantedAt;
+    const rewardFitcoins = this.getChallengeReward(metadata);
+    const trophyName = this.getChallengeTrophyName(challenge.title, metadata);
+
+    const updatedChallenge = await this.prisma.$transaction(async (tx) => {
+      if (shouldGrantReward) {
+        // La transaccion queda como fuente auditable para que el balance acumulado se sincronice.
+        await tx.wallet_transactions.create({
+          data: {
+            user_id: challenge.user_id,
+            amount: rewardFitcoins,
+            type: "EARN",
+            description: `Reto validado en ${venue.name}: ${challenge.title}`,
+          },
+        });
+
+        await tx.engagement_achievements.create({
+          data: {
+            user_id: challenge.user_id,
+            name: trophyName,
+            description: `Trofeo obtenido por completar un reto validado por ${venue.name}.`,
+            unlock_condition: `Empresa valida cumplimiento en ${venue.name}.`,
+            status: "unlocked",
+            source: "business_validation",
+            unlocked_at: new Date(),
+            metadata: {
+              challengeId: challenge.id,
+              venueId: venue.id,
+              venueName: venue.name,
+              rewardFitcoins,
+            } as Prisma.InputJsonValue,
+          },
+        });
+
+        nextMetadata.rewardGrantedAt = nowIso;
+      }
+
+      return tx.engagement_challenges.update({
+        where: { id: challenge.id },
+        data: {
+          status:
+            dto.status === "approved"
+              ? "completed"
+              : dto.status === "rejected"
+                ? "dismissed"
+                : "started",
+          completed_at: dto.status === "approved" ? new Date() : null,
+          metadata: nextMetadata as Prisma.InputJsonValue,
+        },
+      });
+    });
+
+    await this.recordEvent(challenge.user_id, {
+      eventType: dto.status === "approved" ? "CHALLENGE_COMPLETED" : "DAILY_CHALLENGE_STARTED",
+      entityType: "engagement_challenge",
+      entityId: challenge.id,
+      dedupeKey: `business-validation:${challenge.id}:${dto.status}:${nowIso}`,
+      metadata: {
+        validationStatus: dto.status,
+        venueId: venue.id,
+        venueName: venue.name,
+        rewardFitcoins: shouldGrantReward ? rewardFitcoins : 0,
+      },
+    });
+
+    return updatedChallenge;
+  }
+
+  /**
    * Marca un reto persistido como completado. La condicion por user_id evita
    * completar retos de otro usuario aunque se conozca el id.
    */
@@ -914,6 +1114,22 @@ export class EngagementService {
     return value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : {};
+  }
+
+  private asVenueChallengeMetadata(value: Prisma.JsonValue): VenueChallengeMetadata {
+    return this.asMetadata(value) as VenueChallengeMetadata;
+  }
+
+  private getChallengeReward(metadata: VenueChallengeMetadata): number {
+    return typeof metadata.rewardFitcoins === "number" && metadata.rewardFitcoins > 0
+      ? Math.min(Math.round(metadata.rewardFitcoins), 120)
+      : 50;
+  }
+
+  private getChallengeTrophyName(title: string, metadata: VenueChallengeMetadata): string {
+    return typeof metadata.trophyName === "string" && metadata.trophyName.trim()
+      ? metadata.trophyName.trim()
+      : `Trofeo ${title.slice(0, 70)}`;
   }
 
   private safeRate(numerator: number, denominator: number): number {
@@ -1284,9 +1500,7 @@ export class EngagementService {
       },
       {
         title: `Mision sede testigo`,
-        description: court
-          ? `Elige ${court.name ?? "una sede recomendada"} en ${court.district ?? district}. Realiza 25 minutos de ${sport}: 8 de entrada en calor, 12 de tecnica y 5 de cierre. La sede puede validar asistencia y cumplimiento.`
-          : `Busca una sede disponible en ${district}. Realiza 25 minutos de ${sport}: 8 de entrada en calor, 12 de tecnica y 5 de cierre, con validacion de asistencia si aplica.`,
+        description: `Elige una sede deportiva disponible desde el mapa de SportMatch. Realiza 25 minutos de ${sport}: 8 de entrada en calor, 12 de tecnica y 5 de cierre. La empresa elegida valida asistencia y cumplimiento.`,
         rewardHint: "+50 FitCoins sugeridos cuando la empresa valide la actividad.",
       },
       {
@@ -1690,6 +1904,8 @@ Definicion obligatoria de reto deportivo:
 - Si el usuario practica deportes fisicos, prioriza retos presenciales en cancha, gym,
   club o sede cercana. Si solo hay e-sports, crea reto de practica tecnica, estrategia
   o consistencia sin pedir sede fisica.
+- No nombres una sede especifica dentro del reto diario si el usuario aun no la eligio.
+  Es correcto decir "elige una sede desde el mapa"; la sede real se asigna despues en UI.
 - Para recomendaciones type="challenges", devuelve al menos 2 cards de type "challenge".
 - Las cards challenge deben tener metadata.rewardHint con FitCoins sugeridos.
 
@@ -1821,9 +2037,9 @@ ${compactContext}`;
         recommendations: fallbackCards,
         dailyChallenge: proceduralChallenge,
         achievementIdea: {
-          name: "Perfil en Entrenamiento",
+          name: "Trofeo de Constancia Deportiva",
           description: "Primer logro basado en señales reales de engagement.",
-          unlockCondition: "Registrar 3 eventos deportivos.",
+          unlockCondition: "Completar un reto deportivo validado o registrar 3 acciones reales.",
         },
         weeklyBrief: "Tu perfil esta aprendiendo de tus acciones reales.",
         tourNarrative: "Cada accion suma a tu historia deportiva dentro de SportMatch.",

@@ -41,6 +41,11 @@ import { apiClient, MOCK_VENUES } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
 import {
+  BusinessVenueChallenge,
+  getBusinessVenueChallenges,
+  updateBusinessVenueChallengeStatus,
+} from "@/features/engagement-ai";
+import {
   Plus,
   Trash2,
   Edit3,
@@ -57,6 +62,8 @@ import {
   MapPin,
   ShoppingBag,
   Heart,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import {
   AreaChart,
@@ -177,6 +184,9 @@ function BusinessPage() {
   // Estados para Venues (Sedes)
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loadingVenues, setLoadingVenues] = useState(true);
+  const [venueChallenges, setVenueChallenges] = useState<BusinessVenueChallenge[]>([]);
+  const [loadingVenueChallenges, setLoadingVenueChallenges] = useState(false);
+  const [validatingChallengeId, setValidatingChallengeId] = useState<string | null>(null);
   const [sportsList, setSportsList] = useState<SportCatalog[]>([]);
   const [venueFormOpen, setVenueFormOpen] = useState(false);
   const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
@@ -549,6 +559,48 @@ function BusinessPage() {
     }
     loadBusinessData();
   }, [user]);
+
+  const loadVenueChallenges = async () => {
+    if (!user || user.user_role !== "BUSINESS") return;
+    try {
+      setLoadingVenueChallenges(true);
+      const challenges = await getBusinessVenueChallenges();
+      setVenueChallenges(challenges);
+    } catch (err) {
+      console.error("[business-challenge-validation] load failed", err);
+      setVenueChallenges([]);
+    } finally {
+      setLoadingVenueChallenges(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== "venues") return;
+    loadVenueChallenges();
+    // Se refresca al abrir Mis sedes para que la empresa vea solicitudes recientes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user?.id]);
+
+  const handleVenueChallengeValidation = async (
+    challengeId: string,
+    status: "approved" | "rejected",
+  ) => {
+    try {
+      setValidatingChallengeId(challengeId);
+      await updateBusinessVenueChallengeStatus(challengeId, status);
+      await loadVenueChallenges();
+      toast.success(
+        status === "approved"
+          ? "Reto aprobado. Se asignaron FitCoins y trofeo al usuario."
+          : "Reto rechazado. El usuario podra intentarlo nuevamente.",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo actualizar el reto.";
+      toast.error(message);
+    } finally {
+      setValidatingChallengeId(null);
+    }
+  };
 
   if (!user) return null;
 
@@ -1631,6 +1683,53 @@ function BusinessPage() {
             </button>
           </div>
 
+          <div className="bg-gradient-card border border-border rounded-3xl p-6 shadow-card">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="font-extrabold text-lg text-foreground">
+                  Validacion de retos en sede
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Clientes que eligieron una de tus sedes para cumplir un reto semanal. Al aprobar,
+                  reciben FitCoins acumulables y un trofeo visible en su historial.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={loadVenueChallenges}
+                disabled={loadingVenueChallenges}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-bold text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+              >
+                {loadingVenueChallenges ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Actualizar validaciones
+              </button>
+            </div>
+
+            {loadingVenueChallenges ? (
+              <div className="mt-5 flex items-center gap-2 rounded-2xl border border-border bg-background/40 p-4 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                Cargando retos asignados a tus sedes...
+              </div>
+            ) : venueChallenges.length > 0 ? (
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                {venueChallenges.map((challenge) => (
+                  <VenueChallengeValidationCard
+                    key={challenge.id}
+                    challenge={challenge}
+                    isUpdating={validatingChallengeId === challenge.id}
+                    onApprove={() => handleVenueChallengeValidation(challenge.id, "approved")}
+                    onReject={() => handleVenueChallengeValidation(challenge.id, "rejected")}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
+                Aun no hay retos pendientes para tus sedes. Cuando un cliente elija una sede desde
+                su reto semanal, aparecera aqui para aprobacion o rechazo.
+              </div>
+            )}
+          </div>
+
           {loadingVenues ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 bg-gradient-card border border-border rounded-3xl shadow-card">
               <Loader2 className="h-8 w-8 animate-spin text-neon" />
@@ -2014,6 +2113,94 @@ function BusinessPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function VenueChallengeValidationCard({
+  challenge,
+  isUpdating,
+  onApprove,
+  onReject,
+}: {
+  challenge: BusinessVenueChallenge;
+  isUpdating: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const statusLabel =
+    challenge.validationStatus === "approved"
+      ? "Completado"
+      : challenge.validationStatus === "rejected"
+        ? "No cumplio"
+        : "Pendiente";
+  const statusClass =
+    challenge.validationStatus === "approved"
+      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+      : challenge.validationStatus === "rejected"
+        ? "bg-red-500/10 text-red-500 border-red-500/30"
+        : "bg-warning/10 text-warning border-warning/30";
+
+  return (
+    <article className="rounded-2xl border border-border bg-background/40 p-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="font-extrabold text-foreground">{challenge.title}</h4>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {challenge.user?.name || "Cliente SportMatch"} eligio {challenge.venue.name}
+            {challenge.venue.district ? ` (${challenge.venue.district})` : ""}.
+          </p>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-[10px] font-bold ${statusClass}`}>
+          {statusLabel}
+        </span>
+      </div>
+
+      <p className="line-clamp-3 text-xs leading-5 text-muted-foreground">
+        {challenge.description}
+      </p>
+
+      <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card/60 p-3">
+          <span className="block text-[10px] uppercase text-muted-foreground">Cliente</span>
+          <strong>{challenge.user?.name || "Sin nombre"}</strong>
+        </div>
+        <div className="rounded-xl border border-border bg-card/60 p-3">
+          <span className="block text-[10px] uppercase text-muted-foreground">Recompensa</span>
+          <strong>{challenge.rewardFitcoins} FC</strong>
+        </div>
+        <div className="rounded-xl border border-border bg-card/60 p-3">
+          <span className="block text-[10px] uppercase text-muted-foreground">Inicio</span>
+          <strong>{new Date(challenge.started_at).toLocaleDateString("es-PE")}</strong>
+        </div>
+      </div>
+
+      {challenge.validationStatus !== "approved" && (
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onApprove}
+            disabled={isUpdating}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
+          >
+            {isUpdating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            Aprobar reto
+          </button>
+          <button
+            type="button"
+            onClick={onReject}
+            disabled={isUpdating}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 px-3 py-2 text-xs font-bold text-red-500 transition-colors hover:bg-red-500 hover:text-white disabled:opacity-60"
+          >
+            <XCircle className="h-4 w-4" />
+            No cumplio
+          </button>
+        </div>
+      )}
+    </article>
   );
 }
 
