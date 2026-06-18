@@ -1276,37 +1276,35 @@ export class EngagementService {
   ): Array<AiRecommendationResponse["dailyChallenge"]> {
     return [
       {
-        title: `Reto tecnico de ${sport}`,
-        description:
-          "Dedica 20 minutos a practicar un fundamento clave: control, precision o resistencia segun tu deporte principal.",
-        rewardHint: "+50 FitCoins sugeridos si registras actividad deportiva hoy.",
+        title: `Circuito de precision ${sport}`,
+        description: `Completa 3 bloques de 8 minutos: calentamiento tecnico, repeticion de una habilidad clave y reto final de 10 intentos medibles. El objetivo es registrar al menos 7 ejecuciones limpias sin forzar intensidad.`,
+        rewardHint: "+55 FitCoins sugeridos si completas el circuito y registras el resultado.",
       },
       {
-        title: `Reto cancha cercana`,
+        title: `Mision sede testigo`,
         description: court
-          ? `Revisa ${court.name ?? "una sede recomendada"} en ${court.district ?? district} y agenda una sesion corta de ${sport}.`
-          : `Busca una sede disponible en ${district} y planifica una sesion corta de ${sport}.`,
-        rewardHint: "+40 FitCoins sugeridos por explorar una sede deportiva real.",
+          ? `Elige ${court.name ?? "una sede recomendada"} en ${court.district ?? district}. Realiza 25 minutos de ${sport}: 8 de entrada en calor, 12 de tecnica y 5 de cierre. La sede puede validar asistencia y cumplimiento.`
+          : `Busca una sede disponible en ${district}. Realiza 25 minutos de ${sport}: 8 de entrada en calor, 12 de tecnica y 5 de cierre, con validacion de asistencia si aplica.`,
+        rewardHint: "+50 FitCoins sugeridos cuando la empresa valide la actividad.",
       },
       {
-        title: `Reto partido compatible`,
+        title: `Reto ritmo de partido`,
         description: match
-          ? `Evalua unirte a "${match.title}" de ${match.sport} el ${this.formatMatchDate(match.date)} a las ${this.formatMatchTime(match.time)}.`
-          : `Encuentra un partido compatible de ${sport} y coordina una hora concreta para jugar.`,
-        rewardHint: "+60 FitCoins sugeridos si conviertes la recomendacion en partido.",
+          ? `Usa "${match.title}" como objetivo: antes del ${this.formatMatchDate(match.date)} a las ${this.formatMatchTime(match.time)}, completa una sesion de preparacion con 10 minutos de movilidad, 15 de tecnica y 5 jugadas o intentos finales medibles.`
+          : `Prepara tu proximo partido de ${sport}: 10 minutos de movilidad, 15 de tecnica y 5 jugadas o intentos finales medibles. El reto se cumple si anotas tu mejor resultado.`,
+        rewardHint: "+60 FitCoins sugeridos si conviertes la preparacion en actividad real.",
       },
       {
-        title: "Reto companero de entrenamiento",
+        title: "Reto dupla tactica",
         description: player
-          ? `Coordina con ${player.name ?? "un jugador compatible"} para entrenar ${player.sharedSports[0] ?? sport} esta semana.`
-          : `Busca un jugador compatible de ${sport} y proponle una sesion de entrenamiento esta semana.`,
-        rewardHint: "+45 FitCoins sugeridos por activar una conexion deportiva.",
+          ? `Invita a ${player.name ?? "un jugador compatible"} a una practica corta de ${player.sharedSports[0] ?? sport}: 5 minutos de objetivo comun, 15 minutos de ejercicio alternado y 5 minutos para comparar resultados.`
+          : `Haz una practica tipo dupla en ${sport}: define un objetivo, completa 15 minutos de ejercicio alternado y registra que mejorarias para el siguiente encuentro.`,
+        rewardHint: "+45 FitCoins sugeridos por completar un reto colaborativo.",
       },
       {
-        title: `Reto constancia en ${sport}`,
-        description:
-          "Completa un calentamiento de 10 minutos, una practica principal de 20 minutos y un cierre de movilidad de 5 minutos.",
-        rewardHint: "+50 FitCoins sugeridos por mantener rutina deportiva.",
+        title: `Marca personal segura en ${sport}`,
+        description: `Elige una metrica simple de ${sport}: aciertos, tiempo controlado, vueltas suaves o repeticiones tecnicas. Haz 2 rondas, descansa 2 minutos entre rondas y busca mejorar solo un 10% sin excederte.`,
+        rewardHint: "+55 FitCoins sugeridos por registrar una mejora medible.",
       },
     ];
   }
@@ -1677,6 +1675,27 @@ Puedes mejorar nombres, descripciones y motivos, pero conserva entityId cuando e
 
 Objetivo: generar recomendaciones deportivas personalizadas, reto diario, logro sugerido,
 resumen semanal, narrativa de distritos y borrador de notificacion inteligente.
+
+Definicion obligatoria de reto deportivo:
+- Un reto NO debe ser "conecta", "coordina", "crea publicacion" ni una tarea administrativa.
+- Debe sentirse como una mision deportiva entretenida, concreta y segura.
+- Debe incluir: nombre memorable, deporte o habilidad objetivo, duracion o repeticiones,
+  criterio medible de exito y modo de validacion si aplica una sede.
+- Debe ser exigente pero NO extremo: evita lesion, castigos, ayunos, sobreentrenamiento
+  o cualquier lenguaje de riesgo.
+- Si el usuario practica deportes fisicos, prioriza retos presenciales en cancha, gym,
+  club o sede cercana. Si solo hay e-sports, crea reto de practica tecnica, estrategia
+  o consistencia sin pedir sede fisica.
+- Para recomendaciones type="challenges", devuelve al menos 2 cards de type "challenge".
+- Las cards challenge deben tener metadata.rewardHint con FitCoins sugeridos.
+
+Ejemplos de estilo esperado:
+- "Circuito Primer Toque 3x8": 3 bloques de 8 minutos para control orientado, pase contra pared
+  y definicion suave; exito si registra 30 acciones limpias.
+- "Duelo de Precision en Sede": 20 minutos de tiros/servicios a zonas marcadas; exito si alcanza
+  12 aciertos y la empresa valida asistencia.
+- "Mision Ritmo de Partido": calentamiento 8 min, bloque tecnico 15 min y mini reto final de
+  10 intentos medibles segun el deporte.
 
 Responde UNICAMENTE JSON valido, sin markdown, con esta forma exacta:
 {

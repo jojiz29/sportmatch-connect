@@ -337,42 +337,41 @@ function buildWeeklyChallengeRefreshPair(
   const variants = [
     [
       {
-        title: "Mision precision y ritmo",
-        description: `En ${sport}, completa 3 bloques: 8 minutos de calentamiento, 15 minutos de tecnica repetida y 12 minutos de ritmo continuo. Anota que parte te costo mas para comparar tu progreso.`,
-        reward: "+50 FitCoins sugeridos si completas el reto y eliges una sede validable.",
+        title: `Circuito relampago de ${sport}`,
+        description: `Completa 3 mini bloques: 8 minutos de entrada en calor, 10 minutos de tecnica repetida y un cierre de 10 intentos medibles. El reto se cumple si registras tu mejor marca sin subir la intensidad de golpe.`,
+        reward: "+55 FitCoins sugeridos si completas el circuito y registras resultado.",
       },
       {
-        title: "Mision sede testigo",
+        title: "Sede testigo: prueba de precision",
         description: venue
-          ? `Elige ${venue} u otra sede del mapa, realiza una sesion corta y pide validacion de la empresa responsable.`
-          : "Elige una sede del mapa, realiza una sesion corta y pide validacion de la empresa responsable.",
-        reward: "+45 FitCoins sugeridos cuando la empresa valide la actividad.",
+          ? `Elige ${venue} u otra sede del mapa. Haz 20 minutos de practica tecnica y completa 12 intentos a una zona u objetivo definido. La empresa valida asistencia y cumplimiento.`
+          : "Elige una sede del mapa. Haz 20 minutos de practica tecnica y completa 12 intentos a una zona u objetivo definido. La empresa valida asistencia y cumplimiento.",
+        reward: "+50 FitCoins sugeridos cuando la empresa valide la actividad.",
       },
     ],
     [
       {
-        title: "Mision duelo amistoso",
-        description:
-          "Coordina una actividad fisica con una persona compatible: define deporte, hora y objetivo del encuentro antes de asistir.",
-        reward: "+60 FitCoins sugeridos si conviertes el reto en actividad real.",
+        title: "Duelo de marca personal",
+        description: `Elige una metrica de ${sport}: aciertos, tiempo, control o repeticiones tecnicas. Haz 2 rondas de 7 minutos con 2 minutos de pausa y busca mejorar tu primera ronda solo un 10%.`,
+        reward: "+60 FitCoins sugeridos si registras ambas rondas.",
       },
       {
-        title: "Mision check-in deportivo",
+        title: "Check-in de habilidad",
         description:
-          "Selecciona una sede, asiste a la actividad y deja que la empresa confirme que estuviste presente y cumpliste el reto.",
-        reward: "+40 FitCoins sugeridos por validacion aprobada.",
+          "Selecciona una sede, realiza una sesion de 25 minutos con calentamiento, practica central y cierre suave. La empresa confirma que asististe y completaste la mision.",
+        reward: "+45 FitCoins sugeridos por validacion aprobada.",
       },
     ],
     [
       {
-        title: "Mision mejora medible",
-        description: `Haz una sesion de ${sport} y mide una mejora concreta: mas repeticiones, mejor tiempo, mas precision o mayor resistencia.`,
+        title: "Escalera de mejora medible",
+        description: `Haz una sesion de ${sport} en 3 niveles: facil, medio y reto final. En cada nivel mide una accion concreta, como precision, control, tiempo o repeticiones tecnicas.`,
         reward: "+55 FitCoins sugeridos por progreso deportivo.",
       },
       {
-        title: "Mision empresa validadora",
+        title: "Empresa validadora: reto 25",
         description:
-          "Selecciona una sede fisica, realiza la actividad ahi y deja registrada la empresa que revisara si cumpliste.",
+          "Selecciona una sede fisica y completa 25 minutos de actividad segura. La empresa revisa asistencia, disciplina del reto y registro final del usuario.",
         reward: "+45 FitCoins sugeridos tras aprobacion de la sede.",
       },
     ],
@@ -397,6 +396,10 @@ function isLegacyWeeklyChallengeDraft(challenge: WeeklyChallengeDraft | undefine
     "reto validable en sede",
     "coordina una actividad fisica",
     "realiza una actividad fisica en una cancha",
+    "define deporte, hora y objetivo",
+    "selecciona una sede, asiste a la actividad",
+    "completa tu actividad deportiva",
+    "agrega deportes, conecta con jugadores",
   ].some((legacyText) => normalizedText.includes(legacyText));
 }
 
