@@ -1,9 +1,21 @@
 // === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Users, Clock, Plus, UserX, Star, Trophy, X, ShieldAlert } from "lucide-react";
+import {
+  MapPin,
+  Users,
+  Clock,
+  Plus,
+  UserX,
+  Star,
+  Trophy,
+  X,
+  ShieldAlert,
+  CalendarDays,
+} from "lucide-react";
 import { usePublicMatchStore, type PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
 import { CreateMatchModal } from "@/features/matchmaking/ui/CreateMatchModal";
+import { MiniCalendar } from "@/features/matchmaking/ui/MiniCalendar";
 import { ReviewModal } from "@/features/matchmaking/ui/ReviewModal";
 import { AdminModerationPanel } from "@/features/matchmaking/ui/AdminModerationPanel";
 import { ReportModal } from "@/components/ReportModal";
@@ -77,6 +89,7 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
   const kickParticipant = usePublicMatchStore((s) => s.kickParticipant);
   const cancelMatch = usePublicMatchStore((s) => s.cancelMatch);
   const getAverageRating = usePublicMatchStore((s) => s.getAverageRating);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const isCreator = currentUserId === match.creatorId;
   const isParticipant = match.participants.some((p) => p.userId === currentUserId);
@@ -86,156 +99,177 @@ function MatchCard({ match, currentUserId, onReview, onReport }: MatchCardProps)
   const avg = getAverageRating(match.creatorId);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      layout
-      className={`bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all border-l-4 ${sportColor} flex flex-col gap-3`}
-      id={`match-card-${match.id}`}
-    >
-      {/* Fila superior: emoji, título, nivel y estado */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-2xl shrink-0">{SPORT_EMOJIS[match.sport] ?? "🏟️"}</span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-foreground truncate">{match.title}</p>
-            <p className="text-[10px] text-muted-foreground">{match.level}</p>
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        layout
+        className={`bg-gradient-card border border-border rounded-2xl p-4 hover:ring-glow transition-all border-l-4 ${sportColor} flex flex-col gap-3`}
+        id={`match-card-${match.id}`}
+      >
+        {/* Fila superior: emoji, título, nivel y estado */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-2xl shrink-0">{SPORT_EMOJIS[match.sport] ?? "🏟️"}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-foreground truncate">{match.title}</p>
+              <p className="text-[10px] text-muted-foreground">{match.level}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {isCreator && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-primary font-bold">
+                🎯 Tuyo
+              </span>
+            )}
+            <span
+              className={`text-[9px] px-1.5 py-0.5 rounded-full border font-semibold ${statusCfg.className}`}
+            >
+              {statusCfg.label}
+            </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {isCreator && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-primary font-bold">
-              🎯 Tuyo
+
+        {/* Fila de metadatos: cancha, dirección, fecha/hora */}
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Trophy className="h-3 w-3" />
+            {match.courtName}
+          </span>
+          <span className="flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            <span className="truncate max-w-[120px]">{match.address}</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {formatDate(match.date)} {match.time}
+          </span>
+        </div>
+
+        {/* Sección de participantes: avatares apilados y contador */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2">
+              {(match.participants || []).slice(0, 5).map((p) => (
+                <div key={p.userId} className="relative group">
+                  <img
+                    src={
+                      p.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.userId}`
+                    }
+                    alt={p.name}
+                    title={p.name}
+                    className="h-7 w-7 rounded-full border-2 border-card bg-muted object-cover"
+                  />
+                  {/* Botón de expulsión — solo visible para el creador, sobre el avatar al hover */}
+                  {isCreator && p.userId !== currentUserId && match.status === "Open" && (
+                    <button
+                      onClick={() => kickParticipant(match.id, p.userId)}
+                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                      title={`Expulsar a ${p.name}`}
+                      id={`kick-${match.id}-${p.userId}`}
+                    >
+                      <UserX className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {match.participants.length > 5 && (
+                <div className="h-7 w-7 rounded-full border-2 border-card bg-muted grid place-items-center text-[10px] font-bold text-muted-foreground">
+                  +{match.participants.length - 5}
+                </div>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              <Users className="inline h-3 w-3 mr-0.5" />
+              {match.participants.length}/{match.maxPlayers}
+            </span>
+          </div>
+
+          {/* Rating promedio del creador */}
+          {avg > 0 && (
+            <span className="text-xs text-warning flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-warning" />
+              {avg}
             </span>
           )}
-          <span
-            className={`text-[9px] px-1.5 py-0.5 rounded-full border font-semibold ${statusCfg.className}`}
-          >
-            {statusCfg.label}
-          </span>
         </div>
-      </div>
 
-      {/* Fila de metadatos: cancha, dirección, fecha/hora */}
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Trophy className="h-3 w-3" />
-          {match.courtName}
-        </span>
-        <span className="flex items-center gap-1">
-          <MapPin className="h-3 w-3" />
-          <span className="truncate max-w-[120px]">{match.address}</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {formatDate(match.date)} {match.time}
-        </span>
-      </div>
-
-      {/* Sección de participantes: avatares apilados y contador */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex -space-x-2">
-            {(match.participants || []).slice(0, 5).map((p) => (
-              <div key={p.userId} className="relative group">
-                <img
-                  src={p.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.userId}`}
-                  alt={p.name}
-                  title={p.name}
-                  className="h-7 w-7 rounded-full border-2 border-card bg-muted object-cover"
-                />
-                {/* Botón de expulsión — solo visible para el creador, sobre el avatar al hover */}
-                {isCreator && p.userId !== currentUserId && match.status === "Open" && (
-                  <button
-                    onClick={() => kickParticipant(match.id, p.userId)}
-                    className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-                    title={`Expulsar a ${p.name}`}
-                    id={`kick-${match.id}-${p.userId}`}
-                  >
-                    <UserX className="h-2.5 w-2.5" />
-                  </button>
-                )}
-              </div>
+        {/* Botones de acción: unirse, cancelar, valorar, reportar */}
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-border/40">
+          {match.status === "Open" &&
+            !isCreator &&
+            (isParticipant ? (
+              <span className="min-w-[120px] flex-1 py-1.5 rounded-xl bg-neon/10 text-neon border border-neon/20 text-xs font-semibold text-center">
+                ✓ Ya inscrito
+              </span>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => joinMatch(match.id)}
+                disabled={isFull}
+                className="flex-1 py-1.5 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold hover:shadow-neon transition-shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                id={`join-match-${match.id}`}
+              >
+                Unirse rápido ⚡
+              </motion.button>
             ))}
-            {match.participants.length > 5 && (
-              <div className="h-7 w-7 rounded-full border-2 border-card bg-muted grid place-items-center text-[10px] font-bold text-muted-foreground">
-                +{match.participants.length - 5}
-              </div>
-            )}
-          </div>
-          <span className="text-xs text-muted-foreground">
-            <Users className="inline h-3 w-3 mr-0.5" />
-            {match.participants.length}/{match.maxPlayers}
-          </span>
-        </div>
 
-        {/* Rating promedio del creador */}
-        {avg > 0 && (
-          <span className="text-xs text-warning flex items-center gap-0.5">
-            <Star className="h-3 w-3 fill-warning" />
-            {avg}
-          </span>
-        )}
-      </div>
-
-      {/* Botones de acción: unirse, cancelar, valorar, reportar */}
-      <div className="flex gap-2 pt-1 border-t border-border/40">
-        {match.status === "Open" &&
-          !isCreator &&
-          (isParticipant ? (
-            <span className="flex-1 py-1.5 rounded-xl bg-neon/10 text-neon border border-neon/20 text-xs font-semibold text-center">
-              ✓ Ya inscrito
-            </span>
-          ) : (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => joinMatch(match.id)}
-              disabled={isFull}
-              className="flex-1 py-1.5 rounded-xl bg-gradient-neon text-neon-foreground text-xs font-bold hover:shadow-neon transition-shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              id={`join-match-${match.id}`}
+          {/* Botón de calendario (solo visible para participantes inscritos) */}
+          {isParticipant && (
+            <button
+              onClick={() => setCalendarOpen(true)}
+              className="min-w-[148px] flex-1 sm:flex-none py-1.5 px-2.5 rounded-xl border border-primary/30 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors cursor-pointer flex items-center justify-center gap-1"
+              id={`open-calendar-${match.id}`}
+              title="Ver en Calendario"
             >
-              Unirse rápido ⚡
-            </motion.button>
-          ))}
+              <CalendarDays className="h-3 w-3" />
+              Ver en Calendario
+            </button>
+          )}
 
-        {/* Botón de cancelar (solo creador, partido abierto) */}
-        {isCreator && match.status === "Open" && (
-          <button
-            onClick={() => cancelMatch(match.id)}
-            className="py-1.5 px-3 rounded-xl border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/10 transition-colors cursor-pointer flex items-center gap-1"
-            id={`cancel-match-${match.id}`}
-          >
-            <X className="h-3 w-3" /> Cancelar
-          </button>
-        )}
+          {/* Botón de cancelar (solo creador, partido abierto) */}
+          {isCreator && match.status === "Open" && (
+            <button
+              onClick={() => cancelMatch(match.id)}
+              className="py-1.5 px-3 rounded-xl border border-destructive/30 text-destructive text-xs font-semibold hover:bg-destructive/10 transition-colors cursor-pointer flex items-center gap-1"
+              id={`cancel-match-${match.id}`}
+            >
+              <X className="h-3 w-3" /> Cancelar
+            </button>
+          )}
 
-        {/* Botón de valorar al creador */}
-        {!isCreator && (
-          <button
-            onClick={() => onReview(match)}
-            className="py-1.5 px-2.5 rounded-xl glass border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer flex items-center gap-1"
-            id={`review-match-${match.id}`}
-            title="Valorar al creador"
-          >
-            <Star className="h-3 w-3 text-warning" />
-          </button>
-        )}
+          {/* Botón de valorar al creador */}
+          {!isCreator && (
+            <button
+              onClick={() => onReview(match)}
+              className="py-1.5 px-2.5 rounded-xl glass border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer flex items-center gap-1"
+              id={`review-match-${match.id}`}
+              title="Valorar al creador"
+            >
+              <Star className="h-3 w-3 text-warning" />
+            </button>
+          )}
 
-        {/* Botón de reportar al creador */}
-        {!isCreator && (
-          <button
-            onClick={() => onReport(match)}
-            className="py-1.5 px-2.5 rounded-xl glass border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer flex items-center gap-1"
-            id={`report-match-${match.id}`}
-            title="Reportar creador"
-          >
-            <ShieldAlert className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-    </motion.div>
+          {/* Botón de reportar al creador */}
+          {!isCreator && (
+            <button
+              onClick={() => onReport(match)}
+              className="py-1.5 px-2.5 rounded-xl glass border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer flex items-center gap-1"
+              id={`report-match-${match.id}`}
+              title="Reportar creador"
+            >
+              <ShieldAlert className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {calendarOpen && <MiniCalendar match={match} onClose={() => setCalendarOpen(false)} />}
+      </AnimatePresence>
+    </>
   );
 }
 
