@@ -58,6 +58,7 @@ export function XpBar({
       onLevelUp(prev, liveInfo.level);
     }
     prevLevelRef.current = liveInfo.level;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveInfo?.level, onLevelUp]);
 
   // Unificamos XpInfo y customInfo en un solo shape

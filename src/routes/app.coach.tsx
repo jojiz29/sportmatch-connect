@@ -5,13 +5,15 @@ import { useAuthStore } from "@/entities/user/useAuth";
 import {
   Sparkles,
   Send,
-  Lock,
   Activity,
   Award,
-  ChevronRight,
   Apple,
   MessageSquare,
   History,
+  Crown,
+  Layers,
+  Check,
+  X,
 } from "lucide-react";
 import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
@@ -55,6 +57,96 @@ interface NutritionLog {
   created_at: string;
 }
 
+interface PricingPlan {
+  id: string;
+  name: string;
+  price: number;
+  period: string;
+  badge?: string;
+  oldPrice?: string;
+  description: string;
+  features: string[];
+  limits: {
+    formAnalyzer: string;
+    arPreview: string;
+    matchmaking: string;
+    sportyChat: string;
+  };
+}
+
+const PLANS: PricingPlan[] = [
+  {
+    id: "free",
+    name: "Plan Gratuito",
+    price: 0,
+    period: "Siempre",
+    description: "Para probar la plataforma con limitaciones estrictas",
+    features: ["Límites extremadamente bajos", "Soporte básico", "Publicidad activa en la app"],
+    limits: {
+      formAnalyzer: "1 uso de prueba",
+      arPreview: "1 uso de prueba",
+      matchmaking: "5 Me Gusta al día",
+      sportyChat: "3 interacciones gratis",
+    },
+  },
+  {
+    id: "bronce",
+    name: "Plan Inicial",
+    price: 5.99,
+    oldPrice: "S/ 9.99",
+    period: "Mensual",
+    badge: "OFERTA",
+    description: "Ideal para jugadores casuales que desean ventajas IA",
+    features: ["Sin publicidad", "AR Court Preview ilimitado", "Acceso prioritario a canchas"],
+    limits: {
+      formAnalyzer: "5 análisis / mes",
+      arPreview: "Ilimitado",
+      matchmaking: "20 Me Gusta al día",
+      sportyChat: "15 interacciones / día",
+    },
+  },
+  {
+    id: "plata",
+    name: "Plan Plata",
+    price: 19.99,
+    period: "Semestral",
+    badge: "MÁS POPULAR",
+    description: "Perfecto para deportistas constantes y competitivos",
+    features: [
+      "Sin publicidad",
+      "AR Court Preview ilimitado",
+      "Insignia de Plata en perfil",
+      "Análisis avanzado de técnica",
+    ],
+    limits: {
+      formAnalyzer: "30 análisis / mes",
+      arPreview: "Ilimitado",
+      matchmaking: "50 Me Gusta al día",
+      sportyChat: "50 interacciones / día",
+    },
+  },
+  {
+    id: "oro",
+    name: "Plan Oro / Elite",
+    price: 24.99,
+    period: "Anual",
+    badge: "ELITE",
+    description: "Acceso total, definitivo y profesional de SportMatch",
+    features: [
+      "Sin publicidad",
+      "AR Court Preview ilimitado",
+      "Insignia Dorada VIP",
+      "Prioridad máxima en matchmaking",
+    ],
+    limits: {
+      formAnalyzer: "Ilimitado",
+      arPreview: "Ilimitado",
+      matchmaking: "Ilimitado",
+      sportyChat: "Ilimitado",
+    },
+  },
+];
+
 function CoachPage() {
   const user = useAuthStore((s) => s.user);
   const isDemoMode = useAuthStore((s) => s.isDemoMode);
@@ -63,6 +155,7 @@ function CoachPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"chat" | "nutrition">("chat");
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const { processPayment } = usePaymentGatewayStore();
 
   // === ANALYTICS FUNNEL LOGGER ===
@@ -82,7 +175,8 @@ function CoachPage() {
   };
 
   // === CHECKOUT SUBSCRIPTION FLOW ===
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (plan: any) => {
+    setSelectedPlan(plan);
     logFunnelEvent("premium_cta_clicked");
     logFunnelEvent("checkout_initiated");
     setPaymentDialogOpen(true);
@@ -93,10 +187,14 @@ function CoachPage() {
     stripe?: Stripe | null,
     elements?: StripeElements | null,
   ) => {
-    if (!user) return;
+    if (!user || !selectedPlan) return;
     setLoading(true);
     try {
-      const netAmount = Math.max(0, 50 - (selection.useFitcoins ? selection.fitcoinsToUse : 0));
+      const planPrice = selectedPlan.price;
+      const netAmount = Math.max(
+        0,
+        planPrice - (selection.useFitcoins ? selection.fitcoinsToUse : 0),
+      );
       const paymentPayload = {
         method: selection.method,
         amount: netAmount,
@@ -107,7 +205,7 @@ function CoachPage() {
 
       const result = await processPayment(
         paymentPayload,
-        "Suscripción SportMatch Premium",
+        `Suscripción SportMatch ${selectedPlan.name}`,
         stripe,
         elements,
       );
@@ -127,7 +225,7 @@ function CoachPage() {
             await backendApi.wallet.createTransaction(token, {
               user_id: user.id,
               amount: -selection.fitcoinsToUse,
-              description: "Suscripción Premium con FitCoins",
+              description: `Suscripción ${selectedPlan.name} con FitCoins`,
               type: "SPEND",
             });
           }
@@ -137,13 +235,16 @@ function CoachPage() {
             id: `tx-premium-${Date.now()}`,
             user_id: user.id,
             amount: -selection.fitcoinsToUse,
-            description: "Suscripción Premium con FitCoins (Demo)",
+            description: `Suscripción ${selectedPlan.name} con FitCoins (Demo)`,
             type: "SPEND",
             created_at: new Date().toISOString(),
           });
         }
         login({ ...user, fitcoins_balance: newBalance });
       }
+
+      // Guardar plan contratado de forma local
+      localStorage.setItem(`sportmatch_subscription_plan_${user.id}`, selectedPlan.id);
 
       // Activar PREMIUM
       if (isDemoMode) {
@@ -164,7 +265,7 @@ function CoachPage() {
         }
 
         logFunnelEvent("payment_completed");
-        toast.success("¡Suscripción Premium activada exitosamente (Modo Demo)!");
+        toast.success(`¡Suscripción ${selectedPlan.name} activada exitosamente (Modo Demo)!`);
         setPaymentDialogOpen(false);
       } else {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -181,7 +282,7 @@ function CoachPage() {
           logFunnelEvent("payment_completed");
           const upgradedUser = { ...useAuthStore.getState().user!, tier: "PREMIUM" as const };
           login(upgradedUser);
-          toast.success("¡Suscripción Premium activada exitosamente!");
+          toast.success(`¡Suscripción ${selectedPlan.name} activada exitosamente!`);
           setPaymentDialogOpen(false);
         }
       }
@@ -207,114 +308,284 @@ function CoachPage() {
       toast.error("El pago fue cancelado.");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // If Free user, render locking screen
   if (!user || user.tier !== "PREMIUM") {
+    const userTier = user?.tier || "FREE";
     return (
-      <div className="flex-1 p-6 flex flex-col items-center justify-center relative min-h-[85vh]">
+      <div className="flex-1 p-4 lg:p-8 flex flex-col items-center justify-start space-y-12 relative min-h-[85vh] overflow-y-auto max-w-7xl mx-auto w-full">
         {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/20 rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-neon/15 rounded-full blur-3xl -z-10" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-neon/10 rounded-full blur-3xl -z-10" />
 
-        <div className="max-w-2xl w-full glass p-8 rounded-3xl border border-border/40 shadow-2xl flex flex-col items-center text-center space-y-6">
-          <div className="relative">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center shadow-glow animate-pulse">
-              <Lock className="h-8 w-8 text-white" />
+        {/* Header Title */}
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 grid place-items-center shadow-glow shrink-0 animate-pulse">
+              <Crown className="h-5.5 w-5.5 text-white" />
             </div>
-            <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-neon flex items-center justify-center border-2 border-background text-[10px] font-black text-black">
-              ★
+            <h1 className="text-3xl font-black uppercase tracking-wider text-gradient">
+              Desbloquea SportMatch Pro
+            </h1>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-black uppercase tracking-widest shadow-md">
+              PRO
             </span>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Elige el plan ideal para tu ritmo deportivo. Desbloquea límites, accede a herramientas
+            premium de IA, entrena con el Coach Sporty e interactúa con un matchmaking premium.
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            <h1 className="text-3xl font-heading tracking-wide text-foreground">
-              Desbloquea <span className="text-gradient font-black">SportMatch Premium</span>
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto text-sm">
-              Accede a herramientas avanzadas impulsadas por Inteligencia Artificial de Google
-              Gemini y retas competitivas.
+        {/* Premium Benefits Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+          <div className="p-5 rounded-2xl bg-background/40 border border-border/40 flex flex-col space-y-3 hover:border-primary/30 transition-all card-lift">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Sparkles className="h-5.5 w-5.5" />
+            </div>
+            <h3 className="font-bold text-sm text-foreground">Coach IA 1-a-1</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Asesoría de entrenamiento continua e interactiva con telemetría integrada de tus
+              partidos en tiempo real.
             </p>
           </div>
 
-          {/* Premium Benefits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full text-left pt-4">
-            <div className="p-4 rounded-2xl bg-background/40 border border-border/20 flex flex-col space-y-2 hover:border-primary/30 transition-all">
-              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-sm text-foreground">Coach IA 1-a-1</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Asesoría continua de entrenamiento con telemetría integrada de tus partidos.
-                (20/día)
-              </p>
+          <div className="p-5 rounded-2xl bg-background/40 border border-border/40 flex flex-col space-y-3 hover:border-neon/30 transition-all card-lift">
+            <div className="h-10 w-10 rounded-xl bg-neon/10 flex items-center justify-center text-neon">
+              <Apple className="h-5.5 w-5.5" />
             </div>
-
-            <div className="p-4 rounded-2xl bg-background/40 border border-border/20 flex flex-col space-y-2 hover:border-neon/30 transition-all">
-              <div className="h-9 w-9 rounded-xl bg-neon/10 flex items-center justify-center text-neon">
-                <Apple className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-sm text-foreground">Snacks Recomendados</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Recomendaciones de nutrición inteligente post-partido adaptadas a calorías y
-                esfuerzo.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-background/40 border border-border/20 flex flex-col space-y-2 hover:border-purple-500/30 transition-all">
-              <div className="h-9 w-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                <Award className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-sm text-foreground">Retos de Squads</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Reta a squads rivales apostando tus FitCoins con sistema oficial de arbitraje/voto.
-              </p>
-            </div>
+            <h3 className="font-bold text-sm text-foreground">Snacks Recomendados</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Recomendaciones de nutrición inteligente post-partido adaptadas a tu nivel, calorías
+              quemadas y esfuerzo.
+            </p>
           </div>
 
-          <div className="pt-6 w-full max-w-sm">
-            <button
-              onClick={handleSubscribe}
-              disabled={loading}
-              className="w-full py-4 rounded-2xl bg-gradient-primary hover:scale-[1.02] active:scale-95 text-white font-bold text-base tracking-wider shadow-glow flex items-center justify-center gap-2 cursor-pointer transition-all duration-300 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  <span>Procesando...</span>
-                </>
-              ) : (
-                <>
-                  <span>Suscribirse por S/ 50.00/mes</span>
-                  <ChevronRight className="h-5 w-5" />
-                </>
-              )}
-            </button>
-            <p className="text-[10px] text-muted-foreground/60 mt-3">
-              Cancela en cualquier momento.{" "}
-              {isDemoMode ? "🔧 Modo Demo activo: No se cobrará dinero real." : ""}
+          <div className="p-5 rounded-2xl bg-background/40 border border-border/40 flex flex-col space-y-3 hover:border-purple-500/30 transition-all card-lift">
+            <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+              <Award className="h-5.5 w-5.5" />
+            </div>
+            <h3 className="font-bold text-sm text-foreground">Retos de Squads</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Reta a squads rivales apostando tus FitCoins con un sistema oficial de arbitraje,
+              votación y canje.
             </p>
+          </div>
+        </div>
+
+        {/* Pricing Plans Cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full pt-4">
+          {PLANS.map((plan) => {
+            const isCurrent =
+              (plan.id === "free" && userTier !== "PREMIUM") ||
+              (plan.id !== "free" && userTier === "PREMIUM");
+
+            return (
+              <div
+                key={plan.id}
+                className={`rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 border bg-gradient-card ${
+                  plan.badge
+                    ? "border-amber-500/50 shadow-glow scale-[1.02]"
+                    : "border-border/50 hover:border-border"
+                }`}
+              >
+                {plan.badge && (
+                  <div className="absolute right-0 top-0 bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[9px] font-black uppercase py-1 px-4 rounded-bl-2xl tracking-widest shadow-md">
+                    {plan.badge}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-base font-black uppercase text-foreground">{plan.name}</h3>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug min-h-[2.5rem] text-left">
+                      {plan.description}
+                    </p>
+                  </div>
+
+                  <div className="py-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-foreground">S/ {plan.price}</span>
+                    <span className="text-xs text-muted-foreground">/ {plan.period}</span>
+                    {plan.oldPrice && (
+                      <span className="text-xs text-muted-foreground line-through ml-2">
+                        {plan.oldPrice}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Limits List */}
+                  <div className="p-3.5 rounded-2xl bg-muted/60 border border-border/40 space-y-2">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground text-left">
+                      Límites de Uso:
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Form Analyzer:</span>
+                        <span className="font-bold text-foreground">
+                          {plan.limits.formAnalyzer}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">AR Preview:</span>
+                        <span className="font-bold text-foreground">{plan.limits.arPreview}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Matchmaking:</span>
+                        <span className="font-bold text-foreground">{plan.limits.matchmaking}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Sporty Chat:</span>
+                        <span className="font-bold text-foreground">{plan.limits.sportyChat}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Key Features */}
+                  <div className="space-y-2 pt-2">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground text-left">
+                      Qué incluye:
+                    </div>
+                    <ul className="space-y-1.5 text-left">
+                      {plan.features.map((feat, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs">
+                          <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="text-muted-foreground">{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isCurrent}
+                  onClick={() => handleSubscribe(plan)}
+                  className={`mt-6 w-full py-2.5 rounded-xl font-bold text-xs transition-all tracking-wider cursor-pointer ${
+                    isCurrent
+                      ? "bg-muted text-muted-foreground border-border border cursor-not-allowed"
+                      : plan.badge
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-500 hover:scale-[1.02] text-black shadow-md font-black"
+                        : "bg-primary text-primary-foreground hover:bg-primary/95"
+                  }`}
+                >
+                  {isCurrent ? "Plan Actual" : "Suscribirme al Plan"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Freemium vs Premium Complete Comparison Table */}
+        <div className="bg-gradient-card border border-border/50 rounded-3xl p-6 space-y-4 shadow-card w-full">
+          <div className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-amber-400" />
+            <h3 className="font-black text-sm uppercase tracking-wider text-foreground">
+              Comparativa Completa de Beneficios
+            </h3>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border/40 text-muted-foreground uppercase font-bold tracking-widest text-[10px]">
+                  <th className="py-3 px-4">Característica</th>
+                  <th className="py-3 px-4">Gratuito</th>
+                  <th className="py-3 px-4 text-amber-400">Bronce (S/ 5.99)</th>
+                  <th className="py-3 px-4">Plata (S/ 19.99)</th>
+                  <th className="py-3 px-4">Oro / Elite (S/ 24.99)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20 text-muted-foreground">
+                <tr>
+                  <td className="py-3 px-4 font-bold text-foreground">Form Analyzer (IA)</td>
+                  <td className="py-3 px-4">1 uso único de prueba</td>
+                  <td className="py-3 px-4 text-foreground font-semibold">5 análisis / mes</td>
+                  <td className="py-3 px-4">30 análisis / mes</td>
+                  <td className="py-3 px-4 font-bold text-emerald-400">Ilimitado</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-bold text-foreground">AR Court Preview (3D)</td>
+                  <td className="py-3 px-4">1 uso único de prueba</td>
+                  <td className="py-3 px-4">Acceso Completo</td>
+                  <td className="py-3 px-4">Acceso Completo</td>
+                  <td className="py-3 px-4 font-bold text-emerald-400">Ilimitado</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-bold text-foreground">
+                    Me Gusta Matchmaking (Likes)
+                  </td>
+                  <td className="py-3 px-4 text-rose-400 font-semibold">5 Me Gusta al día</td>
+                  <td className="py-3 px-4">20 Me Gusta al día</td>
+                  <td className="py-3 px-4">50 Me Gusta al día</td>
+                  <td className="py-3 px-4 font-bold text-emerald-400">Ilimitado</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-bold text-foreground">
+                    Interacciones Sporty Coach
+                  </td>
+                  <td className="py-3 px-4 text-rose-400">3 interacciones totales</td>
+                  <td className="py-3 px-4">15 interacciones / día</td>
+                  <td className="py-3 px-4">50 interacciones / día</td>
+                  <td className="py-3 px-4 font-bold text-emerald-400">Ilimitado</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-bold text-foreground">
+                    Publicidad en la Aplicación
+                  </td>
+                  <td className="py-3 px-4 text-rose-400">Publicidades Activas</td>
+                  <td className="py-3 px-4">Sin Publicidad</td>
+                  <td className="py-3 px-4">Sin Publicidad</td>
+                  <td className="py-3 px-4 font-semibold text-emerald-400 font-bold">
+                    Sin Publicidad
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-bold text-foreground">
+                    Insignia Especial en Perfil
+                  </td>
+                  <td className="py-3 px-4">
+                    <X className="h-4 w-4 text-muted-foreground/40" />
+                  </td>
+                  <td className="py-3 px-4">
+                    <X className="h-4 w-4 text-muted-foreground/40" />
+                  </td>
+                  <td className="py-3 px-4 text-foreground font-semibold">Insignia de Plata</td>
+                  <td className="py-3 px-4 text-amber-400 font-bold">Insignia VIP Oro</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
         {/* Dialog de pago inline */}
         <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-          <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto bg-background border border-border rounded-3xl p-6 text-left">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-xl font-bold text-foreground">
-                Suscripción SportMatch Premium
+          <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 text-foreground overflow-y-auto max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-black uppercase text-white tracking-wide">
+                Adquirir Suscripción Pro
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                Completa tu pago seguro para activar los beneficios de SportMatch Premium.
+              <DialogDescription className="text-xs text-muted-foreground leading-normal">
+                Estás por suscribirte al{" "}
+                <span className="font-bold text-amber-400">{selectedPlan?.name}</span> por{" "}
+                <span className="font-bold text-white">
+                  S/ {selectedPlan?.price.toFixed(2)} {selectedPlan?.period}
+                </span>
+                .
               </DialogDescription>
             </DialogHeader>
-            <PaymentCheckout
-              cost={50}
-              userBalance={user?.fitcoins_balance || 0}
-              onConfirm={handlePaymentConfirm}
-              isProcessing={loading}
-              disabled={loading}
-            />
+
+            {selectedPlan && (
+              <div className="py-4">
+                <PaymentCheckout
+                  cost={selectedPlan.price}
+                  userBalance={user?.fitcoins_balance || 0}
+                  onConfirm={handlePaymentConfirm}
+                  isProcessing={loading}
+                />
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
