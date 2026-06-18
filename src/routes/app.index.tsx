@@ -39,7 +39,13 @@ import { useTranslation } from "react-i18next";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
-import { getTodayAiRecommendations, type AiRecommendationResponse } from "@/features/engagement-ai";
+import {
+  getEngagementChallenges,
+  getTodayAiRecommendations,
+  saveEngagementChallenge,
+  type AiRecommendationResponse,
+  type EngagementChallenge,
+} from "@/features/engagement-ai";
 import { usePublicMatchStore, type PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
 
 type DailyPlanStatus = "idle" | "loading" | "ready" | "error";
@@ -185,20 +191,26 @@ function getWeeklyChallengeKey(userId: string) {
   return `${userId}_${bogotaDate.toISOString().slice(0, 10)}`;
 }
 
-function getWeeklyRefreshCount(userId: string): number {
-  if (typeof window === "undefined") return 0;
-  return Number(
-    window.localStorage.getItem(
-      `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
-    ) ?? 0,
+function getWeeklyRefreshCounts(userId: string): number[] {
+  if (typeof window === "undefined") return [0, 0];
+  const raw = window.localStorage.getItem(
+    `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
   );
+  if (!raw) return [0, 0];
+  try {
+    const parsed = JSON.parse(raw) as number | number[];
+    if (Array.isArray(parsed)) return [Number(parsed[0] ?? 0), Number(parsed[1] ?? 0)];
+    return [Number(parsed || 0), 0];
+  } catch {
+    return [Number(raw || 0), 0];
+  }
 }
 
-function setWeeklyRefreshCount(userId: string, count: number) {
+function setWeeklyRefreshCounts(userId: string, counts: number[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(
     `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
-    String(count),
+    JSON.stringify([counts[0] ?? 0, counts[1] ?? 0]),
   );
 }
 
@@ -222,6 +234,29 @@ function setWeeklyOverrideChallenges(userId: string, challenges: WeeklyChallenge
     `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
     JSON.stringify(challenges),
   );
+}
+
+function getPersistedWeeklyChallengeState(
+  challenges: EngagementChallenge[],
+  weekKey: string,
+): { drafts: WeeklyChallengeDraft[]; refreshCounts: number[] } {
+  const drafts: WeeklyChallengeDraft[] = [];
+  const refreshCounts = [0, 0];
+  for (const challenge of challenges) {
+    const metadata = challenge.metadata ?? {};
+    if (metadata.weekKey !== weekKey || metadata.source !== "home_weekly_challenge") continue;
+    const index = Number(metadata.challengeIndex);
+    if (index !== 0 && index !== 1) continue;
+    if (!drafts[index]) {
+      drafts[index] = {
+        title: challenge.title,
+        description: challenge.description,
+        reward: challenge.reward_hint ?? "Recompensa sugerida al completar el reto.",
+      };
+    }
+    refreshCounts[index] = Math.max(refreshCounts[index], Number(metadata.refreshCount ?? 1));
+  }
+  return { drafts, refreshCounts };
 }
 
 function getWeeklySelectedVenues(userId: string): string[] {
@@ -299,6 +334,15 @@ function buildWeeklyChallengeRefreshPair(
     ],
   ];
   return variants[count % variants.length];
+}
+
+function buildSingleWeeklyChallengeRefresh(
+  plan: AiRecommendationResponse | null,
+  challengeIndex: number,
+  count: number,
+): WeeklyChallengeDraft {
+  const pair = buildWeeklyChallengeRefreshPair(plan, count + challengeIndex);
+  return pair[challengeIndex] ?? pair[0];
 }
 
 function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
@@ -480,8 +524,8 @@ function Dashboard() {
     cachedInitialPlan ? "ready" : "idle",
   );
   const [dailyPlanRefreshKey, setDailyPlanRefreshKey] = useState(0);
-  const [challengeRefreshCount, setChallengeRefreshCount] = useState(
-    user ? getWeeklyRefreshCount(user.id) : 0,
+  const [challengeRefreshCounts, setChallengeRefreshCounts] = useState<number[]>(
+    user ? getWeeklyRefreshCounts(user.id) : [0, 0],
   );
   const [overrideChallenges, setOverrideChallenges] = useState<WeeklyChallengeDraft[]>(
     user ? getWeeklyOverrideChallenges(user.id) : [],
@@ -496,21 +540,70 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    setChallengeRefreshCount(getWeeklyRefreshCount(user.id));
+    setChallengeRefreshCounts(getWeeklyRefreshCounts(user.id));
     setOverrideChallenges(getWeeklyOverrideChallenges(user.id));
     setSelectedWeeklyVenueIds(getWeeklySelectedVenues(user.id));
   }, [user]);
 
-  const handleRefreshWeeklyChallenge = () => {
-    if (!user || challengeRefreshCount >= 1) return;
-    const nextCount = challengeRefreshCount + 1;
-    const nextChallenges = buildWeeklyChallengeRefreshPair(dailyPlan, nextCount);
-    setWeeklyRefreshCount(user.id, nextCount);
+  useEffect(() => {
+    if (!user || useAuthStore.getState().isDemoMode) return;
+    let active = true;
+    getEngagementChallenges()
+      .then((challenges) => {
+        if (!active) return;
+        const { drafts, refreshCounts } = getPersistedWeeklyChallengeState(
+          challenges,
+          getWeeklyChallengeKey(user.id),
+        );
+        if (drafts.length > 0) {
+          setOverrideChallenges(drafts);
+          setWeeklyOverrideChallenges(user.id, drafts);
+        }
+        if (refreshCounts.some((count) => count > 0)) {
+          setChallengeRefreshCounts(refreshCounts);
+          setWeeklyRefreshCounts(user.id, refreshCounts);
+        }
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) console.warn("No se pudieron restaurar retos persistidos:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const handleRefreshWeeklyChallenge = async (challengeIndex: number) => {
+    if (!user || challengeRefreshCounts[challengeIndex] >= 1) return;
+    const nextCounts = [...challengeRefreshCounts];
+    nextCounts[challengeIndex] = (nextCounts[challengeIndex] ?? 0) + 1;
+    const nextChallenge = buildSingleWeeklyChallengeRefresh(
+      dailyPlan,
+      challengeIndex,
+      nextCounts[challengeIndex],
+    );
+    const nextChallenges = [...overrideChallenges];
+    nextChallenges[challengeIndex] = nextChallenge;
+    setWeeklyRefreshCounts(user.id, nextCounts);
     setWeeklyOverrideChallenges(user.id, nextChallenges);
-    setChallengeRefreshCount(nextCount);
+    setChallengeRefreshCounts(nextCounts);
     setOverrideChallenges(nextChallenges);
-    toast.success("Retos actualizados", {
-      description: "Se actualizaron los 2 retos con base en tu perfil deportivo.",
+
+    saveEngagementChallenge({
+      title: nextChallenge.title,
+      description: nextChallenge.description,
+      rewardHint: nextChallenge.reward,
+      metadata: {
+        source: "home_weekly_challenge",
+        weekKey: getWeeklyChallengeKey(user.id),
+        challengeIndex,
+        refreshCount: nextCounts[challengeIndex],
+      },
+    }).catch((error) => {
+      if (import.meta.env.DEV) console.warn("No se pudo persistir reto actualizado:", error);
+    });
+
+    toast.success(`Reto ${challengeIndex + 1} actualizado`, {
+      description: "Se genero una nueva mision usando tu perfil deportivo.",
     });
   };
 
@@ -1151,7 +1244,7 @@ function Dashboard() {
         status={dailyPlanStatus}
         onRetry={() => setDailyPlanRefreshKey((current) => current + 1)}
         overrideChallenges={overrideChallenges}
-        refreshesRemaining={Math.max(0, 1 - challengeRefreshCount)}
+        refreshesRemaining={challengeRefreshCounts.map((count) => Math.max(0, 1 - count))}
         onRefreshChallenge={handleRefreshWeeklyChallenge}
         venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
         selectedVenueIds={selectedWeeklyVenueIds}
@@ -1677,8 +1770,8 @@ function DailySportsPlan({
   status: DailyPlanStatus;
   onRetry: () => void;
   overrideChallenges: WeeklyChallengeDraft[];
-  refreshesRemaining: number;
-  onRefreshChallenge: () => void;
+  refreshesRemaining: number[];
+  onRefreshChallenge: (challengeIndex: number) => void;
   venues: Court[];
   selectedVenueIds: string[];
   onSelectVenue: (challengeIndex: number, venueId: string) => void;
@@ -1718,7 +1811,7 @@ function DailySportsPlan({
             : isLoading
               ? "Cargando"
               : "No cargado",
-      canRefresh: Boolean(plan) && refreshesRemaining > 0,
+      canRefresh: Boolean(plan) && (refreshesRemaining[0] ?? 0) > 0,
     },
     {
       title: venueOverride?.title ?? "Reto validable en sede",
@@ -1733,7 +1826,7 @@ function DailySportsPlan({
         : isLoading
           ? "Cargando"
           : "Pendiente de sede",
-      canRefresh: Boolean(plan) && refreshesRemaining > 0,
+      canRefresh: Boolean(plan) && (refreshesRemaining[1] ?? 0) > 0,
     },
   ];
 
@@ -1844,17 +1937,17 @@ function DailySportsPlan({
               </div>
               <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-[11px] text-muted-foreground">
-                  {refreshesRemaining > 0
-                    ? `Te queda ${refreshesRemaining} actualizacion esta semana.`
+                  {(refreshesRemaining[index] ?? 0) > 0
+                    ? `Te queda ${refreshesRemaining[index]} actualizacion esta semana.`
                     : "Actualizacion semanal usada."}
                 </span>
                 <button
                   type="button"
-                  onClick={onRefreshChallenge}
+                  onClick={() => onRefreshChallenge(index)}
                   disabled={!challenge.canRefresh}
                   className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {challenge.canRefresh ? "Actualizar los 2 retos" : "Sin actualizaciones"}
+                  {challenge.canRefresh ? `Actualizar reto ${index + 1}` : "Sin actualizaciones"}
                 </button>
               </div>
             </div>
@@ -1939,6 +2032,10 @@ function ChallengeVenueMap({
     return null;
   }
 
+  useEffect(() => {
+    setIsMapReady(false);
+  }, [selectedVenueId]);
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
       <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border bg-muted">
@@ -1956,12 +2053,14 @@ function ChallengeVenueMap({
           className="h-full w-full"
           scrollWheelZoom={false}
           dragging
-          whenReady={() => setIsMapReady(true)}
         >
           <MapResizer />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            eventHandlers={{
+              load: () => setIsMapReady(true),
+            }}
           />
           {venues.map((venue) => {
             const isSelected = venue.id === selectedVenueId;
