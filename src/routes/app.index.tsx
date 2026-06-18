@@ -1694,7 +1694,7 @@ function DailySportsPlan({
         : isLoading
           ? "Cargando"
           : "Pendiente de sede",
-      canRefresh: false,
+      canRefresh: Boolean(plan) && refreshesRemaining > 0,
     },
   ];
 
@@ -1800,102 +1800,46 @@ function DailySportsPlan({
                     : "La empresa de la sede seleccionada podra aprobar o rechazar el cumplimiento."}
                 </p>
               </div>
-              {index === 0 && (
-                <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <span className="text-[11px] text-muted-foreground">
-                    {refreshesRemaining > 0
-                      ? `Te queda ${refreshesRemaining} actualizacion esta semana.`
-                      : "Actualizacion semanal usada."}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onRefreshChallenge}
-                    disabled={!challenge.canRefresh}
-                    className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {challenge.canRefresh ? "Actualizar los 2 retos" : "Sin actualizaciones"}
-                  </button>
-                </div>
-              )}
+              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[11px] text-muted-foreground">
+                  {refreshesRemaining > 0
+                    ? `Te queda ${refreshesRemaining} actualizacion esta semana.`
+                    : "Actualizacion semanal usada."}
+                </span>
+                <button
+                  type="button"
+                  onClick={onRefreshChallenge}
+                  disabled={!challenge.canRefresh}
+                  className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {challenge.canRefresh ? "Actualizar los 2 retos" : "Sin actualizaciones"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
 
         <Dialog open={isVenuePickerOpen} onOpenChange={setIsVenuePickerOpen}>
-          <DialogContent className="max-w-3xl bg-background border border-border/60 rounded-3xl p-6">
+          <DialogContent className="max-w-3xl bg-background border border-border/60 rounded-3xl p-5">
             <DialogHeader>
               <DialogTitle className="font-heading text-2xl tracking-wide">
-                Escoge la sede para validar tus retos
+                Escoge una sede en el mapa
               </DialogTitle>
               <DialogDescription>
-                Selecciona la cancha, establecimiento o gym donde realizaras el reto. La empresa
-                responsable podra aprobar o rechazar el cumplimiento desde su panel.
+                Selecciona la sede o empresa donde realizaras los retos. La empresa responsable
+                podra aprobar o rechazar el cumplimiento desde su panel.
               </DialogDescription>
             </DialogHeader>
-
-            <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs text-muted-foreground">
-              Esta seleccion aplica para los 2 retos semanales. La sede queda como responsable de
-              supervisar la evidencia o asistencia del usuario.
-            </div>
 
             <div className="mt-4">
               <ChallengeVenueMap
                 venues={venues}
                 selectedVenueId={selectedVenueId}
-                onSelectVenue={onSelectVenue}
+                onSelectVenue={(venueId) => {
+                  onSelectVenue(venueId);
+                  setIsVenuePickerOpen(false);
+                }}
               />
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 max-h-[300px] overflow-y-auto pr-1">
-              {venues.map((venue) => {
-                const isSelected = venue.id === selectedVenueId;
-                const venueDistance = (venue as Court & { distance?: number }).distance;
-                const distanceText =
-                  typeof venueDistance === "number"
-                    ? `${venueDistance.toFixed(1)} km`
-                    : venue.district || "Sede disponible";
-                return (
-                  <button
-                    key={venue.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectVenue(venue.id);
-                      setIsVenuePickerOpen(false);
-                    }}
-                    className={`group rounded-2xl border p-4 text-left transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/10 shadow-glow"
-                        : "border-border bg-card hover:border-primary/40 hover:bg-accent/40"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-foreground truncate">
-                          {venue.name}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {venue.sport} · {distanceText}
-                        </div>
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {isSelected ? "Elegida" : "Elegir"}
-                      </span>
-                    </div>
-                    <div className="mt-3 text-[11px] text-muted-foreground">
-                      {venue.address || "Direccion registrada por la empresa"}
-                    </div>
-                    <div className="mt-3 rounded-xl bg-background/60 border border-border/50 px-3 py-2 text-[11px] text-muted-foreground">
-                      Empresa responsable: validara asistencia y cumplimiento del reto.
-                    </div>
-                  </button>
-                );
-              })}
             </div>
           </DialogContent>
         </Dialog>
@@ -1936,18 +1880,26 @@ function ChallengeVenueMap({
   function MapResizer() {
     const map = useMap();
     useEffect(() => {
-      const timeoutId = globalThis.setTimeout(() => map.invalidateSize(), 120);
-      return () => globalThis.clearTimeout(timeoutId);
+      const timeoutIds = [80, 220, 420].map((delay) =>
+        globalThis.setTimeout(() => map.invalidateSize(), delay),
+      );
+      return () => timeoutIds.forEach((timeoutId) => globalThis.clearTimeout(timeoutId));
     }, [map]);
     useEffect(() => {
-      map.flyTo(center, Math.max(map.getZoom(), 13), { duration: 0.4 });
+      map.setView(center, 13, { animate: false });
     }, [center, map]);
     return null;
   }
 
   return (
-    <div className="h-72 overflow-hidden rounded-2xl border border-border bg-muted">
-      <MapContainer center={center} zoom={13} className="h-full w-full" scrollWheelZoom={false}>
+    <div className="h-[460px] overflow-hidden rounded-2xl border border-border bg-muted">
+      <MapContainer
+        center={center}
+        zoom={13}
+        className="h-full w-full"
+        scrollWheelZoom={false}
+        dragging
+      >
         <MapResizer />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
@@ -1969,18 +1921,12 @@ function ChallengeVenueMap({
               eventHandlers={{ click: () => onSelectVenue(venue.id) }}
             >
               <Popup>
-                <div className="min-w-[170px] text-sm">
-                  <div className="font-bold">{venue.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {venue.sport} · {venue.district || venue.address || "Sede deportiva"}
+                <div className="min-w-[180px] text-sm">
+                  <div className="font-bold text-foreground">{venue.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{venue.sport}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    Empresa responsable de validacion
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onSelectVenue(venue.id)}
-                    className="mt-2 w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"
-                  >
-                    Seleccionar sede
-                  </button>
                 </div>
               </Popup>
             </CircleMarker>
