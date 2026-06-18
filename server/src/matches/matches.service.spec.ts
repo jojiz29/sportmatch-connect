@@ -106,6 +106,7 @@ describe("MatchesService", () => {
         data: {
           title: "Partido",
           sport: "tenis",
+          // El schema remoto guarda estos campos como texto, no como Date.
           date: "2026-06-15",
           time: "10:00",
           max_players: 10,

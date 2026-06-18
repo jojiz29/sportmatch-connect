@@ -23,6 +23,16 @@ export class VoiceService {
 
   onModuleInit() {
     this.config = this.aiConfigService.getConfig();
+
+    if (!this.config.isAvailable) {
+      // Voz usa las mismas credenciales de Google. Si no existen en local,
+      // dejamos que el frontend use Web Speech API como alternativa.
+      this.logger.warn(
+        `Google Cloud Speech/TTS no inicializados: ${this.config.unavailableReason}`,
+      );
+      return;
+    }
+
     const opts: { credentials?: object; keyFile?: string } = {};
     if (this.config.credentialsJson) {
       opts.credentials = this.config.credentialsJson as object;
