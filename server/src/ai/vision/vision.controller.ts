@@ -183,7 +183,8 @@ export class VisionController {
   @Post("dni-verify")
   @ApiOperation({
     summary: "#32 — Verifica identidad comparando selfie con foto del DNI",
-    description: "Recibe dos imágenes: selfie y foto del DNI. Realiza face matching biométrico.",
+    description:
+      "Recibe dos imágenes: selfie y foto del DNI. Realiza una comparación visual asistida.",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
@@ -191,7 +192,7 @@ export class VisionController {
       type: "object",
       properties: {
         selfie: { type: "string", format: "binary", description: "Selfie actual del usuario" },
-        dniImage: {
+        dni: {
           type: "string",
           format: "binary",
           description: "Foto del DNI (la que tiene la cara)",

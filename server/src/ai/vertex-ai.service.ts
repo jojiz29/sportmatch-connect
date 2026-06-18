@@ -47,12 +47,16 @@ export interface VertexAiOptions {
   responseMimeType?: "application/json" | "text/plain";
 }
 
-export interface VertexAiMediaPart {
-  inlineData: {
-    mimeType: string;
-    data: string;
-  };
-}
+export type VertexAiMediaPart =
+  | {
+      text: string;
+    }
+  | {
+      inlineData: {
+        mimeType: string;
+        data: string;
+      };
+    };
 
 export interface VertexAiMediaOptions extends VertexAiOptions {
   mediaParts: VertexAiMediaPart[];

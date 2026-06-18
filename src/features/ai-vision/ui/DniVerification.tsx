@@ -72,6 +72,7 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
   };
 
   const canVerify = selfieFile && dniFile && !verifying;
+  const isProbableMatch = result ? result.match && result.confidence < 0.7 : false;
   const isUnverified = result ? !result.match && result.confidence < 0.4 : false;
 
   return (
@@ -209,7 +210,9 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
                 }`}
               >
                 {result.match
-                  ? "Identidad verificada"
+                  ? isProbableMatch
+                    ? "Coincidencia probable"
+                    : "Identidad verificada"
                   : isUnverified
                     ? "No verificable"
                     : "No coincide"}
