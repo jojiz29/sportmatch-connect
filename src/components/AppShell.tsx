@@ -190,8 +190,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {
               to: "/app/coach",
               labelKey: "nav.coach",
-              label: "Coach IA (Pro)",
+              label: "Coach IA",
               icon: Sparkles,
+              badge: "PRO",
             },
             {
               to: "/app/ai-vision",

@@ -120,8 +120,18 @@ function Admin() {
 
     backendApi.courts
       .getAll()
-      .then((backendCourts) => {
-        if (active) setCourtsList(backendCourts as Court[]);
+      .then((res) => {
+        if (!active) return;
+        if (
+          res &&
+          typeof res === "object" &&
+          "data" in res &&
+          Array.isArray((res as { data: Court[] }).data)
+        ) {
+          setCourtsList((res as { data: Court[] }).data);
+        } else if (Array.isArray(res)) {
+          setCourtsList(res as Court[]);
+        }
       })
       .catch(() => {
         apiClient.courts

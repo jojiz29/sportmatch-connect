@@ -288,7 +288,7 @@ export function WeeklyChallengesCard({
                           [c.id]: event.target.value,
                         }))
                       }
-                      className="min-h-[36px] rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                      className="w-full max-w-full min-h-[36px] rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
                     >
                       <option value="">Elegir sede para validación</option>
                       {venues.slice(0, 30).map((venue) => (

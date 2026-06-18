@@ -783,14 +783,14 @@
   "share": {
     "button": "Compartilhar",
     "copied": "Copiado!",
-    "levelUp": "Acabei de subir para o nivel {level} ({label}) no SportMatch! 🏆",
-    "matchCompleted": "Partidao! {sport} concluido no SportMatch",
-    "challengeCompleted": "Completei o desafio '{name}' no SportMatch!",
+    "levelUp": "Acabei de subir para o nivel {{level}} ({{label}}) no SportMatch! 🏆",
+    "matchCompleted": "Partidao! {{sport}} concluido no SportMatch",
+    "challengeCompleted": "Completei o desafio '{{name}}' no SportMatch!",
     "hashtags": "#SportMatch #Esporte #FitCoins"
   },
   "levelUp": {
     "title": "Você subiu de nivel!",
-    "message": "Parabens! Voce alcancou o nivel {label}. Continue assim!",
+    "message": "Parabens! Voce alcancou o nivel {{label}}. Continue assim!",
     "close": "Fechar"
   },
   "weeklyChallenges": {
@@ -798,15 +798,15 @@
     "empty": "Nenhum desafio esta semana. Volte na segunda!",
     "claim": "Resgatar",
     "claimed": "Resgatado",
-    "progress": "{current}/{goal}",
-    "reward": "{xp} XP · {fc} FitCoins",
+    "progress": "{{current}}/{{goal}}",
+    "reward": "{{xp}} XP · {{fc}} FitCoins",
     "types": {
-      "play_matches": "Jogue {goal} partidas",
-      "win_matches": "Ganhe {goal} partidas",
-      "book_courts": "Reserve {goal} quadras",
-      "invite_friends": "Convide {goal} amigo",
-      "maintain_streak": "Mantenha sequencia de {goal} dias",
-      "earn_xp": "Ganhe {goal} XP"
+      "play_matches": "Jogue {{goal}} partidas",
+      "win_matches": "Ganhe {{goal}} partidas",
+      "book_courts": "Reserve {{goal}} quadras",
+      "invite_friends": "Convide {{goal}} amigo",
+      "maintain_streak": "Mantenha sequencia de {{goal}} dias",
+      "earn_xp": "Ganhe {{goal}} XP"
     }
   },
   "favorites": {

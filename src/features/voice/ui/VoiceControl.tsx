@@ -117,9 +117,14 @@ export function VoiceControl({ onTranscript, textToSpeak, textKey }: VoiceContro
       if (!text) return;
       setIsSpeaking(true);
       try {
+        const cleanText = text
+          .replace(/[\uD83C-\uDBFF][\uDC00-\uDFFF]/g, "") // Emojis de pares sustitutos (🏆, ⚽, 🎾...)
+          .replace(/[\u2600-\u27BF]/g, "") // Símbolos misceláneos y dingbats
+          .trim();
+
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
+          const utterance = new SpeechSynthesisUtterance(cleanText);
           const bcp47 = toBcp47(language);
           utterance.lang = bcp47;
 
@@ -128,7 +133,7 @@ export function VoiceControl({ onTranscript, textToSpeak, textKey }: VoiceContro
           if (voice) utterance.voice = voice;
 
           // Parámetros para sonar más humano (menos robótico)
-          utterance.rate = 0.98; // ligeramente más lento = más claro
+          utterance.rate = 1.15; // Velocidad de lectura más ágil y natural
           utterance.pitch = 1.0; // neutral, no agudo
           utterance.volume = 1.0;
 
@@ -139,7 +144,7 @@ export function VoiceControl({ onTranscript, textToSpeak, textKey }: VoiceContro
           return;
         }
         // Fallback: Google Cloud TTS
-        const res = await synthesizeSpeech({ text, language });
+        const res = await synthesizeSpeech({ text: cleanText, language });
         const audio = new Audio(`data:audio/mpeg;base64,${res.audioBase64}`);
         audio.onended = () => setIsSpeaking(false);
         audio.onerror = () => setIsSpeaking(false);
