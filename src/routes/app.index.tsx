@@ -1,6 +1,7 @@
 // === BLOQUE: IMPORTS — Dependencias del dashboard principal ===
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
+import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -72,10 +73,13 @@ export const Route = createFileRoute("/app/")({
       }
     };
 
-    const backendMatches = await fetchWithTimeout(() => backendApi.matches.getAll());
-    const backendCourts = await fetchWithTimeout(() => backendApi.courts.getAll());
-    const backendUsers = await fetchWithTimeout(() => backendApi.users.getAll());
-    const backendSports = await fetchWithTimeout(() => backendApi.sports.getAll());
+    // Las cuatro consultas no dependen entre si; correrlas en paralelo evita sumar timeouts.
+    const [backendMatches, backendCourts, backendUsers, backendSports] = await Promise.all([
+      fetchWithTimeout(() => backendApi.matches.getAll()),
+      fetchWithTimeout(() => backendApi.courts.getAll()),
+      fetchWithTimeout(() => backendApi.users.getAll()),
+      fetchWithTimeout(() => backendApi.sports.getAll()),
+    ]);
 
     const matches =
       backendMatches && typeof backendMatches === "object" && "data" in backendMatches
@@ -277,6 +281,46 @@ function scoreRecommendedMatch(match: Match, user: User | null): number {
     String(user.level).toLowerCase() === String(match.required_level).toLowerCase() ? 30 : 0;
   const openBonus = match.status !== "Full" && match.status !== "Finished" ? 20 : 0;
   return sameSport + sameLevel + openBonus;
+}
+
+function scoreNearbyPlayer(
+  player: User,
+  user: User | null,
+  baseLocation: { lat: number; lng: number } | null,
+) {
+  const distance =
+    baseLocation && player.last_location_lat && player.last_location_lng
+      ? calculateDistance(
+          baseLocation.lat,
+          baseLocation.lng,
+          player.last_location_lat,
+          player.last_location_lng,
+        )
+      : player.distance_km;
+  const distanceScore =
+    typeof distance === "number" ? Math.max(0, 60 - Math.min(distance, 60)) : 15;
+  const sportScore = player.preferred_sports?.some((sport) =>
+    user?.preferred_sports?.includes(sport),
+  )
+    ? 25
+    : 0;
+  const trustScore = Math.min(player.trust_score ?? 0, 100) / 10;
+  return { distance, score: distanceScore + sportScore + trustScore };
+}
+
+function scoreNearbyCourt(
+  court: Court,
+  user: User | null,
+  baseLocation: { lat: number; lng: number } | null,
+) {
+  const distance = baseLocation
+    ? calculateDistance(baseLocation.lat, baseLocation.lng, court.lat, court.lng)
+    : undefined;
+  const distanceScore =
+    typeof distance === "number" ? Math.max(0, 70 - Math.min(distance, 70)) : 20;
+  const sportScore = user?.preferred_sports?.includes(court.sport as never) ? 25 : 0;
+  const ratingScore = Math.round((court.rating ?? 4) * 2);
+  return { distance, score: distanceScore + sportScore + ratingScore };
 }
 
 function isLegacyDailyPlan(plan: AiRecommendationResponse): boolean {
@@ -776,31 +820,49 @@ function Dashboard() {
     [...liveMatches, ...publicMatchesForDashboard].forEach((match) => {
       byId.set(match.id, match);
     });
-    return [...byId.values()].sort(
-      (a, b) => scoreRecommendedMatch(b, user) - scoreRecommendedMatch(a, user),
-    );
+    return [...byId.values()]
+      .map((match) => ({ match, score: scoreRecommendedMatch(match, user) }))
+      .filter(
+        ({ match, score }) => score > 0 && match.status !== "Full" && match.status !== "Finished",
+      )
+      .sort((a, b) => b.score - a.score)
+      .map(({ match }) => match);
   }, [liveMatches, publicMatchesForDashboard, user]);
 
   const filteredMatches =
     selectedSport !== "Todos"
       ? recommendedMatches.filter((m) => m.sport === selectedSport)
-      : recommendedMatches;
+      : recommendedMatches.slice(0, 4);
+  const visibleRecommendedMatches = filteredMatches.slice(0, 4);
   const isResolvingRecommendedMatches =
     recommendedMatches.length === 0 &&
     liveMatches.length === 0 &&
     publicMatchesForDashboard.length === 0;
 
   // Canchas más cercanas según ubicación base.
+  const nearbyPlayers = useMemo(() => {
+    return users
+      .filter((candidate) => candidate.id !== user?.id && candidate.user_role !== "BUSINESS")
+      .map((candidate) => ({
+        ...candidate,
+        proximity: scoreNearbyPlayer(candidate, user, baseLocation),
+      }))
+      .sort((a, b) => b.proximity.score - a.proximity.score)
+      .slice(0, 4);
+  }, [users, user, baseLocation]);
+
   const closestCourts = useMemo(() => {
-    if (!baseLocation) return courts.slice(0, 5);
     return [...courts]
       .map((c) => ({
         ...c,
-        distance: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
+        proximity: scoreNearbyCourt(c, user, baseLocation),
+        distance: baseLocation
+          ? calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng)
+          : undefined,
       }))
-      .sort((a, b) => a.distance - b.distance)
+      .sort((a, b) => b.proximity.score - a.proximity.score)
       .slice(0, 5);
-  }, [courts, baseLocation]);
+  }, [courts, user, baseLocation]);
 
   const SPORTS = [
     { name: "Todos", emoji: "◎" },
@@ -1137,8 +1199,8 @@ function Dashboard() {
                     Estamos revisando partidos públicos y compatibilidad.
                   </p>
                 </div>
-              ) : filteredMatches.length > 0 ? (
-                filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
+              ) : visibleRecommendedMatches.length > 0 ? (
+                visibleRecommendedMatches.map((m) => <MatchCard key={m.id} match={m} />)
               ) : (
                 <div className="col-span-2 p-10 text-center text-muted-foreground/60 glass rounded-2xl border border-border/40">
                   <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
@@ -1269,8 +1331,16 @@ function Dashboard() {
               </Link>
             </div>
             <div className="space-y-2">
-              {users.slice(0, 4).map((p) => {
+              {nearbyPlayers.map((p) => {
                 const isMe = p.id === user?.id;
+                const distanceLabel =
+                  typeof p.proximity.distance === "number"
+                    ? `${p.proximity.distance.toFixed(1)} km`
+                    : p.proximity.score >= 45
+                      ? "Prioridad alta"
+                      : p.proximity.score >= 25
+                        ? "Prioridad media"
+                        : "Prioridad general";
                 return (
                   <Link
                     key={p.id}
@@ -1295,10 +1365,7 @@ function Dashboard() {
                         )}
                       </div>
                       <div className="text-[11px] text-muted-foreground/70 truncate">
-                        {p.preferred_sports?.[0] || "Sin deporte"} ·{" "}
-                        {baseLocation && p.last_location_lat && p.last_location_lng
-                          ? `${calculateDistance(baseLocation.lat, baseLocation.lng, p.last_location_lat, p.last_location_lng).toFixed(1)} km`
-                          : `${p.distance_km || 0} km`}
+                        {p.preferred_sports?.[0] || "Sin deporte"} · {distanceLabel}
                       </div>
                     </div>
                     <span className="text-[11px] text-neon flex items-center gap-1 shrink-0 font-semibold">
@@ -1307,6 +1374,11 @@ function Dashboard() {
                   </Link>
                 );
               })}
+              {nearbyPlayers.length === 0 && (
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
+                  Aun no hay jugadores disponibles para recomendar.
+                </div>
+              )}
             </div>
           </div>
 
@@ -1325,6 +1397,11 @@ function Dashboard() {
                   variant="list"
                 />
               ))}
+              {closestCourts.length === 0 && (
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
+                  Aun no hay canchas o sedes registradas para recomendar.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1546,8 +1623,14 @@ function DailySportsPlan({
 }) {
   const isLoading = status === "loading";
   const isError = status === "error";
+  const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
   const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
+  const mapCenter: [number, number] = selectedVenue
+    ? [selectedVenue.lat, selectedVenue.lng]
+    : venues[0]
+      ? [venues[0].lat, venues[0].lng]
+      : [-12.0464, -77.0428];
   const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
   const weeklyChallenges = [
     {
@@ -1665,26 +1748,18 @@ function DailySportsPlan({
               </div>
               {index === 1 && (
                 <div className="mt-3 space-y-2">
-                  <label className="text-[11px] font-bold text-muted-foreground">
-                    Sede donde realizaras el reto
-                  </label>
-                  <select
-                    value={selectedVenueId}
-                    onChange={(event) => onSelectVenue(event.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40"
+                  <button
+                    type="button"
+                    onClick={() => setIsVenuePickerOpen(true)}
                     disabled={venues.length === 0}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-left text-xs text-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
                   >
-                    <option value="">
-                      {venues.length > 0
-                        ? "Selecciona una sede cercana"
-                        : "No hay sedes disponibles por ahora"}
-                    </option>
-                    {venues.map((venue) => (
-                      <option key={venue.id} value={venue.id}>
-                        {venue.name} · {venue.district || venue.sport}
-                      </option>
-                    ))}
-                  </select>
+                    {selectedVenue
+                      ? selectedVenue.name
+                      : venues.length > 0
+                        ? "Escoger sede en el mapa"
+                        : "No hay sedes fisicas disponibles"}
+                  </button>
                   <p className="text-[11px] text-muted-foreground">
                     {selectedVenue
                       ? `${selectedVenue.name} quedara como sede responsable de validacion.`
@@ -1712,6 +1787,93 @@ function DailySportsPlan({
             </div>
           ))}
         </div>
+
+        <Dialog open={isVenuePickerOpen} onOpenChange={setIsVenuePickerOpen}>
+          <DialogContent className="max-w-4xl bg-background border border-border/60 rounded-3xl p-0 overflow-hidden">
+            <DialogHeader className="p-5 pb-3">
+              <DialogTitle className="font-heading text-2xl tracking-wide">
+                Escoge la sede del reto
+              </DialogTitle>
+              <DialogDescription>
+                Selecciona la cancha, establecimiento o gym donde realizaras el reto. La empresa
+                responsable revisara y aprobara si cumpliste la actividad.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid lg:grid-cols-[1.2fr_0.8fr] border-t border-border/60">
+              <div className="h-[360px] bg-muted">
+                <MapContainer center={mapCenter} zoom={13} className="h-full w-full">
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {venues.map((venue) => {
+                    const isSelected = venue.id === selectedVenueId;
+                    return (
+                      <CircleMarker
+                        key={venue.id}
+                        center={[venue.lat, venue.lng]}
+                        radius={isSelected ? 12 : 9}
+                        pathOptions={{
+                          color: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
+                          fillColor: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
+                          fillOpacity: 0.7,
+                        }}
+                        eventHandlers={{ click: () => onSelectVenue(venue.id) }}
+                      >
+                        <Popup>
+                          <div className="min-w-[180px] text-sm">
+                            <div className="font-bold">{venue.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {venue.district || venue.address}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onSelectVenue(venue.id);
+                                setIsVenuePickerOpen(false);
+                              }}
+                              className="mt-2 w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"
+                            >
+                              Usar esta sede
+                            </button>
+                          </div>
+                        </Popup>
+                      </CircleMarker>
+                    );
+                  })}
+                </MapContainer>
+              </div>
+              <div className="max-h-[360px] overflow-y-auto p-4 space-y-2">
+                {venues.map((venue) => {
+                  const isSelected = venue.id === selectedVenueId;
+                  return (
+                    <button
+                      key={venue.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectVenue(venue.id);
+                        setIsVenuePickerOpen(false);
+                      }}
+                      className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-card hover:bg-accent"
+                      }`}
+                    >
+                      <div className="text-sm font-bold text-foreground">{venue.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {venue.sport} · {venue.district || venue.address || "Sede deportiva"}
+                      </div>
+                      <div className="mt-2 text-[11px] text-muted-foreground">
+                        Empresa responsable: validara asistencia y cumplimiento del reto.
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
