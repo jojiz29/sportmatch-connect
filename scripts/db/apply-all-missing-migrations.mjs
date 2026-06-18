@@ -45,12 +45,12 @@ const migrationsToApply = [
   "20260618002000_post_likes.sql",
   "20260618003000_player_ratings.sql",
   "20260618003100_match_results.sql",
-  "20260618003200_matchmaking_queue.sql"
+  "20260618003200_matchmaking_queue.sql",
 ];
 
 const client = new pg.Client({
   connectionString,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 
 async function main() {
@@ -68,8 +68,10 @@ async function main() {
     `);
 
     // Obtener las versiones ya aplicadas
-    const appliedRes = await client.query("SELECT version FROM supabase_migrations.schema_migrations;");
-    const appliedVersions = new Set(appliedRes.rows.map(row => row.version));
+    const appliedRes = await client.query(
+      "SELECT version FROM supabase_migrations.schema_migrations;",
+    );
+    const appliedVersions = new Set(appliedRes.rows.map((row) => row.version));
 
     console.log(`ℹ️ Migraciones registradas previamente en DB: ${appliedVersions.size}`);
 
@@ -102,7 +104,7 @@ async function main() {
         await client.query(sql);
         await client.query(
           "INSERT INTO supabase_migrations.schema_migrations (version) VALUES ($1);",
-          [version]
+          [version],
         );
         await client.query("COMMIT;");
         console.log(`✅ Migración ${file} aplicada y registrada exitosamente.`);
@@ -116,7 +118,6 @@ async function main() {
     console.log("🔄 Recargando esquema de PostgREST...");
     await client.query("NOTIFY pgrst, 'reload schema';");
     console.log("🎉 ¡Sincronización de base de datos completada exitosamente!");
-
   } catch (err) {
     console.error("❌ Fallo general durante la sincronización:", err.message);
     process.exit(1);

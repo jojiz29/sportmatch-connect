@@ -3,6 +3,7 @@
 ## Resumen
 
 El módulo B2B-AI consume datos de **3 fuentes**:
+
 - `bookings` (existe desde el inicio)
 - `business_ads` (existe, gestionada por Supabase PostgREST)
 - `usage_metrics` (nueva, creada en migración 20260616)
@@ -80,6 +81,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 (supabase service_role), evitando depender de la policy de INSERT.
 
 **Payload típico desde el cliente:**
+
 ```ts
 const { error } = await supabase.rpc("track_b2b_metric", {
   p_business_id: businessId,
@@ -169,6 +171,7 @@ await usageMetricsService.track(businessId, "profile_view");
 ```
 
 Implementado en:
+
 - `src/features/business/ui/CommercialSheetModal.tsx` → `profile_view`
 
 ### Puntos pendientes de instrumentar

@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Req, Headers, UseGuards, BadRequestException } from "@nestjs/common";
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  Headers,
+  UseGuards,
+  BadRequestException,
+} from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 import { PaymentsService } from "./payments.service";
 
@@ -41,13 +49,10 @@ export class PaymentsController {
   }
 
   @Post("stripe-webhook")
-  async webhook(
-    @Req() req: any,
-    @Headers("stripe-signature") signature: string,
-  ) {
+  async webhook(@Req() req: any, @Headers("stripe-signature") signature: string) {
     // stripe signature validation requires the raw body
     let rawBody = req.body;
-    
+
     // In Express/NestJS, if body parser is already active, req.body is parsed as object.
     // We convert it back to buffer if it's an object/string, or use it directly if it is a Buffer.
     if (rawBody && !Buffer.isBuffer(rawBody)) {

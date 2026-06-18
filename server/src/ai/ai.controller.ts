@@ -25,7 +25,6 @@ import {
   RecommendSnackDto,
 } from "./dto/ai.dto";
 
-
 interface AuthenticatedRequest extends Request {
   user: {
     sub: string;
@@ -128,7 +127,8 @@ export class AiController {
 
   @Post("moderate/advanced")
   @ApiOperation({
-    summary: "US-SEC-002 — Moderación avanzada con ensemble de modelos (IA, reglas y comportamiento)",
+    summary:
+      "US-SEC-002 — Moderación avanzada con ensemble de modelos (IA, reglas y comportamiento)",
   })
   async moderateAdvanced(
     @Body() dto: ModerateAdvancedDto,
@@ -147,10 +147,7 @@ export class AiController {
   @ApiOperation({
     summary: "Premium Coach Chat — Chat 1-a-1 personalizado con telemetría para usuarios Premium",
   })
-  async coachChat(
-    @Body() dto: CoachChatDto,
-    @Request() req: AuthenticatedRequest,
-  ) {
+  async coachChat(@Body() dto: CoachChatDto, @Request() req: AuthenticatedRequest) {
     const userId = (req.user?.userId || req.user?.sub) as string;
     if (!userId) {
       throw new BadRequestException("Usuario no autenticado");
@@ -162,10 +159,7 @@ export class AiController {
   @ApiOperation({
     summary: "Premium Nutrition — Recomendador de snacks post-entrenamiento en base a telemetría",
   })
-  async recommendSnack(
-    @Body() dto: RecommendSnackDto,
-    @Request() req: AuthenticatedRequest,
-  ) {
+  async recommendSnack(@Body() dto: RecommendSnackDto, @Request() req: AuthenticatedRequest) {
     const userId = (req.user?.userId || req.user?.sub) as string;
     if (!userId) {
       throw new BadRequestException("Usuario no autenticado");
@@ -180,4 +174,3 @@ export class AiController {
     );
   }
 }
-

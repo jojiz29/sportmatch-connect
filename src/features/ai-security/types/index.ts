@@ -11,17 +11,17 @@
  */
 export interface ModerationResult {
   ensemble_score: number; // Score final de 0 a 100
-  signals: BlockSignal[];  // Señales individuales que componen el score
+  signals: BlockSignal[]; // Señales individuales que componen el score
   action_recommended: "allow" | "warn" | "block";
-  reasoning: string;       // Justificación detallada de la acción recomendada
+  reasoning: string; // Justificación detallada de la acción recomendada
 }
 
 /**
  * Señal de bloqueo individual evaluada por un sub-modelo o regla.
  */
 export interface BlockSignal {
-  name: string;        // Nombre de la señal (ej: "Vertex AI", "Filtro Regex", "Historial")
-  score: number;       // Score de 0 a 100 para esta señal
+  name: string; // Nombre de la señal (ej: "Vertex AI", "Filtro Regex", "Historial")
+  score: number; // Score de 0 a 100 para esta señal
   description?: string; // Explicación opcional
 }
 

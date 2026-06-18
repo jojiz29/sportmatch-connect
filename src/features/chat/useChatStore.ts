@@ -109,19 +109,19 @@ const appendBroadcastMessage = (row: any) => (chat: any) => {
   return chat;
 };
 
-const mapChatForInsert = (row: any, incomingMessage: any, currentUser: any, activeConversationId: any) => (chat: any) => {
-  const hasMessage = chat.messages.some((m: any) => m.id === row.id);
-  if (chat.id !== row.chat_id || hasMessage) {
-    return chat;
-  }
-  const isUnread =
-    row.sender_id !== currentUser?.id && activeConversationId !== row.chat_id;
-  return {
-    ...chat,
-    messages: [...chat.messages, incomingMessage],
-    unread: isUnread ? chat.unread + 1 : chat.unread,
+const mapChatForInsert =
+  (row: any, incomingMessage: any, currentUser: any, activeConversationId: any) => (chat: any) => {
+    const hasMessage = chat.messages.some((m: any) => m.id === row.id);
+    if (chat.id !== row.chat_id || hasMessage) {
+      return chat;
+    }
+    const isUnread = row.sender_id !== currentUser?.id && activeConversationId !== row.chat_id;
+    return {
+      ...chat,
+      messages: [...chat.messages, incomingMessage],
+      unread: isUnread ? chat.unread + 1 : chat.unread,
+    };
   };
-};
 
 const updateMessageInChat = (row: any) => (message: any) =>
   message.id === row.id ? { ...message, ...row } : message;
@@ -142,15 +142,16 @@ const filterMessagesById = (chatId: string, messageId: string) => (chat: any) =>
   };
 };
 
-const mapMessagesWithConfirmed = (chatId: string, messageId: string, confirmedMessage: any) => (chat: any) => {
-  if (chat.id !== chatId) return chat;
-  return {
-    ...chat,
-    messages: chat.messages.map((message: any) =>
-      message.id === messageId ? confirmedMessage : message
-    ),
+const mapMessagesWithConfirmed =
+  (chatId: string, messageId: string, confirmedMessage: any) => (chat: any) => {
+    if (chat.id !== chatId) return chat;
+    return {
+      ...chat,
+      messages: chat.messages.map((message: any) =>
+        message.id === messageId ? confirmedMessage : message,
+      ),
+    };
   };
-};
 
 const markAsSeenRealMap = (chatId: string, userId: string) => (chat: any) => {
   if (chat.id !== chatId) return chat;
@@ -288,22 +289,32 @@ export const useChatStore = create<ChatState>()(
           try {
             const evaluation = await withTimeout(
               aiSecurityService.evaluateSecurity(normalizedText, "mensaje"),
-              5000
+              5000,
             );
             if (evaluation.action_recommended === "block" || evaluation.ensemble_score >= 75) {
-              toast.error("Mensaje bloqueado: tu cuenta ha sido restringida temporalmente debido a infracciones de las normas de seguridad.");
+              toast.error(
+                "Mensaje bloqueado: tu cuenta ha sido restringida temporalmente debido a infracciones de las normas de seguridad.",
+              );
               chatLog("send:blocked", { chatId, reason: evaluation.reasoning || "Filtro de IA" });
               return;
             }
           } catch (error: any) {
             console.error("[chat] Error en moderación:", error);
             const errorMsg = error?.message || "";
-            if (errorMsg.includes("restringida") || errorMsg.includes("Forbidden") || errorMsg.includes("bloqueado") || errorMsg.includes("403")) {
+            if (
+              errorMsg.includes("restringida") ||
+              errorMsg.includes("Forbidden") ||
+              errorMsg.includes("bloqueado") ||
+              errorMsg.includes("403")
+            ) {
               toast.error("Tu cuenta está restringida temporalmente para enviar mensajes.");
               return; // Bloquea el envío si la cuenta está restringida
             }
             // Fallback (fail-open) para errores de red, backend offline, 500 o timeouts.
-            console.warn("[chat] Moderación de seguridad no disponible. Permitiendo envío por resiliencia.", error);
+            console.warn(
+              "[chat] Moderación de seguridad no disponible. Permitiendo envío por resiliencia.",
+              error,
+            );
           }
         }
 
@@ -384,7 +395,9 @@ export const useChatStore = create<ChatState>()(
           const confirmedMessage = { ...newMessage, metadata: sentMetadata };
 
           set((state) => ({
-            chats: state.chats.map(mapMessagesWithConfirmed(chatId, newMessageId, confirmedMessage)),
+            chats: state.chats.map(
+              mapMessagesWithConfirmed(chatId, newMessageId, confirmedMessage),
+            ),
             lastDiagnostic: `Mensaje confirmado en ${chatId}.`,
           }));
 
@@ -876,7 +889,9 @@ export const useChatStore = create<ChatState>()(
                 messageId: row.id,
               });
               set((state: any) => ({
-                chats: state.chats.map(mapChatForInsert(row, incomingMessage, currentUser, state.activeConversationId)),
+                chats: state.chats.map(
+                  mapChatForInsert(row, incomingMessage, currentUser, state.activeConversationId),
+                ),
                 lastDiagnostic: `Mensaje recibido en vivo en ${row.chat_id}.`,
               }));
 

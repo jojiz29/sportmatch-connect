@@ -13,7 +13,7 @@ import { useAuthStore } from "@/entities/user/useAuth";
 export const aiSecurityService = {
   /**
    * Evalúa el contenido del usuario mediante el ensemble de modelos del backend.
-   * 
+   *
    * @param content - Texto a moderar
    * @param contextType - Tipo de contexto ('mensaje' | 'comentario' | 'perfil')
    * @param metadata - Datos contextuales opcionales
@@ -25,20 +25,39 @@ export const aiSecurityService = {
   ): Promise<ModerationResult> {
     // 0. Soporte para modo DEMO local
     if (useAuthStore.getState().isDemoMode) {
-      const toxicKeywords = ["tonto", "estupido", "estúpido", "imbecil", "imbécil", "basura", "mierda", "puto", "puta", "hijo de puta"];
+      const toxicKeywords = [
+        "tonto",
+        "estupido",
+        "estúpido",
+        "imbecil",
+        "imbécil",
+        "basura",
+        "mierda",
+        "puto",
+        "puta",
+        "hijo de puta",
+      ];
       const contentLower = content.toLowerCase();
-      const hasToxicWord = toxicKeywords.some(word => contentLower.includes(word));
+      const hasToxicWord = toxicKeywords.some((word) => contentLower.includes(word));
 
       if (hasToxicWord) {
         return {
           ensemble_score: 95,
           signals: [
-            { name: "Modelos IA (Simulado)", score: 85, description: "Toxicidad simulada detectada" },
-            { name: "Reglas y Palabras Clave (Local)", score: 95, description: "Palabra clave inapropiada detectada" },
-            { name: "Historial de Comportamiento (Demo)", score: 0, description: "Limpio" }
+            {
+              name: "Modelos IA (Simulado)",
+              score: 85,
+              description: "Toxicidad simulada detectada",
+            },
+            {
+              name: "Reglas y Palabras Clave (Local)",
+              score: 95,
+              description: "Palabra clave inapropiada detectada",
+            },
+            { name: "Historial de Comportamiento (Demo)", score: 0, description: "Limpio" },
           ],
           action_recommended: "block",
-          reasoning: "Se detectó lenguaje inapropiado o insultos (Modo Demo)."
+          reasoning: "Se detectó lenguaje inapropiado o insultos (Modo Demo).",
         };
       }
 
@@ -47,10 +66,10 @@ export const aiSecurityService = {
         signals: [
           { name: "Modelos IA (Simulado)", score: 10, description: "Contenido seguro" },
           { name: "Reglas y Palabras Clave (Local)", score: 0, description: "Limpio" },
-          { name: "Historial de Comportamiento (Demo)", score: 0, description: "Limpio" }
+          { name: "Historial de Comportamiento (Demo)", score: 0, description: "Limpio" },
         ],
         action_recommended: "allow",
-        reasoning: "Contenido limpio (Modo Demo)."
+        reasoning: "Contenido limpio (Modo Demo).",
       };
     }
 

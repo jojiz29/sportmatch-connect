@@ -292,10 +292,17 @@ export class ModerateAdvancedResultDto {
   @ApiProperty({ description: "Listado de señales individuales evaluadas", type: [SignalDto] })
   signals!: SignalDto[];
 
-  @ApiProperty({ description: "Acción recomendada", example: "allow", enum: ["allow", "warn", "block"] })
+  @ApiProperty({
+    description: "Acción recomendada",
+    example: "allow",
+    enum: ["allow", "warn", "block"],
+  })
   action_recommended!: "allow" | "warn" | "block";
 
-  @ApiProperty({ description: "Razonamiento detrás de la recomendación", example: "Todas las señales indican contenido limpio." })
+  @ApiProperty({
+    description: "Razonamiento detrás de la recomendación",
+    example: "Todas las señales indican contenido limpio.",
+  })
   reasoning!: string;
 }
 
@@ -307,7 +314,11 @@ export class CoachChatDto {
   @Transform(sanitizeAiText)
   message!: string;
 
-  @ApiProperty({ description: "Historial de mensajes previos", type: [ChatMessageDto], required: false })
+  @ApiProperty({
+    description: "Historial de mensajes previos",
+    type: [ChatMessageDto],
+    required: false,
+  })
   @IsOptional()
   history?: ChatMessageDto[];
 
@@ -344,5 +355,3 @@ export class RecommendSnackDto {
   @IsEnum(["es", "en", "pt"])
   language?: "es" | "en" | "pt";
 }
-
-

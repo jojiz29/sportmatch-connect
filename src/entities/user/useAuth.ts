@@ -252,7 +252,7 @@ export function useAuth() {
   const signIn = async (email?: string, password?: string) => {
     // E2E / Mock login bypass
     const isMockAttempt = !!(email && !password);
-    
+
     // Si se provee contraseña y no estamos forzados a usar mocks globales, intentamos login real
     const forceMocks = import.meta.env.VITE_USE_MOCKS === "true";
     const isRealAttempt = !!(email && password && !forceMocks);

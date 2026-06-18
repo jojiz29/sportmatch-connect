@@ -42,4 +42,3 @@ import { PaymentsModule } from "./payments/payments.module";
   controllers: [HealthController],
 })
 export class AppModule {}
-

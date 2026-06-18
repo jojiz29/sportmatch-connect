@@ -74,8 +74,9 @@ export function SquadExplorer() {
   const [challengeTime, setChallengeTime] = useState<string>("");
   const [challengeBet, setChallengeBet] = useState<number>(100);
   const [showChallengeForm, setShowChallengeForm] = useState<boolean>(false);
-  const [reports, setReports] = useState<Record<string, { winnerSquadId?: string; reporterId?: string }>>({});
-
+  const [reports, setReports] = useState<
+    Record<string, { winnerSquadId?: string; reporterId?: string }>
+  >({});
 
   // === BLOQUE: CARGA INICIAL DE SQUADS ===
   // Obtiene la lista de squads y verifica membresías en paralelo.
@@ -177,9 +178,7 @@ export function SquadExplorer() {
           const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
           const allChallenges = stored ? JSON.parse(stored) : [];
           const filtered = allChallenges.filter(
-            (c: any) =>
-              c.challenger_squad_id === squadId ||
-              c.challenged_squad_id === squadId
+            (c: any) => c.challenger_squad_id === squadId || c.challenged_squad_id === squadId,
           );
           if (active) setChallenges(filtered);
         } else {
@@ -402,7 +401,9 @@ export function SquadExplorer() {
         const { data } = await supabase
           .from("squad_challenges")
           .select("*")
-          .or(`challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`);
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
         if (data) setChallenges(data);
       }
       setShowChallengeForm(false);
@@ -418,11 +419,19 @@ export function SquadExplorer() {
         const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
         const allChallenges = stored ? JSON.parse(stored) : [];
         const updated = allChallenges.map((c: any) =>
-          c.id === challengeId ? { ...c, status: "ACCEPTED", updated_at: new Date().toISOString() } : c
+          c.id === challengeId
+            ? { ...c, status: "ACCEPTED", updated_at: new Date().toISOString() }
+            : c,
         );
         localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(updated));
         toast.success("¡Reto Aceptado! La apuesta de FitCoins ha sido reservada.");
-        setChallenges(updated.filter((c: any) => c.challenger_squad_id === selectedSquad.id || c.challenged_squad_id === selectedSquad.id));
+        setChallenges(
+          updated.filter(
+            (c: any) =>
+              c.challenger_squad_id === selectedSquad.id ||
+              c.challenged_squad_id === selectedSquad.id,
+          ),
+        );
       } else {
         const { error } = await supabase
           .from("squad_challenges")
@@ -433,7 +442,9 @@ export function SquadExplorer() {
         const { data } = await supabase
           .from("squad_challenges")
           .select("*")
-          .or(`challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`);
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
         if (data) setChallenges(data);
       }
     } catch (err: any) {
@@ -448,11 +459,19 @@ export function SquadExplorer() {
         const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
         const allChallenges = stored ? JSON.parse(stored) : [];
         const updated = allChallenges.map((c: any) =>
-          c.id === challengeId ? { ...c, status: "REJECTED", updated_at: new Date().toISOString() } : c
+          c.id === challengeId
+            ? { ...c, status: "REJECTED", updated_at: new Date().toISOString() }
+            : c,
         );
         localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(updated));
         toast.success("Reto rechazado.");
-        setChallenges(updated.filter((c: any) => c.challenger_squad_id === selectedSquad.id || c.challenged_squad_id === selectedSquad.id));
+        setChallenges(
+          updated.filter(
+            (c: any) =>
+              c.challenger_squad_id === selectedSquad.id ||
+              c.challenged_squad_id === selectedSquad.id,
+          ),
+        );
       } else {
         const { error } = await supabase
           .from("squad_challenges")
@@ -463,7 +482,9 @@ export function SquadExplorer() {
         const { data } = await supabase
           .from("squad_challenges")
           .select("*")
-          .or(`challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`);
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
         if (data) setChallenges(data);
       }
     } catch (err: any) {
@@ -478,27 +499,38 @@ export function SquadExplorer() {
         const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
         const allChallenges = stored ? JSON.parse(stored) : [];
         const challenge = allChallenges.find((c: any) => c.id === challengeId);
-        
+
         if (challenge) {
           const bet = challenge.bet_amount;
           const updated = allChallenges.map((c: any) =>
             c.id === challengeId
-              ? { ...c, status: "COMPLETED", winner_squad_id: winnerSquadId, updated_at: new Date().toISOString() }
-              : c
+              ? {
+                  ...c,
+                  status: "COMPLETED",
+                  winner_squad_id: winnerSquadId,
+                  updated_at: new Date().toISOString(),
+                }
+              : c,
           );
           localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(updated));
 
-          const challengerSquad = squads.find(s => s.id === challenge.challenger_squad_id);
-          const challengedSquad = squads.find(s => s.id === challenge.challenged_squad_id);
+          const challengerSquad = squads.find((s) => s.id === challenge.challenger_squad_id);
+          const challengedSquad = squads.find((s) => s.id === challenge.challenged_squad_id);
           const challengerCaptainId = challengerSquad?.creator_id || "";
           const challengedCaptainId = challengedSquad?.creator_id || "";
-          
+
           const storedBalances = localStorage.getItem("sportmatch_demo_balances");
           const balances = storedBalances ? JSON.parse(storedBalances) : {};
-          
-          const winnerCaptainId = winnerSquadId === challenge.challenger_squad_id ? challengerCaptainId : challengedCaptainId;
-          const loserCaptainId = winnerSquadId === challenge.challenger_squad_id ? challengedCaptainId : challengerCaptainId;
-          
+
+          const winnerCaptainId =
+            winnerSquadId === challenge.challenger_squad_id
+              ? challengerCaptainId
+              : challengedCaptainId;
+          const loserCaptainId =
+            winnerSquadId === challenge.challenger_squad_id
+              ? challengedCaptainId
+              : challengerCaptainId;
+
           balances[winnerCaptainId] = (balances[winnerCaptainId] || 1000) + bet;
           balances[loserCaptainId] = Math.max(0, (balances[loserCaptainId] || 1000) - bet);
           localStorage.setItem("sportmatch_demo_balances", JSON.stringify(balances));
@@ -506,11 +538,20 @@ export function SquadExplorer() {
           if (currentUser.id === winnerCaptainId) {
             login({ ...currentUser, fitcoins_balance: currentUser.fitcoins_balance + bet });
           } else if (currentUser.id === loserCaptainId) {
-            login({ ...currentUser, fitcoins_balance: Math.max(0, currentUser.fitcoins_balance - bet) });
+            login({
+              ...currentUser,
+              fitcoins_balance: Math.max(0, currentUser.fitcoins_balance - bet),
+            });
           }
 
           toast.success(`¡Reto completado! Se transfirieron ${bet} FitCoins al equipo ganador.`);
-          setChallenges(updated.filter((c: any) => c.challenger_squad_id === selectedSquad.id || c.challenged_squad_id === selectedSquad.id));
+          setChallenges(
+            updated.filter(
+              (c: any) =>
+                c.challenger_squad_id === selectedSquad.id ||
+                c.challenged_squad_id === selectedSquad.id,
+            ),
+          );
         }
       } else {
         const { error } = await supabase
@@ -522,7 +563,9 @@ export function SquadExplorer() {
         const { data } = await supabase
           .from("squad_challenges")
           .select("*")
-          .or(`challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`);
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
         if (data) setChallenges(data);
       }
     } catch (err: any) {
@@ -671,10 +714,12 @@ export function SquadExplorer() {
               <>
                 <div className="pb-1">
                   <h3 className="font-semibold text-xs text-foreground flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 text-electric" /> Reserva Colectiva (Dividir Costo)
+                    <Calendar className="h-3.5 w-3.5 text-electric" /> Reserva Colectiva (Dividir
+                    Costo)
                   </h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Al reservar desde este panel, el costo se dividirá en partes iguales entre los miembros del Squad.
+                    Al reservar desde este panel, el costo se dividirá en partes iguales entre los
+                    miembros del Squad.
                   </p>
                 </div>
                 {loadingCourts ? (
@@ -736,9 +781,12 @@ export function SquadExplorer() {
                     <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                       <Lock className="h-6 w-6 animate-pulse" />
                     </div>
-                    <h4 className="font-bold text-sm text-foreground">Retos de Competición requiere Premium</h4>
+                    <h4 className="font-bold text-sm text-foreground">
+                      Retos de Competición requiere Premium
+                    </h4>
                     <p className="text-xs text-muted-foreground max-w-sm">
-                      Para poder retar a otros equipos y apostar FitCoins en encuentros oficiales, debes tener una suscripción Premium activa.
+                      Para poder retar a otros equipos y apostar FitCoins en encuentros oficiales,
+                      debes tener una suscripción Premium activa.
                     </p>
                     <button
                       onClick={() => navigate({ to: "/app/coach" })}
@@ -756,7 +804,7 @@ export function SquadExplorer() {
                       {selectedSquad.creator_id === currentUser.id && !showChallengeForm && (
                         <button
                           onClick={() => {
-                            const other = squads.find(s => s.id !== selectedSquad.id);
+                            const other = squads.find((s) => s.id !== selectedSquad.id);
                             if (other) setTargetRivalSquadId(other.id);
                             setShowChallengeForm(true);
                           }}
@@ -768,24 +816,35 @@ export function SquadExplorer() {
                     </div>
 
                     {showChallengeForm ? (
-                      <form onSubmit={handleLaunchChallenge} className="p-4 bg-background/50 border border-border/40 rounded-2xl space-y-3 animate-fade-in text-left">
+                      <form
+                        onSubmit={handleLaunchChallenge}
+                        className="p-4 bg-background/50 border border-border/40 rounded-2xl space-y-3 animate-fade-in text-left"
+                      >
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">Rival</label>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Rival
+                            </label>
                             <select
                               value={targetRivalSquadId}
                               onChange={(e) => setTargetRivalSquadId(e.target.value)}
                               className="w-full bg-background border border-border/40 rounded-xl px-2 py-1.5 text-xs text-foreground focus:outline-none"
                               required
                             >
-                              {squads.filter(s => s.id !== selectedSquad.id).map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
+                              {squads
+                                .filter((s) => s.id !== selectedSquad.id)
+                                .map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name}
+                                  </option>
+                                ))}
                             </select>
                           </div>
-                          
+
                           <div>
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">Deporte</label>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Deporte
+                            </label>
                             <select
                               value={challengeSport}
                               onChange={(e) => setChallengeSport(e.target.value)}
@@ -799,7 +858,9 @@ export function SquadExplorer() {
                           </div>
 
                           <div>
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">Fecha</label>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Fecha
+                            </label>
                             <input
                               type="date"
                               value={challengeDate}
@@ -810,7 +871,9 @@ export function SquadExplorer() {
                           </div>
 
                           <div>
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">Apuesta (FitCoins)</label>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Apuesta (FitCoins)
+                            </label>
                             <select
                               value={challengeBet}
                               onChange={(e) => setChallengeBet(parseInt(e.target.value) || 100)}
@@ -844,7 +907,9 @@ export function SquadExplorer() {
                       // Challenges List
                       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                         {loadingChallenges ? (
-                          <div className="text-center py-10 text-muted-foreground text-xs">Cargando retos...</div>
+                          <div className="text-center py-10 text-muted-foreground text-xs">
+                            Cargando retos...
+                          </div>
                         ) : challenges.length === 0 ? (
                           <div className="text-center py-10 text-muted-foreground text-xs">
                             No hay retos activos. ¡Reta a un equipo rival!
@@ -852,26 +917,39 @@ export function SquadExplorer() {
                         ) : (
                           challenges.map((c) => {
                             const isChallenger = c.challenger_squad_id === selectedSquad.id;
-                            const opponentSquadId = isChallenger ? c.challenged_squad_id : c.challenger_squad_id;
-                            const opponent = squads.find(s => s.id === opponentSquadId);
+                            const opponentSquadId = isChallenger
+                              ? c.challenged_squad_id
+                              : c.challenger_squad_id;
+                            const opponent = squads.find((s) => s.id === opponentSquadId);
                             const opponentName = opponent?.name || "Squad Rival";
                             const isCaptain = selectedSquad.creator_id === currentUser.id;
 
                             return (
-                              <div key={c.id} className="p-4 bg-background/40 border border-border/30 rounded-2xl space-y-2 text-left hover:border-primary/20 transition-all">
+                              <div
+                                key={c.id}
+                                className="p-4 bg-background/40 border border-border/30 rounded-2xl space-y-2 text-left hover:border-primary/20 transition-all"
+                              >
                                 <div className="flex justify-between items-center">
-                                  <span className={`text-[9px] px-2 py-0.5 rounded font-black tracking-wider uppercase ${
-                                    c.status === "PENDING" ? "bg-amber-500/20 text-amber-400" :
-                                    c.status === "ACCEPTED" ? "bg-emerald-500/20 text-emerald-400" :
-                                    "bg-zinc-500/20 text-zinc-400"
-                                  }`}>
+                                  <span
+                                    className={`text-[9px] px-2 py-0.5 rounded font-black tracking-wider uppercase ${
+                                      c.status === "PENDING"
+                                        ? "bg-amber-500/20 text-amber-400"
+                                        : c.status === "ACCEPTED"
+                                          ? "bg-emerald-500/20 text-emerald-400"
+                                          : "bg-zinc-500/20 text-zinc-400"
+                                    }`}
+                                  >
                                     {c.status}
                                   </span>
-                                  <span className="text-[10px] text-neon font-extrabold">⚔️ Apuesta: {c.bet_amount} FC</span>
+                                  <span className="text-[10px] text-neon font-extrabold">
+                                    ⚔️ Apuesta: {c.bet_amount} FC
+                                  </span>
                                 </div>
 
                                 <div className="text-xs font-semibold text-foreground">
-                                  {isChallenger ? `Retaste a: ${opponentName}` : `Fuiste retado por: ${opponentName}`}
+                                  {isChallenger
+                                    ? `Retaste a: ${opponentName}`
+                                    : `Fuiste retado por: ${opponentName}`}
                                 </div>
 
                                 <div className="text-[10px] text-muted-foreground flex gap-3">
@@ -900,7 +978,9 @@ export function SquadExplorer() {
 
                                 {c.status === "ACCEPTED" && isCaptain && (
                                   <div className="pt-2 border-t border-border/10 space-y-1.5">
-                                    <div className="text-[9px] uppercase font-bold text-muted-foreground">Reportar Ganador (Capitán)</div>
+                                    <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                                      Reportar Ganador (Capitán)
+                                    </div>
                                     <div className="flex gap-2 text-[10px]">
                                       <button
                                         onClick={() => handleReportWinner(c.id, selectedSquad.id)}
@@ -920,7 +1000,10 @@ export function SquadExplorer() {
 
                                 {c.status === "COMPLETED" && (
                                   <div className="text-[10px] font-semibold text-emerald-400 mt-1">
-                                    🏆 Ganador: {c.winner_squad_id === selectedSquad.id ? "¡Ganaste!" : opponentName}
+                                    🏆 Ganador:{" "}
+                                    {c.winner_squad_id === selectedSquad.id
+                                      ? "¡Ganaste!"
+                                      : opponentName}
                                   </div>
                                 )}
                               </div>

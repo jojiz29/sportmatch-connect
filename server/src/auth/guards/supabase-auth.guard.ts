@@ -3,7 +3,14 @@
 // Valida el token Bearer contra Supabase Auth y asigna el payload a request.user
 // ============================================================
 
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException, Optional } from "@nestjs/common";
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  ForbiddenException,
+  Optional,
+} from "@nestjs/common";
 import { SupabaseAuthService } from "../supabase-auth.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -26,7 +33,7 @@ export class SupabaseAuthGuard implements CanActivate {
 
     try {
       const payload = await this.supabaseAuth.validateToken(token);
-      
+
       // Smart Block Check: verificar si el usuario tiene un bloqueo automático activo (si prisma está disponible)
       if (this.prisma) {
         const activeBlock = await this.prisma.user_blocks.findFirst({
@@ -39,7 +46,9 @@ export class SupabaseAuthGuard implements CanActivate {
         });
 
         if (activeBlock) {
-          throw new ForbiddenException("Tu cuenta ha sido restringida temporalmente por actividad inusual");
+          throw new ForbiddenException(
+            "Tu cuenta ha sido restringida temporalmente por actividad inusual",
+          );
         }
       }
 

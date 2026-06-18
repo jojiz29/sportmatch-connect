@@ -262,7 +262,11 @@ describe("AiService", () => {
       });
       prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 100 });
 
-      const res = await service.moderateAdvanced("user1", "¡¡¡Mira esta oferta en www.oferta.com!!!", "mensaje");
+      const res = await service.moderateAdvanced(
+        "user1",
+        "¡¡¡Mira esta oferta en www.oferta.com!!!",
+        "mensaje",
+      );
 
       expect(res.ensemble_score).toBe(55);
       expect(res.action_recommended).toBe("warn");
@@ -282,7 +286,11 @@ describe("AiService", () => {
       prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 100 });
       prismaMock.profiles.findFirst.mockResolvedValue({ id: "admin-user" });
 
-      const res = await service.moderateAdvanced("user1", "Eres un estúpido y una basura", "mensaje");
+      const res = await service.moderateAdvanced(
+        "user1",
+        "Eres un estúpido y una basura",
+        "mensaje",
+      );
 
       expect(res.ensemble_score).toBeGreaterThanOrEqual(75);
       expect(res.action_recommended).toBe("block");

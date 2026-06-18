@@ -181,7 +181,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
             { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
             { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa Comercial", icon: Map },
-            { to: "/app/coach", labelKey: "nav.coach", label: "Coach IA (Premium)", icon: Sparkles },
+            {
+              to: "/app/coach",
+              labelKey: "nav.coach",
+              label: "Coach IA (Premium)",
+              icon: Sparkles,
+            },
           ],
         },
         {

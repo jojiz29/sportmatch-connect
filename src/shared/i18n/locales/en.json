@@ -179,7 +179,17 @@
     "purchase_success_desc": "You redeemed: {{name}}",
     "purchase_error": "Insufficient balance",
     "purchase_error_desc": "You don't have enough FitCoins for this item.",
-    "purchase_failed": "Error processing purchase"
+    "purchase_failed": "Error processing purchase",
+    "sporty_coach": "Sporty Coach",
+    "coach_sport_placeholder": "Which sport?",
+    "coach_location_placeholder": "Where do you want to play?",
+    "coach_level_placeholder": "Skill level",
+    "coach_level_beginner": "Beginner",
+    "coach_level_intermediate": "Intermediate",
+    "coach_level_advanced": "Advanced",
+    "coach_prefs_placeholder": "Preferences (e.g. indoor, lighting)",
+    "coach_ask": "Ask Sporty",
+    "coach_loading": "Sporty is thinking..."
   },
   "profile": {
     "title": "My profile",
@@ -804,18 +814,6 @@
     "remove": "Remove from favorites",
     "filter": "Favorites only",
     "empty": "You have no favorite courts"
-  },
-  "wallet": {
-    "sporty_coach": "Sporty Coach",
-    "coach_sport_placeholder": "Which sport?",
-    "coach_location_placeholder": "Where do you want to play?",
-    "coach_level_placeholder": "Skill level",
-    "coach_level_beginner": "Beginner",
-    "coach_level_intermediate": "Intermediate",
-    "coach_level_advanced": "Advanced",
-    "coach_prefs_placeholder": "Preferences (e.g. indoor, lighting)",
-    "coach_ask": "Ask Sporty",
-    "coach_loading": "Sporty is thinking..."
   },
   "challengeInvite": {
     "title": "You've been challenged!",

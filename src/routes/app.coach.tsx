@@ -68,10 +68,14 @@ function CoachPage() {
   const { isProcessing: isPayingPremium, processPayment } = usePaymentGatewayStore();
 
   // === ANALYTICS FUNNEL LOGGER ===
-  const logFunnelEvent = (stepName: "premium_cta_clicked" | "checkout_initiated" | "payment_completed") => {
+  const logFunnelEvent = (
+    stepName: "premium_cta_clicked" | "checkout_initiated" | "payment_completed",
+  ) => {
     try {
       const stored = localStorage.getItem("sportmatch_conversion_analytics");
-      const data = stored ? JSON.parse(stored) : { premium_cta_clicked: 0, checkout_initiated: 0, payment_completed: 0 };
+      const data = stored
+        ? JSON.parse(stored)
+        : { premium_cta_clicked: 0, checkout_initiated: 0, payment_completed: 0 };
       data[stepName] = (data[stepName] || 0) + 1;
       localStorage.setItem("sportmatch_conversion_analytics", JSON.stringify(data));
     } catch (err) {
@@ -94,10 +98,7 @@ function CoachPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const netAmount = Math.max(
-        0,
-        50 - (selection.useFitcoins ? selection.fitcoinsToUse : 0),
-      );
+      const netAmount = Math.max(0, 50 - (selection.useFitcoins ? selection.fitcoinsToUse : 0));
       const paymentPayload = {
         method: selection.method,
         amount: netAmount,
@@ -150,12 +151,14 @@ function CoachPage() {
       if (isDemoMode) {
         const upgradedUser = { ...useAuthStore.getState().user!, tier: "PREMIUM" as const };
         login(upgradedUser);
-        
+
         try {
           const storedUsers = localStorage.getItem("sportmatch_demo_users");
           if (storedUsers) {
             const users = JSON.parse(storedUsers);
-            const updatedUsers = users.map((u: any) => u.id === user.id ? { ...u, tier: "PREMIUM" } : u);
+            const updatedUsers = users.map((u: any) =>
+              u.id === user.id ? { ...u, tier: "PREMIUM" } : u,
+            );
             localStorage.setItem("sportmatch_demo_users", JSON.stringify(updatedUsers));
           }
         } catch (e) {
@@ -231,7 +234,8 @@ function CoachPage() {
               Desbloquea <span className="text-gradient font-black">SportMatch Premium</span>
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto text-sm">
-              Accede a herramientas avanzadas impulsadas por Inteligencia Artificial de Google Gemini y retas competitivas.
+              Accede a herramientas avanzadas impulsadas por Inteligencia Artificial de Google
+              Gemini y retas competitivas.
             </p>
           </div>
 
@@ -243,7 +247,8 @@ function CoachPage() {
               </div>
               <h3 className="font-bold text-sm text-foreground">Coach IA 1-a-1</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Asesoría continua de entrenamiento con telemetría integrada de tus partidos. (20/día)
+                Asesoría continua de entrenamiento con telemetría integrada de tus partidos.
+                (20/día)
               </p>
             </div>
 
@@ -253,7 +258,8 @@ function CoachPage() {
               </div>
               <h3 className="font-bold text-sm text-foreground">Snacks Recomendados</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Recomendaciones de nutrición inteligente post-partido adaptadas a calorías y esfuerzo.
+                Recomendaciones de nutrición inteligente post-partido adaptadas a calorías y
+                esfuerzo.
               </p>
             </div>
 
@@ -287,7 +293,8 @@ function CoachPage() {
               )}
             </button>
             <p className="text-[10px] text-muted-foreground/60 mt-3">
-              Cancela en cualquier momento. {isDemoMode ? "🔧 Modo Demo activo: No se cobrará dinero real." : ""}
+              Cancela en cualquier momento.{" "}
+              {isDemoMode ? "🔧 Modo Demo activo: No se cobrará dinero real." : ""}
             </p>
           </div>
         </div>
@@ -327,7 +334,9 @@ function CoachPage() {
               <Award className="h-5 w-5 animate-pulse" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-primary uppercase tracking-wider">Plan Activo</div>
+              <div className="text-xs font-semibold text-primary uppercase tracking-wider">
+                Plan Activo
+              </div>
               <div className="text-base font-bold text-foreground">SportMatch Premium ★</div>
             </div>
           </div>
@@ -387,11 +396,7 @@ function CoachPage() {
 
         {/* Feature Sub-panels */}
         <div className="flex-1">
-          {activeTab === "chat" ? (
-            <CoachInfoPanel />
-          ) : (
-            <NutritionRecommenderPanel />
-          )}
+          {activeTab === "chat" ? <CoachInfoPanel /> : <NutritionRecommenderPanel />}
         </div>
       </div>
 
@@ -414,17 +419,16 @@ function CoachInfoPanel() {
         <span>Telemetría & Perfil</span>
       </h3>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        El Coach Sporty analiza tu historial deportivo de los partidos jugados en la plataforma y tus respuestas previas para sugerir rutinas, corregir técnica e incentivar tus rachas.
+        El Coach Sporty analiza tu historial deportivo de los partidos jugados en la plataforma y
+        tus respuestas previas para sugerir rutinas, corregir técnica e incentivar tus rachas.
       </p>
-      
+
       <div className="space-y-3 pt-2">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-neon/10 flex items-center justify-center text-neon text-xs font-bold">
             20
           </div>
-          <div className="text-xs text-foreground font-semibold">
-            Mensajes diarios permitidos
-          </div>
+          <div className="text-xs text-foreground font-semibold">Mensajes diarios permitidos</div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -489,7 +493,7 @@ function CoachChatTab() {
         if (token) {
           const res = await withTimeout(
             backendApi.ai.coachChat(token, { message: "Hola, preséntate" }),
-            8000
+            8000,
           );
           if (res.error) {
             throw new Error(res.error);
@@ -620,7 +624,7 @@ function CoachChatTab() {
             message: messageText,
             history: history,
           }),
-          12000
+          12000,
         );
 
         if (res.error) {
@@ -697,10 +701,7 @@ function CoachChatTab() {
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+          <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
               className={`max-w-[80%] p-4 rounded-2xl leading-relaxed text-sm ${
                 m.role === "user"
@@ -807,10 +808,18 @@ function NutritionRecommenderPanel() {
         setRecommendation({
           snack_name: "Yogurt Griego con Almendras y Plátano",
           calories: 280,
-          ingredients: ["150g de Yogurt griego natural", "1 Plátano mediano picado", "10 Almendras tostadas", "1 cucharadita de Miel de abejas"],
+          ingredients: [
+            "150g de Yogurt griego natural",
+            "1 Plátano mediano picado",
+            "10 Almendras tostadas",
+            "1 cucharadita de Miel de abejas",
+          ],
           reasoning: `Después de entrenar ${sport} durante ${duration} minutos con intensidad ${intensity}, requieres una porción de proteína magra de absorción rápida para reparar fibras musculares dañadas y carbohidratos simples cargados de potasio para reponer las reservas de energía.`,
-          calories_burned: Math.round(duration * (intensity === "alta" ? 10 : intensity === "media" ? 7 : 4)),
-          snack_image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&auto=format&fit=crop",
+          calories_burned: Math.round(
+            duration * (intensity === "alta" ? 10 : intensity === "media" ? 7 : 4),
+          ),
+          snack_image:
+            "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&auto=format&fit=crop",
         });
         setLoading(false);
         toast.success("¡Recomendación nutricional simulada!");
@@ -834,7 +843,7 @@ function NutritionRecommenderPanel() {
             duration,
             intensity,
           }),
-          8000
+          8000,
         );
 
         if (res.error) {
@@ -846,7 +855,10 @@ function NutritionRecommenderPanel() {
           return;
         }
       } catch (err: any) {
-        console.warn("RecommendSnack backend failed, falling back to simulated recommendation:", err);
+        console.warn(
+          "RecommendSnack backend failed, falling back to simulated recommendation:",
+          err,
+        );
       }
     }
 
@@ -855,10 +867,18 @@ function NutritionRecommenderPanel() {
       setRecommendation({
         snack_name: "Yogurt Griego con Almendras y Plátano",
         calories: 280,
-        ingredients: ["150g de Yogurt griego natural", "1 Plátano mediano picado", "10 Almendras tostadas", "1 cucharadita de Miel de abejas"],
+        ingredients: [
+          "150g de Yogurt griego natural",
+          "1 Plátano mediano picado",
+          "10 Almendras tostadas",
+          "1 cucharadita de Miel de abejas",
+        ],
         reasoning: `Después de entrenar ${sport} durante ${duration} minutos con intensidad ${intensity}, requieres una porción de proteína magra de absorción rápida para reparar fibras musculares dañadas y carbohidratos simples cargados de potasio para reponer las reservas de energía.`,
-        calories_burned: Math.round(duration * (intensity === "alta" ? 10 : intensity === "media" ? 7 : 4)),
-        snack_image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&auto=format&fit=crop",
+        calories_burned: Math.round(
+          duration * (intensity === "alta" ? 10 : intensity === "media" ? 7 : 4),
+        ),
+        snack_image:
+          "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&auto=format&fit=crop",
       });
       setLoading(false);
       toast.info("Recomendación deportiva en modo sin conexión.");
@@ -874,7 +894,9 @@ function NutritionRecommenderPanel() {
 
       <div className="space-y-3">
         <div>
-          <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Deporte</label>
+          <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+            Deporte
+          </label>
           <select
             value={sport}
             onChange={(e) => setSport(e.target.value)}
@@ -891,7 +913,9 @@ function NutritionRecommenderPanel() {
         </div>
 
         <div>
-          <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Duración (minutos)</label>
+          <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+            Duración (minutos)
+          </label>
           <input
             type="number"
             value={duration}
@@ -901,7 +925,9 @@ function NutritionRecommenderPanel() {
         </div>
 
         <div>
-          <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Intensidad</label>
+          <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+            Intensidad
+          </label>
           <div className="grid grid-cols-3 gap-1">
             {["baja", "media", "alta"].map((int) => (
               <button
@@ -933,7 +959,10 @@ function NutritionRecommenderPanel() {
         <div className="pt-2 border-t border-border/10 animate-fade-in space-y-3">
           <div className="relative rounded-xl overflow-hidden h-32 border border-border/40">
             <img
-              src={recommendation.snack_image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop"}
+              src={
+                recommendation.snack_image ||
+                "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop"
+              }
               alt={recommendation.snack_name}
               className="w-full h-full object-cover"
             />
@@ -941,13 +970,16 @@ function NutritionRecommenderPanel() {
             <div className="absolute bottom-3 left-3 right-3 text-white">
               <h4 className="font-extrabold text-sm truncate">{recommendation.snack_name}</h4>
               <div className="text-[10px] text-neon font-medium mt-0.5">
-                🔥 Quemado: {recommendation.calories_burned} kcal | Snack: {recommendation.calories} kcal
+                🔥 Quemado: {recommendation.calories_burned} kcal | Snack: {recommendation.calories}{" "}
+                kcal
               </div>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <div className="text-[10px] uppercase font-bold text-muted-foreground">Ingredientes</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">
+              Ingredientes
+            </div>
             <ul className="list-disc list-inside text-xs text-foreground/80 pl-1 space-y-0.5">
               {recommendation.ingredients?.map((ing: string, i: number) => (
                 <li key={i}>{ing}</li>
@@ -956,7 +988,9 @@ function NutritionRecommenderPanel() {
           </div>
 
           <div className="space-y-1">
-            <div className="text-[10px] uppercase font-bold text-muted-foreground">Justificación</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">
+              Justificación
+            </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
               {recommendation.reasoning}
             </p>
@@ -988,8 +1022,14 @@ function NutritionLogsTab() {
             calories_burned: 650,
             snack_name: "Batido de Proteína con Plátano",
             calories: 350,
-            ingredients: ["Leche de almendras", "1 Plátano", "1 scoop proteína Whey", "Semillas de chía"],
-            reasoning: "Perfecto para reponer carbohidratos rápidos e iniciar síntesis proteica post-juego de alta velocidad.",
+            ingredients: [
+              "Leche de almendras",
+              "1 Plátano",
+              "1 scoop proteína Whey",
+              "Semillas de chía",
+            ],
+            reasoning:
+              "Perfecto para reponer carbohidratos rápidos e iniciar síntesis proteica post-juego de alta velocidad.",
             created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           },
           {
@@ -1001,7 +1041,8 @@ function NutritionLogsTab() {
             snack_name: "Sandwich de Pavo y Palta",
             calories: 310,
             ingredients: ["Pan integral", "Pechuga de pavo", "1/4 de Palta", "Rodaja de tomate"],
-            reasoning: "Aporte de grasas saludables y carbohidratos complejos para restablecer energía aeróbica sostenida.",
+            reasoning:
+              "Aporte de grasas saludables y carbohidratos complejos para restablecer energía aeróbica sostenida.",
             created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
           },
         ]);
@@ -1018,7 +1059,7 @@ function NutritionLogsTab() {
               .from("premium_nutrition_logs")
               .select("*")
               .order("created_at", { ascending: false }),
-            4000
+            4000,
           );
           if (queryResult.error) {
             console.error("Supabase nutrition query error:", queryResult.error);
@@ -1040,12 +1081,16 @@ function NutritionLogsTab() {
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="px-5 py-4 border-b border-border/30 bg-background/40">
         <h4 className="font-bold text-sm text-foreground">Historial Nutricional Premium</h4>
-        <p className="text-xs text-muted-foreground">Tus snacks y estadísticas de recuperación sugeridas por el Nutricionista IA.</p>
+        <p className="text-xs text-muted-foreground">
+          Tus snacks y estadísticas de recuperación sugeridas por el Nutricionista IA.
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {loading ? (
-          <div className="text-center py-10 text-muted-foreground text-xs">Cargando historial...</div>
+          <div className="text-center py-10 text-muted-foreground text-xs">
+            Cargando historial...
+          </div>
         ) : logs.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-xs flex flex-col items-center justify-center space-y-2">
             <History className="h-8 w-8 text-muted-foreground/30" />
@@ -1053,7 +1098,10 @@ function NutritionLogsTab() {
           </div>
         ) : (
           logs.map((log) => (
-            <div key={log.id} className="p-4 bg-background/40 border border-border/20 rounded-2xl flex flex-col md:flex-row gap-4 hover:border-primary/20 transition-all">
+            <div
+              key={log.id}
+              className="p-4 bg-background/40 border border-border/20 rounded-2xl flex flex-col md:flex-row gap-4 hover:border-primary/20 transition-all"
+            >
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-neon">
@@ -1069,7 +1117,10 @@ function NutritionLogsTab() {
 
                 <div className="pt-2 flex flex-wrap gap-2">
                   {log.ingredients?.map((ing, idx) => (
-                    <span key={idx} className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-border/20 text-muted-foreground">
+                    <span
+                      key={idx}
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-border/20 text-muted-foreground"
+                    >
                       {ing}
                     </span>
                   ))}
@@ -1078,13 +1129,21 @@ function NutritionLogsTab() {
 
               <div className="md:w-36 flex flex-row md:flex-col justify-between md:justify-center items-center text-center p-3 rounded-xl bg-background/50 border border-border/10 shrink-0 gap-2">
                 <div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Calorías Quemadas</div>
-                  <div className="text-sm font-black text-rose-400 mt-0.5">{log.calories_burned} kcal</div>
+                  <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                    Calorías Quemadas
+                  </div>
+                  <div className="text-sm font-black text-rose-400 mt-0.5">
+                    {log.calories_burned} kcal
+                  </div>
                 </div>
                 <div className="h-px w-full bg-border/10 hidden md:block" />
                 <div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Calorías Snack</div>
-                  <div className="text-sm font-black text-emerald-400 mt-0.5">{log.calories} kcal</div>
+                  <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                    Calorías Snack
+                  </div>
+                  <div className="text-sm font-black text-emerald-400 mt-0.5">
+                    {log.calories} kcal
+                  </div>
                 </div>
               </div>
             </div>

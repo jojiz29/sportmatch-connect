@@ -21,8 +21,21 @@ export interface UserPersonalizedContext {
   city?: string;
   preferredSports: { sport: string; level: string }[];
   mutualMatches: { name: string; sport: string; targetId: string }[];
-  recommendedCourts: { name: string; sport: string; price: number; rating: number; district: string }[];
-  activeMatches: { title: string; sport: string; date: string; time: string; requiredLevel: string; courtName: string }[];
+  recommendedCourts: {
+    name: string;
+    sport: string;
+    price: number;
+    rating: number;
+    district: string;
+  }[];
+  activeMatches: {
+    title: string;
+    sport: string;
+    date: string;
+    time: string;
+    requiredLevel: string;
+    courtName: string;
+  }[];
 }
 
 export interface VertexAiOptions {
@@ -77,7 +90,11 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
     const language = options.language ?? "es";
     const temperature = options.temperature ?? this.config.temperature;
-    const systemInstruction = this.buildSystemInstruction(language, options.history, options.userContext);
+    const systemInstruction = this.buildSystemInstruction(
+      language,
+      options.history,
+      options.userContext,
+    );
 
     const maxRetries = 3;
     const baseDelayMs = 500;
@@ -330,24 +347,47 @@ LIMITE: máximo 150 palavras por resposta. Info longa e estruturada só quando p
 - Nombre del usuario: ${userContext.name || "Atleta"}
 - Ciudad/Ubicación: ${userContext.city || "No especificada"}
 - Deportes que practica y nivel:
-${userContext.preferredSports && userContext.preferredSports.length > 0 
-  ? userContext.preferredSports.map(s => `  * ${s.sport} (Nivel: ${s.level})`).join("\n")
-  : "  * No ha especificado deportes aún."}
+${
+  userContext.preferredSports && userContext.preferredSports.length > 0
+    ? userContext.preferredSports.map((s) => `  * ${s.sport} (Nivel: ${s.level})`).join("\n")
+    : "  * No ha especificado deportes aún."
+}
 
 - Gente con la que ha hecho MATCH (Mutual Likes en la app) - Sugiere hablarles si es oportuno:
-${userContext.mutualMatches && userContext.mutualMatches.length > 0
-  ? userContext.mutualMatches.map(m => `  * ${m.name} (Hicieron match en el deporte: ${m.sport}). Sugiere iniciar un chat o invitarle a jugar.`).join("\n")
-  : "  * No tiene matches mutuos todavía."}
+${
+  userContext.mutualMatches && userContext.mutualMatches.length > 0
+    ? userContext.mutualMatches
+        .map(
+          (m) =>
+            `  * ${m.name} (Hicieron match en el deporte: ${m.sport}). Sugiere iniciar un chat o invitarle a jugar.`,
+        )
+        .join("\n")
+    : "  * No tiene matches mutuos todavía."
+}
 
 - Canchas deportivas recomendadas para sus deportes preferidos:
-${userContext.recommendedCourts && userContext.recommendedCourts.length > 0
-  ? userContext.recommendedCourts.map(c => `  * ${c.name} en ${c.district || "zona cercana"} (${c.sport}) - Calificación: ${c.rating}⭐, Precio/hr: $${c.price}`).join("\n")
-  : "  * No hay canchas registradas para sus deportes preferidos."}
+${
+  userContext.recommendedCourts && userContext.recommendedCourts.length > 0
+    ? userContext.recommendedCourts
+        .map(
+          (c) =>
+            `  * ${c.name} en ${c.district || "zona cercana"} (${c.sport}) - Calificación: ${c.rating}⭐, Precio/hr: $${c.price}`,
+        )
+        .join("\n")
+    : "  * No hay canchas registradas para sus deportes preferidos."
+}
 
 - Partidos públicos/abiertos disponibles (¡Pichangas abiertas!) - Ofrece recomendarlos para hoy:
-${userContext.activeMatches && userContext.activeMatches.length > 0
-  ? userContext.activeMatches.map(m => `  * "${m.title}" (${m.sport}) el ${m.date} a las ${m.time}. Nivel requerido: ${m.requiredLevel}. Ubicación: ${m.courtName}.`).join("\n")
-  : "  * No hay partidos abiertos programados hoy."}
+${
+  userContext.activeMatches && userContext.activeMatches.length > 0
+    ? userContext.activeMatches
+        .map(
+          (m) =>
+            `  * "${m.title}" (${m.sport}) el ${m.date} a las ${m.time}. Nivel requerido: ${m.requiredLevel}. Ubicación: ${m.courtName}.`,
+        )
+        .join("\n")
+    : "  * No hay partidos abiertos programados hoy."
+}
 
 REGLAS DE PERSONALIZACIÓN CASUAL:
 1. Llámale por su nombre (${userContext.name || "Atleta"}) de forma natural y amigable (ej: "¡Hola ${userContext.name || "Atleta"}! ¿Cómo va todo?", "Qué tal, ${userContext.name || "Atleta"}...").

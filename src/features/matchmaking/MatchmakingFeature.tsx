@@ -482,9 +482,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                     </span>
                     <span className="px-2.5 py-1 rounded-md bg-muted border border-border text-foreground/75 text-[10px] font-medium flex items-center gap-1">
                       <MapPin className="h-2.5 w-2.5 text-primary" />{" "}
-                      {dist == null
-                        ? p.user.city || "Sin ubicación"
-                        : `${dist.toFixed(1)} km`}
+                      {dist == null ? p.user.city || "Sin ubicación" : `${dist.toFixed(1)} km`}
                     </span>
                   </div>
 
@@ -627,9 +625,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
 
       {/* ── Carrusel de tarjetas swipe ── */}
       <div className="lg:col-span-2 flex justify-center">
-        <div className="relative w-full max-w-md h-[560px]">
-          {renderStackContent()}
-        </div>
+        <div className="relative w-full max-w-md h-[560px]">{renderStackContent()}</div>
       </div>
 
       {/* ── Panel lateral de compatibilidad y desafíos ── */}

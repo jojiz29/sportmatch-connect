@@ -181,7 +181,9 @@ function RegisterPage() {
         navigate({ to: role === "BUSINESS" ? "/app/business" : "/app" });
       } catch (err: any) {
         if (err.message === "CONFIRMATION_PENDING") {
-          toast.success("¡Registro exitoso! Por favor, verifica tu correo electrónico para activar tu cuenta.");
+          toast.success(
+            "¡Registro exitoso! Por favor, verifica tu correo electrónico para activar tu cuenta.",
+          );
           navigate({ to: "/login" });
         } else {
           throw err;

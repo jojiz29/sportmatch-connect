@@ -10,9 +10,18 @@ import {
   HttpException,
   HttpStatus,
 } from "@nestjs/common";
-import { VertexAiService, VertexAiGenerationResult, UserPersonalizedContext } from "./vertex-ai.service";
+import {
+  VertexAiService,
+  VertexAiGenerationResult,
+  UserPersonalizedContext,
+} from "./vertex-ai.service";
 import { ChatResponseDto } from "./dto/chat.dto";
-import { ChatMessageDto, ModerationResultDto, CoachRecommendationDto, ModerateAdvancedResultDto } from "./dto/ai.dto";
+import {
+  ChatMessageDto,
+  ModerationResultDto,
+  CoachRecommendationDto,
+  ModerateAdvancedResultDto,
+} from "./dto/ai.dto";
 import { PrismaService } from "../prisma/prisma.service";
 
 interface UserRateLimit {
@@ -52,7 +61,9 @@ export class AiService {
 
     let isDbHealthy = this.prisma.isHealthy();
     if (!isDbHealthy) {
-      this.logger.warn("Database connection is down, trying manual reconnect in getUserPersonalizedContext...");
+      this.logger.warn(
+        "Database connection is down, trying manual reconnect in getUserPersonalizedContext...",
+      );
       isDbHealthy = await this.prisma.tryReconnect();
     }
 
@@ -86,7 +97,8 @@ export class AiService {
           const sportName = item.sport_id || item.sport;
           if (sportName) {
             const levelNum = item.level;
-            const levelLabel = levelNum === 3 ? "Avanzado" : levelNum === 2 ? "Intermedio" : "Principiante";
+            const levelLabel =
+              levelNum === 3 ? "Avanzado" : levelNum === 2 ? "Intermedio" : "Principiante";
             preferredSports.push({ sport: sportName, level: levelLabel });
             sportsList.push(sportName);
           }
@@ -94,7 +106,11 @@ export class AiService {
       }
 
       // Fallback a preferred_sports si user_sports está vacío
-      if (preferredSports.length === 0 && profile.preferred_sports && profile.preferred_sports.length > 0) {
+      if (
+        preferredSports.length === 0 &&
+        profile.preferred_sports &&
+        profile.preferred_sports.length > 0
+      ) {
         for (const s of profile.preferred_sports) {
           preferredSports.push({ sport: s, level: "No especificado" });
           sportsList.push(s);
@@ -117,20 +133,28 @@ export class AiService {
         );
 
         if (Array.isArray(rawMatches)) {
-          mutualMatches = rawMatches.map(m => ({
+          mutualMatches = rawMatches.map((m) => ({
             name: m.name || "Otro jugador",
             sport: m.sport || "Deporte general",
             targetId: m.target_id || "",
           }));
         }
       } catch (err) {
-        this.logger.warn(`Failed to fetch mutual matches for context: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.warn(
+          `Failed to fetch mutual matches for context: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
 
       const searchSports = sportsList.length > 0 ? sportsList : ["Fútbol", "Pádel", "Tenis"];
 
       // 3. Obtener canchas recomendadas para sus deportes preferidos
-      let recommendedCourts: { name: string; sport: string; price: number; rating: number; district: string }[] = [];
+      let recommendedCourts: {
+        name: string;
+        sport: string;
+        price: number;
+        rating: number;
+        district: string;
+      }[] = [];
       try {
         const courts = await this.prisma.courts.findMany({
           where: {
@@ -141,7 +165,7 @@ export class AiService {
           take: 5,
         });
 
-        recommendedCourts = courts.map(c => ({
+        recommendedCourts = courts.map((c) => ({
           name: c.name,
           sport: c.sport,
           price: c.price_per_hour,
@@ -149,11 +173,20 @@ export class AiService {
           district: c.district || "zona cercana",
         }));
       } catch (err) {
-        this.logger.warn(`Failed to fetch recommended courts for context: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.warn(
+          `Failed to fetch recommended courts for context: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
 
       // 4. Obtener pichangas/partidos abiertos programados
-      let activeMatches: { title: string; sport: string; date: string; time: string; requiredLevel: string; courtName: string }[] = [];
+      let activeMatches: {
+        title: string;
+        sport: string;
+        date: string;
+        time: string;
+        requiredLevel: string;
+        courtName: string;
+      }[] = [];
       try {
         const matches = await this.prisma.matches.findMany({
           where: {
@@ -167,7 +200,7 @@ export class AiService {
           take: 3,
         });
 
-        activeMatches = matches.map(m => ({
+        activeMatches = matches.map((m) => ({
           title: m.title,
           sport: m.sport,
           date: m.date,
@@ -176,7 +209,9 @@ export class AiService {
           courtName: m.court?.name || "Cancha externa",
         }));
       } catch (err) {
-        this.logger.warn(`Failed to fetch active matches for context: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.warn(
+          `Failed to fetch active matches for context: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
 
       return {
@@ -188,7 +223,9 @@ export class AiService {
         activeMatches,
       };
     } catch (err) {
-      this.logger.error(`Error building personalized context for user ${userId}: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Error building personalized context for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return defaultContext;
     }
   }
@@ -237,10 +274,12 @@ export class AiService {
     this.checkRateLimit(userId, "chat");
 
     const context = await this.getUserPersonalizedContext(userId);
-    const name = context.name || (language === "en" ? "Athlete" : language === "pt" ? "Atleta" : "Atleta");
-    const sportsText = context.preferredSports.length > 0
-      ? context.preferredSports.map(s => s.sport).join(", ")
-      : "";
+    const name =
+      context.name || (language === "en" ? "Athlete" : language === "pt" ? "Atleta" : "Atleta");
+    const sportsText =
+      context.preferredSports.length > 0
+        ? context.preferredSports.map((s) => s.sport).join(", ")
+        : "";
 
     let welcomePrompt = "";
     if (language === "en") {
@@ -363,8 +402,7 @@ Reglas estrictas:
   ): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
-    const promptLang =
-      language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish";
+    const promptLang = language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish";
     const parts: string[] = [];
     if (preferences.sport) parts.push(`Sport: ${preferences.sport}`);
     if (preferences.location) parts.push(`Location: ${preferences.location}`);
@@ -470,7 +508,9 @@ Reglas:
 
     let isDbHealthy = this.prisma.isHealthy();
     if (!isDbHealthy) {
-      this.logger.warn("Database connection is down, attempting manual reconnect in moderateAdvanced...");
+      this.logger.warn(
+        "Database connection is down, attempting manual reconnect in moderateAdvanced...",
+      );
       isDbHealthy = await this.prisma.tryReconnect();
     }
 
@@ -496,15 +536,24 @@ Reglas:
     // 2. Reglas de Negocio / Spam / Keyword checks
     let rulesScore = 0;
     let rulesReason = "";
-    
+
     // Check de Insultos / Spam
-    const toxicKeywords = ["tonto", "estupido", "estúpido", "imbecil", "imbécil", "basura", "mierda"];
+    const toxicKeywords = [
+      "tonto",
+      "estupido",
+      "estúpido",
+      "imbecil",
+      "imbécil",
+      "basura",
+      "mierda",
+    ];
     const contentLower = content.toLowerCase();
-    const hasToxicWord = toxicKeywords.some(word => contentLower.includes(word));
-    
+    const hasToxicWord = toxicKeywords.some((word) => contentLower.includes(word));
+
     // Check de enlaces / spam
-    const hasSpamPattern = contentLower.includes("http") || contentLower.includes("www") || content.includes("!!!");
-    
+    const hasSpamPattern =
+      contentLower.includes("http") || contentLower.includes("www") || content.includes("!!!");
+
     if (hasToxicWord) {
       rulesScore = 90;
       rulesReason = "Se detectó el uso de lenguaje vulgar o insultos en el texto.";
@@ -553,7 +602,9 @@ Reglas:
     if (rulesScore > 0) reasoningParts.push(rulesReason);
     if (behaviorScore > 30) reasoningParts.push(behaviorReason);
     if (reasoningParts.length === 0) {
-      reasoningParts.push("Todas las señales analizadas indican comportamiento seguro y contenido limpio.");
+      reasoningParts.push(
+        "Todas las señales analizadas indican comportamiento seguro y contenido limpio.",
+      );
     }
     const reasoning = reasoningParts.join(" ");
 
@@ -561,7 +612,11 @@ Reglas:
       ensemble_score: ensembleScore,
       signals: [
         { name: "Modelos IA (Vertex)", score: aiScore, description: aiReason },
-        { name: "Reglas y Palabras Clave", score: rulesScore, description: rulesReason || "Sin coincidencias de reglas." },
+        {
+          name: "Reglas y Palabras Clave",
+          score: rulesScore,
+          description: rulesReason || "Sin coincidencias de reglas.",
+        },
         { name: "Historial de Comportamiento", score: behaviorScore, description: behaviorReason },
       ],
       action_recommended: actionRecommended,
@@ -612,7 +667,7 @@ Reglas:
 
         if (blockerId !== userId) {
           // Bloqueo temporal para pruebas de 2 minutos (originalmente 24 horas)
-          const timestampFin = new Date(Date.now() + 2 * 60 * 1000); 
+          const timestampFin = new Date(Date.now() + 2 * 60 * 1000);
           await this.prisma.user_blocks.upsert({
             where: {
               blocker_id_blocked_id: { blocker_id: blockerId, blocked_id: userId },
@@ -620,19 +675,23 @@ Reglas:
             create: {
               blocker_id: blockerId,
               blocked_id: userId,
-              reason: "Bloqueo automático de seguridad IA por comportamiento abusivo o contenido inapropiado.",
+              reason:
+                "Bloqueo automático de seguridad IA por comportamiento abusivo o contenido inapropiado.",
               ensemble_score: ensembleScore,
               timestamp_inicio: new Date(),
               timestamp_fin: timestampFin,
             },
             update: {
-              reason: "Bloqueo automático de seguridad IA por comportamiento abusivo o contenido inapropiado.",
+              reason:
+                "Bloqueo automático de seguridad IA por comportamiento abusivo o contenido inapropiado.",
               ensemble_score: ensembleScore,
               timestamp_inicio: new Date(),
               timestamp_fin: timestampFin,
             },
           });
-          this.logger.log(`User ${userId} automatically blocked by system (ensemble_score=${ensembleScore}) until ${timestampFin.toISOString()}`);
+          this.logger.log(
+            `User ${userId} automatically blocked by system (ensemble_score=${ensembleScore}) until ${timestampFin.toISOString()}`,
+          );
         }
       } catch (err) {
         this.logger.error(`Failed to apply automated block for user ${userId}: ${err.message}`);
@@ -656,7 +715,8 @@ Reglas:
 
     let isPremium = true; // Default to true if DB is down to allow testing/offline usage
     let messageCount = 0;
-    let telemetryContext: Array<{ deporte: string; fecha: string; hora: string; cancha: string }> = [];
+    let telemetryContext: Array<{ deporte: string; fecha: string; hora: string; cancha: string }> =
+      [];
 
     if (isDbHealthy) {
       try {
@@ -848,7 +908,12 @@ Genera una recomendación de snack ideal en formato JSON exacto:
 Devuelve ÚNICAMENTE el objeto JSON. Sin formato Markdown ni texto extra.`;
 
     let resultText = "";
-    let parsedData: { snack_name: string; calories: number; ingredients: string[]; reasoning: string };
+    let parsedData: {
+      snack_name: string;
+      calories: number;
+      ingredients: string[];
+      reasoning: string;
+    };
 
     try {
       const response = await this.vertexAiService.generateContent(nutritionPrompt, {
@@ -869,13 +934,25 @@ Devuelve ÚNICAMENTE el objeto JSON. Sin formato Markdown ni texto extra.`;
       parsedData = {
         snack_name: "Tazón Recuperador de Avena y Plátano",
         calories: 320,
-        ingredients: ["Avena en hojuelas", "1 Plátano maduro", "Miel de abejas", "Semillas de chía"],
+        ingredients: [
+          "Avena en hojuelas",
+          "1 Plátano maduro",
+          "Miel de abejas",
+          "Semillas de chía",
+        ],
         reasoning: `Después de un entrenamiento de ${sport} de ${duration} minutos a intensidad ${intensity}, necesitas carbohidratos de absorción rápida y potasio para recuperar electrolitos y reponer el glucógeno muscular rápidamente.`,
       };
     }
 
     // Guardar en base de datos
-    let caloriesBurned = Math.round(duration * (intensity === "alta" || intensity === "high" ? 10 : intensity === "media" || intensity === "medium" ? 7 : 5));
+    let caloriesBurned = Math.round(
+      duration *
+        (intensity === "alta" || intensity === "high"
+          ? 10
+          : intensity === "media" || intensity === "medium"
+            ? 7
+            : 5),
+    );
     if (sport.toLowerCase().includes("fútbol") || sport.toLowerCase().includes("soccer")) {
       caloriesBurned = Math.round(caloriesBurned * 1.2);
     }

@@ -8,10 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function run() {
   console.log("Querying premium_nutrition_logs...");
   try {
-    const { data, error } = await supabase
-      .from("premium_nutrition_logs")
-      .select("*")
-      .limit(5);
+    const { data, error } = await supabase.from("premium_nutrition_logs").select("*").limit(5);
 
     if (error) {
       console.error("Error from Supabase:", error);

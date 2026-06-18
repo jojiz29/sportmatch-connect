@@ -116,11 +116,7 @@ export function useMatchOperations() {
 
   const updateMatchMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Match> }) => {
-      const { data: result, error } = await backendApi.matches.update(
-        "",
-        id,
-        data,
-      );
+      const { data: result, error } = await backendApi.matches.update("", id, data);
       if (error) throw new Error(error);
       return result;
     },

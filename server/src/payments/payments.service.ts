@@ -23,7 +23,11 @@ export class PaymentsService {
     }
   }
 
-  async createCheckoutSession(userId: string, successUrl: string, cancelUrl: string): Promise<{ url: string; mock?: boolean }> {
+  async createCheckoutSession(
+    userId: string,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<{ url: string; mock?: boolean }> {
     if (!this.stripe) {
       this.logger.log(`[Mock Payments] Creating mock checkout session for user: ${userId}`);
       // Return a URL that redirects back to the app with a success query param
@@ -40,7 +44,8 @@ export class PaymentsService {
               currency: "pen",
               product_data: {
                 name: "SportMatch Connect Premium",
-                description: "Acceso ilimitado a recomendaciones del Coach IA, nutrición inteligente y retos entre Squads.",
+                description:
+                  "Acceso ilimitado a recomendaciones del Coach IA, nutrición inteligente y retos entre Squads.",
               },
               unit_amount: 5000, // S/ 50.00 PEN
               recurring: {
@@ -66,7 +71,10 @@ export class PaymentsService {
     }
   }
 
-  async createPortalSession(userId: string, returnUrl: string): Promise<{ url: string; mock?: boolean }> {
+  async createPortalSession(
+    userId: string,
+    returnUrl: string,
+  ): Promise<{ url: string; mock?: boolean }> {
     if (!this.stripe) {
       this.logger.log(`[Mock Payments] Creating mock billing portal for user: ${userId}`);
       return { url: returnUrl, mock: true };
@@ -78,7 +86,9 @@ export class PaymentsService {
       });
 
       if (!subscription || !subscription.stripe_customer_id) {
-        throw new BadRequestException("No se encontró una suscripción de Stripe activa para este usuario.");
+        throw new BadRequestException(
+          "No se encontró una suscripción de Stripe activa para este usuario.",
+        );
       }
 
       const portalSession = await this.stripe.billingPortal.sessions.create({
@@ -120,7 +130,13 @@ export class PaymentsService {
         const stripeSubscriptionId = session.subscription as string;
 
         if (userId) {
-          await this.upgradeUser(userId, stripeCustomerId, stripeSubscriptionId, "Premium Month", "PREMIUM");
+          await this.upgradeUser(
+            userId,
+            stripeCustomerId,
+            stripeSubscriptionId,
+            "Premium Month",
+            "PREMIUM",
+          );
         }
         break;
       }
@@ -128,7 +144,7 @@ export class PaymentsService {
         const subscription = event.data.object as any;
         const stripeCustomerId = subscription.customer as string;
         const stripeSubscriptionId = subscription.id;
-        
+
         // Find subscription by stripe_subscription_id
         const subRecord = await this.prisma.subscriptions.findFirst({
           where: { stripe_subscription_id: stripeSubscriptionId },
@@ -137,7 +153,7 @@ export class PaymentsService {
         if (subRecord) {
           const status = subscription.status;
           const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-          
+
           await this.prisma.subscriptions.update({
             where: { id: subRecord.id },
             data: {
@@ -153,7 +169,7 @@ export class PaymentsService {
               tier: status === "active" ? "PREMIUM" : "FREE",
             },
           });
-          
+
           this.logger.log(`Subscription updated for user ${subRecord.user_id} to status ${status}`);
         }
         break;
@@ -202,7 +218,7 @@ export class PaymentsService {
       where: { id: userId },
       data: { tier: "FREE" },
     });
-    
+
     await this.prisma.subscriptions.upsert({
       where: { user_id: userId },
       create: {

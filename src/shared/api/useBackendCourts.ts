@@ -76,11 +76,7 @@ export function useBackendCourts() {
 
   const updateCourtMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Court> }) => {
-      const { data: result, error } = await backendApi.courts.update(
-        "",
-        id,
-        data,
-      );
+      const { data: result, error } = await backendApi.courts.update("", id, data);
       if (error) throw new Error(error);
       return result;
     },
