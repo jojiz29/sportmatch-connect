@@ -1,7 +1,8 @@
 // === BLOQUE: IMPORTS — Dependencias del dashboard principal ===
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -133,6 +134,32 @@ function getSportEmoji(name: string) {
   }
 }
 
+const challengeVenueIconCache = new Map<string, L.DivIcon>();
+
+function createChallengeVenueIcon(sport: string, isSelected: boolean) {
+  const key = `${sport}_${isSelected}`;
+  if (challengeVenueIconCache.has(key)) return challengeVenueIconCache.get(key)!;
+  const emoji = getSportEmoji(sport);
+  const bg = isSelected
+    ? "linear-gradient(135deg, #f59e0b, #d97706)"
+    : "linear-gradient(135deg, #8b5cf6, #3b82f6)";
+  const shadow = isSelected
+    ? "0 0 20px rgba(251, 191, 36, 0.9)"
+    : "0 0 15px rgba(139, 92, 246, 0.7)";
+  const badge = isSelected
+    ? `<div style="position:absolute;top:-6px;right:-6px;background:#fbbf24;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:8px;border:1px solid #fff">✓</div>`
+    : "";
+  const icon = L.divIcon({
+    html: `<div style="position:relative;display:flex;width:42px;height:42px;align-items:center;justify-content:center;background:${bg};border:2.5px solid #ffffff;border-radius:50%;box-shadow:${shadow};font-size:18px;">${emoji}${badge}</div>`,
+    className: "challenge-venue-marker",
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+    popupAnchor: [0, -20],
+  });
+  challengeVenueIconCache.set(key, icon);
+  return icon;
+}
+
 function getDailyPlanCacheKey(userId: string) {
   const dateKey = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Bogota",
@@ -226,42 +253,42 @@ function buildWeeklyChallengeRefreshPair(
   const variants = [
     [
       {
-        title: "Reto tecnica y constancia",
-        description: `Completa 35 minutos de practica fisica enfocada en ${sport}: calentamiento, tecnica y movilidad final.`,
+        title: "Mision precision y ritmo",
+        description: `En ${sport}, completa 3 bloques: 8 minutos de calentamiento, 15 minutos de tecnica repetida y 12 minutos de ritmo continuo. Anota que parte te costo mas para comparar tu progreso.`,
         reward: "+50 FitCoins sugeridos si completas el reto y eliges una sede validable.",
       },
       {
-        title: "Reto sede deportiva",
+        title: "Mision sede testigo",
         description: venue
-          ? `Realiza una sesion verificable en ${venue} u otra sede cercana seleccionada.`
-          : "Realiza una sesion verificable en una sede cercana seleccionada.",
+          ? `Elige ${venue} u otra sede del mapa, realiza una sesion corta y pide validacion de la empresa responsable.`
+          : "Elige una sede del mapa, realiza una sesion corta y pide validacion de la empresa responsable.",
         reward: "+45 FitCoins sugeridos cuando la empresa valide la actividad.",
       },
     ],
     [
       {
-        title: "Reto partido o entrenamiento",
+        title: "Mision duelo amistoso",
         description:
-          "Coordina una actividad fisica con al menos una persona compatible y define lugar, fecha y hora.",
+          "Coordina una actividad fisica con una persona compatible: define deporte, hora y objetivo del encuentro antes de asistir.",
         reward: "+60 FitCoins sugeridos si conviertes el reto en actividad real.",
       },
       {
-        title: "Reto asistencia validada",
+        title: "Mision check-in deportivo",
         description:
-          "Elige una sede, asiste a realizar tu actividad y deja que la empresa confirme el cumplimiento.",
+          "Selecciona una sede, asiste a la actividad y deja que la empresa confirme que estuviste presente y cumpliste el reto.",
         reward: "+40 FitCoins sugeridos por validacion aprobada.",
       },
     ],
     [
       {
-        title: "Reto mejora semanal",
-        description: `Realiza una sesion corta de ${sport} y registra una mejora concreta: resistencia, precision o constancia.`,
+        title: "Mision mejora medible",
+        description: `Haz una sesion de ${sport} y mide una mejora concreta: mas repeticiones, mejor tiempo, mas precision o mayor resistencia.`,
         reward: "+55 FitCoins sugeridos por progreso deportivo.",
       },
       {
-        title: "Reto sede responsable",
+        title: "Mision empresa validadora",
         description:
-          "Selecciona una sede fisica para que la empresa supervise el reto y confirme si cumpliste.",
+          "Selecciona una sede fisica, realiza la actividad ahi y deja registrada la empresa que revisara si cumpliste.",
         reward: "+45 FitCoins sugeridos tras aprobacion de la sede.",
       },
     ],
@@ -1908,16 +1935,10 @@ function ChallengeVenueMap({
         {venues.map((venue) => {
           const isSelected = venue.id === selectedVenueId;
           return (
-            <CircleMarker
+            <Marker
               key={venue.id}
-              center={[venue.lat, venue.lng]}
-              radius={isSelected ? 12 : 8}
-              pathOptions={{
-                color: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
-                fillColor: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
-                fillOpacity: isSelected ? 0.85 : 0.55,
-                weight: isSelected ? 3 : 2,
-              }}
+              position={[venue.lat, venue.lng]}
+              icon={createChallengeVenueIcon(venue.sport, isSelected)}
               eventHandlers={{ click: () => onSelectVenue(venue.id) }}
             >
               <Popup>
@@ -1929,7 +1950,7 @@ function ChallengeVenueMap({
                   </div>
                 </div>
               </Popup>
-            </CircleMarker>
+            </Marker>
           );
         })}
       </MapContainer>
