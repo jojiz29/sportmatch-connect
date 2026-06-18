@@ -2012,6 +2012,10 @@ function ChallengeVenueMap({
   onConfirm: () => void;
 }) {
   const [isMapReady, setIsMapReady] = useState(false);
+  const venuesSignature = useMemo(
+    () => venues.map((venue) => `${venue.id}:${venue.lat}:${venue.lng}`).join("|"),
+    [venues],
+  );
   const center: [number, number] = selectedVenue
     ? [selectedVenue.lat, selectedVenue.lng]
     : venues[0]
@@ -2033,8 +2037,10 @@ function ChallengeVenueMap({
   }
 
   useEffect(() => {
+    // Reiniciamos el loader solo cuando cambia la lista real de sedes.
+    // Seleccionar un marcador no debe mostrar "Cargando sedes" otra vez.
     setIsMapReady(false);
-  }, [selectedVenueId]);
+  }, [venuesSignature]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
