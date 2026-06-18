@@ -93,19 +93,19 @@ export const Route = createFileRoute("/app/")({
     const matches =
       backendMatches && typeof backendMatches === "object" && "data" in backendMatches
         ? (backendMatches as { data: Match[] }).data
-        : [];
+        : await apiClient.matches.getAll().catch(() => []);
     const users =
       backendUsers && typeof backendUsers === "object" && "data" in backendUsers
         ? (backendUsers as { data: User[] }).data
-        : [];
+        : await apiClient.users.getMatches(useAuthStore.getState().user?.id).catch(() => []);
     const courts =
       backendCourts && typeof backendCourts === "object" && "data" in backendCourts
         ? (backendCourts as { data: Court[] }).data
-        : [];
+        : await apiClient.courts.getAll().catch(() => []);
     const sports =
       backendSports && typeof backendSports === "object" && "data" in backendSports
         ? (backendSports as { data: SportCatalog[] }).data
-        : [];
+        : await apiClient.sports.getAll().catch(() => []);
 
     return { matches, users, courts, sports };
   },
@@ -264,19 +264,22 @@ function getPersistedWeeklyChallengeState(
 ): { drafts: WeeklyChallengeDraft[]; refreshCounts: number[] } {
   const drafts: WeeklyChallengeDraft[] = [];
   const refreshCounts = [0, 0];
+  const seenIndexes = new Set<number>();
   for (const challenge of challenges) {
     const metadata = challenge.metadata ?? {};
     if (metadata.weekKey !== weekKey || metadata.source !== "home_weekly_challenge") continue;
     const index = Number(metadata.challengeIndex);
     if (index !== 0 && index !== 1) continue;
-    if (!drafts[index]) {
-      drafts[index] = {
-        title: challenge.title,
-        description: challenge.description,
-        reward: challenge.reward_hint ?? "Recompensa sugerida al completar el reto.",
-      };
-    }
-    refreshCounts[index] = Math.max(refreshCounts[index], Number(metadata.refreshCount ?? 1));
+    if (seenIndexes.has(index)) continue;
+    // La API devuelve retos recientes primero; tomamos el ultimo guardado por indice.
+    // Asi un reinicio de prueba con refreshCount 0 no queda bloqueado por registros viejos.
+    seenIndexes.add(index);
+    drafts[index] = {
+      title: challenge.title,
+      description: challenge.description,
+      reward: challenge.reward_hint ?? "Recompensa sugerida al completar el reto.",
+    };
+    refreshCounts[index] = Number(metadata.refreshCount ?? 0);
   }
   return { drafts, refreshCounts };
 }
@@ -432,7 +435,10 @@ async function generateWeeklyChallengeWithVertex(
   challengeIndex: number,
   fallbackPlan: AiRecommendationResponse | null,
 ): Promise<WeeklyChallengeDraft> {
-  const aiPlan = await getAiRecommendations({ type: "challenges", limit: 4, language: "es" });
+  const aiPlan = await withTimeout(
+    getAiRecommendations({ type: "challenges", limit: 4, language: "es" }),
+    18_000,
+  );
   return buildWeeklyChallengeFromAi(aiPlan, challengeIndex, fallbackPlan);
 }
 
@@ -471,9 +477,7 @@ function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
 
 function scoreRecommendedMatch(match: Match, user: User | null): number {
   if (!user) return 0;
-  const userSports = getUserSports(user);
   const sportAffinity = getSportAffinity(user, match.sport);
-  if (userSports.length > 0 && sportAffinity === 0) return 0;
 
   const matchDate = new Date(`${match.date}T${match.time || "00:00"}`);
   if (Number.isNaN(matchDate.getTime())) return 0;
@@ -489,6 +493,11 @@ function scoreRecommendedMatch(match: Match, user: User | null): number {
     ? Math.max(0, 10 - (match.current_players.length / match.max_players) * 10)
     : 10;
   return sameSport + sameLevel + openBonus + availabilityBonus;
+}
+
+function isStrongRecommendedMatch(match: Match, user: User | null): boolean {
+  const userSports = getUserSports(user);
+  return userSports.length === 0 || getSportAffinity(user, match.sport) > 0;
 }
 
 function scoreNearbyPlayer(
@@ -509,7 +518,7 @@ function scoreNearbyPlayer(
     typeof distance === "number" ? Math.max(0, 60 - Math.min(distance, 60)) : 15;
   const userSports = getUserSports(user);
   const sharesSport = player.preferred_sports?.some((sport) => getSportAffinity(user, sport) > 0);
-  const sportScore = sharesSport ? 30 : userSports.length > 0 ? -100 : 0;
+  const sportScore = sharesSport ? 30 : userSports.length > 0 ? 0 : 0;
   const trustScore = Math.min(player.trust_score ?? 0, 100) / 10;
   return { distance, score: distanceScore + sportScore + trustScore };
 }
@@ -526,7 +535,7 @@ function scoreNearbyCourt(
     typeof distance === "number" ? Math.max(0, 70 - Math.min(distance, 70)) : 20;
   const userSports = getUserSports(user);
   const sportAffinity = getSportAffinity(user, court.sport);
-  const sportScore = sportAffinity ? 30 : userSports.length > 0 ? -100 : 0;
+  const sportScore = sportAffinity ? 30 : userSports.length > 0 ? 0 : 0;
   const ratingScore = Math.round((court.rating ?? 4) * 2);
   return { distance, score: distanceScore + sportScore + ratingScore };
 }
@@ -1063,10 +1072,48 @@ function Dashboard() {
   };
 
   const [liveMatches, setLiveMatches] = useState<Match[]>(matches);
+  const [dashboardUsers, setDashboardUsers] = useState<User[]>(users);
+  const [dashboardCourts, setDashboardCourts] = useState<Court[]>(courts);
+  const [dashboardSports, setDashboardSports] = useState<SportCatalog[]>(sports);
+  const [isHydratingDashboardData, setIsHydratingDashboardData] = useState(false);
 
   useEffect(() => {
     setLiveMatches(matches);
   }, [matches]);
+
+  useEffect(() => {
+    setDashboardUsers(users);
+    setDashboardCourts(courts);
+    setDashboardSports(sports);
+  }, [courts, sports, users]);
+
+  useEffect(() => {
+    let active = true;
+    setIsHydratingDashboardData(true);
+
+    // Refresco de fondo para evitar Home vacio cuando backend/Supabase responde lento
+    // en la primera entrada. No inventa data: solo completa con consultas reales.
+    Promise.all([
+      apiClient.matches.getAll().catch(() => [] as Match[]),
+      apiClient.users.getMatches(user?.id).catch(() => [] as User[]),
+      apiClient.courts.getAll().catch(() => [] as Court[]),
+      apiClient.sports.getAll().catch(() => [] as SportCatalog[]),
+    ])
+      .then(([freshMatches, freshUsers, freshCourts, freshSports]) => {
+        if (!active) return;
+        if (freshMatches.length > 0) setLiveMatches(freshMatches);
+        if (freshUsers.length > 0) setDashboardUsers(freshUsers);
+        if (freshCourts.length > 0) setDashboardCourts(freshCourts);
+        if (freshSports.length > 0) setDashboardSports(freshSports);
+      })
+      .finally(() => {
+        if (active) setIsHydratingDashboardData(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   // === BLOQUE: nextMatch — Próximo partido del usuario ===
   const nextMatch = useMemo(() => {
@@ -1246,13 +1293,17 @@ function Dashboard() {
     [...liveMatches, ...publicMatchesForDashboard].forEach((match) => {
       byId.set(match.id, match);
     });
-    return [...byId.values()]
+    const scoredMatches = [...byId.values()]
       .map((match) => ({ match, score: scoreRecommendedMatch(match, user) }))
       .filter(
         ({ match, score }) => score > 0 && match.status !== "Full" && match.status !== "Finished",
       )
-      .sort((a, b) => b.score - a.score)
-      .map(({ match }) => match);
+      .sort((a, b) => b.score - a.score);
+
+    const strongMatches = scoredMatches.filter(({ match }) =>
+      isStrongRecommendedMatch(match, user),
+    );
+    return (strongMatches.length > 0 ? strongMatches : scoredMatches).map(({ match }) => match);
   }, [liveMatches, publicMatchesForDashboard, user]);
 
   const filteredMatches =
@@ -1261,25 +1312,27 @@ function Dashboard() {
       : recommendedMatches.slice(0, 4);
   const visibleRecommendedMatches = filteredMatches.slice(0, 4);
   const isResolvingRecommendedMatches =
-    recommendedMatches.length === 0 &&
-    liveMatches.length === 0 &&
-    publicMatchesForDashboard.length === 0;
+    visibleRecommendedMatches.length === 0 &&
+    (isHydratingDashboardData ||
+      (recommendedMatches.length === 0 &&
+        liveMatches.length === 0 &&
+        publicMatchesForDashboard.length === 0));
 
   // Canchas más cercanas según ubicación base.
   const nearbyPlayers = useMemo(() => {
-    return users
+    return dashboardUsers
       .filter((candidate) => candidate.id !== user?.id && candidate.user_role !== "BUSINESS")
       .map((candidate) => ({
         ...candidate,
         proximity: scoreNearbyPlayer(candidate, user, baseLocation),
       }))
-      .filter((candidate) => candidate.proximity.score > 0)
+      .filter((candidate) => candidate.proximity.score > 0 || getUserSports(user).length === 0)
       .sort((a, b) => b.proximity.score - a.proximity.score)
       .slice(0, 4);
-  }, [users, user, baseLocation]);
+  }, [dashboardUsers, user, baseLocation]);
 
   const closestCourts = useMemo(() => {
-    return [...courts]
+    return [...dashboardCourts]
       .map((c) => ({
         ...c,
         proximity: scoreNearbyCourt(c, user, baseLocation),
@@ -1287,15 +1340,15 @@ function Dashboard() {
           ? calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng)
           : undefined,
       }))
-      .filter((court) => court.proximity.score > 0)
+      .filter((court) => court.proximity.score > 0 || getUserSports(user).length === 0)
       .sort((a, b) => b.proximity.score - a.proximity.score)
       .slice(0, 5);
-  }, [courts, user, baseLocation]);
+  }, [dashboardCourts, user, baseLocation]);
 
   const SPORTS = [
     { name: "Todos", emoji: "◎" },
-    ...(sports.length > 0
-      ? sports.map((s) => ({ name: s.name, emoji: getSportEmoji(s.name) }))
+    ...(dashboardSports.length > 0
+      ? dashboardSports.map((s) => ({ name: s.name, emoji: getSportEmoji(s.name) }))
       : [
           { name: "Pádel", emoji: "🏓" },
           { name: "Fútbol", emoji: "⚽" },
@@ -1805,7 +1858,13 @@ function Dashboard() {
                   </Link>
                 );
               })}
-              {nearbyPlayers.length === 0 && (
+              {nearbyPlayers.length === 0 && isHydratingDashboardData && (
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
+                  <Loader2 className="mr-2 inline h-3 w-3 animate-spin" />
+                  Cargando jugadores compatibles...
+                </div>
+              )}
+              {nearbyPlayers.length === 0 && !isHydratingDashboardData && (
                 <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
                   Aun no hay jugadores disponibles para recomendar.
                 </div>
@@ -1828,7 +1887,13 @@ function Dashboard() {
                   variant="list"
                 />
               ))}
-              {closestCourts.length === 0 && (
+              {closestCourts.length === 0 && isHydratingDashboardData && (
+                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
+                  <Loader2 className="mr-2 inline h-3 w-3 animate-spin" />
+                  Cargando canchas y sedes...
+                </div>
+              )}
+              {closestCourts.length === 0 && !isHydratingDashboardData && (
                 <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
                   Aun no hay canchas o sedes registradas para recomendar.
                 </div>

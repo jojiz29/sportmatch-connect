@@ -504,7 +504,9 @@ function VenueActivityPanel({
 
 function MapPage() {
   const { t } = useTranslation();
-  const data = Route.useLoaderData();
+  const initialData = Route.useLoaderData();
+  const [mapData, setMapData] = useState(initialData);
+  const [isHydratingMapData, setIsHydratingMapData] = useState(false);
   const user = useAuthStore((state) => state.user);
   const [selectedBusinessForSheet, setSelectedBusinessForSheet] = useState<User | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
@@ -512,6 +514,38 @@ function MapPage() {
   const [venueActivities, setVenueActivities] = useState<VenueActivity[]>([]);
   const [connectionIds, setConnectionIds] = useState<string[]>([]);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setIsHydratingMapData(true);
+
+    // El loader del mapa tiene timeout corto para no bloquear la ruta.
+    // Esta recarga de fondo completa la data real sin exigir refresh manual del navegador.
+    Promise.all([
+      safeMapLoad("partidos fondo", () => apiClient.matches.getAll(), [] as Match[], 12_000),
+      safeMapLoad("empresas fondo", () => apiClient.users.getBusinesses(), [] as User[], 12_000),
+      safeMapLoad("sedes fondo", () => apiClient.venues.getAll(), [] as Venue[], 12_000),
+      safeMapLoad("jugadores fondo", () => apiClient.users.getMatches(), [] as User[], 12_000),
+      safeMapLoad("equipos fondo", () => getSquads(), [] as Squad[], 12_000),
+    ])
+      .then(([matches, businesses, venues, players, squads]) => {
+        if (!active) return;
+        setMapData({
+          matches: matches.length > 0 ? matches : initialData.matches,
+          businesses: businesses.length > 0 ? businesses : initialData.businesses,
+          venues: venues.length > 0 ? venues : initialData.venues,
+          players: players.length > 0 ? players : initialData.players,
+          squads: squads.length > 0 ? squads : initialData.squads,
+        });
+      })
+      .finally(() => {
+        if (active) setIsHydratingMapData(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialData]);
 
   // === BLOQUE: Geolocalización del usuario ===
   // Obtiene las coordenadas actuales del navegador para calcular
@@ -526,10 +560,10 @@ function MapPage() {
   }, [user]);
 
   useEffect(() => {
-    getVenueActivities((data.venues || []).map((venue) => venue.id))
+    getVenueActivities((mapData.venues || []).map((venue) => venue.id))
       .then(setVenueActivities)
       .catch((error) => console.error("Error al cargar actividad de sedes:", error));
-  }, [data.venues]);
+  }, [mapData.venues]);
 
   useEffect(() => {
     let active = true;
@@ -576,7 +610,7 @@ function MapPage() {
 
   // === BLOQUE: Negocios ordenados por distancia ===
   const sortedBusinesses = useMemo(() => {
-    const list = data.businesses || [];
+    const list = mapData.businesses || [];
     if (!baseLocation) return list;
     return [...list]
       .map((b) => ({
@@ -589,7 +623,7 @@ function MapPage() {
         ),
       }))
       .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
-  }, [data.businesses, baseLocation]);
+  }, [mapData.businesses, baseLocation]);
 
   // === BLOQUE: Filtrado por distrito ===
   const filteredBusinesses = useMemo(() => {
@@ -602,16 +636,16 @@ function MapPage() {
   const filteredVenues = useMemo(() => {
     // El mapa comercial muestra sedes creadas por cuentas empresa. No dependemos de que
     // el perfil del negocio llegue en la consulta lateral, porque esa lista puede venir paginada.
-    const list = (data.venues || []).filter(
+    const list = (mapData.venues || []).filter(
       (venue) => Boolean(venue.owner_id) && hasValidLimaCoordinates(venue),
     );
     if (!selectedDistrict) return list;
     return list.filter((c) =>
       (c.district || "").toLowerCase().includes(selectedDistrict.toLowerCase()),
     );
-  }, [data.businesses, data.venues, selectedDistrict]);
+  }, [mapData.venues, selectedDistrict]);
 
-  if (!data || !data.businesses) {
+  if (!mapData || !mapData.businesses) {
     return (
       <div className="container mx-auto px-4 lg:px-8 py-8 animate-pulse bg-muted h-[560px] rounded-3xl" />
     );
@@ -647,6 +681,11 @@ function MapPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* === BLOQUE: Mapa Leaflet === */}
         <div className="lg:col-span-2 relative h-[560px] rounded-3xl overflow-hidden shadow-card animate-fade-in">
+          {isHydratingMapData && (
+            <div className="absolute left-4 top-4 z-[600] rounded-full border border-border bg-background/90 px-4 py-2 text-xs font-bold text-muted-foreground shadow-card backdrop-blur">
+              Cargando sedes comerciales...
+            </div>
+          )}
           <ErrorBoundary>
             <MapFeature
               venues={filteredVenues}
@@ -693,7 +732,7 @@ function MapPage() {
         venue={selectedVenueDetail}
         owner={
           selectedVenueDetail
-            ? (data.businesses || []).find(
+            ? (mapData.businesses || []).find(
                 (business) => business.id === selectedVenueDetail.owner_id,
               )
             : null
@@ -706,8 +745,8 @@ function MapPage() {
         <VenueActivityPanel
           venue={selectedVenue}
           currentUser={user}
-          players={(data.players || []).filter((player) => player.user_role !== "BUSINESS")}
-          squads={data.squads || []}
+          players={(mapData.players || []).filter((player) => player.user_role !== "BUSINESS")}
+          squads={mapData.squads || []}
           activities={venueActivities.filter((activity) => activity.venue_id === selectedVenue.id)}
           connectionIds={connectionIds}
           onClose={() => setSelectedVenue(null)}
