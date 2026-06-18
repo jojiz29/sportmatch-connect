@@ -89,10 +89,7 @@ export class EngagementController {
 
   @Post("achievements")
   @ApiOperation({ summary: "Guarda un logro sugerido por recomendaciones" })
-  saveAchievement(
-    @Request() req: AuthenticatedRequest,
-    @Body() dto: SaveEngagementAchievementDto,
-  ) {
+  saveAchievement(@Request() req: AuthenticatedRequest, @Body() dto: SaveEngagementAchievementDto) {
     return this.engagementService.saveAchievement(req.user.userId, dto);
   }
 

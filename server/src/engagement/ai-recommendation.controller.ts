@@ -19,7 +19,10 @@ export class AiRecommendationController {
   @ApiOperation({
     summary: "Genera recomendaciones personalizadas de engagement con Vertex AI",
   })
-  recommend(@Request() req: AuthenticatedRequest, @Body() dto: AiRecommendationRequestDto): Promise<unknown> {
+  recommend(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: AiRecommendationRequestDto,
+  ): Promise<unknown> {
     return this.engagementService.generateAiRecommendations(req.user.userId, dto);
   }
 }

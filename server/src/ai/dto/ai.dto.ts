@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 // ============================================================
 // server/src/ai/dto/ai.dto.ts — DTOs para endpoints AI (text + voice)
 // Validación estricta + sanitización de inputs

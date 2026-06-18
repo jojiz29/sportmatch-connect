@@ -365,14 +365,13 @@ export class EngagementService {
 
     const vertexConfigured = Boolean(
       process.env.GOOGLE_CLOUD_PROJECT &&
-        process.env.VERTEX_AI_LOCATION &&
-        process.env.VERTEX_AI_MODEL_ID &&
-        (process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-          process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+      process.env.VERTEX_AI_LOCATION &&
+      process.env.VERTEX_AI_MODEL_ID &&
+      (process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+        process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
     );
     const hasWarnings =
-      !vertexConfigured ||
-      Object.values(databaseChecks).some((check) => check.status !== "ok");
+      !vertexConfigured || Object.values(databaseChecks).some((check) => check.status !== "ok");
 
     return {
       generatedAt: new Date().toISOString(),
@@ -1035,7 +1034,9 @@ export class EngagementService {
 
         if (signals.embeddingVector.length > 0) {
           const embeddingBoost = Math.round(
-            Math.abs(signals.embeddingVector[card.id.length % signals.embeddingVector.length] ?? 0) * 6,
+            Math.abs(
+              signals.embeddingVector[card.id.length % signals.embeddingVector.length] ?? 0,
+            ) * 6,
           );
           score += embeddingBoost;
           if (embeddingBoost > 0) {
@@ -1160,7 +1161,6 @@ export class EngagementService {
     deterministicCards: RecommendationCard[],
     context: Awaited<ReturnType<EngagementService["buildRecommendationContext"]>>,
   ): Omit<AiRecommendationResponse, "metadata"> {
-    const topSport = context.profile?.preferred_sports?.[0] ?? context.matches[0]?.sport ?? "tu deporte favorito";
     const topDistrict = context.profile?.city ?? context.courts[0]?.district ?? "tu zona";
     const dailyChallenge = this.buildProceduralDailyChallenge(context);
 
@@ -1271,7 +1271,9 @@ export class EngagementService {
     sport: string,
     district: string,
     court: { name: string | null; district: string | null } | undefined,
-    match: { title: string; sport: string; date: Date | string; time: Date | string | null } | undefined,
+    match:
+      | { title: string; sport: string; date: Date | string; time: Date | string | null }
+      | undefined,
     player: { name: string | null; sharedSports: string[] } | undefined,
   ): Array<AiRecommendationResponse["dailyChallenge"]> {
     return [
@@ -1483,7 +1485,10 @@ export class EngagementService {
         description:
           "Actividad sugerida a partir de tus deportes preferidos y oportunidades cercanas.",
         score: 72,
-        reasons: ["Basado en tus preferencias deportivas", "Ayuda a mejorar futuras recomendaciones"],
+        reasons: [
+          "Basado en tus preferencias deportivas",
+          "Ayuda a mejorar futuras recomendaciones",
+        ],
         actionLabel: "Explorar",
         metadata: { sport: preferredSport },
       });
@@ -1510,7 +1515,8 @@ export class EngagementService {
       id: "achievement-weekly-activation",
       type: "achievement",
       title: "Logro sugerido: Semana en movimiento",
-      description: "Completa una accion deportiva esta semana para alimentar tu historial de engagement.",
+      description:
+        "Completa una accion deportiva esta semana para alimentar tu historial de engagement.",
       score: 68,
       reasons: ["Premia actividad constante", "No depende de IA externa para calcularse"],
       actionLabel: "Guardar logro",
@@ -1588,14 +1594,12 @@ export class EngagementService {
   }
 
   private scorePlayer(
-    current:
-      | {
-          city: string | null;
-          level: number | null;
-          trust_score: number | null;
-          preferred_sports: string[];
-        }
-      | null,
+    current: {
+      city: string | null;
+      level: number | null;
+      trust_score: number | null;
+      preferred_sports: string[];
+    } | null,
     candidate: {
       city: string | null;
       level: number | null;
@@ -1750,7 +1754,9 @@ ${compactContext}`;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("Respuesta sin JSON");
-      const parsed = JSON.parse(jsonMatch[0]) as Partial<Omit<AiRecommendationResponse, "metadata">>;
+      const parsed = JSON.parse(jsonMatch[0]) as Partial<
+        Omit<AiRecommendationResponse, "metadata">
+      >;
       const proceduralChallenge = this.buildProceduralDailyChallenge(context);
       const parsedDailyChallenge = {
         title: this.stringOrFallback(parsed.dailyChallenge?.title, proceduralChallenge.title),
@@ -1764,11 +1770,16 @@ ${compactContext}`;
         ),
       };
       return {
-        summary: this.stringOrFallback(parsed.summary, "Tu perfil deportivo ya esta listo para personalizar recomendaciones."),
+        summary: this.stringOrFallback(
+          parsed.summary,
+          "Tu perfil deportivo ya esta listo para personalizar recomendaciones.",
+        ),
         recommendations: Array.isArray(parsed.recommendations)
           ? parsed.recommendations.map((card, index) => this.normalizeCard(card, index))
           : fallbackCards,
-        dailyChallenge: this.isLegacyActivationChallenge({ dailyChallenge: parsedDailyChallenge } as AiRecommendationResponse)
+        dailyChallenge: this.isLegacyActivationChallenge({
+          dailyChallenge: parsedDailyChallenge,
+        } as AiRecommendationResponse)
           ? proceduralChallenge
           : parsedDailyChallenge,
         achievementIdea: {
@@ -1782,13 +1793,19 @@ ${compactContext}`;
             "Completar 3 acciones deportivas relevantes.",
           ),
         },
-        weeklyBrief: this.stringOrFallback(parsed.weeklyBrief, "Esta semana puedes reforzar tus deportes favoritos."),
+        weeklyBrief: this.stringOrFallback(
+          parsed.weeklyBrief,
+          "Esta semana puedes reforzar tus deportes favoritos.",
+        ),
         tourNarrative: this.stringOrFallback(
           parsed.tourNarrative,
           "Tu mapa deportivo empieza a tomar forma con cada sede, partido y reto.",
         ),
         notificationDraft: {
-          title: this.stringOrFallback(parsed.notificationDraft?.title, "Nueva recomendacion deportiva"),
+          title: this.stringOrFallback(
+            parsed.notificationDraft?.title,
+            "Nueva recomendacion deportiva",
+          ),
           body: this.stringOrFallback(
             parsed.notificationDraft?.body,
             "SportMatch encontro una oportunidad compatible para ti.",
@@ -1824,12 +1841,11 @@ ${compactContext}`;
     const allowedTypes = ["player", "sport", "challenge", "achievement", "content", "venue"];
     return {
       id: this.stringOrFallback(card.id, `ai-card-${index}`),
-      type: allowedTypes.includes(rawType)
-        ? (rawType as RecommendationCard["type"])
-        : "content",
+      type: allowedTypes.includes(rawType) ? (rawType as RecommendationCard["type"]) : "content",
       title: this.stringOrFallback(card.title, "Recomendacion deportiva"),
       description: this.stringOrFallback(card.description, "Sugerencia personalizada por IA."),
-      score: typeof card.score === "number" ? Math.max(0, Math.min(100, Math.round(card.score))) : 70,
+      score:
+        typeof card.score === "number" ? Math.max(0, Math.min(100, Math.round(card.score))) : 70,
       reasons: Array.isArray(card.reasons)
         ? card.reasons.filter((reason): reason is string => typeof reason === "string").slice(0, 4)
         : ["Basado en tu perfil deportivo"],
@@ -1842,7 +1858,9 @@ ${compactContext}`;
     };
   }
 
-  private isLegacyActivationChallenge(payload: Pick<AiRecommendationResponse, "dailyChallenge">): boolean {
+  private isLegacyActivationChallenge(
+    payload: Pick<AiRecommendationResponse, "dailyChallenge">,
+  ): boolean {
     const title = payload.dailyChallenge?.title?.toLowerCase() ?? "";
     const description = payload.dailyChallenge?.description?.toLowerCase() ?? "";
     const combined = `${title} ${description}`;
