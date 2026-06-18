@@ -310,7 +310,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <NotificationBell />
             </div>
           </div>
-          <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {dynamicGroups.map((group) => (
               <div key={group.titleKey} className="space-y-1">
                 <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60 px-3 mb-2">
@@ -517,7 +517,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
 
-        <main className="lg:pl-72 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
+        <main className="lg:pl-80 pt-14 lg:pt-0 pb-24 lg:pb-10 min-h-screen flex flex-col">
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>

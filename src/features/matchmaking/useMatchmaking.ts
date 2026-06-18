@@ -17,6 +17,10 @@ export function useMatchmaking(initialData?: User[], onMatch?: (user: User) => v
     queryKey: ["matchmaking", "stack"],
     queryFn: () => apiClient.users.getMatches(),
     initialData,
+    // Evita refetch inmediato al volver a Matchmaking si ya tenemos candidatos recientes.
+    staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Real-time subscription to new players

@@ -23,6 +23,7 @@ Basado en auditoría del código (`server/src/**/*.ts`, `src/**/*.ts`, `render.y
 | `DIRECT_URL`                          | connection string |         —         |        ✅        | Supabase Dashboard → DB          |
 | `FRONTEND_URL`                        |         —         |         —         |        ✅        | Tu URL de Vercel                 |
 | `JWT_SECRET`                          |         —         |         —         |        ✅        | Genera uno aleatorio             |
+| `CRON_SECRET`                         |         —         |         —         |        ✅        | Genera uno aleatorio             |
 | `PORT`                                |         —         |         —         |       auto       | Render lo inyecta                |
 | `NODE_ENV`                            |         —         |         —         |   `production`   | Manual                           |
 | `GOOGLE_CLOUD_PROJECT`                |         —         |         —         |        ✅        | Google Cloud Console             |
@@ -150,6 +151,7 @@ Configurar en: [render.com/dashboard](https://dashboard.render.com) → servicio
 | `SUPABASE_SERVICE_ROLE_KEY`           | Supabase → API → service_role        | Bypass de RLS — **CRÍTICO**                  |
 | `SUPABASE_JWT_SECRET`                 | Supabase → API → JWT Secret          | Para validar tokens en `SupabaseAuthGuard`   |
 | `JWT_SECRET`                          | Generar aleatorio (≥32 chars)        | Para tokens propios (si los usas)            |
+| `CRON_SECRET`                         | Generar aleatorio (≥32 chars)        | Protege endpoints internos de cron           |
 | `GOOGLE_CLOUD_PROJECT`                | Google Cloud Console                 | ID del proyecto GCP                          |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Service Account JSON inline          | **NO** el path a archivo                     |
 
@@ -247,6 +249,7 @@ cat service-account.json | jq -c . > service-account-oneline.json
 - [ ] `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] `SUPABASE_JWT_SECRET`
 - [ ] `JWT_SECRET` (generar uno nuevo)
+- [ ] `CRON_SECRET` (generar uno nuevo)
 - [ ] `GOOGLE_CLOUD_PROJECT`
 - [ ] `GOOGLE_APPLICATION_CREDENTIALS_JSON` (todo en una línea)
 - [ ] `VERTEX_AI_LOCATION=us-central1`
