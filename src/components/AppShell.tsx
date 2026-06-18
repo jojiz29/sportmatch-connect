@@ -21,6 +21,7 @@ import {
   MapPin,
   Globe,
   Sparkles,
+  ScanEye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
@@ -114,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     labelKey: string;
     label?: string;
     icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
     end?: boolean;
   }
 
@@ -181,7 +183,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
             { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
             { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa Comercial", icon: Map },
-            { to: "/app/coach", labelKey: "nav.coach", label: "Coach IA (Premium)", icon: Sparkles },
+            {
+              to: "/app/coach",
+              labelKey: "nav.coach",
+              label: "Coach IA (Premium)",
+              icon: Sparkles,
+            },
+            {
+              to: "/app/ai-vision",
+              labelKey: "nav.computer_vision",
+              label: "Computer Vision",
+              icon: ScanEye,
+              badge: "PRO",
+            },
           ],
         },
         {
@@ -237,6 +251,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
         { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
         { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa", icon: Map },
+        {
+          to: "/app/ai-vision",
+          labelKey: "nav.computer_vision",
+          label: "Vision",
+          icon: ScanEye,
+          badge: "PRO",
+        },
         { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
         { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
       ];
@@ -322,9 +343,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       }`}
                     >
                       <Icon className="h-6 w-6 shrink-0" />
-                      {item.label || t(item.labelKey)}
+                      <span className="min-w-0 flex-1 truncate">
+                        {item.label || t(item.labelKey)}
+                      </span>
+                      {item.badge && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${
+                            active
+                              ? "bg-white/20 text-primary-foreground"
+                              : "bg-primary/10 text-primary"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
                       {active && (
-                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white animate-glow-pulse" />
                       )}
                     </Link>
                   );
@@ -467,9 +501,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   <div
-                    className={`p-1.5 rounded-lg transition-all duration-200 ${active ? "bg-neon/10" : ""}`}
+                    className={`relative p-1.5 rounded-lg transition-all duration-200 ${active ? "bg-neon/10" : ""}`}
                   >
                     <Icon className={`h-5 w-5 ${active ? "text-neon" : ""}`} />
+                    {item.badge && (
+                      <span className="absolute -right-2 -top-1 rounded-full bg-primary px-1 text-[7px] font-black leading-3 text-primary-foreground">
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
                   <span>{item.label || t(item.labelKey)}</span>
                 </Link>
