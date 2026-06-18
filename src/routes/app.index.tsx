@@ -16,6 +16,7 @@ import {
   Sparkles,
   Plus,
   Clock,
+  CalendarDays,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -36,6 +37,8 @@ import { useTranslation } from "react-i18next";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
+import { MiniCalendar } from "@/features/matchmaking/ui/MiniCalendar";
+import type { PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
 
 // === BLOQUE: Ruta /app/ — createFileRoute con loader ===
 // Carga datos iniciales desde backendApi (con timeout de 8s por llamada):
@@ -1186,6 +1189,7 @@ function MatchCard({ match }: { match: Match }) {
   const [joined, setJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const hasUserJoined = match.current_players?.some((p) => p.id === user?.id) || joined;
   const currentParticipants = match.current_players?.filter((p) => p.id !== user?.id).length || 0;
@@ -1202,6 +1206,42 @@ function MatchCard({ match }: { match: Match }) {
   const twoHoursAfter = matchStart.getTime() + 2 * 60 * 60 * 1000;
 
   const isParticipant = match.creator_id === user?.id || hasUserJoined;
+  const calendarPlayers =
+    isParticipant && user && !match.current_players?.some((p) => p.id === user.id)
+      ? [...(match.current_players ?? []), user]
+      : (match.current_players ?? []);
+  const creatorProfile = calendarPlayers.find((player) => player.id === match.creator_id);
+  const calendarMatch: PublicMatch = {
+    id: match.id,
+    creatorId: match.creator_id,
+    creatorName: creatorProfile?.name ?? "Organizador",
+    creatorAvatar: creatorProfile?.avatar_url ?? "",
+    title: match.title,
+    sport: match.sport,
+    level: match.required_level,
+    courtName: match.court?.name ?? "Sin cancha asignada",
+    address: match.court?.address ?? "Direccion por confirmar",
+    lat: match.court?.lat ?? 0,
+    lng: match.court?.lng ?? 0,
+    date: match.date,
+    time: match.time,
+    maxPlayers: match.max_players,
+    participants: calendarPlayers.map((player) => ({
+      userId: player.id,
+      name: player.name,
+      avatarUrl: player.avatar_url,
+      joinedAt: new Date().toISOString(),
+    })),
+    status:
+      match.status === "IN_PROGRESS"
+        ? "Open"
+        : match.status === "Full" || isFull
+          ? "Full"
+          : match.status === "Finished" || match.status === "Cancelled"
+            ? match.status
+            : "Open",
+    createdAt: match.created_at,
+  };
 
   const showCheckIn =
     isParticipant &&
@@ -1426,6 +1466,18 @@ function MatchCard({ match }: { match: Match }) {
           </button>
         )}
       </div>
+      {isParticipant && (
+        <button
+          type="button"
+          onClick={() => setIsCalendarOpen(true)}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+          id={`dashboard-open-calendar-${match.id}`}
+          title="Ver en Calendario"
+        >
+          <CalendarDays className="h-4 w-4" />
+          Ver en Calendario
+        </button>
+      )}
       <div className="mt-4 h-1.5 rounded-full bg-muted/30 overflow-hidden">
         <div
           className="h-full bg-gradient-primary rounded-full transition-all duration-700 ease-out"
@@ -1439,6 +1491,9 @@ function MatchCard({ match }: { match: Match }) {
         cost={courtFee}
         balance={user?.fitcoins_balance ?? 0}
       />
+      {isCalendarOpen && (
+        <MiniCalendar match={calendarMatch} onClose={() => setIsCalendarOpen(false)} />
+      )}
     </div>
   );
 }
