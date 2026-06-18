@@ -204,8 +204,8 @@ export class AiService {
         activeMatches = matches.map((m) => ({
           title: m.title,
           sport: m.sport,
-          date: m.date,
-          time: m.time,
+          date: m.date instanceof Date ? m.date.toISOString().split("T")[0] : String(m.date),
+          time: m.time instanceof Date ? m.time.toTimeString().split(" ")[0] : String(m.time),
           requiredLevel: m.required_level || "Todos los niveles",
           courtName: m.court?.name || "Cancha externa",
         }));
@@ -771,8 +771,8 @@ Reglas:
 
         telemetryContext = lastMatches.map((p) => ({
           deporte: p.match.sport,
-          fecha: p.match.date,
-          hora: p.match.time,
+          fecha: p.match.date instanceof Date ? p.match.date.toISOString().split("T")[0] : String(p.match.date),
+          hora: p.match.time instanceof Date ? p.match.time.toTimeString().split(" ")[0] : String(p.match.time),
           cancha: p.match.court?.name || "Cancha genérica",
         }));
 

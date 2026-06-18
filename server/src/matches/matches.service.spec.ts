@@ -101,6 +101,8 @@ describe("MatchesService", () => {
           sport: "tenis",
           creator_id: "u1",
           status: "OPEN",
+          date: expect.any(Date),
+          time: expect.any(Date),
         },
       });
       expect(res).toEqual({ id: "m1", ...dto });

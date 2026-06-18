@@ -219,6 +219,7 @@ export class MatchesService {
    * cambios de dia por zona horaria al serializar el Date en Node.
    */
   private toDatabaseDate(value: string): Date {
+    if (!value) return new Date();
     return new Date(`${value}T12:00:00.000Z`);
   }
 
@@ -227,6 +228,7 @@ export class MatchesService {
    * por eso fijamos una fecha neutra y conservamos solo hora/minuto/segundo.
    */
   private toDatabaseTime(value: string): Date {
+    if (!value) return new Date("1970-01-01T00:00:00.000Z");
     const normalized = value.length === 5 ? `${value}:00` : value;
     return new Date(`1970-01-01T${normalized}.000Z`);
   }
