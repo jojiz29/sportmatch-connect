@@ -715,7 +715,7 @@
       "exporting": "Generando...",
       "export_data_help": "Obtén una copia de todos tus datos (perfil, posts, matches, transacciones, etc.) en formato JSON. Tarda unos segundos.",
       "export_request": "Solicitar descarga",
-      "last_export": "Ãšltima descarga: {{date}}",
+      "last_export": "Última descarga: {{date}}",
       "what_included": "¿Qué incluye la exportación?",
       "includes_profile": "Tu perfil (nombre, bio, ciudad, avatar)",
       "includes_preferences": "Tus preferencias de configuración",

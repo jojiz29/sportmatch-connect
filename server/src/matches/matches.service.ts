@@ -86,7 +86,7 @@ export class MatchesService {
       return await this.prisma.matches.create({
         data: {
           ...data,
-          // La API y el schema Prisma actual guardan date/time como texto estable.
+          // El schema actual guarda date/time como texto estable.
           date: data.date,
           time: data.time,
           creator_id: creatorId,
@@ -117,7 +117,7 @@ export class MatchesService {
         where: { id },
         data: {
           ...data,
-          // Mantener string evita errores P2032 cuando Supabase devuelve DATE/TIME serializados.
+          // Mantener string evita errores de conversión cuando Supabase serializa DATE/TIME.
           date: data.date,
           time: data.time,
         },
