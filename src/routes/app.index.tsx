@@ -2135,6 +2135,7 @@ function DailySportsPlan({
 
             <div className="mt-4">
               <ChallengeVenueMap
+                isOpen={isVenuePickerOpen}
                 venues={venues}
                 selectedVenueId={activeSelectedVenueId}
                 selectedVenue={activeSelectedVenue}
@@ -2164,6 +2165,7 @@ function DailySportsPlan({
 }
 
 function ChallengeVenueMap({
+  isOpen,
   venues,
   selectedVenueId,
   selectedVenue,
@@ -2171,6 +2173,7 @@ function ChallengeVenueMap({
   onSelectVenue,
   onConfirm,
 }: {
+  isOpen: boolean;
   venues: Court[];
   selectedVenueId: string;
   selectedVenue: Court | undefined;
@@ -2192,11 +2195,32 @@ function ChallengeVenueMap({
   function MapResizer() {
     const map = useMap();
     useEffect(() => {
-      const timeoutIds = [80, 220, 420].map((delay) =>
-        globalThis.setTimeout(() => map.invalidateSize(), delay),
+      if (!isOpen) return;
+
+      const container = map.getContainer();
+      const resizeMap = () => {
+        map.invalidateSize({ animate: false });
+        const size = map.getSize();
+        // Leaflet puede reportar listo antes de tener ancho real dentro del modal.
+        // Esperamos un tamaño util para evitar el mapa recortado de la primera apertura.
+        if (size.x >= 360 && size.y >= 300) setIsMapReady(true);
+      };
+      const frameIds = [
+        globalThis.requestAnimationFrame(resizeMap),
+        globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resizeMap)),
+      ];
+      const timeoutIds = [80, 180, 360, 700, 1100].map((delay) =>
+        globalThis.setTimeout(resizeMap, delay),
       );
-      return () => timeoutIds.forEach((timeoutId) => globalThis.clearTimeout(timeoutId));
-    }, [map]);
+      const observer = new ResizeObserver(resizeMap);
+      observer.observe(container);
+
+      return () => {
+        frameIds.forEach((frameId) => globalThis.cancelAnimationFrame(frameId));
+        timeoutIds.forEach((timeoutId) => globalThis.clearTimeout(timeoutId));
+        observer.disconnect();
+      };
+    }, [isOpen, map, venuesSignature]);
     useEffect(() => {
       map.setView(center, 13, { animate: false });
     }, [center, map]);
@@ -2207,7 +2231,7 @@ function ChallengeVenueMap({
     // Reiniciamos el loader solo cuando cambia la lista real de sedes.
     // Seleccionar un marcador no debe mostrar "Cargando sedes" otra vez.
     setIsMapReady(false);
-  }, [venuesSignature]);
+  }, [isOpen, venuesSignature]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
