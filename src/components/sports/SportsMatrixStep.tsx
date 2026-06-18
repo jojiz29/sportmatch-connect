@@ -26,7 +26,7 @@ export function SportsMatrixStep({ sportsMatrix, onSportChange, onNext }: Sports
         <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary shadow-glow mb-2">
           <Flame className="h-6 w-6 text-primary-foreground animate-pulse" />
         </div>
-        <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-foreground">
+        <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-white">
           {t("onboarding.step1_title", "Elige tus disciplinas")}
         </h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">

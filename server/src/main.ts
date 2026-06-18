@@ -26,8 +26,10 @@ import * as path from "path";
 const serverEnvPath = path.resolve(process.cwd(), ".env");
 const rootEnvPath = path.resolve(process.cwd(), "../.env");
 
-dotenv.config({ path: serverEnvPath, override: false });
+// Cargar primero el .env raíz para que los secretos reales compartidos
+// tengan prioridad sobre los placeholders locales en server/.env
 dotenv.config({ path: rootEnvPath, override: false });
+dotenv.config({ path: serverEnvPath, override: false });
 
 const finalUrl = process.env.DATABASE_URL || "NOT FOUND";
 const finalDirectUrl = process.env.DIRECT_URL || "NOT FOUND";

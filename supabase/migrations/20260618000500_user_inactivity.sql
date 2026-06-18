@@ -52,35 +52,35 @@ CREATE POLICY "Service role manages inactivity log"
   USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
 
--- 4. Trigger: Actualizar last_login_at cuando el usuario inicia sesión
-CREATE OR REPLACE FUNCTION update_last_login()
-RETURNS TRIGGER
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  UPDATE profiles
-  SET last_login_at = now()
-  WHERE id = NEW.id;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_auth_users_login
-  AFTER INSERT OR UPDATE OF last_sign_in_at
-  ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION update_last_login();
-
-COMMENT ON TRIGGER trg_auth_users_login ON auth.users IS
-  'Actualiza last_login_at en profiles cada vez que el usuario inicia sesión';
+-- 4. Trigger: Actualizar last_login_at cuando el usuario inicia sesión (Comentado debido a restricciones de propiedad en auth.users en Supabase)
+-- CREATE OR REPLACE FUNCTION update_last_login()
+-- RETURNS TRIGGER
+-- LANGUAGE plpgsql SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+-- BEGIN
+--   UPDATE profiles
+--   SET last_login_at = now()
+--   WHERE id = NEW.id;
+--   RETURN NEW;
+-- END;
+-- $$;
+-- 
+-- CREATE TRIGGER trg_auth_users_login
+--   AFTER INSERT OR UPDATE OF last_sign_in_at
+--   ON auth.users
+--   FOR EACH ROW
+--   EXECUTE FUNCTION update_last_login();
+-- 
+-- COMMENT ON TRIGGER trg_auth_users_login ON auth.users IS
+--   'Actualiza last_login_at en profiles cada vez que el usuario inicia sesión';
 
 -- 5. Vista: Usuarios inactivos (para Edge Function)
 CREATE OR REPLACE VIEW view_inactive_users AS
 SELECT
   p.id,
   p.name,
-  p.email,
+  au.email,
   p.avatar_url,
   p.last_login_at,
   p.push_token,
@@ -92,6 +92,7 @@ SELECT
     ELSE EXTRACT(DAY FROM now() - p.last_login_at)::INTEGER
   END AS inactivity_days
 FROM profiles p
+LEFT JOIN auth.users au ON au.id = p.id
 WHERE p.deleted_at IS NULL
   AND (p.last_login_at IS NULL OR p.last_login_at < now() - interval '14 days')
   AND (p.is_admin IS NOT TRUE OR p.is_admin IS NULL);

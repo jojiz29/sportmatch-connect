@@ -190,14 +190,14 @@ function ChallengeLandingPage() {
               <div className="space-y-3">
                 <Link
                   to="/login"
-                  search={{ redirect: `/challenge/${token}` } as Record<string, string>}
+                  search={{ redirect: `/challenge/${token}` } as any}
                   className="block w-full text-center px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all"
                 >
                   Iniciar Sesión — Aceptar Reto
                 </Link>
                 <Link
                   to="/app/register"
-                  search={{ ref: "challenge", token } as Record<string, string>}
+                  search={{ ref: "challenge", token } as any}
                   className="block w-full text-center px-6 py-3 rounded-xl bg-accent text-foreground font-semibold hover:bg-accent/80 transition-all"
                 >
                   Registrarme en SportMatch

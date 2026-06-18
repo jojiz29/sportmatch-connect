@@ -5,16 +5,13 @@
 // POST /api/v1/ai/text/comment-suggestion  → Feature #2 Smart Comments
 // POST /api/v1/ai/text/hashtags      → Feature #3 Auto-Hashtags
 // POST /api/v1/ai/text/moderate      → Feature #6 Content Moderation
-// GET  /api/v1/ai/health             → Health check (público)
-// Todos los endpoints protegidos por SupabaseAuthGuard excepto /health
+// Todos protegidos por SupabaseAuthGuard
 // ============================================================
 
-import { Body, Controller, Get, Post, Request, UseGuards } from "@nestjs/common";
+import { Body, Controller, Post, Request, UseGuards, BadRequestException } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
-import { Public } from "../auth/decorators/public.decorator";
 import { AiService } from "./ai.service";
-import type { IntegrationTestReport } from "./ai.service";
 import { ChatRequestDto, ChatResponseDto, WelcomeRequestDto } from "./dto/chat.dto";
 import {
   CommentSuggestionDto,
@@ -22,7 +19,12 @@ import {
   ModerateTextDto,
   ModerationResultDto,
   CoachRecommendationDto,
+  ModerateAdvancedDto,
+  ModerateAdvancedResultDto,
+  CoachChatDto,
+  RecommendSnackDto,
 } from "./dto/ai.dto";
+
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -124,20 +126,58 @@ export class AiController {
     return this.aiService.moderateContent(userId, dto.text, dto.context ?? "post");
   }
 
-  // TODO: Eliminar antes de producción
-  @Public()
-  @Post("test-full-integration")
+  @Post("moderate/advanced")
   @ApiOperation({
-    summary: "Test de integración completa del pipeline Vertex AI — TEMPORAL",
+    summary: "US-SEC-002 — Moderación avanzada con ensemble de modelos (IA, reglas y comportamiento)",
   })
-  async testFullIntegration(): Promise<IntegrationTestReport> {
-    return this.aiService.testFullIntegration();
+  async moderateAdvanced(
+    @Body() dto: ModerateAdvancedDto,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ModerateAdvancedResultDto> {
+    const targetUserId = dto.userId || req.user.sub || (req.user as any).userId;
+    return this.aiService.moderateAdvanced(
+      targetUserId,
+      dto.content,
+      dto.contextType,
+      dto.metadata,
+    );
   }
 
-  @Public()
-  @Get("health")
-  @ApiOperation({ summary: "Health check de Vertex AI (público)" })
-  async health(): Promise<{ status: string; message: string }> {
-    return this.aiService.healthCheck();
+  @Post("coach/chat")
+  @ApiOperation({
+    summary: "Premium Coach Chat — Chat 1-a-1 personalizado con telemetría para usuarios Premium",
+  })
+  async coachChat(
+    @Body() dto: CoachChatDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const userId = (req.user?.userId || req.user?.sub) as string;
+    if (!userId) {
+      throw new BadRequestException("Usuario no autenticado");
+    }
+    return this.aiService.coachChat(userId, dto.message, dto.history, dto.language);
+  }
+
+  @Post("premium/nutrition")
+  @ApiOperation({
+    summary: "Premium Nutrition — Recomendador de snacks post-entrenamiento en base a telemetría",
+  })
+  async recommendSnack(
+    @Body() dto: RecommendSnackDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const userId = (req.user?.userId || req.user?.sub) as string;
+    if (!userId) {
+      throw new BadRequestException("Usuario no autenticado");
+    }
+    return this.aiService.recommendSnack(
+      userId,
+      dto.sport,
+      dto.duration,
+      dto.intensity,
+      dto.matchId,
+      dto.language,
+    );
   }
 }
+

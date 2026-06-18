@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";

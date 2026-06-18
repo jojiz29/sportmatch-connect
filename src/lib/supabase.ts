@@ -11,26 +11,6 @@
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-interface MockChain {
-  select: () => MockChain;
-  insert: () => MockChain;
-  update: () => MockChain;
-  delete: () => MockChain;
-  eq: () => MockChain;
-  neq: () => MockChain;
-  lt: () => MockChain;
-  gt: () => MockChain;
-  limit: () => MockChain;
-  order: () => MockChain;
-  single: () => Promise<{ data: null; count: null; error: Error }>;
-}
-
-interface MockChannel {
-  on: () => MockChannel;
-  subscribe: () => MockChannel;
-  unsubscribe: () => void;
-}
-
 // ------------------------------------------------------------------
 // VARIABLES DE ENTORNO: URL y clave anónima de Supabase
 // ------------------------------------------------------------------
@@ -96,113 +76,105 @@ if (isConfigured) {
  * ------------------------------------------------------------------
  */
 function createFallbackClient(): SupabaseClient {
-  return new Proxy(
-    {},
-    {
-      get(_target, prop) {
-        // --- MÓDULO AUTH: login, registro, sesión ---
-        if (prop === "auth") {
-          return {
-            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-            getSession: () => Promise.resolve({ data: { session: null } }),
-            signInWithPassword: () =>
-              Promise.resolve({ error: new Error("Supabase not configured") }),
-            signInWithOAuth: () =>
-              Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
-            signUp: () => Promise.resolve({ error: new Error("Supabase not configured") }),
-            signOut: () => Promise.resolve({ error: null }),
-          };
-        }
-
-        // --- MÓDULO FROM: Consultas a tablas (SELECT, INSERT, UPDATE, DELETE) ---
-        if (prop === "from") {
-          return (table: string) => {
-            console.warn(`Called supabase.from('${table}') but Supabase is not configured.`);
-
-            const dummyPromise = Promise.resolve({
-              data: null,
-              count: null,
-              error: new Error("Supabase not configured"),
-            });
-            const chainObj: MockChain = Object.assign(dummyPromise, {
-              select: () => chainObj,
-              insert: () => chainObj,
-              update: () => chainObj,
-              delete: () => chainObj,
-              eq: () => chainObj,
-              neq: () => chainObj,
-              lt: () => chainObj,
-              gt: () => chainObj,
-              limit: () => chainObj,
-              order: () => chainObj,
-              single: () =>
-                Promise.resolve({
-                  data: null,
-                  count: null,
-                  error: new Error("Supabase not configured"),
-                }),
-            });
-            return chainObj;
-          };
-        }
-
-        // --- MÓDULO CHANNEL: Suscripciones en tiempo real (Realtime) ---
-        if (prop === "channel") {
-          return (name: string) => {
-            console.warn(`Called supabase.channel('${name}') but Supabase is not configured.`);
-            const dummyChannel: MockChannel = {
-              on: () => dummyChannel,
-              subscribe: () => dummyChannel,
-              unsubscribe: () => {},
-            };
-            return dummyChannel;
-          };
-        }
-
-        // --- MÓDULO REMOVE CHANNEL: Limpieza de canales ---
-        if (prop === "removeChannel") {
-          return () => {
-            console.warn("Called supabase.removeChannel but Supabase is not configured.");
-          };
-        }
-
-        // --- MÓDULO GET CHANNELS: Listar canales activos ---
-        if (prop === "getChannels") {
-          return () => {
-            console.warn("Called supabase.getChannels but Supabase is not configured.");
-            return [];
-          };
-        }
-
-        // --- MÓDULO STORAGE: Subida/descarga de archivos ---
-        if (prop === "storage") {
-          const dummyStorageBucket = {
-            upload: () =>
-              Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
-            getPublicUrl: () => ({
-              data: { publicUrl: "" },
-            }),
-            remove: () =>
-              Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
-          };
-          return {
-            from: () => {
-              console.warn(`Called supabase.storage.from() but Supabase is not configured.`);
-              return dummyStorageBucket;
-            },
-          };
-        }
-
-        // --- FALLBACK GENÉRICO: Cualquier otro método no contemplado ---
-        return () => {
-          console.warn(
-            `Attempted to call supabase.${String(prop)} but Supabase is not configured.`,
-          );
-          return Promise.resolve({ data: null, error: new Error("Supabase not configured") });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Proxy({}, {
+    get(target, prop) {
+      // --- MÓDULO AUTH: login, registro, sesión ---
+      if (prop === "auth") {
+        return {
+          onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+          getSession: () => Promise.resolve({ data: { session: null } }),
+          signInWithPassword: () =>
+            Promise.resolve({ error: new Error("Supabase not configured") }),
+          signUp: () => Promise.resolve({ error: new Error("Supabase not configured") }),
+          signOut: () => Promise.resolve({ error: null }),
         };
-      },
+      }
+
+      // --- MÓDULO FROM: Consultas a tablas (SELECT, INSERT, UPDATE, DELETE) ---
+      if (prop === "from") {
+        return (table: string) => {
+          console.warn(`Called supabase.from('${table}') but Supabase is not configured.`);
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const dummyPromise = Promise.resolve({ data: null, count: null, error: new Error("Supabase not configured") });
+          const chainObj: any = Object.assign(dummyPromise, {
+            select: () => chainObj,
+            insert: () => chainObj,
+            update: () => chainObj,
+            delete: () => chainObj,
+            eq: () => chainObj,
+            neq: () => chainObj,
+            lt: () => chainObj,
+            gt: () => chainObj,
+            limit: () => chainObj,
+            order: () => chainObj,
+            single: () =>
+              Promise.resolve({
+                data: null,
+                count: null,
+                error: new Error("Supabase not configured"),
+              }),
+          });
+          return chainObj;
+        };
+      }
+
+      // --- MÓDULO CHANNEL: Suscripciones en tiempo real (Realtime) ---
+      if (prop === "channel") {
+        return (name: string) => {
+          console.warn(`Called supabase.channel('${name}') but Supabase is not configured.`);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const dummyChannel: any = {
+            on: () => dummyChannel,
+            subscribe: () => dummyChannel,
+            unsubscribe: () => {},
+          };
+          return dummyChannel;
+        };
+      }
+
+      // --- MÓDULO REMOVE CHANNEL: Limpieza de canales ---
+      if (prop === "removeChannel") {
+        return () => {
+          console.warn("Called supabase.removeChannel but Supabase is not configured.");
+        };
+      }
+
+      // --- MÓDULO GET CHANNELS: Listar canales activos ---
+      if (prop === "getChannels") {
+        return () => {
+          console.warn("Called supabase.getChannels but Supabase is not configured.");
+          return [];
+        };
+      }
+
+      // --- MÓDULO STORAGE: Subida/descarga de archivos ---
+      if (prop === "storage") {
+        const dummyStorageBucket = {
+          upload: () =>
+            Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
+          getPublicUrl: () => ({
+            data: { publicUrl: "" },
+          }),
+          remove: () =>
+            Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
+        };
+        return {
+          from: () => {
+            console.warn(`Called supabase.storage.from() but Supabase is not configured.`);
+            return dummyStorageBucket;
+          },
+        };
+      }
+
+      // --- FALLBACK GENÉRICO: Cualquier otro método no contemplado ---
+      return () => {
+        console.warn(`Attempted to call supabase.${String(prop)} but Supabase is not configured.`);
+        return Promise.resolve({ data: null, error: new Error("Supabase not configured") });
+      };
     },
-  ) as unknown as SupabaseClient;
+  }) as unknown as SupabaseClient;
 }
 
 // ==================================================================

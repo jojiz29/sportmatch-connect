@@ -204,7 +204,9 @@ export interface CoachPreferences {
   language?: "es" | "en" | "pt";
 }
 
-export async function fetchCoachRecommendations(prefs: CoachPreferences): Promise<AiChatResponse> {
+export async function fetchCoachRecommendations(
+  prefs: CoachPreferences,
+): Promise<AiChatResponse> {
   const apiBaseUrl = getApiBaseUrl();
   if (!isAllowedApiHost(apiBaseUrl)) {
     throw new Error("Configuración inválida: VITE_API_URL no apunta a un backend válido.");
