@@ -503,9 +503,12 @@ Reglas:
     userId: string,
     content: string,
     contextType: "mensaje" | "comentario" | "perfil",
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): Promise<ModerateAdvancedResultDto> {
     this.checkRateLimit(userId, "moderation");
+    if (metadata && Object.keys(metadata).length > 0) {
+      this.logger.debug(`Moderation metadata received: ${Object.keys(metadata).join(", ")}`);
+    }
 
     let isDbHealthy = this.prisma.isHealthy();
     if (!isDbHealthy) {

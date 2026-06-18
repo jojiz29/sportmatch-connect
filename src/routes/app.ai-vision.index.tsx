@@ -1,5 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Video, Box, Crown, Check, X, ArrowRight, Sparkles, Layers } from "lucide-react";
+import {
+  Video,
+  Box,
+  Crown,
+  Check,
+  X,
+  ArrowRight,
+  Sparkles,
+  Layers,
+  ChevronDown,
+  IdCard,
+  ScanEye,
+  ShieldCheck,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { usePaymentGatewayStore } from "@/features/wallet/usePaymentGatewayStore";
@@ -120,6 +133,7 @@ function AiVisionOverview() {
 
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [toolsExpanded, setToolsExpanded] = useState(false);
   const [trials, setTrials] = useState({
     form_analyzer: 0,
     ar_preview: 0,
@@ -316,85 +330,197 @@ function AiVisionOverview() {
         </div>
       )}
 
-      {/* Premium Tools Cards Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Card 1: Form Analyzer */}
-        <div
-          onClick={() => handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer")}
-          className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+      {/* Computer Vision Pro Module */}
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setToolsExpanded((value) => !value)}
+          aria-expanded={toolsExpanded}
+          className="group w-full rounded-3xl border border-border/50 bg-gradient-card p-6 text-left shadow-card transition-all duration-300 hover:border-amber-500/40 hover:shadow-glow active:scale-[0.99]"
         >
-          <div className="absolute right-6 top-6 flex items-center gap-1.5">
-            {userTier === "PREMIUM" ? (
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
-                ILIMITADO
-              </span>
-            ) : (
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
-                Prueba: {trials.form_analyzer}/1 Usada
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
-              <Video className="h-7 w-7 text-white" />
-            </div>
-            <div className="flex-1 min-w-0 pr-16">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                  Form Analyzer
-                </h3>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
-                  PRO
-                </span>
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 shadow-glow transition-transform duration-300 group-hover:scale-105">
+                <ScanEye className="h-8 w-8 text-white" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Analiza tu técnica deportiva mediante video. Sube un clip de hasta 30s de tu tiro,
-                swing o zancada y obtén retroalimentación biométrica por IA.
-              </p>
-              <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
-                Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-black uppercase tracking-wide text-foreground">
+                    Modulo Computer Vision
+                  </h2>
+                  <span className="rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-black shadow-md">
+                    PRO
+                  </span>
+                </div>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  Form Analyzer, Fake Profile Detector, verificacion DNI y AR Court Preview en un
+                  solo modulo.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Card 2: AR Court Preview */}
+            <div className="flex shrink-0 items-center justify-between gap-3 rounded-xl border border-border/40 bg-background/40 px-4 py-3 text-sm font-bold text-foreground md:justify-center">
+              <span>{toolsExpanded ? "Ocultar herramientas" : "Ver herramientas"}</span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-300 ${
+                  toolsExpanded ? "rotate-180 text-amber-400" : ""
+                }`}
+              />
+            </div>
+          </div>
+        </button>
+
         <div
-          onClick={() => handleCardClick("ar_preview", "/app/map")}
-          className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+          className={`grid gap-4 transition-all duration-300 md:grid-cols-2 ${
+            toolsExpanded
+              ? "max-h-[980px] opacity-100"
+              : "pointer-events-none max-h-0 overflow-hidden opacity-0"
+          }`}
         >
-          <div className="absolute right-6 top-6 flex items-center gap-1.5">
-            {userTier === "PREMIUM" ? (
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
-                ILIMITADO
-              </span>
-            ) : (
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
-                Prueba: {trials.ar_preview}/1 Usada
-              </span>
-            )}
+          {/* Card 1: Form Analyzer */}
+          <div
+            onClick={() => handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer")}
+            className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+          >
+            <div className="absolute right-6 top-6 flex items-center gap-1.5">
+              {userTier === "PREMIUM" ? (
+                <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
+                  ILIMITADO
+                </span>
+              ) : (
+                <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
+                  Prueba: {trials.form_analyzer}/1 Usada
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                <Video className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0 pr-16">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                    Form Analyzer
+                  </h3>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
+                    PRO
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  Analiza tu técnica deportiva mediante video. Sube un clip de hasta 30s de tu tiro,
+                  swing o zancada y obtén retroalimentación biométrica por IA.
+                </p>
+                <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                  Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
-              <Box className="h-7 w-7 text-white" />
+          <div
+            onClick={() => navigate({ to: "/app/ai-vision/fake-profile" })}
+            className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+          >
+            <div className="absolute right-6 top-6 flex items-center gap-1.5">
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
+                PRO
+              </span>
             </div>
-            <div className="flex-1 min-w-0 pr-16">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                  AR Court Preview
-                </h3>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
-                  PRO
-                </span>
+
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                <ShieldCheck className="h-7 w-7 text-white" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Vista previa en realidad aumentada 3D de las canchas afiliadas. Ve al mapa,
-                selecciona una cancha y pulsa el cubo para proyectar el terreno en 3D.
-              </p>
-              <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
-                Abrir Mapa <ArrowRight className="h-3.5 w-3.5" />
+              <div className="flex-1 min-w-0 pr-16">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                    Fake Profile Detector
+                  </h3>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
+                    PRO
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  Evalua si una foto de perfil parece real o generada por IA.
+                </p>
+                <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                  Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => navigate({ to: "/app/ai-vision/dni-verify" })}
+            className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+          >
+            <div className="absolute right-6 top-6 flex items-center gap-1.5">
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
+                PRO
+              </span>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                <IdCard className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0 pr-16">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                    Verificacion DNI 2.0
+                  </h3>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
+                    PRO
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  Compara selfie y documento con matching biometrico asistido por IA.
+                </p>
+                <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                  Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: AR Court Preview */}
+          <div
+            onClick={() => handleCardClick("ar_preview", "/app/map")}
+            className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+          >
+            <div className="absolute right-6 top-6 flex items-center gap-1.5">
+              {userTier === "PREMIUM" ? (
+                <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
+                  ILIMITADO
+                </span>
+              ) : (
+                <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
+                  Prueba: {trials.ar_preview}/1 Usada
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                <Box className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0 pr-16">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                    AR Court Preview
+                  </h3>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
+                    PRO
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  Vista previa en realidad aumentada 3D de las canchas afiliadas. Ve al mapa,
+                  selecciona una cancha y pulsa el cubo para proyectar el terreno en 3D.
+                </p>
+                <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                  Abrir Mapa <ArrowRight className="h-3.5 w-3.5" />
+                </div>
               </div>
             </div>
           </div>

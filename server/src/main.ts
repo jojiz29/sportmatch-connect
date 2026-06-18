@@ -61,7 +61,8 @@ import { AppModule } from "./app.module";
  *     sportmatch-connect-juan-alonso). Esto evita que CORS rompa cuando se
  *     añade un nuevo alias/preview de Vercel sin tocar el dashboard de Render.
  *  3. Puertos locales de Vite (5173..5180) para hot-reload en desarrollo.
- *  4. Rango localhost:5100-5200 solo en desarrollo.
+ *  4. Origin del backend local para que Swagger UI pueda ejecutar requests.
+ *  5. Rango localhost:5100-5200 solo en desarrollo.
  *
  * Cualquier origin que NO matchea se loguea y se rechaza con un error de CORS
  * (mantenemos el logging de auditoría que ya teníamos).
@@ -83,7 +84,10 @@ function buildAllowedOrigins(): { exact: Set<string>; patterns: RegExp[] } {
     "http://localhost:5180",
   ];
 
-  const exact = new Set<string>([...fromEnv, ...viteDevPorts]);
+  const backendPort = process.env.PORT || "3000";
+  const swaggerDevOrigins = [`http://localhost:${backendPort}`, `http://127.0.0.1:${backendPort}`];
+
+  const exact = new Set<string>([...fromEnv, ...viteDevPorts, ...swaggerDevOrigins]);
 
   if (process.env.NODE_ENV !== "production") {
     for (let p = 5100; p <= 5200; p++) {

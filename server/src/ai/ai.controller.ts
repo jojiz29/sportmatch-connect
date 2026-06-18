@@ -135,7 +135,8 @@ export class AiController {
     @Body() dto: ModerateAdvancedDto,
     @Request() req: AuthenticatedRequest,
   ): Promise<ModerateAdvancedResultDto> {
-    const targetUserId = dto.userId || req.user.sub || (req.user as any).userId;
+    const requestUserId = typeof req.user.userId === "string" ? req.user.userId : req.user.sub;
+    const targetUserId = dto.userId || requestUserId;
     return this.aiService.moderateAdvanced(
       targetUserId,
       dto.content,

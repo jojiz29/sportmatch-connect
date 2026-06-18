@@ -272,7 +272,7 @@ export class ModerateAdvancedDto {
     required: false,
   })
   @IsOptional()
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export class SignalDto {
