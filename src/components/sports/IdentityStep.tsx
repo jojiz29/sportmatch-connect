@@ -18,7 +18,7 @@ interface IdentityStepProps {
   onComplete: (data: {
     avatar_url: string;
     bio: string;
-    gender: "Masculino" | "Femenino" | "Mixto";
+    gender: "Masculino" | "Femenino" | "Otro";
     weekly_hours: number;
     lat: number | null;
     lng: number | null;
@@ -43,7 +43,7 @@ export function IdentityStep({
   // Almacenan los valores del perfil antes de enviarlos al callback onComplete
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [bio, setBio] = useState<string>("");
-  const [gender, setGender] = useState<"Masculino" | "Femenino" | "Mixto">("Masculino");
+  const [gender, setGender] = useState<"Masculino" | "Femenino" | "Otro">("Masculino");
   const [weeklyHours, setWeeklyHours] = useState<number>(6);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
@@ -237,7 +237,7 @@ export function IdentityStep({
         </div>
       );
     }
-    // Mixto: trofeo abstracto
+    // Otro: trofeo abstracto
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/20 flex items-center justify-center">
         <svg
@@ -352,15 +352,15 @@ export function IdentityStep({
               activeClass: "bg-[#D946EF] text-white shadow-[0_0_10px_rgba(217,70,239,0.4)]",
             },
             {
-              value: "Mixto",
-              label: "⚡ Mixto",
+              value: "Otro",
+              label: "⚡ Otro",
               activeClass: "bg-primary text-primary-foreground shadow-glow",
             },
           ].map((item) => (
             <button
               key={item.value}
               type="button"
-              onClick={() => setGender(item.value as "Masculino" | "Femenino" | "Mixto")}
+              onClick={() => setGender(item.value as "Masculino" | "Femenino" | "Otro")}
               className={`py-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${gender === item.value ? item.activeClass : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground"}`}
             >
               {item.label}

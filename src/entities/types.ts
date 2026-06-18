@@ -121,7 +121,7 @@ export interface User {
   user_sports?: { sport_id: string; level: 1 | 2 | 3 }[];
   onboarding_completed?: boolean;
   push_token?: string | null;
-  gender?: "Masculino" | "Femenino" | "Mixto";
+  gender?: "Masculino" | "Femenino" | "Otro";
   dni_verificado?: boolean;
   dni_hash?: string | null;
   dni_intentos?: number;

@@ -67,10 +67,12 @@ export const Route = createFileRoute("/app/")({
       }
     };
 
-    const backendMatches = await fetchWithTimeout(() => backendApi.matches.getAll());
-    const backendCourts = await fetchWithTimeout(() => backendApi.courts.getAll());
-    const backendUsers = await fetchWithTimeout(() => backendApi.users.getAll());
-    const backendSports = await fetchWithTimeout(() => backendApi.sports.getAll());
+    const [backendMatches, backendCourts, backendUsers, backendSports] = await Promise.all([
+      fetchWithTimeout(() => backendApi.matches.getAll(), 4000),
+      fetchWithTimeout(() => backendApi.courts.getAll(), 4000),
+      fetchWithTimeout(() => backendApi.users.getAll(), 4000),
+      fetchWithTimeout(() => backendApi.sports.getAll(), 4000),
+    ]);
 
     const matches =
       backendMatches && typeof backendMatches === "object" && "data" in backendMatches
@@ -762,9 +764,6 @@ function Dashboard() {
                 <h2 className="font-heading text-2xl tracking-wide text-foreground">
                   Partidos recomendados
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Curado por IA según tu nivel y horarios
-                </p>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -1188,8 +1187,9 @@ function MatchCard({ match }: { match: Match }) {
   const [isJoining, setIsJoining] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
 
-  const currentParticipants = match.current_players?.length || 0;
-  const spotsTaken = joined ? currentParticipants + 1 : currentParticipants;
+  const hasUserJoined = match.current_players?.some((p) => p.id === user?.id) || joined;
+  const currentParticipants = match.current_players?.filter((p) => p.id !== user?.id).length || 0;
+  const spotsTaken = hasUserJoined ? currentParticipants + 1 : currentParticipants;
   const isFull = spotsTaken >= match.max_players;
 
   const courtFee = match.court
@@ -1201,10 +1201,7 @@ function MatchCard({ match }: { match: Match }) {
   const fifteenMinsBefore = matchStart.getTime() - 15 * 60 * 1000;
   const twoHoursAfter = matchStart.getTime() + 2 * 60 * 60 * 1000;
 
-  const isParticipant =
-    match.creator_id === user?.id ||
-    match.current_players?.some((p) => p.id === user?.id) ||
-    joined;
+  const isParticipant = match.creator_id === user?.id || hasUserJoined;
 
   const showCheckIn =
     isParticipant &&
@@ -1234,6 +1231,23 @@ function MatchCard({ match }: { match: Match }) {
           );
           if (error) throw error;
         }
+        if (user) {
+          // Sincronización inmediata en memoria para consistencia y respuesta instantánea (alta disponibilidad)
+          const { MOCK_MATCHES } = await import("@/shared/api/apiClient");
+          const mockMatch = MOCK_MATCHES.find((m) => m.id === match.id);
+          if (mockMatch) {
+            if (!mockMatch.current_players) mockMatch.current_players = [];
+            if (!mockMatch.current_players.some((p) => p.id === user.id)) {
+              mockMatch.current_players.push(user);
+            }
+          }
+
+          if (!match.current_players) match.current_players = [];
+          if (!match.current_players.some((p) => p.id === user.id)) {
+            match.current_players.push(user);
+          }
+        }
+
         setIsJoining(false);
         setJoined(true);
         toast.success("¡Te uniste al partido!", {

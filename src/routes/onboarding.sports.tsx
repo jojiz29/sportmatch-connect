@@ -79,7 +79,7 @@ function OnboardingSports() {
   const handleComplete = async (identityData: {
     avatar_url: string;
     bio: string;
-    gender: "Masculino" | "Femenino" | "Mixto";
+    gender: "Masculino" | "Femenino" | "Otro";
     weekly_hours: number;
     lat: number | null;
     lng: number | null;

@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 user_role: "PLAYER",
                 trust_score: 90,
                 fitcoins_balance: 100,
-                level: "Intermedio",
+                level_label: "Intermedio",
                 preferred_sports: ["Pádel"],
               })
               .select()
