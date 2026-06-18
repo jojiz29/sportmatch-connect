@@ -378,7 +378,7 @@ function Landing() {
           style={{ backgroundImage: "url('/images/sports/fondo_sportmatch.webp')" }}
         />
         {/* Glassmorphic Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background/85 backdrop-blur-[3px] -z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/60 to-background/95 backdrop-blur-[2px] -z-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 xl:px-16 grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           <div className="lg:col-span-7 xl:col-span-6 flex flex-col justify-center">

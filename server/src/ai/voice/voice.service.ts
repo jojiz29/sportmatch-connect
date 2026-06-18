@@ -22,18 +22,9 @@ export class VoiceService {
   ) {}
 
   onModuleInit() {
-    if (!this.aiConfigService.isHealthy()) {
-      this.logger.warn(
-        `Google Cloud Speech/TTS no inicializados: ${this.aiConfigService.getDegradedReason()}. Se usara Web Speech API como fallback en el cliente.`,
-      );
-      return;
-    }
-
     this.config = this.aiConfigService.getConfig();
-    const opts: { credentials?: object; keyFile?: string; apiKey?: string } = {};
-    if (this.config.apiKey) {
-      opts.apiKey = this.config.apiKey;
-    } else if (this.config.credentialsJson) {
+    const opts: { credentials?: object; keyFile?: string } = {};
+    if (this.config.credentialsJson) {
       opts.credentials = this.config.credentialsJson as object;
     } else if (this.config.credentialsPath) {
       opts.keyFile = this.config.credentialsPath;

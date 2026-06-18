@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Loader2, Check } from "lucide-react";
+import { Trophy, Loader2, Check, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";

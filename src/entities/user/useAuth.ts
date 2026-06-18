@@ -8,7 +8,6 @@ import { backendApi } from "@/shared/api/backendApi";
 import { User } from "@/entities/types";
 import { safeLocalStorage } from "@/shared/lib/safeStorage";
 import { MOCK_USERS } from "@/shared/api/apiClient";
-import { toast } from "sonner";
 
 // === BLOQUE: INTERFAZ DEL ESTADO ===
 interface AuthState {
@@ -137,10 +136,7 @@ const findMockUser = (email: string, users: User[]): User => {
 };
 
 // Helper: Ejecuta el login mock
-const executeMockSignIn = (
-  email: string | undefined,
-  store: { setDemoMode: (val: boolean) => void; login: (user: User) => void },
-) => {
+const executeMockSignIn = (email: string | undefined, store: any) => {
   store.setDemoMode(true);
   const users = getDemoUsers();
   let mockUser: User = email ? findMockUser(email, users) : users[0];
@@ -188,29 +184,38 @@ const fetchProfile = async (userId: string, token?: string): Promise<User> => {
 
 // Helper: Inserta o actualiza perfil en Supabase
 const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promise<User> => {
-  try {
-    // 1. Intentamos actualizar el perfil directamente (asumiendo que el trigger ya lo creó)
-    // Excluimos "trust_score" y "fitcoins_balance" ya que los triggers de seguridad de la BD
-    // bloquean cualquier intento del cliente de modificarlos (restricciones de saldo/trust).
-    const { data: updated, error: updateError } = await supabase
+  let profile: User | null = null;
+  for (let i = 0; i < 5; i++) {
+    const { data } = await supabase.from("profiles").select("*").eq("id", authUserId).single();
+    if (data) {
+      profile = data as User;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  if (profile) {
+    // Actualiza campos extra que el trigger automático podría no haber incluido
+    const { data: updated } = await supabase
       .from("profiles")
       .update({
         age: newUser.age,
         city: newUser.city,
         bio: newUser.bio,
-        level_label: newUser.level ?? "Intermedio",
+        trust_score: newUser.trust_score ?? 50,
+        fitcoins_balance: newUser.fitcoins_balance ?? 0,
+        level: newUser.level ?? "Intermedio",
         preferred_sports: newUser.preferred_sports ?? [],
         sport_preferences: newUser.sport_preferences,
       })
       .eq("id", authUserId)
       .select()
       .single();
-
-    if (updated && !updateError) {
-      return updated as User;
+    if (updated) {
+      profile = updated as User;
     }
-
-    // 2. Si no se pudo actualizar (ej. no existe la fila aún), la insertamos manualmente
+  } else {
+    // Si el trigger no se ha ejecutado, insertamos la fila manualmente
     const { data: inserted, error: insertError } = await supabase
       .from("profiles")
       .insert({
@@ -218,30 +223,22 @@ const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promi
         name: newUser.name,
         avatar_url: newUser.avatar_url,
         user_role: newUser.user_role || "PLAYER",
-        level_label: newUser.level ?? "Intermedio",
+        trust_score: newUser.trust_score ?? 50,
+        fitcoins_balance: newUser.fitcoins_balance ?? 0,
+        level: newUser.level ?? "Intermedio",
         preferred_sports: newUser.preferred_sports ?? [],
         sport_preferences: newUser.sport_preferences,
       })
       .select()
       .single();
 
-    if (inserted && !insertError) {
-      return inserted as User;
-    }
-
     if (insertError) {
+      if (import.meta.env.DEV) console.error("Error manually inserting profile:", insertError);
       throw insertError;
     }
-  } catch (err) {
-    console.error("Resilient fallback: failed to upsert profile in Supabase:", err);
+    profile = inserted as User;
   }
-
-  // Fallback definitivo para no interrumpir el flujo del usuario
-  return {
-    ...newUser,
-    id: authUserId,
-    onboarding_completed: false,
-  };
+  return profile;
 };
 
 // === BLOQUE: HOOK PRINCIPAL DE AUTENTICACIÓN ===
@@ -255,7 +252,12 @@ export function useAuth() {
   const signIn = async (email?: string, password?: string) => {
     // E2E / Mock login bypass
     const isMockAttempt = !!(email && !password);
-    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true" || isMockAttempt) {
+    
+    // Si se provee contraseña y no estamos forzados a usar mocks globales, intentamos login real
+    const forceMocks = import.meta.env.VITE_USE_MOCKS === "true";
+    const isRealAttempt = !!(email && password && !forceMocks);
+
+    if (!isRealAttempt && (store.isDemoMode || forceMocks || isMockAttempt)) {
       executeMockSignIn(email, store);
       return;
     }
@@ -277,6 +279,16 @@ export function useAuth() {
       }
 
       const profile = await fetchProfile(authData.user.id, authData.session?.access_token);
+
+      // Sincronizar last_login_at en la base de datos
+      try {
+        await supabase
+          .from("profiles")
+          .update({ last_login_at: new Date().toISOString() })
+          .eq("id", authData.user.id);
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn("Failed to update last_login_at:", e);
+      }
 
       store.setDemoMode(false);
       store.login(profile);
@@ -301,6 +313,7 @@ export function useAuth() {
       last_location_lat: -12.14,
       last_location_lng: -76.995,
       onboarding_completed: true,
+      tier: "FREE",
       user_sports: [
         { sport_id: "Pádel", level: 2 },
         { sport_id: "Tenis", level: 1 },
@@ -316,7 +329,8 @@ export function useAuth() {
     }
 
     // Modo simulado: registro contra localStorage
-    if (store.isDemoMode || import.meta.env.VITE_USE_MOCKS === "true") {
+    const forceMocks = import.meta.env.VITE_USE_MOCKS === "true";
+    if (forceMocks) {
       store.setDemoMode(true);
       const mockRegisteredUser: User = {
         ...newUser,
@@ -361,27 +375,18 @@ export function useAuth() {
 
       const profile = await upsertProfileInSupabase(newUser, authData.user.id);
 
+      // Establece la sesión en Supabase para que el usuario quede autenticado
       if (authData.session) {
+        await supabase.auth.setSession({
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
+        });
+        store.setDemoMode(false);
         store.register(profile);
       } else {
-        // Si no hay sesión (ej. confirmación de email requerida),
-        // activamos modo demo/mock temporalmente para que el usuario
-        // pueda continuar su onboarding y explorar sin quedarse trabado,
-        // pero le notificamos mediante un toast informativo.
-        console.warn("No active Supabase session returned. Activating demo fallback mode.");
-        store.setDemoMode(true);
-        const demoUser: User = {
-          ...profile,
-          onboarding_completed: false, // Forzar flujo de onboarding
-        };
-        store.register(demoUser);
-
-        setTimeout(() => {
-          toast.info(
-            "Registro completado. Por favor, confirma tu correo electrónico. Mientras tanto, puedes explorar la aplicación.",
-            { duration: 6000 },
-          );
-        }, 1000);
+        // El registro fue exitoso pero requiere confirmación de email (común en Supabase)
+        store.setDemoMode(false);
+        throw new Error("CONFIRMATION_PENDING");
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("Error durante registro:", err);

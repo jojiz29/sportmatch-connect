@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { useAuthStore } from "@/entities/user/useAuth";
@@ -155,7 +154,12 @@ const handleStripePaymentFlow = async (
 // Procesa pagos con tarjeta (Stripe), Yape/Plin y descuento con FitCoins.
 // No se persiste en localStorage (el estado es transaccional).
 // Helpers para procesar flujos de pago reduciendo la complejidad cognitiva
-const failPayment = (set: any, attempt: any, errorCode: string, error: string) => {
+const failPayment = (
+  set: any,
+  attempt: any,
+  errorCode: string,
+  error: string,
+) => {
   set({ isProcessing: false, status: "failed", error, errorCode });
   logPaymentAttempt({ ...attempt, status: "failed", errorCode });
   return { success: false, amountCharged: 0, fitcoinsUsed: 0, errorCode };
@@ -223,15 +227,11 @@ const processYapePlinPayment = (set: any, payload: any, attempt: any) => {
   return null;
 };
 
-const processFitcoinsPayment = async (
-  payload: any,
-  courtName: string,
-  isDemo: boolean,
-  set: any,
-  attempt: any,
-) => {
+const processFitcoinsPayment = async (payload: any, courtName: string, isDemo: boolean, set: any, attempt: any) => {
   const ledgerDesc = `Reserva: ${courtName}`;
-  const ledgerSuccess = await useWalletStore.getState().redeem(payload.fitcoinsToUse, ledgerDesc);
+  const ledgerSuccess = await useWalletStore
+    .getState()
+    .redeem(payload.fitcoinsToUse, ledgerDesc);
   if (!ledgerSuccess && !isDemo) {
     return failPayment(
       set,

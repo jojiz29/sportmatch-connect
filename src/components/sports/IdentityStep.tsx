@@ -426,7 +426,7 @@ export function IdentityStep({
             onChange={(e) => setWeeklyHours(parseInt(e.target.value))}
             className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted outline-none accent-primary"
             style={{
-              background: `linear-gradient(to right, var(--color-primary) ${((weeklyHours - 1) / 19) * 100}%, var(--color-muted) ${((weeklyHours - 1) / 19) * 100}%)`,
+              background: `linear-gradient(to right, hsl(var(--primary)) ${((weeklyHours - 1) / 19) * 100}%, hsl(var(--muted)) ${((weeklyHours - 1) / 19) * 100}%)`,
             }}
             id="hours-slider"
           />

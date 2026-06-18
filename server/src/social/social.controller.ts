@@ -28,7 +28,10 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { SupabaseAuthGuard } from "../auth/guards/supabase-auth.guard";
 import { SocialService } from "./social.service";
-import { PaginationQueryDto, SuggestionsQueryDto } from "./dto/social.dto";
+import {
+  PaginationQueryDto,
+  SuggestionsQueryDto,
+} from "./dto/social.dto";
 
 @ApiTags("Social")
 @Controller("social")
@@ -42,7 +45,10 @@ export class SocialController {
   @ApiOperation({ summary: "Lista paginada de seguidores (público)" })
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiQuery({ name: "limit", required: false, type: Number })
-  async getFollowers(@Param("userId") userId: string, @Query() query: PaginationQueryDto) {
+  async getFollowers(
+    @Param("userId") userId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
     return this.socialService.getFollowers(userId, query.page, query.limit);
   }
 
@@ -53,7 +59,10 @@ export class SocialController {
   @ApiOperation({ summary: "Lista paginada de seguidos (público)" })
   @ApiQuery({ name: "page", required: false, type: Number })
   @ApiQuery({ name: "limit", required: false, type: Number })
-  async getFollowing(@Param("userId") userId: string, @Query() query: PaginationQueryDto) {
+  async getFollowing(
+    @Param("userId") userId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
     return this.socialService.getFollowing(userId, query.page, query.limit);
   }
 
@@ -77,7 +86,10 @@ export class SocialController {
     @Param("userId") followingId: string,
     @Request() req: { user: { userId: string } },
   ) {
-    const result = await this.socialService.isFollowing(req.user.userId, followingId);
+    const result = await this.socialService.isFollowing(
+      req.user.userId,
+      followingId,
+    );
     return { following: result };
   }
 
@@ -89,7 +101,10 @@ export class SocialController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Seguir a un usuario" })
   @HttpCode(HttpStatus.CREATED)
-  async follow(@Param("userId") followingId: string, @Request() req: { user: { userId: string } }) {
+  async follow(
+    @Param("userId") followingId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
     return this.socialService.follow(req.user.userId, followingId);
   }
 
@@ -101,8 +116,12 @@ export class SocialController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Dejar de seguir a un usuario" })
   @HttpCode(HttpStatus.NO_CONTENT)
-  unfollow(@Param("userId") followingId: string, @Request() req: { user: { userId: string } }) {
-    return this.socialService.unfollow(req.user.userId, followingId);
+  async unfollow(
+    @Param("userId") followingId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    await this.socialService.unfollow(req.user.userId, followingId);
+    return;
   }
 
   // ==============================================================
@@ -118,6 +137,10 @@ export class SocialController {
     @Request() req: { user: { userId: string } },
     @Query() query: SuggestionsQueryDto,
   ) {
-    return this.socialService.getSuggestions(req.user.userId, query.limit || 10, query.sport);
+    return this.socialService.getSuggestions(
+      req.user.userId,
+      query.limit || 10,
+      query.sport,
+    );
   }
 }

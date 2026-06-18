@@ -55,9 +55,7 @@ async function clearKey(key: string): Promise<void> {
 async function clearAll(): Promise<void> {
   const allKeys = await keys();
   await Promise.all(
-    (allKeys as Array<string | number | Date | ArrayBuffer | ArrayBufferView>)
-      .filter((k): k is string => typeof k === "string" && (k as string).startsWith("sm:"))
-      .map((k) => del(k)),
+    allKeys.filter((k) => typeof k === "string" && k.startsWith("sm:")).map((k) => del(k)),
   );
 }
 

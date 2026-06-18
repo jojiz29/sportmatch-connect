@@ -12,7 +12,7 @@
 -- 1. CREAR TABLA post_likes
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.post_likes (
-  post_id uuid NOT NULL,
+  post_id character varying(255) NOT NULL,
   user_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT pk_post_likes PRIMARY KEY (post_id, user_id)
@@ -112,7 +112,7 @@ END $$;
 -- SECURITY DEFINER: usa auth.uid() internamente, funciona
 -- tanto desde frontend (PostgREST) como backend.
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.toggle_post_like(p_post_id uuid)
+CREATE OR REPLACE FUNCTION public.toggle_post_like(p_post_id character varying)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -164,7 +164,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.toggle_post_like(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.toggle_post_like(character varying) TO authenticated, service_role;
 
 -- NOTIFY PostgREST para recargar el esquema
 NOTIFY pgrst, 'reload schema';

@@ -33,7 +33,6 @@ import { useBusinessStore } from "@/features/business/model/useBusinessStore";
 import { useSocialStore } from "@/features/social/model/useSocialStore";
 import { useProfileStore } from "@/features/profile/useProfileStore";
 import { useAdsStore } from "@/features/business/model/useAdsStore";
-import { IntelligenceDashboard } from "@/features/b2b-ai";
 import { toast } from "sonner";
 import { supabase } from "@/shared/api/supabase";
 import { withTimeout } from "@/shared/api/timeoutHelper";
@@ -72,7 +71,7 @@ import {
 
 // === BLOQUE: Tipos de búsqueda para pestañas ===
 interface BusinessSearch {
-  tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings" | "intelligence";
+  tab?: "profile" | "ads" | "analytics" | "catalog" | "venues" | "settings";
 }
 
 async function uploadVenueImage(imageValue: string, businessId: string): Promise<string> {
@@ -82,11 +81,7 @@ async function uploadVenueImage(imageValue: string, businessId: string): Promise
   const imageBlob = await fetch(imageValue).then((response) => response.blob());
   const extension =
     imageBlob.type === "image/png" ? "png" : imageBlob.type === "image/webp" ? "webp" : "jpg";
-  const uuid =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-  const filePath = `${businessId}/${uuid}.${extension}`;
+  const filePath = `${businessId}/${crypto.randomUUID()}.${extension}`;
   const { error } = await withTimeout(
     supabase.storage.from("venue-images").upload(filePath, imageBlob, {
       contentType: imageBlob.type || "image/webp",
@@ -1936,17 +1931,6 @@ function BusinessPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* === BLOQUE: Pestaña Intelligence (B2B-AI) === */}
-      {/* Feature #9 Pricing, #21 Ads Optimizer, #23 Churn Predictor */}
-      {activeTab === "intelligence" && (
-        <IntelligenceDashboard
-          businessId={user.id}
-          businessName={user.company_name || user.name}
-          courts={venues.map((v) => ({ id: v.id, name: v.name }))}
-          ads={businessAds}
-        />
       )}
     </div>
   );

@@ -53,8 +53,13 @@ END $$;
 -- ============================================================
 -- 2. Normalizar status
 -- ============================================================
--- Convertir NULL status a 'OPEN'
-UPDATE public.matches SET status = 'OPEN' WHERE status IS NULL;
+-- Eliminar la constraint de status heredada si existe
+ALTER TABLE public.matches DROP CONSTRAINT IF EXISTS matches_status_check;
+
+-- Convertir NULL, capitalizados y heredados a la nueva convención en mayúsculas
+UPDATE public.matches SET status = 'OPEN' WHERE status IS NULL OR UPPER(status) = 'OPEN' OR UPPER(status) = 'FULL';
+UPDATE public.matches SET status = 'FINISHED' WHERE UPPER(status) = 'FINISHED';
+UPDATE public.matches SET status = 'CANCELLED' WHERE UPPER(status) = 'CANCELLED';
 
 -- Agregar CHECK constraint si no existe
 DO $$

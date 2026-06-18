@@ -5,29 +5,46 @@
 
 import { Test, TestingModule } from "@nestjs/testing";
 import { AiService } from "./ai.service";
-import { AiConfigService } from "./ai-config.service";
 import { VertexAiService } from "./vertex-ai.service";
 import { InternalServerErrorException, HttpException, HttpStatus } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 describe("AiService", () => {
   let service: AiService;
   let vertexAiServiceMock: any;
-  let aiConfigServiceMock: any;
+  let prismaMock: any;
 
   beforeEach(async () => {
     vertexAiServiceMock = {
       generateContent: jest.fn(),
     };
-    aiConfigServiceMock = {
+
+    prismaMock = {
       isHealthy: jest.fn().mockReturnValue(true),
-      getDegradedReason: jest.fn().mockReturnValue(""),
+      tryReconnect: jest.fn().mockResolvedValue(true),
+      profiles: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+      },
+      moderation_logs: {
+        create: jest.fn(),
+      },
+      user_blocks: {
+        upsert: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiService,
-        { provide: VertexAiService, useValue: vertexAiServiceMock },
-        { provide: AiConfigService, useValue: aiConfigServiceMock },
+        {
+          provide: VertexAiService,
+          useValue: vertexAiServiceMock,
+        },
+        {
+          provide: PrismaService,
+          useValue: prismaMock,
+        },
       ],
     }).compile();
 
@@ -210,6 +227,105 @@ describe("AiService", () => {
       await expect(service.chat("u1", "h")).rejects.toThrow(
         "No se pudo conectar con el servicio de IA. Verifica tu conexión e intenta de nuevo.",
       );
+    });
+  });
+
+  describe("moderateAdvanced", () => {
+    it("debe retornar allow para contenido limpio", async () => {
+      vertexAiServiceMock.generateContent.mockResolvedValue({
+        text: JSON.stringify({
+          safe: true,
+          flagged: false,
+          categorias: { toxicity: 0.1, harassment: 0.1, sexual: 0.0, violence: 0.0 },
+          confidencia: 0.9,
+        }),
+      });
+      prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 100 });
+
+      const res = await service.moderateAdvanced("user1", "Hola amigos, ¿cómo están?", "mensaje");
+
+      expect(res.ensemble_score).toBeLessThan(40);
+      expect(res.action_recommended).toBe("allow");
+      expect(prismaMock.moderation_logs.create).toHaveBeenCalled();
+      expect(prismaMock.user_blocks.upsert).not.toHaveBeenCalled();
+    });
+
+    it("debe retornar warn para spam leve", async () => {
+      vertexAiServiceMock.generateContent.mockResolvedValue({
+        text: JSON.stringify({
+          safe: true,
+          flagged: false,
+          categorias: { toxicity: 0.1, harassment: 0.1, sexual: 0.0, violence: 0.0 },
+          confidencia: 0.9,
+        }),
+      });
+      prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 100 });
+
+      const res = await service.moderateAdvanced("user1", "¡¡¡Mira esta oferta en www.oferta.com!!!", "mensaje");
+
+      expect(res.ensemble_score).toBe(55);
+      expect(res.action_recommended).toBe("warn");
+      expect(prismaMock.moderation_logs.create).toHaveBeenCalled();
+      expect(prismaMock.user_blocks.upsert).not.toHaveBeenCalled();
+    });
+
+    it("debe retornar block para insulto directo", async () => {
+      vertexAiServiceMock.generateContent.mockResolvedValue({
+        text: JSON.stringify({
+          safe: false,
+          flagged: true,
+          categorias: { toxicity: 0.85, harassment: 0.7, sexual: 0.0, violence: 0.0 },
+          confidencia: 0.95,
+        }),
+      });
+      prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 100 });
+      prismaMock.profiles.findFirst.mockResolvedValue({ id: "admin-user" });
+
+      const res = await service.moderateAdvanced("user1", "Eres un estúpido y una basura", "mensaje");
+
+      expect(res.ensemble_score).toBeGreaterThanOrEqual(75);
+      expect(res.action_recommended).toBe("block");
+      expect(prismaMock.moderation_logs.create).toHaveBeenCalled();
+      expect(prismaMock.user_blocks.upsert).toHaveBeenCalled();
+    });
+
+    it("debe retornar block para patrón de cancelaciones (comportamiento de usuario bajo)", async () => {
+      vertexAiServiceMock.generateContent.mockResolvedValue({
+        text: JSON.stringify({
+          safe: true,
+          flagged: false,
+          categorias: { toxicity: 0.1, harassment: 0.1, sexual: 0.0, violence: 0.0 },
+          confidencia: 0.9,
+        }),
+      });
+      prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 25 });
+      prismaMock.profiles.findFirst.mockResolvedValue({ id: "admin-user" });
+
+      const res = await service.moderateAdvanced("user1", "Texto normal y limpio", "mensaje");
+
+      expect(res.ensemble_score).toBe(75);
+      expect(res.action_recommended).toBe("block");
+      expect(prismaMock.moderation_logs.create).toHaveBeenCalled();
+      expect(prismaMock.user_blocks.upsert).toHaveBeenCalled();
+    });
+
+    it("debe aplicar block en el caso límite de ensemble_score exactamente en 75", async () => {
+      vertexAiServiceMock.generateContent.mockResolvedValue({
+        text: JSON.stringify({
+          safe: true,
+          flagged: false,
+          categorias: { toxicity: 0.1, harassment: 0.1, sexual: 0.0, violence: 0.0 },
+          confidencia: 0.9,
+        }),
+      });
+      prismaMock.profiles.findUnique.mockResolvedValue({ trust_score: 25 });
+      prismaMock.profiles.findFirst.mockResolvedValue({ id: "admin-user" });
+
+      const res = await service.moderateAdvanced("user1", "Texto normal", "mensaje");
+
+      expect(res.ensemble_score).toBe(75);
+      expect(res.action_recommended).toBe("block");
+      expect(prismaMock.user_blocks.upsert).toHaveBeenCalled();
     });
   });
 });

@@ -39,7 +39,6 @@ import {
   DialogTrigger,
 } from "@/shared/ui/dialog";
 import { SportSelectionGrid } from "@/components/sports/SportSelectionGrid";
-import { EloBadgeList } from "@/features/profile/components/EloBadge";
 
 export const Route = createFileRoute("/app/profile/")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -725,16 +724,6 @@ function Profile() {
             value={profile.following_count ?? 0}
           />
         </div>
-
-        {/* === Sección Elo Rating (V2.3) === */}
-        {profile.preferred_sports && profile.preferred_sports.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-warning" /> Elo Rating
-            </h3>
-            <EloBadgeList sports={profile.preferred_sports.slice(0, 6)} />
-          </div>
-        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mt-6">
@@ -805,7 +794,7 @@ function Profile() {
                   </DialogTrigger>
                   <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 text-foreground">
                     <DialogHeader>
-                      <DialogTitle className="text-lg font-black text-foreground">
+                      <DialogTitle className="text-lg font-black text-white">
                         Verificar mi identidad (DNI)
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">

@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
 // VITE_API_URL configured: https://sportmatch-connect.onrender.com
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { supabase, USE_SUPABASE } from "@/shared/api/supabase";
+import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useThemeStore } from "@/features/theme/store";
 import { I18nextProvider } from "react-i18next";
@@ -35,11 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    const isDemo = useAuthStore.getState().isDemoMode || !USE_SUPABASE;
+    const isDemo = useAuthStore.getState().isDemoMode;
     if (isDemo) {
-      if (!useAuthStore.getState().isDemoMode) {
-        useAuthStore.getState().setDemoMode(true);
-      }
       setIsLoading(false);
       return;
     }
@@ -49,17 +46,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initAuth() {
       try {
-        // SEC-05: Strict 1.5s timeout on Supabase authentication sync
-        // If it takes longer, we automatically fallback to local mock mode so the user is NEVER stuck (Task 2.4 / 2.5)
+        // SEC-05: Robust 5s timeout on Supabase authentication sync
+        // If it takes longer, we fallback to local mock mode ONLY if the user was NOT previously authenticated
         timeoutId = setTimeout(() => {
           if (mounted) {
-            console.warn("Auth synchronization timed out. Falling back to demo mode.");
-            useAuthStore.getState().setDemoMode(true);
-            const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
-            useAuthStore.getState().login(fallbackUser);
+            console.warn("Auth synchronization timed out.");
+            const wasAuthenticated = useAuthStore.getState().isAuthenticated;
+            if (!wasAuthenticated) {
+              console.warn("Falling back to demo mode because user is not authenticated.");
+              useAuthStore.getState().setDemoMode(true);
+              const fallbackUser = useAuthStore.getState().user || MOCK_USERS[0];
+              useAuthStore.getState().login(fallbackUser);
+            } else {
+              console.warn("Keeping current authenticated session.");
+            }
             setIsLoading(false);
           }
-        }, 1500);
+        }, 5000);
 
         const {
           data: { session },
@@ -141,9 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      // Si estamos en modo demo/mock, ignoramos los eventos de Supabase Auth
-      // para evitar que deslogueen o limpien la sesión local activa.
-      if (useAuthStore.getState().isDemoMode) return;
       // Skip INITIAL_SESSION — already handled synchronously by initAuth()
       if (!initializedRef.current) return;
 

@@ -18,7 +18,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
 
-const CONNECT_TIMEOUT_MS = 2000;
+const CONNECT_TIMEOUT_MS = 10000;
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

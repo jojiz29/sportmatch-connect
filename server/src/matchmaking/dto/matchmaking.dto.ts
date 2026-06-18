@@ -14,6 +14,7 @@ import {
   Min,
   Max,
 } from "class-validator";
+import { Transform } from "class-transformer";
 
 // ==============================================================
 // ENTER QUEUE
@@ -44,10 +45,7 @@ export class EnterQueueDto {
 // SWIPE
 // ==============================================================
 export class SwipeDto {
-  @ApiProperty({
-    description: "UUID del usuario objetivo",
-    example: "550e8400-e29b-41d4-a716-446655440000",
-  })
+  @ApiProperty({ description: "UUID del usuario objetivo", example: "550e8400-e29b-41d4-a716-446655440000" })
   @IsString()
   @IsNotEmpty()
   target_id!: string;

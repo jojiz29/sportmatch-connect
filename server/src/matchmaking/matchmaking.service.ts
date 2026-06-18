@@ -13,6 +13,7 @@ import {
   Injectable,
   Logger,
   BadRequestException,
+  NotFoundException,
   InternalServerErrorException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
@@ -37,7 +38,10 @@ export class MatchmakingService {
   // ==============================================================
   // ENTER QUEUE
   // ==============================================================
-  async enterQueue(userId: string, dto: EnterQueueDto): Promise<QueueEntryResponse> {
+  async enterQueue(
+    userId: string,
+    dto: EnterQueueDto,
+  ): Promise<QueueEntryResponse> {
     if (dto.lat < -90 || dto.lat > 90) {
       throw new BadRequestException("Latitud inválida (debe estar entre -90 y 90)");
     }
@@ -85,9 +89,11 @@ export class MatchmakingService {
     sport: string,
   ): Promise<{ user_id: string; sport: string; status: string }> {
     try {
-      const results = await this.prisma.$queryRawUnsafe<
-        Array<{ user_id: string; sport: string; status: string }>
-      >(`SELECT * FROM public.leave_queue($1::uuid, $2::text)`, userId, sport);
+      const results = await this.prisma.$queryRawUnsafe<Array<{ user_id: string; sport: string; status: string }>>(
+        `SELECT * FROM public.leave_queue($1::uuid, $2::text)`,
+        userId,
+        sport,
+      );
       return results[0] ?? { user_id: userId, sport, status: "NOT_IN_QUEUE" };
     } catch (err) {
       this.logger.error(`leaveQueue failed for ${userId}: ${(err as Error).message}`);
@@ -98,7 +104,10 @@ export class MatchmakingService {
   // ==============================================================
   // GET QUEUE STATUS
   // ==============================================================
-  async getQueueStatus(userId: string, sport: string): Promise<QueueEntryResponse | null> {
+  async getQueueStatus(
+    userId: string,
+    sport: string,
+  ): Promise<QueueEntryResponse | null> {
     const results = await this.prisma.$queryRawUnsafe<QueueEntryResponse[]>(
       `SELECT user_id, sport, status, radius_km, created_at AS entered_at, matched_with, matched_at
        FROM public.matchmaking_queue
@@ -113,7 +122,10 @@ export class MatchmakingService {
   // ==============================================================
   // FIND MATCH
   // ==============================================================
-  async findMatch(userId: string, sport: string): Promise<FindMatchResponse> {
+  async findMatch(
+    userId: string,
+    sport: string,
+  ): Promise<FindMatchResponse> {
     try {
       const results = await this.prisma.$queryRawUnsafe<FindMatchResponse[]>(
         `SELECT * FROM public.find_match($1::uuid, $2::text)`,
@@ -133,7 +145,10 @@ export class MatchmakingService {
   // Si mutual_like === true, crea automáticamente una conversación
   // directa llamando a la RPC create_direct_conversation.
   // ==============================================================
-  async recordSwipe(actorId: string, dto: SwipeDto): Promise<SwipeResponse> {
+  async recordSwipe(
+    actorId: string,
+    dto: SwipeDto,
+  ): Promise<SwipeResponse> {
     if (actorId === dto.target_id) {
       throw new BadRequestException("No puedes hacer swipe sobre ti mismo");
     }
@@ -170,7 +185,10 @@ export class MatchmakingService {
   // ==============================================================
   // REPORT MATCH RESULT
   // ==============================================================
-  async reportResult(userId: string, dto: ReportResultDto): Promise<MatchResultResponse> {
+  async reportResult(
+    userId: string,
+    dto: ReportResultDto,
+  ): Promise<MatchResultResponse> {
     try {
       const results = await this.prisma.$queryRawUnsafe<MatchResultResponse[]>(
         `SELECT * FROM public.record_match_result($1::uuid, $2::uuid, $3::integer, $4::integer)`,
@@ -226,11 +244,12 @@ export class MatchmakingService {
   // ==============================================================
   // GET LEADERBOARD
   // ==============================================================
-  async getLeaderboard(sport: string, limit = 50): Promise<LeaderboardEntry[]> {
+  async getLeaderboard(
+    sport: string,
+    limit = 50,
+  ): Promise<LeaderboardEntry[]> {
     try {
-      const results = await this.prisma.$queryRawUnsafe<
-        Array<LeaderboardEntry & { name: string | null; avatar_url: string | null }>
-      >(
+      const results = await this.prisma.$queryRawUnsafe<Array<LeaderboardEntry & { name: string | null; avatar_url: string | null }>>(
         `SELECT
            pr.user_id,
            pr.sport,

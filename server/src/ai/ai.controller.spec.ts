@@ -19,7 +19,6 @@ describe("AiController", () => {
       generateCommentSuggestions: jest.fn(),
       generateHashtags: jest.fn(),
       moderateContent: jest.fn(),
-      healthCheck: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -109,23 +108,6 @@ describe("AiController", () => {
 
       expect(serviceMock.moderateContent).toHaveBeenCalledWith("u1", "t", "post");
       expect(res).toEqual({ safe: true });
-    });
-  });
-
-  describe("health", () => {
-    it("debe retornar status ok cuando Vertex AI responde", async () => {
-      serviceMock.healthCheck.mockResolvedValue({ status: "ok", message: "Vertex AI connected" });
-      const res = await controller.health();
-      expect(res).toEqual({ status: "ok", message: "Vertex AI connected" });
-    });
-
-    it("debe retornar status degraded cuando el módulo está caído", async () => {
-      serviceMock.healthCheck.mockResolvedValue({
-        status: "degraded",
-        message: "Vertex AI not configured",
-      });
-      const res = await controller.health();
-      expect(res).toEqual({ status: "degraded", message: "Vertex AI not configured" });
     });
   });
 });

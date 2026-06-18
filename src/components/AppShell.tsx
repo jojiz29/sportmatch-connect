@@ -20,7 +20,6 @@ import {
   Package,
   MapPin,
   Globe,
-  ScanEye,
   Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -80,8 +79,6 @@ function LanguageSelector() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const { theme } = useThemeStore();
-  const isLightTheme = theme === "light";
   const routerState = useRouterState();
   const path = routerState.location.pathname;
   const isRegister = path === "/app/register";
@@ -169,13 +166,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             },
             {
               to: "/app/business",
-              search: { tab: "intelligence" },
-              labelKey: "nav.business_intelligence",
-              label: "Inteligencia IA",
-              icon: Sparkles,
-            },
-            {
-              to: "/app/business",
               search: { tab: "settings" },
               labelKey: "nav.business_settings",
               label: "Configuración",
@@ -191,6 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
             { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
             { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa Comercial", icon: Map },
+            { to: "/app/coach", labelKey: "nav.coach", label: "Coach IA (Premium)", icon: Sparkles },
           ],
         },
         {
@@ -200,36 +191,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
             { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
             { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
-          ],
-        },
-        {
-          titleKey: "nav.groups.vision",
-          title: "Visión por Computadora",
-          items: [
-            {
-              to: "/app/ai-vision",
-              labelKey: "nav.vision_overview",
-              label: "Visión General",
-              icon: ScanEye,
-            },
-            {
-              to: "/app/ai-vision/form-analyzer",
-              labelKey: "nav.vision_form",
-              label: "Form Analyzer",
-              icon: ScanEye,
-            },
-            {
-              to: "/app/ai-vision/fake-profile",
-              labelKey: "nav.vision_fake",
-              label: "Fake Profile Detector",
-              icon: ScanEye,
-            },
-            {
-              to: "/app/ai-vision/dni-verify",
-              labelKey: "nav.vision_dni",
-              label: "Verificación DNI",
-              icon: ScanEye,
-            },
           ],
         },
       ];
@@ -278,12 +239,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa", icon: Map },
         { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
         { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
-        {
-          to: "/app/ai-vision",
-          labelKey: "nav.vision_overview",
-          label: "Visión IA",
-          icon: ScanEye,
-        },
       ];
 
   // Filter accounts list dynamically based on permissions
@@ -313,13 +268,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background bg-[url('/images/sports/fondo-sportmatch-app-final.webp')] bg-cover bg-center bg-fixed relative overflow-hidden">
-      <div
-        className={`absolute inset-0 transition-all duration-500 -z-10 ${
-          isLightTheme
-            ? "bg-background/90 backdrop-blur-3xl"
-            : "bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md"
-        }`}
-      />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md -z-10" />
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
