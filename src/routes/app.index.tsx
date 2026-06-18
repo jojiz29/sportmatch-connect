@@ -440,9 +440,22 @@ async function generateWeeklyChallengeWithVertex(
 ): Promise<WeeklyChallengeDraft> {
   const aiPlan = await withTimeout(
     getAiRecommendations({ type: "challenges", limit: 4, language: "es" }),
-    18_000,
+    35000,
   );
   return buildWeeklyChallengeFromAi(aiPlan, challengeIndex, fallbackPlan);
+}
+
+async function generateWeeklyChallengePairWithVertex(
+  fallbackPlan: AiRecommendationResponse | null,
+): Promise<WeeklyChallengeDraft[]> {
+  const aiPlan = await withTimeout(
+    getAiRecommendations({ type: "challenges", limit: 4, language: "es" }),
+    35000,
+  );
+  return [
+    buildWeeklyChallengeFromAi(aiPlan, 0, fallbackPlan),
+    buildWeeklyChallengeFromAi(aiPlan, 1, fallbackPlan),
+  ];
 }
 
 function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
@@ -781,15 +794,26 @@ function Dashboard() {
     try {
       // Boton de prueba: fuerza nuevos retos con Vertex sin esperar al lunes.
       // Se persisten como la version actual de la semana para validar el flujo completo.
-      const generatedChallenges = await Promise.all(
-        indexes.map(async (challengeIndex) => ({
-          challengeIndex,
-          challenge: await generateWeeklyChallengeWithVertex(challengeIndex, dailyPlan),
-        })),
-      );
+      let usedAi = true;
+      let generatedChallenges: WeeklyChallengeDraft[];
+      try {
+        generatedChallenges = await generateWeeklyChallengePairWithVertex(dailyPlan);
+      } catch (error) {
+        usedAi = false;
+        if (import.meta.env.DEV) console.warn("Vertex no respondio para regenerar retos:", error);
+        generatedChallenges = indexes.map((challengeIndex) =>
+          buildSingleWeeklyChallengeRefresh(dailyPlan, challengeIndex, challengeIndex + Date.now()),
+        );
+      }
+      if (generatedChallenges.some(isLegacyWeeklyChallengeDraft)) {
+        usedAi = false;
+        generatedChallenges = indexes.map((challengeIndex) =>
+          buildSingleWeeklyChallengeRefresh(dailyPlan, challengeIndex, challengeIndex + Date.now()),
+        );
+      }
       const nextChallenges: WeeklyChallengeDraft[] = [];
-      for (const { challengeIndex, challenge } of generatedChallenges) {
-        nextChallenges[challengeIndex] = challenge;
+      for (const challengeIndex of indexes) {
+        nextChallenges[challengeIndex] = generatedChallenges[challengeIndex];
       }
       const nextCounts = [0, 0];
       setOverrideChallenges(nextChallenges);
@@ -798,17 +822,17 @@ function Dashboard() {
       setWeeklyRefreshCounts(user.id, nextCounts);
 
       await Promise.all(
-        generatedChallenges.map(({ challengeIndex, challenge }) =>
+        indexes.map((challengeIndex) =>
           saveEngagementChallenge({
-            title: challenge.title,
-            description: challenge.description,
-            rewardHint: challenge.reward,
+            title: generatedChallenges[challengeIndex].title,
+            description: generatedChallenges[challengeIndex].description,
+            rewardHint: generatedChallenges[challengeIndex].reward,
             metadata: {
               source: "home_weekly_challenge",
               weekKey: getWeeklyChallengeKey(user.id),
               challengeIndex,
               refreshCount: 0,
-              generationMode: "vertex_test_regeneration",
+              generationMode: usedAi ? "vertex_test_regeneration" : "fallback_test_regeneration",
             },
           }).catch((error) => {
             if (import.meta.env.DEV) console.warn("No se pudo persistir reto de prueba:", error);
@@ -816,9 +840,15 @@ function Dashboard() {
         ),
       );
 
-      toast.success("Retos regenerados con IA", {
-        description: "Se crearon 2 retos nuevos usando tu perfil deportivo.",
-      });
+      if (usedAi) {
+        toast.success("Retos regenerados con IA", {
+          description: "Se crearon 2 retos nuevos usando tu perfil deportivo.",
+        });
+      } else {
+        toast.warning("Vertex no respondio a tiempo", {
+          description: "Se generaron retos deportivos de respaldo para no bloquear la prueba.",
+        });
+      }
     } catch (error) {
       if (import.meta.env.DEV) console.warn("No se pudieron regenerar retos:", error);
       toast.error("No se pudieron regenerar los retos con IA.");
