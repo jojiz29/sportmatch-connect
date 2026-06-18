@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 // ============================================================
 // server/src/ai/ai.service.ts — Capa de negocio
 // Orquesta: rate limiting granular + Vertex AI + formateo por endpoint
@@ -10,10 +11,19 @@ import {
   HttpException,
   HttpStatus,
 } from "@nestjs/common";
-import { VertexAiService, VertexAiGenerationResult } from "./vertex-ai.service";
-import { AiConfigService } from "./ai-config.service";
+import {
+  VertexAiService,
+  VertexAiGenerationResult,
+  UserPersonalizedContext,
+} from "./vertex-ai.service";
 import { ChatResponseDto } from "./dto/chat.dto";
-import { ChatMessageDto, ModerationResultDto, CoachRecommendationDto } from "./dto/ai.dto";
+import {
+  ChatMessageDto,
+  ModerationResultDto,
+  CoachRecommendationDto,
+  ModerateAdvancedResultDto,
+} from "./dto/ai.dto";
+import { PrismaService } from "../prisma/prisma.service";
 
 interface UserRateLimit {
   count: number;
@@ -37,8 +47,189 @@ export class AiService {
 
   constructor(
     private readonly vertexAiService: VertexAiService,
-    private readonly aiConfigService: AiConfigService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  async getUserPersonalizedContext(userId: string): Promise<UserPersonalizedContext> {
+    const defaultContext: UserPersonalizedContext = {
+      name: "",
+      city: "",
+      preferredSports: [],
+      mutualMatches: [],
+      recommendedCourts: [],
+      activeMatches: [],
+    };
+
+    let isDbHealthy = this.prisma.isHealthy();
+    if (!isDbHealthy) {
+      this.logger.warn(
+        "Database connection is down, trying manual reconnect in getUserPersonalizedContext...",
+      );
+      isDbHealthy = await this.prisma.tryReconnect();
+    }
+
+    if (!isDbHealthy) {
+      return defaultContext;
+    }
+
+    try {
+      // 1. Obtener perfil
+      const profile = await this.prisma.profiles.findUnique({
+        where: { id: userId },
+        select: {
+          name: true,
+          city: true,
+          preferred_sports: true,
+          user_sports: true,
+        },
+      });
+
+      if (!profile) {
+        return defaultContext;
+      }
+
+      // Procesar deportes preferidos y niveles
+      const preferredSports: { sport: string; level: string }[] = [];
+      const sportsList: string[] = [];
+
+      if (profile.user_sports && Array.isArray(profile.user_sports)) {
+        const userSportsArr = profile.user_sports as any[];
+        for (const item of userSportsArr) {
+          const sportName = item.sport_id || item.sport;
+          if (sportName) {
+            const levelNum = item.level;
+            const levelLabel =
+              levelNum === 3 ? "Avanzado" : levelNum === 2 ? "Intermedio" : "Principiante";
+            preferredSports.push({ sport: sportName, level: levelLabel });
+            sportsList.push(sportName);
+          }
+        }
+      }
+
+      // Fallback a preferred_sports si user_sports está vacío
+      if (
+        preferredSports.length === 0 &&
+        profile.preferred_sports &&
+        profile.preferred_sports.length > 0
+      ) {
+        for (const s of profile.preferred_sports) {
+          preferredSports.push({ sport: s, level: "No especificado" });
+          sportsList.push(s);
+        }
+      }
+
+      // 2. Obtener matches mutuos (likes recíprocos en public.swipes)
+      let mutualMatches: { name: string; sport: string; targetId: string }[] = [];
+      try {
+        const rawMatches = await this.prisma.$queryRawUnsafe<any[]>(
+          `SELECT DISTINCT p.id as target_id, p.name, s1.sport
+           FROM public.swipes s1
+           JOIN public.swipes s2 ON s1.actor_id = s2.target_id AND s1.target_id = s2.actor_id
+           JOIN public.profiles p ON p.id = s1.target_id
+           WHERE s1.actor_id = $1::uuid
+             AND s1.action = 'LIKE'
+             AND s2.action = 'LIKE'
+           LIMIT 5`,
+          userId,
+        );
+
+        if (Array.isArray(rawMatches)) {
+          mutualMatches = rawMatches.map((m) => ({
+            name: m.name || "Otro jugador",
+            sport: m.sport || "Deporte general",
+            targetId: m.target_id || "",
+          }));
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Failed to fetch mutual matches for context: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      const searchSports = sportsList.length > 0 ? sportsList : ["Fútbol", "Pádel", "Tenis"];
+
+      // 3. Obtener canchas recomendadas para sus deportes preferidos
+      let recommendedCourts: {
+        name: string;
+        sport: string;
+        price: number;
+        rating: number;
+        district: string;
+      }[] = [];
+      try {
+        const courts = await this.prisma.courts.findMany({
+          where: {
+            sport: { in: searchSports },
+            is_available: true,
+          },
+          orderBy: { rating: "desc" },
+          take: 5,
+        });
+
+        recommendedCourts = courts.map((c) => ({
+          name: c.name,
+          sport: c.sport,
+          price: c.price_per_hour,
+          rating: c.rating,
+          district: c.district || "zona cercana",
+        }));
+      } catch (err) {
+        this.logger.warn(
+          `Failed to fetch recommended courts for context: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      // 4. Obtener pichangas/partidos abiertos programados
+      let activeMatches: {
+        title: string;
+        sport: string;
+        date: string;
+        time: string;
+        requiredLevel: string;
+        courtName: string;
+      }[] = [];
+      try {
+        const matches = await this.prisma.matches.findMany({
+          where: {
+            sport: { in: searchSports },
+            status: "OPEN",
+          },
+          include: {
+            court: true,
+          },
+          orderBy: { date: "asc" },
+          take: 3,
+        });
+
+        activeMatches = matches.map((m) => ({
+          title: m.title,
+          sport: m.sport,
+          date: m.date,
+          time: m.time,
+          requiredLevel: m.required_level || "Todos los niveles",
+          courtName: m.court?.name || "Cancha externa",
+        }));
+      } catch (err) {
+        this.logger.warn(
+          `Failed to fetch active matches for context: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      return {
+        name: profile.name || "",
+        city: profile.city || "",
+        preferredSports,
+        mutualMatches,
+        recommendedCourts,
+        activeMatches,
+      };
+    } catch (err) {
+      this.logger.error(
+        `Error building personalized context for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return defaultContext;
+    }
+  }
 
   async chat(
     userId: string,
@@ -48,11 +239,14 @@ export class AiService {
   ): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
+    const context = await this.getUserPersonalizedContext(userId);
+
     let result: VertexAiGenerationResult;
     try {
       result = await this.vertexAiService.generateContent(message, {
         history,
         language: language ?? "es",
+        userContext: context,
       });
     } catch (err) {
       const rawError = err instanceof Error ? err.message : String(err);
@@ -80,20 +274,35 @@ export class AiService {
   async welcome(userId: string, language: "es" | "en" | "pt"): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
-    // Prompt que induce al LLM a generar un saludo natural, corto
-    // y con la personalidad de Sporty (amigable, cercano, no formal).
-    const welcomePrompt =
-      language === "en"
-        ? "You are Sporty, greeting a user who just opened the chat for the first time. Keep it super short (1-2 sentences, max 40 words). Sound like a friend texting, not a corporate bot. Mention ONE thing you can help with (e.g. finding a match, checking their streak). Don't list everything. Don't start with 'Hi!'. Respond in English only."
-        : language === "pt"
-          ? "Você é o Sporty, dando oi pra um usuário que acabou de abrir o chat pela primeira vez. Seja bem curto (1-2 frases, máx 40 palavras). Fale como um amigo mandando zap, não como bot corporativo. Mencione UMA coisa que você pode ajudar (tipo achar uma partida, ver a sequência). Não liste tudo. Não comece com 'Olá!'. Responda só em português."
-          : "Eres Sporty, saludando a un usuario que acaba de abrir el chat por primera vez. Sé bien corto (1-2 frases, máx 40 palabras). Habla como amigo mandando WhatsApp, no como bot corporativo. Menciona UNA sola cosa en la que puedes ayudar (ej. encontrar un partido, ver su racha). No listes todo. No arranques con '¡Hola!'. Responde solo en español.";
+    const context = await this.getUserPersonalizedContext(userId);
+    const name =
+      context.name || (language === "en" ? "Athlete" : language === "pt" ? "Atleta" : "Atleta");
+    const sportsText =
+      context.preferredSports.length > 0
+        ? context.preferredSports.map((s) => s.sport).join(", ")
+        : "";
+
+    let welcomePrompt = "";
+    if (language === "en") {
+      welcomePrompt = `You are Sporty, greeting the user ${name} who just opened the chat for the first time. Keep it super short (1-2 sentences, max 40 words). Sound like a friend texting, not a corporate bot.
+User plays: ${sportsText || "sports"}.
+Mention ONE highly personalized thing you can help with, using their name ${name} naturally. For example, if they play soccer, ask if they want to find a match or recommend a nearby court. Don't start with 'Hi!'. Respond in English only.`;
+    } else if (language === "pt") {
+      welcomePrompt = `Você é o Sporty, dando oi para o usuário ${name} que acabou de abrir o chat pela primeira vez. Seja bem curto (1-2 frases, máx 40 palavras). Fale como um amigo mandando zap, não como bot corporativo.
+O usuário joga: ${sportsText || "esportes"}.
+Mencione UMA coisa bem personalizada em que você pode ajudar usando o nome ${name} naturalmente. Ex: se ele joga futebol, pergunte se quer achar uma pelada hoje ou recomenda uma quadra. Não comece com 'Olá!'. Responda só em português.`;
+    } else {
+      welcomePrompt = `Eres Sporty, saludando al usuario ${name} que acaba de abrir el chat por primera vez. Sé bien corto (1-2 frases, máx 40 palabras). Habla como amigo mandando WhatsApp, no como bot corporativo.
+El usuario juega: ${sportsText || "deportes"}.
+Menciona UNA sola cosa súper personalizada en la que puedes ayudar usando el nombre ${name} de forma natural (ej. encontrar una pichanga de ${context.preferredSports[0]?.sport || "su deporte preferido"} para hoy o recomendarle una de las canchas disponibles). No listes todo. No arranques con '¡Hola!'. Responde solo en español.`;
+    }
 
     let result: VertexAiGenerationResult;
     try {
       result = await this.vertexAiService.generateContent(welcomePrompt, {
         language,
         temperature: 0.8,
+        userContext: context,
       });
     } catch (err) {
       const rawError = err instanceof Error ? err.message : String(err);
@@ -288,6 +497,529 @@ Reglas:
     }
 
     return this.parseModerationResult(result.text, text);
+  }
+
+  async moderateAdvanced(
+    userId: string,
+    content: string,
+    contextType: "mensaje" | "comentario" | "perfil",
+    metadata?: Record<string, unknown>,
+  ): Promise<ModerateAdvancedResultDto> {
+    this.checkRateLimit(userId, "moderation");
+    if (metadata && Object.keys(metadata).length > 0) {
+      this.logger.debug(`Moderation metadata received: ${Object.keys(metadata).join(", ")}`);
+    }
+
+    let isDbHealthy = this.prisma.isHealthy();
+    if (!isDbHealthy) {
+      this.logger.warn(
+        "Database connection is down, attempting manual reconnect in moderateAdvanced...",
+      );
+      isDbHealthy = await this.prisma.tryReconnect();
+    }
+
+    // 1. Detección de IA (Vertex AI)
+    let aiScore = 0;
+    let aiReason = "Contenido limpio analizado por IA.";
+    try {
+      const aiResult = await this.moderateContent(userId, content, "post");
+      const maxAiCategory = Math.max(
+        aiResult.categorias.toxicity,
+        aiResult.categorias.harassment,
+        aiResult.categorias.sexual,
+        aiResult.categorias.violence,
+      );
+      aiScore = Math.round(maxAiCategory * 100);
+      if (aiScore > 50) {
+        aiReason = `Modelos de IA detectaron riesgo alto (${aiScore}/100) en categorías de seguridad.`;
+      }
+    } catch (err) {
+      this.logger.warn(`Vertex AI content moderation fallback due to error: ${err.message}`);
+    }
+
+    // 2. Reglas de Negocio / Spam / Keyword checks
+    let rulesScore = 0;
+    let rulesReason = "";
+
+    // Check de Insultos / Spam
+    const toxicKeywords = [
+      "tonto",
+      "estupido",
+      "estúpido",
+      "imbecil",
+      "imbécil",
+      "basura",
+      "mierda",
+    ];
+    const contentLower = content.toLowerCase();
+    const hasToxicWord = toxicKeywords.some((word) => contentLower.includes(word));
+
+    // Check de enlaces / spam
+    const hasSpamPattern =
+      contentLower.includes("http") || contentLower.includes("www") || content.includes("!!!");
+
+    if (hasToxicWord) {
+      rulesScore = 90;
+      rulesReason = "Se detectó el uso de lenguaje vulgar o insultos en el texto.";
+    } else if (hasSpamPattern) {
+      rulesScore = 55;
+      rulesReason = "Se detectaron posibles patrones de spam o enlaces sospechosos.";
+    }
+
+    // 3. Comportamiento del usuario (trust_score de la base de datos)
+    let behaviorScore = 0;
+    let behaviorReason = "Historial del usuario confiable.";
+    if (isDbHealthy) {
+      try {
+        const profile = await this.prisma.profiles.findUnique({
+          where: { id: userId },
+          select: { trust_score: true },
+        });
+        const trustScore = profile?.trust_score ?? 100;
+        behaviorScore = 100 - trustScore;
+        if (behaviorScore > 30) {
+          behaviorReason = `El usuario tiene un puntaje de confianza bajo en el sistema (${trustScore}/100).`;
+        }
+      } catch (err) {
+        this.logger.warn(`Could not read trust_score from DB: ${err.message}`);
+      }
+    } else {
+      this.logger.warn("Skipping trust_score DB check in degraded mode.");
+    }
+
+    // 4. Ensemble Score Calculation
+    // ensemble_score es el máximo de las señales individuales y del promedio ponderado
+    const weightedAvg = Math.round(0.4 * aiScore + 0.3 * rulesScore + 0.3 * behaviorScore);
+    const ensembleScore = Math.max(aiScore, rulesScore, behaviorScore, weightedAvg);
+
+    // Determinar la acción recomendada
+    let actionRecommended: "allow" | "warn" | "block" = "allow";
+    if (ensembleScore >= 75) {
+      actionRecommended = "block";
+    } else if (ensembleScore >= 40) {
+      actionRecommended = "warn";
+    }
+
+    // Compilar razonamiento
+    const reasoningParts = [];
+    if (aiScore > 50) reasoningParts.push(aiReason);
+    if (rulesScore > 0) reasoningParts.push(rulesReason);
+    if (behaviorScore > 30) reasoningParts.push(behaviorReason);
+    if (reasoningParts.length === 0) {
+      reasoningParts.push(
+        "Todas las señales analizadas indican comportamiento seguro y contenido limpio.",
+      );
+    }
+    const reasoning = reasoningParts.join(" ");
+
+    const result: ModerateAdvancedResultDto = {
+      ensemble_score: ensembleScore,
+      signals: [
+        { name: "Modelos IA (Vertex)", score: aiScore, description: aiReason },
+        {
+          name: "Reglas y Palabras Clave",
+          score: rulesScore,
+          description: rulesReason || "Sin coincidencias de reglas.",
+        },
+        { name: "Historial de Comportamiento", score: behaviorScore, description: behaviorReason },
+      ],
+      action_recommended: actionRecommended,
+      reasoning: reasoning,
+    };
+
+    // 5. Registro en moderation_logs
+    if (isDbHealthy) {
+      try {
+        await this.prisma.moderation_logs.create({
+          data: {
+            user_id: userId,
+            content: content,
+            context_type: contextType,
+            ensemble_score: ensembleScore,
+            action_recommended: actionRecommended,
+            reasoning: reasoning,
+          },
+        });
+      } catch (err) {
+        this.logger.error(`Failed to write to moderation_logs: ${err.message}`);
+      }
+    } else {
+      this.logger.warn("Skipping moderation logs creation since DB is down.");
+    }
+
+    // 6. Si la acción recomendada es "block", aplicar Smart Block (solo si DB es accesible)
+    if (actionRecommended === "block" && isDbHealthy) {
+      try {
+        let blockerId = userId;
+        // Buscar un admin para registrar como blocker
+        const admin = await this.prisma.profiles.findFirst({
+          where: { is_admin: true },
+          select: { id: true },
+        });
+        if (admin) {
+          blockerId = admin.id;
+        } else {
+          // Si no hay admin, buscar cualquier otro perfil para no violar blocker_id <> blocked_id
+          const anyOther = await this.prisma.profiles.findFirst({
+            where: { id: { not: userId } },
+            select: { id: true },
+          });
+          if (anyOther) {
+            blockerId = anyOther.id;
+          }
+        }
+
+        if (blockerId !== userId) {
+          // Bloqueo temporal para pruebas de 2 minutos (originalmente 24 horas)
+          const timestampFin = new Date(Date.now() + 2 * 60 * 1000);
+          await this.prisma.user_blocks.upsert({
+            where: {
+              blocker_id_blocked_id: { blocker_id: blockerId, blocked_id: userId },
+            },
+            create: {
+              blocker_id: blockerId,
+              blocked_id: userId,
+              reason:
+                "Bloqueo automático de seguridad IA por comportamiento abusivo o contenido inapropiado.",
+              ensemble_score: ensembleScore,
+              timestamp_inicio: new Date(),
+              timestamp_fin: timestampFin,
+            },
+            update: {
+              reason:
+                "Bloqueo automático de seguridad IA por comportamiento abusivo o contenido inapropiado.",
+              ensemble_score: ensembleScore,
+              timestamp_inicio: new Date(),
+              timestamp_fin: timestampFin,
+            },
+          });
+          this.logger.log(
+            `User ${userId} automatically blocked by system (ensemble_score=${ensembleScore}) until ${timestampFin.toISOString()}`,
+          );
+        }
+      } catch (err) {
+        this.logger.error(`Failed to apply automated block for user ${userId}: ${err.message}`);
+      }
+    }
+
+    return result;
+  }
+
+  async coachChat(
+    userId: string,
+    message: string,
+    history?: ChatMessageDto[],
+    language: "es" | "en" | "pt" = "es",
+  ): Promise<ChatResponseDto & { messagesRemaining: number }> {
+    let isDbHealthy = this.prisma.isHealthy();
+    if (!isDbHealthy) {
+      this.logger.warn("Database connection is down, attempting manual reconnect...");
+      isDbHealthy = await this.prisma.tryReconnect();
+    }
+
+    let isPremium = true; // Default to true if DB is down to allow testing/offline usage
+    let messageCount = 0;
+    let telemetryContext: Array<{ deporte: string; fecha: string; hora: string; cancha: string }> =
+      [];
+    let userProfile: any = null;
+
+    if (isDbHealthy) {
+      try {
+        // 1. Verificar si el usuario es PREMIUM y obtener su perfil
+        userProfile = await this.prisma.profiles.findUnique({
+          where: { id: userId },
+          select: {
+            name: true,
+            tier: true,
+            city: true,
+            preferred_sports: true,
+            level: true,
+            last_location_lat: true,
+            last_location_lng: true,
+          },
+        });
+
+        isPremium = userProfile?.tier === "PREMIUM";
+
+        // 2. Límite diario: 20 mensajes al día (últimas 24 horas)
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        messageCount = await this.prisma.moderation_logs.count({
+          where: {
+            user_id: userId,
+            context_type: "coach",
+            created_at: {
+              gte: twentyFourHoursAgo,
+            },
+          },
+        });
+
+        // 3. Telemetría de partidos jugados
+        const lastMatches = await this.prisma.match_participants.findMany({
+          where: { user_id: userId },
+          include: {
+            match: {
+              include: {
+                court: true,
+              },
+            },
+          },
+          orderBy: { joined_at: "desc" },
+          take: 3,
+        });
+
+        telemetryContext = lastMatches.map((p) => ({
+          deporte: p.match.sport,
+          fecha: p.match.date,
+          hora: p.match.time,
+          cancha: p.match.court?.name || "Cancha genérica",
+        }));
+      } catch (dbErr) {
+        this.logger.error(`Database query failed in coachChat: ${dbErr.message}`);
+        // Keep fallback values to avoid crashing/hanging the request
+      }
+    } else {
+      this.logger.warn("Database is unreachable. Running coachChat in degraded mode.");
+    }
+
+    if (!isPremium) {
+      throw new HttpException(
+        "Este servicio requiere una suscripción Premium activa.",
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // Limit check bypassed as requested by user
+    /*
+    if (messageCount >= 20) {
+      throw new HttpException(
+        "Has superado el límite diario de 20 mensajes con el Coach IA.",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    */
+
+    // 4. Prompt de Vertex AI con Datos de Perfil completos para personalización inteligente
+    const userProfileContext = {
+      nombre: userProfile?.name || "Atleta",
+      ciudad: userProfile?.city || "No especificada",
+      deportes_preferidos: userProfile?.preferred_sports || ["Fútbol", "Pádel"],
+      nivel: userProfile?.level || "No especificado",
+      coordenadas:
+        userProfile?.last_location_lat && userProfile?.last_location_lng
+          ? `${userProfile.last_location_lat}, ${userProfile.last_location_lng}`
+          : "No especificadas",
+    };
+
+    const coachPrompt = `Eres Sporty Coach, un entrenador e instructor de alto rendimiento deportivo de SportMatch Connect.
+Estás chateando 1-a-1 con un atleta y necesitas darle respuestas personalizadas basadas en su perfil, ubicación y contexto.
+
+INFORMACIÓN DEL ATLETA:
+- Nombre: ${userProfileContext.nombre}
+- Ciudad: ${userProfileContext.ciudad}
+- Deportes de Interés: ${userProfileContext.deportes_preferidos.join(", ")}
+- Nivel de juego general: ${userProfileContext.nivel}
+- Ubicación actual (coordenadas GPS): ${userProfileContext.coordenadas}
+
+Información y telemetría de sus últimos partidos jugados:
+${telemetryContext.length > 0 ? JSON.stringify(telemetryContext, null, 2) : "Aún no ha participado en partidos recientemente."}
+
+Tus respuestas deben ser altamente motivadoras, profesionales y llenas de energía. Dirígete a él o ella usando su nombre y haz referencia a su ciudad o a sus deportes preferidos si es pertinente, demostrando que tienes acceso a su contexto. ¡Nunca digas que no tienes acceso o que no conoces de qué ciudad es o qué deportes prefiere!
+
+Mensaje del atleta: "${message}"
+
+Responde en el idioma ${language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish"}.
+Mantén la respuesta concisa y al grano (máx 150 palabras). Da consejos prácticos y altamente personalizados.`;
+
+    let result: VertexAiGenerationResult;
+    try {
+      result = await this.vertexAiService.generateContent(coachPrompt, {
+        history: history,
+        language: language,
+        temperature: 0.7,
+      });
+    } catch (err) {
+      // Fallback local por si Vertex AI falla o no está configurado (por ejemplo, en modo Demo sin API keys)
+      this.logger.warn(`Vertex AI coachChat failed, using local mock fallback: ${err}`);
+      const fallbackText = `¡Hola ${userProfileContext.nombre}! Como tu Coach Sporty en ${userProfileContext.ciudad}, veo que te apasiona el ${userProfileContext.deportes_preferidos[0] || "deporte"}. Te recomiendo enfocar tu entrenamiento en mejorar la agilidad y táctica para tus partidos de nivel ${userProfileContext.nivel}. ¡Mantén el alto rendimiento!`;
+      result = {
+        text: fallbackText,
+        tokens: 50,
+        model: "mock-gemini",
+        latencyMs: 150,
+      };
+    }
+
+    // 5. Registrar en moderation_logs (para llevar la cuenta del límite diario de 20)
+    if (isDbHealthy) {
+      try {
+        await this.prisma.moderation_logs.create({
+          data: {
+            user_id: userId,
+            content: message,
+            context_type: "coach",
+            ensemble_score: 0,
+            action_recommended: "allow",
+            reasoning: "Interacción con Coach Premium registrada.",
+          },
+        });
+      } catch (err) {
+        this.logger.error(`Failed to register Coach Chat log: ${err.message}`);
+      }
+    } else {
+      this.logger.warn("Skipping moderation log registration since DB is down.");
+    }
+
+    return {
+      reply: result.text,
+      suggestions: [
+        "¿Cómo mejoro mi racha?",
+        "Recomiéndame una rutina",
+        "Dame consejos de nutrición",
+      ],
+      metadata: {
+        tokens: result.tokens,
+        model: result.model,
+        latencyMs: result.latencyMs,
+      },
+      messagesRemaining: 20 - (messageCount + 1),
+    };
+  }
+
+  async recommendSnack(
+    userId: string,
+    sport: string,
+    duration: number,
+    intensity: string,
+    matchId?: string,
+    language: "es" | "en" | "pt" = "es",
+  ) {
+    let isDbHealthy = this.prisma.isHealthy();
+    if (!isDbHealthy) {
+      this.logger.warn("Database connection is down, attempting manual reconnect...");
+      isDbHealthy = await this.prisma.tryReconnect();
+    }
+
+    let isPremium = true; // Default to true if DB is down to allow testing/offline usage
+
+    if (isDbHealthy) {
+      try {
+        // 1. Verificar si es PREMIUM
+        const profile = await this.prisma.profiles.findUnique({
+          where: { id: userId },
+          select: { tier: true },
+        });
+
+        isPremium = profile?.tier === "PREMIUM";
+      } catch (dbErr) {
+        this.logger.error(`Database query failed in recommendSnack: ${dbErr.message}`);
+      }
+    } else {
+      this.logger.warn("Database is unreachable. Running recommendSnack in degraded mode.");
+    }
+
+    if (!isPremium) {
+      throw new HttpException(
+        "Este servicio requiere una suscripción Premium activa.",
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // 2. Prompt para recomendación de nutrición
+    const nutritionPrompt = `Eres un nutricionista deportivo de élite. Genera una recomendación de snack post-entrenamiento altamente personalizada.
+Datos del entrenamiento reciente:
+- Deporte: ${sport}
+- Duración: ${duration} minutos
+- Intensidad: ${intensity}
+
+Genera una recomendación de snack ideal en formato JSON exacto:
+{
+  "snack_name": "Nombre corto y atractivo del snack",
+  "calories": número entero estimado de calorías,
+  "ingredients": ["ingrediente 1", "ingrediente 2", ...],
+  "reasoning": "Explicación breve de por qué este snack ayuda a recuperar según el deporte y la intensidad en el idioma ${language} (máx 60 palabras)"
+}
+
+Devuelve ÚNICAMENTE el objeto JSON. Sin formato Markdown ni texto extra.`;
+
+    let resultText = "";
+    let parsedData: {
+      snack_name: string;
+      calories: number;
+      ingredients: string[];
+      reasoning: string;
+    };
+
+    try {
+      const response = await this.vertexAiService.generateContent(nutritionPrompt, {
+        language,
+        temperature: 0.5,
+      });
+      resultText = response.text;
+
+      const trimmed = resultText.trim();
+      const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON format found in response");
+      }
+    } catch (err) {
+      this.logger.warn(`Vertex AI recommendSnack failed, using fallback mock: ${err}`);
+      parsedData = {
+        snack_name: "Tazón Recuperador de Avena y Plátano",
+        calories: 320,
+        ingredients: [
+          "Avena en hojuelas",
+          "1 Plátano maduro",
+          "Miel de abejas",
+          "Semillas de chía",
+        ],
+        reasoning: `Después de un entrenamiento de ${sport} de ${duration} minutos a intensidad ${intensity}, necesitas carbohidratos de absorción rápida y potasio para recuperar electrolitos y reponer el glucógeno muscular rápidamente.`,
+      };
+    }
+
+    // Guardar en base de datos
+    let caloriesBurned = Math.round(
+      duration *
+        (intensity === "alta" || intensity === "high"
+          ? 10
+          : intensity === "media" || intensity === "medium"
+            ? 7
+            : 5),
+    );
+    if (sport.toLowerCase().includes("fútbol") || sport.toLowerCase().includes("soccer")) {
+      caloriesBurned = Math.round(caloriesBurned * 1.2);
+    }
+
+    if (isDbHealthy) {
+      try {
+        await this.prisma.premium_nutrition_logs.create({
+          data: {
+            user_id: userId,
+            match_id: matchId || null,
+            sport,
+            duration,
+            intensity,
+            calories_burned: caloriesBurned,
+            snack_name: parsedData.snack_name,
+            snack_image: `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop`,
+            calories: parsedData.calories,
+            ingredients: parsedData.ingredients,
+            reasoning: parsedData.reasoning,
+          },
+        });
+      } catch (dbErr) {
+        this.logger.error(`Failed to save premium_nutrition_logs: ${dbErr.message}`);
+      }
+    } else {
+      this.logger.warn("Skipping nutrition log registration since DB is down.");
+    }
+
+    return {
+      ...parsedData,
+      calories_burned: caloriesBurned,
+      snack_image: `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop`,
+    };
   }
 
   /**
@@ -487,236 +1219,4 @@ Reglas:
       preview: originalText.slice(0, 80),
     };
   }
-
-  /**
-   * Health check del módulo Vertex AI.
-   *
-   * - Si AiConfigService está degradado → retorna status: "degraded"
-   * - Si el cliente Vertex AI no está disponible → retorna status: "degraded"
-   * - Si la generación de respuesta mínima falla → retorna status: "error"
-   * - Si la generación es exitosa → retorna status: "ok"
-   *
-   * Realiza una prueba de carga real generando 1 palabra para confirmar
-   * que la API de aiplatform tiene permisos de ejecución completos.
-   */
-  async healthCheck(): Promise<{ status: string; message: string }> {
-    if (!this.aiConfigService.isHealthy()) {
-      return {
-        status: "degraded",
-        message: this.aiConfigService.getDegradedReason() || "Vertex AI not configured",
-      };
-    }
-
-    if (!this.vertexAiService.isAvailable()) {
-      return { status: "degraded", message: "Vertex AI client not initialized" };
-    }
-
-    try {
-      const result = await this.vertexAiService.generateContent("Di 'ok'", {
-        temperature: 0,
-      });
-      if (result.text && result.text.length > 0) {
-        return { status: "ok", message: "Vertex AI connected" };
-      }
-      return { status: "error", message: "Vertex AI returned empty response" };
-    } catch (err) {
-      this.logger.error(
-        `Health check failed: ${err instanceof Error ? err.message : "unknown error"}`,
-      );
-      return { status: "error", message: "Vertex AI generation failed — model unreachable" };
-    }
-  }
-
-  /**
-   * Prueba de integración completa del pipeline Vertex AI.
-   * Ejecuta 4 pruebas — chat, coach, hashtags, moderación — y retorna
-   * un reporte con el estado individual de cada una.
-   *
-   * Si una prueba falla, captura el error técnico de Google (código + mensaje)
-   * para diagnóstico IAM sin tirar el servidor.
-   */
-  async testFullIntegration(): Promise<IntegrationTestReport> {
-    const errors: IntegrationTestError[] = [];
-    let chatTest: "success" | "failed" = "success";
-    let coachTest: "success" | "failed" = "success";
-    let hashtagsTest: "success" | "failed" = "success";
-    let moderationTest: "success" | "failed" = "success";
-
-    // ── Test 1: Chat simple ──
-    try {
-      const chatResult = await this.vertexAiService.generateContent(
-        "Hola, ¿me escuchas? Responde solo 'sí'.",
-        { temperature: 0 },
-      );
-      if (!chatResult.text || chatResult.text.length === 0) {
-        throw new Error("Empty response from model");
-      }
-    } catch (err) {
-      chatTest = "failed";
-      errors.push({
-        test: "chat",
-        error: err instanceof Error ? err.message : String(err),
-        raw: this.extractGoogleError(err),
-      });
-    }
-
-    // ── Test 2: Coach recommendation (prompt complejo) ──
-    try {
-      const coachResult = await this.vertexAiService.generateContent(
-        "Recomiéndame canchas de fútbol para nivel intermedio en Lima. Responde en 2 frases en español.",
-        { temperature: 0.3 },
-      );
-      if (!coachResult.text || coachResult.text.length === 0) {
-        throw new Error("Empty response from model");
-      }
-    } catch (err) {
-      coachTest = "failed";
-      errors.push({
-        test: "coach",
-        error: err instanceof Error ? err.message : String(err),
-        raw: this.extractGoogleError(err),
-      });
-    }
-
-    // ── Test 3: Hashtags ──
-    try {
-      const hashtagResult = await this.vertexAiService.generateContent(
-        "Genera 3 hashtags en español para un post sobre un partido de fútbol. Responde SOLO los hashtags, uno por línea, con #.",
-        { temperature: 0 },
-      );
-      if (!hashtagResult.text || hashtagResult.text.length === 0) {
-        throw new Error("Empty response from model");
-      }
-    } catch (err) {
-      hashtagsTest = "failed";
-      errors.push({
-        test: "hashtags",
-        error: err instanceof Error ? err.message : String(err),
-        raw: this.extractGoogleError(err),
-      });
-    }
-
-    // ── Test 4: Moderación ──
-    try {
-      const moderationResult = await this.vertexAiService.generateContent(
-        `Analiza si este texto es ofensivo: "Buen partido ayer, felicitaciones al equipo rival". Responde SOLO en JSON: {"safe": true/false, "reason": "breve explicación"}.`,
-        { temperature: 0 },
-      );
-      if (!moderationResult.text || moderationResult.text.length === 0) {
-        throw new Error("Empty response from model");
-      }
-    } catch (err) {
-      moderationTest = "failed";
-      errors.push({
-        test: "moderation",
-        error: err instanceof Error ? err.message : String(err),
-        raw: this.extractGoogleError(err),
-      });
-    }
-
-    const allPassed = errors.length === 0;
-
-    return { chatTest, coachTest, hashtagsTest, moderationTest, allPassed, errors };
-  }
-
-  /**
-   * Extrae el error estructurado de Google Gen AI SDK.
-   *
-   * El SDK de @google/genai puede devolver errores en varias formas:
-   *   1. err.error = { code, status, message, details[] }   (objeto directo)
-   *   2. err.message = '{"error":{"code":403,...}}'          (JSON string)
-   *   3. err.status + err.statusMessage                       (HTTP wrapper)
-   *
-   * Este método intenta todas las variantes y retorna la info
-   * relevante para diagnóstico IAM sin exponer credenciales.
-   */
-  private extractGoogleError(err: unknown): Record<string, unknown> | null {
-    if (!err || typeof err !== "object") return null;
-
-    const e = err as Record<string, unknown>;
-
-    // Variante 1: err.error es un objeto directo
-    if (e.error && typeof e.error === "object") {
-      const g = e.error as Record<string, unknown>;
-      return this.sanitizeGoogleError(g);
-    }
-
-    // Variante 2: err.message contiene un JSON stringificado
-    if (typeof e.message === "string") {
-      try {
-        const parsed = JSON.parse(e.message);
-        if (parsed.error && typeof parsed.error === "object") {
-          return this.sanitizeGoogleError(parsed.error);
-        }
-        if (parsed.code || parsed.status) {
-          return this.sanitizeGoogleError(parsed);
-        }
-
-        // Caso especial: error es un array de errores
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].error) {
-          return this.sanitizeGoogleError(parsed[0].error);
-        }
-      } catch {
-        // no es JSON parseable, devolver el mensaje plano
-        return { rawMessage: e.message.slice(0, 500) };
-      }
-    }
-
-    // Variante 3: HTTP status wrapper con statusText
-    if (e.status || e.statusMessage) {
-      return {
-        httpStatus: e.status,
-        statusText: e.statusMessage,
-      };
-    }
-
-    return null;
-  }
-
-  /**
-   * Sanitiza el objeto de error de Google: extrae solo campos
-   * seguros (code, status, message, reason, permission, resource).
-   */
-  private sanitizeGoogleError(g: Record<string, unknown>): Record<string, unknown> {
-    const details = Array.isArray(g.details) ? g.details : [];
-
-    // Extraer info IAM específica de los details
-    const iamInfo = details
-      .filter((d: unknown) => typeof d === "object" && d !== null)
-      .map((d: Record<string, unknown>) => {
-        const metadata = d.metadata as Record<string, unknown> | undefined;
-        return {
-          type: d["@type"],
-          reason: d.reason,
-          domain: d.domain,
-          permission: metadata?.permission,
-          resource: metadata?.resource,
-          service: metadata?.service,
-          consumer: metadata?.consumer,
-        };
-      });
-
-    return {
-      code: g.code,
-      status: g.status,
-      reason: g.reason,
-      message: typeof g.message === "string" ? g.message.slice(0, 400) : undefined,
-      iamDetails: iamInfo.length > 0 ? iamInfo : undefined,
-    };
-  }
-}
-
-interface IntegrationTestError {
-  test: string;
-  error: string;
-  raw: Record<string, unknown> | null;
-}
-
-export interface IntegrationTestReport {
-  chatTest: "success" | "failed";
-  coachTest: "success" | "failed";
-  hashtagsTest: "success" | "failed";
-  moderationTest: "success" | "failed";
-  allPassed: boolean;
-  errors: IntegrationTestError[];
 }

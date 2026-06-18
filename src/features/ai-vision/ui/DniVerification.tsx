@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Loader2,
@@ -15,9 +15,10 @@ import type { SupportedLanguage } from "../model/types";
 interface DniVerificationProps {
   language?: SupportedLanguage;
   className?: string;
+  onSuccess?: () => void;
 }
 
-export function DniVerification({ language, className = "" }: DniVerificationProps) {
+export function DniVerification({ language, className = "", onSuccess }: DniVerificationProps) {
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [dniPreview, setDniPreview] = useState<string | null>(null);
   const [selfieFile, setSelfieFile] = useState<Blob | null>(null);
@@ -26,6 +27,12 @@ export function DniVerification({ language, className = "" }: DniVerificationPro
   const dniInputRef = useRef<HTMLInputElement>(null);
 
   const { verifying, result, error, verify, clear } = useDniVerification(language);
+
+  useEffect(() => {
+    if (result && result.match) {
+      onSuccess?.();
+    }
+  }, [result, onSuccess]);
 
   const handleSelfie = useCallback(
     (file: Blob) => {

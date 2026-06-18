@@ -38,6 +38,7 @@ if (occupancyRate > HIGH_OCCUPANCY_THRESHOLD) {
 ```
 
 **Constantes:**
+
 - `HIGH_OCCUPANCY_THRESHOLD = 0.7`
 - `LOW_OCCUPANCY_THRESHOLD = 0.3`
 - `HIGH_OCCUPANCY_MULT = 1.25` (sube hasta 25% en slots muy demandados)
@@ -45,11 +46,11 @@ if (occupancyRate > HIGH_OCCUPANCY_THRESHOLD) {
 
 ### Componentes temporales (multiplicativos)
 
-| Condición | Multiplicador |
-|---|---|
-| Hora pico (18h-21h) | × 1.10 |
-| Hora valle (8h-11h) | × 0.95 |
-| Fin de semana (sábado/domingo) | × 1.08 |
+| Condición                      | Multiplicador |
+| ------------------------------ | ------------- |
+| Hora pico (18h-21h)            | × 1.10        |
+| Hora valle (8h-11h)            | × 0.95        |
+| Fin de semana (sábado/domingo) | × 1.08        |
 
 Se aplican en cascada, no se excluyen mutuamente. Un sábado 19h aplicaría
 `× 1.10 × 1.08 = × 1.188` por concepto de tiempo.
@@ -59,7 +60,7 @@ Se aplican en cascada, no se excluyen mutuamente. Un sábado 19h aplicaría
 Para evitar recomendaciones absurdas por composición de multiplicadores:
 
 ```ts
-finalMultiplier = max(1.0 - MAX_DISCOUNT, min(1.0 + MAX_UPLIFT, rawMult))
+finalMultiplier = max(1.0 - MAX_DISCOUNT, min(1.0 + MAX_UPLIFT, rawMult));
 ```
 
 - `MAX_UPLIFT = 0.30` (nunca más de +30% del baseline)
@@ -76,6 +77,7 @@ confidence = min(1.0, BASE_CONFIDENCE + totalSampleSize × CONFIDENCE_PER_BOOKIN
 - **Cap a 1.0** cuando hay ≥ 24 bookings observados.
 
 Interpretación para la UI:
+
 - `< 0.4` → recomendación con poca muestra, usar como referencia
 - `0.4 - 0.7` → recomendación razonable
 - `> 0.7` → recomendación confiable
@@ -84,13 +86,13 @@ Interpretación para la UI:
 
 Cada predicción devuelve 5 drivers que explican la recomendación:
 
-| Feature | Peso | Baseline | Dirección |
-|---|---|---|---|
-| Ocupación del slot | 0.45 | 0.5 | + |
-| Hora pico (18-21h) | 0.20 | 0.25 | + |
-| Fin de semana | 0.15 | 0.3 | + |
-| Hora valle (8-11h) | 0.10 | 0.2 | - |
-| Anticipación de reserva | 0.10 | 0.5 | - |
+| Feature                 | Peso | Baseline | Dirección |
+| ----------------------- | ---- | -------- | --------- |
+| Ocupación del slot      | 0.45 | 0.5      | +         |
+| Hora pico (18-21h)      | 0.20 | 0.25     | +         |
+| Fin de semana           | 0.15 | 0.3      | +         |
+| Hora valle (8-11h)      | 0.10 | 0.2      | -         |
+| Anticipación de reserva | 0.10 | 0.5      | -         |
 
 `contribution = (value - baseline) / max(|baseline|, ε) × weight × outputScale`
 
@@ -115,9 +117,9 @@ donde `outputScale = baseline × 0.3` (±30% del baseline en PEN).
 ### Cancha sin reservas históricas
 
 ```ts
-occupancyRate = 0  // para todas las horas
-sampleSize = 0
-confidence = 0.3  // base
+occupancyRate = 0; // para todas las horas
+sampleSize = 0;
+confidence = 0.3; // base
 
 // Resultado: baseline × 1.0 (sin cambio) con confidence muy baja
 ```

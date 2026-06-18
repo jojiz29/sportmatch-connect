@@ -20,8 +20,8 @@ import {
   Package,
   MapPin,
   Globe,
-  ScanEye,
   Sparkles,
+  ScanEye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useAuthStore } from "@/entities/user/useAuth";
@@ -80,8 +80,6 @@ function LanguageSelector() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const { theme } = useThemeStore();
-  const isLightTheme = theme === "light";
   const routerState = useRouterState();
   const path = routerState.location.pathname;
   const isRegister = path === "/app/register";
@@ -117,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     labelKey: string;
     label?: string;
     icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
     end?: boolean;
   }
 
@@ -169,13 +168,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             },
             {
               to: "/app/business",
-              search: { tab: "intelligence" },
-              labelKey: "nav.business_intelligence",
-              label: "Inteligencia IA",
-              icon: Sparkles,
-            },
-            {
-              to: "/app/business",
               search: { tab: "settings" },
               labelKey: "nav.business_settings",
               label: "Configuración",
@@ -191,6 +183,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
             { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
             { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa Comercial", icon: Map },
+            {
+              to: "/app/coach",
+              labelKey: "nav.coach",
+              label: "Coach IA (Premium)",
+              icon: Sparkles,
+            },
+            {
+              to: "/app/ai-vision",
+              labelKey: "nav.computer_vision",
+              label: "Computer Vision",
+              icon: ScanEye,
+              badge: "PRO",
+            },
           ],
         },
         {
@@ -200,36 +205,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { to: "/app/squads", labelKey: "nav.squads", icon: Shield },
             { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
             { to: "/app/tournaments", labelKey: "nav.torneos", icon: Trophy },
-          ],
-        },
-        {
-          titleKey: "nav.groups.vision",
-          title: "Visión por Computadora",
-          items: [
-            {
-              to: "/app/ai-vision",
-              labelKey: "nav.vision_overview",
-              label: "Visión General",
-              icon: ScanEye,
-            },
-            {
-              to: "/app/ai-vision/form-analyzer",
-              labelKey: "nav.vision_form",
-              label: "Form Analyzer",
-              icon: ScanEye,
-            },
-            {
-              to: "/app/ai-vision/fake-profile",
-              labelKey: "nav.vision_fake",
-              label: "Fake Profile Detector",
-              icon: ScanEye,
-            },
-            {
-              to: "/app/ai-vision/dni-verify",
-              labelKey: "nav.vision_dni",
-              label: "Verificación DNI",
-              icon: ScanEye,
-            },
           ],
         },
       ];
@@ -276,14 +251,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         { to: "/app", labelKey: "nav.inicio", icon: Home, end: true },
         { to: "/app/match", labelKey: "nav.matchmaking", icon: Users },
         { to: "/app/map", labelKey: "nav.map_comercial", label: "Mapa", icon: Map },
-        { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
-        { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
         {
           to: "/app/ai-vision",
-          labelKey: "nav.vision_overview",
-          label: "Visión IA",
+          labelKey: "nav.computer_vision",
+          label: "Vision",
           icon: ScanEye,
+          badge: "PRO",
         },
+        { to: "/app/feed", labelKey: "nav.comunidad", icon: Rss },
+        { to: "/app/chat", labelKey: "nav.mensajes", icon: MessageSquare },
       ];
 
   // Filter accounts list dynamically based on permissions
@@ -313,17 +289,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background bg-[url('/images/sports/fondo-sportmatch-app-final.webp')] bg-cover bg-center bg-fixed relative overflow-hidden">
-      <div
-        className={`absolute inset-0 transition-all duration-500 -z-10 ${
-          isLightTheme
-            ? "bg-background/90 backdrop-blur-3xl"
-            : "bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md"
-        }`}
-      />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/40 to-background/55 backdrop-blur-md -z-10" />
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-80 flex-col bg-background/80 backdrop-blur-xl border-r border-border/30 z-30 shadow-2xl">
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-80 flex-col bg-sidebar border-r border-sidebar-border z-30 shadow-2xl">
           <div className="px-5 py-5 flex items-center justify-between border-b border-border/10">
             <Link
               to={isBusiness ? "/app/business" : "/app"}
@@ -343,7 +313,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {dynamicGroups.map((group) => (
               <div key={group.titleKey} className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60 px-3 mb-2">
                   {group.title || t(group.titleKey)}
                 </div>
                 {group.items.map((item) => {
@@ -369,13 +339,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       className={`flex items-center gap-4 px-5 py-3 rounded-xl text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                          : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
                     >
                       <Icon className="h-6 w-6 shrink-0" />
-                      {item.label || t(item.labelKey)}
+                      <span className="min-w-0 flex-1 truncate">
+                        {item.label || t(item.labelKey)}
+                      </span>
+                      {item.badge && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${
+                            active
+                              ? "bg-white/20 text-primary-foreground"
+                              : "bg-primary/10 text-primary"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
                       {active && (
-                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white animate-glow-pulse" />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white animate-glow-pulse" />
                       )}
                     </Link>
                   );
@@ -385,7 +368,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {filteredAccountItems.length > 0 && (
               <div className="space-y-1 pt-4 border-t border-border/10">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60 px-3 mb-1.5">
                   {t("nav.groups.account")}
                 </div>
                 {filteredAccountItems.map((item) => {
@@ -399,7 +382,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       className={`flex items-center gap-4 px-5 py-3 rounded-xl text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                          : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
                     >
                       <Icon className="h-6 w-6 shrink-0" />
@@ -413,13 +396,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </nav>
-          <div className="p-3 m-3 rounded-2xl bg-gradient-card border border-border/40 shadow-card hover:border-primary/20 transition-all duration-300 group">
+          <div className="p-3 m-3 rounded-2xl bg-sidebar-accent/20 border border-sidebar-border shadow-card hover:border-primary/20 transition-all duration-300 group">
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <img
                   src={currentUser.avatar_url}
                   alt={currentUser.name}
-                  className="h-10 w-10 rounded-full bg-muted object-cover border border-border/40 group-hover:border-neon/30 transition-colors"
+                  className="h-10 w-10 rounded-full bg-muted object-cover border border-sidebar-border group-hover:border-neon/30 transition-colors"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-neon border-2 border-background" />
               </div>
@@ -518,9 +501,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   <div
-                    className={`p-1.5 rounded-lg transition-all duration-200 ${active ? "bg-neon/10" : ""}`}
+                    className={`relative p-1.5 rounded-lg transition-all duration-200 ${active ? "bg-neon/10" : ""}`}
                   >
                     <Icon className={`h-5 w-5 ${active ? "text-neon" : ""}`} />
+                    {item.badge && (
+                      <span className="absolute -right-2 -top-1 rounded-full bg-primary px-1 text-[7px] font-black leading-3 text-primary-foreground">
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
                   <span>{item.label || t(item.labelKey)}</span>
                 </Link>

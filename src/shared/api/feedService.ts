@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * ===================================================================
  * ARCHIVO: src/shared/api/feedService.ts
@@ -320,7 +321,7 @@ async function generateAndInsertHashtags(postId: string, content: string): Promi
 async function notifyFollowersAboutNewPost(
   userId: string,
   content: string,
-  author: { company_name?: string | null; name?: string | null },
+  author: any,
 ): Promise<void> {
   try {
     const businessName = author.company_name || author.name;

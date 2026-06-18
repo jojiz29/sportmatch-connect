@@ -150,9 +150,9 @@ export class VisionController {
   // ============================================================
   @Post("fake-profile")
   @ApiOperation({
-    summary: "#26 — Detecta si una foto de perfil fue generada por IA",
+    summary: "#26 — Verifica si una foto de perfil muestra una persona real",
     description:
-      "Analiza la foto y devuelve score de autenticidad, explicación y señales detectadas.",
+      "Analiza la foto y devuelve porcentaje de veracidad de persona, explicación y señales detectadas.",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({

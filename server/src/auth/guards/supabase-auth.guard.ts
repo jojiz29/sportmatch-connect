@@ -1,30 +1,27 @@
 // ============================================================
 // supabase-auth.guard.ts — Guard de autenticación con Supabase
 // Valida el token Bearer contra Supabase Auth y asigna el payload a request.user
-//
-// Respeta el decorador @Public(): si el handler o el controlador
-// tienen IS_PUBLIC_KEY = true, se salta la validación del token.
 // ============================================================
 
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  ForbiddenException,
+  Optional,
+} from "@nestjs/common";
 import { SupabaseAuthService } from "../supabase-auth.service";
-import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
   constructor(
     private supabaseAuth: SupabaseAuthService,
-    private reflector: Reflector,
+    @Optional() private prisma?: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isPublic) return true;
-
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
@@ -36,9 +33,31 @@ export class SupabaseAuthGuard implements CanActivate {
 
     try {
       const payload = await this.supabaseAuth.validateToken(token);
+
+      // Smart Block Check: verificar si el usuario tiene un bloqueo automático activo (si prisma está disponible)
+      if (this.prisma) {
+        const activeBlock = await this.prisma.user_blocks.findFirst({
+          where: {
+            blocked_id: payload.userId,
+            timestamp_fin: {
+              gt: new Date(),
+            },
+          },
+        });
+
+        if (activeBlock) {
+          throw new ForbiddenException(
+            "Tu cuenta ha sido restringida temporalmente por actividad inusual",
+          );
+        }
+      }
+
       request.user = payload;
       return true;
     } catch (err) {
+      if (err instanceof ForbiddenException) {
+        throw err;
+      }
       throw new UnauthorizedException(err.message || "Invalid token");
     }
   }

@@ -81,7 +81,7 @@ DECLARE
   v_profile RECORD;
   v_result jsonb;
 BEGIN
-  SELECT is_admin, id, name, email INTO v_profile
+  SELECT is_admin, id, name INTO v_profile
   FROM profiles
   WHERE id = auth.uid();
 

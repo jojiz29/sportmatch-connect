@@ -121,7 +121,6 @@ export async function createNotification(
     const { data, error } = await supabase
       .from("notifications")
       .insert({
-        id: notifId,
         user_id: userId,
         type,
         title,

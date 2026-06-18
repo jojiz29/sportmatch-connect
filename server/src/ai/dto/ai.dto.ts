@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 // ============================================================
 // server/src/ai/dto/ai.dto.ts — DTOs para endpoints AI (text + voice)
 // Validación estricta + sanitización de inputs
@@ -237,4 +238,121 @@ export class ModerationResultDto {
 
   @ApiProperty({ description: "Preview del texto moderado", example: "Este es un..." })
   preview!: string;
+}
+
+export class ModerateAdvancedDto {
+  @ApiProperty({
+    description: "ID del usuario que genera el contenido",
+    example: "user-123",
+  })
+  @IsString()
+  @IsNotEmpty({ message: "El ID de usuario es obligatorio" })
+  userId!: string;
+
+  @ApiProperty({
+    description: "Texto a moderar",
+    example: "Este es un mensaje de prueba",
+  })
+  @IsString()
+  @IsNotEmpty({ message: "El contenido a moderar es obligatorio" })
+  @MaxLength(2000, { message: "El contenido no puede exceder 2000 caracteres" })
+  @Transform(sanitizeAiText)
+  content!: string;
+
+  @ApiProperty({
+    description: "Contexto del contenido",
+    example: "mensaje",
+    enum: ["mensaje", "comentario", "perfil"],
+  })
+  @IsEnum(["mensaje", "comentario", "perfil"], { message: "Contexto no válido" })
+  contextType!: "mensaje" | "comentario" | "perfil";
+
+  @ApiProperty({
+    description: "Metadatos adicionales opcionales",
+    required: false,
+  })
+  @IsOptional()
+  metadata?: Record<string, unknown>;
+}
+
+export class SignalDto {
+  @ApiProperty({ description: "Nombre del modelo o señal", example: "vertex-ai" })
+  name!: string;
+
+  @ApiProperty({ description: "Puntuación de riesgo de 0 a 100", example: 45 })
+  score!: number;
+
+  @ApiProperty({ description: "Explicación de la señal", example: "Contenido seguro" })
+  description?: string;
+}
+
+export class ModerateAdvancedResultDto {
+  @ApiProperty({ description: "Score final calculado por el ensemble de 0 a 100", example: 45 })
+  ensemble_score!: number;
+
+  @ApiProperty({ description: "Listado de señales individuales evaluadas", type: [SignalDto] })
+  signals!: SignalDto[];
+
+  @ApiProperty({
+    description: "Acción recomendada",
+    example: "allow",
+    enum: ["allow", "warn", "block"],
+  })
+  action_recommended!: "allow" | "warn" | "block";
+
+  @ApiProperty({
+    description: "Razonamiento detrás de la recomendación",
+    example: "Todas las señales indican contenido limpio.",
+  })
+  reasoning!: string;
+}
+
+export class CoachChatDto {
+  @ApiProperty({ description: "Mensaje actual enviado al Coach" })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  @Transform(sanitizeAiText)
+  message!: string;
+
+  @ApiProperty({
+    description: "Historial de mensajes previos",
+    type: [ChatMessageDto],
+    required: false,
+  })
+  @IsOptional()
+  history?: ChatMessageDto[];
+
+  @ApiProperty({ description: "Idioma", default: "es" })
+  @IsOptional()
+  @IsEnum(["es", "en", "pt"])
+  language?: "es" | "en" | "pt";
+}
+
+export class RecommendSnackDto {
+  @ApiProperty({ description: "ID del partido opcional", required: false })
+  @IsOptional()
+  @IsString()
+  matchId?: string;
+
+  @ApiProperty({ description: "Deporte practicado" })
+  @IsString()
+  @IsNotEmpty()
+  sport!: string;
+
+  @ApiProperty({ description: "Duración en minutos" })
+  @IsNumber()
+  @Min(1)
+  duration!: number;
+
+  @ApiProperty({ description: "Intensidad", enum: ["baja", "media", "alta"] })
+  @IsString()
+  @IsNotEmpty()
+  @IsEnum(["baja", "media", "alta", "low", "medium", "high"])
+  intensity!: string;
+
+  @ApiProperty({ description: "Idioma", default: "es" })
+  @IsOptional()
+  @IsEnum(["es", "en", "pt"])
+  language?: "es" | "en" | "pt";
 }

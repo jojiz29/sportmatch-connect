@@ -28,23 +28,25 @@ UCB1_i = meanReward_i + sqrt(2 × ln(N) / n_i)
 ```
 
 Donde:
+
 - `N` = total de "tiradas" del sistema (en nuestro caso: total de clics del business)
 - `n_i` = "tiradas" de la variante `i` (simulado: `N/4`)
 - `meanReward_i` = CTR predicho de la variante `i`
 
 Como **no tenemos un bandit real corriendo** (no hay A/B tests activos),
 simulamos:
+
 - `n_i = N/4` para todas las variantes (asume exposición uniforme)
 - `meanReward_i = businessCtr × style_coefficient[style]`
 
 ### Coeficientes por estilo
 
-| Estilo | Coeficiente | Justificación |
-|---|---|---|
-| `emocional` | 1.15 | Engagement emocional suele ganar CTR en redes sociales |
-| `racional` | 1.08 | Mejora CTR por claridad informativa, menor uplift |
-| `urgencia` | 1.22 | Mayor lift inmediato, riesgo de quemar la marca a largo plazo |
-| `original` | 1.00 | Baseline sin modificar |
+| Estilo      | Coeficiente | Justificación                                                 |
+| ----------- | ----------- | ------------------------------------------------------------- |
+| `emocional` | 1.15        | Engagement emocional suele ganar CTR en redes sociales        |
+| `racional`  | 1.08        | Mejora CTR por claridad informativa, menor uplift             |
+| `urgencia`  | 1.22        | Mayor lift inmediato, riesgo de quemar la marca a largo plazo |
+| `original`  | 1.00        | Baseline sin modificar                                        |
 
 **Nota:** estos coeficientes son heurísticos basados en benchmarks de marketing
 digital. En un sistema real se aprenderían vía A/B tests históricos con datos
@@ -101,7 +103,7 @@ La variante de mayor score es la `recommendation`. El `expectedLift` es la
 diferencia entre el `predictedCtr` de la recomendada y el de la original (A).
 
 ```ts
-expectedLift = max(0, winner.predictedCtr - original.predictedCtr)
+expectedLift = max(0, winner.predictedCtr - original.predictedCtr);
 ```
 
 ## Ejemplo de output
@@ -110,9 +112,9 @@ expectedLift = max(0, winner.predictedCtr - original.predictedCtr)
 {
   "variants": [
     { "variantId": "B", "style": "emocional", "score": 0.1366, "predictedCtr": 0.092 },
-    { "variantId": "D", "style": "urgencia",   "score": 0.1287, "predictedCtr": 0.0976 },
-    { "variantId": "C", "style": "racional",   "score": 0.0922, "predictedCtr": 0.0864 },
-    { "variantId": "A", "style": "original",   "score": 0,      "predictedCtr": 0.08 }
+    { "variantId": "D", "style": "urgencia", "score": 0.1287, "predictedCtr": 0.0976 },
+    { "variantId": "C", "style": "racional", "score": 0.0922, "predictedCtr": 0.0864 },
+    { "variantId": "A", "style": "original", "score": 0, "predictedCtr": 0.08 }
   ],
   "recommendation": "B",
   "expectedLift": 0.012,
@@ -123,12 +125,12 @@ expectedLift = max(0, winner.predictedCtr - original.predictedCtr)
 
 ## SHAP-style drivers
 
-| Feature | Peso | Baseline |
-|---|---|---|
-| Estilo de copy (winner) | 0.40 | 0 |
-| Lift sobre baseline | 0.30 | 0.02 |
-| Objetivo (ctr/conversions) | 0.15 | 0.5 |
-| Muestra acumulada | 0.15 | 0.5 |
+| Feature                    | Peso | Baseline |
+| -------------------------- | ---- | -------- |
+| Estilo de copy (winner)    | 0.40 | 0        |
+| Lift sobre baseline        | 0.30 | 0.02     |
+| Objetivo (ctr/conversions) | 0.15 | 0.5      |
+| Muestra acumulada          | 0.15 | 0.5      |
 
 `outputScale = 0.10` (10% lift máximo).
 

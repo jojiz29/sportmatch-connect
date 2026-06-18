@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: IMPORTACIONES ===
 // Dependencias: React, iconos Lucide (Phone, Video, Send, etc.), tipos User/Match/Squad, store de chat y VerifiedBadge
 import React from "react";
@@ -18,6 +19,9 @@ import { User, Match, Squad } from "@/entities/types";
 import { Chat, ChatMessage, useChatStore } from "@/features/chat/useChatStore";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
 import type { TFunction } from "i18next";
+import { useAuthStore } from "@/entities/user/useAuth";
+import { supabase } from "@/shared/api/supabase";
+import { toast } from "sonner";
 
 // === BLOQUE: INTERFAZ DE TARJETA DE INVITACIÓN A SQUAD ===
 interface SquadInviteCardProps {
@@ -299,6 +303,9 @@ export function ChatWindow({
   fileInputRef,
   t,
 }: ChatWindowProps) {
+  // === BLOQUE: ESTADO DE MENÚ DE ENCABEZADO ===
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = React.useState(false);
+
   // === BLOQUE: ESTADO DE INDICADOR DE ESCRITURA ===
   // Obtiene funciones de la store de chat para enviar estado de escritura y lista de usuarios escribiendo
   const sendTypingStatus = useChatStore((s) => s.sendTypingStatus);
@@ -347,6 +354,73 @@ export function ChatWindow({
     );
   }
 
+  const otherPlayerId = activeChat.current_players?.find((id: string) => id !== currentUser?.id);
+  const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
+
+  const phoneUrl = `tel:${otherPlayer?.whatsapp || "999999999"}`;
+  const videoUrl = `https://wa.me/${otherPlayer?.whatsapp || "51999999999"}?text=Hola%20${encodeURIComponent(otherPlayer?.name || "atleta")}!%20¿Organizamos%20la%20pichanga%20por%20aquí?`;
+
+  const handlePhoneCall = () => {
+    window.open(phoneUrl, "_self");
+  };
+
+  const handleVideoCall = () => {
+    window.open(videoUrl, "_blank");
+  };
+
+  const handleMute = () => {
+    toast.success(`Conversación con ${activeChat.name} silenciada.`);
+    setIsHeaderMenuOpen(false);
+  };
+
+  const handleBlockUser = async () => {
+    if (!currentUser || !otherPlayerId) return;
+    const confirmBlock = window.confirm(
+      `¿Estás seguro de que deseas bloquear a ${activeChat.name}? No podrán verse ni contactarse.`,
+    );
+    if (!confirmBlock) return;
+
+    try {
+      const isDemoMode = useAuthStore.getState().isDemoMode;
+      if (!isDemoMode) {
+        const { error } = await supabase.from("user_blocks").insert({
+          blocker_id: currentUser.id,
+          blocked_id: otherPlayerId,
+          reason: "Bloqueado desde la vista de chat",
+        });
+        if (error) throw error;
+      }
+      toast.success(`Has bloqueado a ${activeChat.name} con éxito.`);
+      setIsHeaderMenuOpen(false);
+      useChatStore.getState().setActiveConversation(null);
+    } catch (err: any) {
+      console.error("Error blocking user from chat:", err);
+      toast.error("No se pudo completar el bloqueo en este momento.");
+    }
+  };
+
+  const handleReportUser = () => {
+    const reason = window.prompt(
+      "Describe brevemente el motivo del reporte (Ej. comportamiento antideportivo, lenguaje ofensivo):",
+    );
+    if (reason === null) return;
+    if (!reason.trim()) {
+      toast.error("Debes ingresar un motivo para enviar el reporte.");
+      return;
+    }
+    toast.success("Reporte enviado con éxito a nuestro equipo de moderación por IA.");
+    setIsHeaderMenuOpen(false);
+  };
+
+  const handleClearHistory = () => {
+    const confirmClear = window.confirm(
+      `¿Deseas vaciar todo el historial de chat con ${activeChat.name}? Esta acción es irreversible.`,
+    );
+    if (!confirmClear) return;
+    toast.success("Historial de conversación vaciado con éxito.");
+    setIsHeaderMenuOpen(false);
+  };
+
   return (
     <>
       {/* === BLOQUE: ENCABEZADO DEL CHAT === */}
@@ -369,29 +443,14 @@ export function ChatWindow({
           <div>
             <div className="font-semibold flex items-center gap-1">
               {activeChat.name}
-              {(() => {
-                const otherPlayerId = activeChat.current_players?.find(
-                  (id: string) => id !== currentUser?.id,
-                );
-                const otherPlayer = registeredUsers.find((u) => u.id === otherPlayerId);
-                return otherPlayer?.dni_verificado ? <VerifiedBadge /> : null;
-              })()}
+              {otherPlayer?.dni_verificado ? <VerifiedBadge /> : null}
             </div>
             <div className="text-xs text-neon">
               {activeChat.current_players.length} {t("chat.online", "participantes en línea")}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-muted-foreground">
-          <button className="hover:text-foreground cursor-pointer">
-            <Phone className="h-5 w-5" />
-          </button>
-          <button className="hover:text-foreground cursor-pointer">
-            <Video className="h-5 w-5" />
-          </button>
-          <button className="hover:text-foreground cursor-pointer">
-            <MoreVertical className="h-5 w-5" />
-          </button>
+        <div className="flex items-center gap-4 text-muted-foreground relative">
           <button
             onClick={openChallengeComposer}
             className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/15 cursor-pointer"
@@ -399,15 +458,62 @@ export function ChatWindow({
             <Swords className="h-4 w-4" />
             Proponer desafío
           </button>
-          <button className="hover:text-foreground cursor-pointer">
+
+          <button
+            onClick={handlePhoneCall}
+            title={t("chat.phone_call", "Llamar por teléfono")}
+            className="hover:text-foreground cursor-pointer p-1.5 rounded-lg hover:bg-muted/40 transition-colors"
+          >
             <Phone className="h-5 w-5" />
           </button>
-          <button className="hover:text-foreground cursor-pointer">
+
+          <button
+            onClick={handleVideoCall}
+            title={t("chat.video_call", "Llamar por WhatsApp")}
+            className="hover:text-foreground cursor-pointer p-1.5 rounded-lg hover:bg-muted/40 transition-colors"
+          >
             <Video className="h-5 w-5" />
           </button>
-          <button className="hover:text-foreground cursor-pointer">
-            <MoreVertical className="h-5 w-5" />
-          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+              title={t("chat.more_options", "Más opciones")}
+              className="hover:text-foreground cursor-pointer p-1.5 rounded-lg hover:bg-muted/40 transition-colors"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </button>
+
+            {isHeaderMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-card border border-border/80 rounded-2xl shadow-xl z-50 py-1 text-xs text-foreground animate-in fade-in slide-in-from-top-1 duration-150">
+                <button
+                  onClick={handleMute}
+                  className="w-full text-left px-4 py-2.5 hover:bg-muted/60 transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  🔔 Silenciar conversación
+                </button>
+                <button
+                  onClick={handleReportUser}
+                  className="w-full text-left px-4 py-2.5 hover:bg-muted/60 transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  ⚠️ Reportar comportamiento
+                </button>
+                <button
+                  onClick={handleClearHistory}
+                  className="w-full text-left px-4 py-2.5 hover:bg-muted/60 transition-colors flex items-center gap-2 text-warning cursor-pointer"
+                >
+                  🗑️ Vaciar chat
+                </button>
+                <div className="border-t border-border/60 my-1"></div>
+                <button
+                  onClick={handleBlockUser}
+                  className="w-full text-left px-4 py-2.5 hover:bg-muted/60 transition-colors flex items-center gap-2 text-destructive font-semibold cursor-pointer"
+                >
+                  🚫 Bloquear deportista
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -1,8 +1,6 @@
 // === BLOQUE: IMPORTS — Dependencias del dashboard principal ===
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
-import L from "leaflet";
 
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -18,7 +16,7 @@ import {
   Sparkles,
   Plus,
   Clock,
-  Loader2,
+  CalendarDays,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useWalletStore } from "@/features/wallet/useWalletStore";
@@ -39,18 +37,8 @@ import { useTranslation } from "react-i18next";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
-import {
-  getAiRecommendations,
-  getEngagementChallenges,
-  getTodayAiRecommendations,
-  saveEngagementChallenge,
-  type AiRecommendationResponse,
-  type EngagementChallenge,
-} from "@/features/engagement-ai";
-import { usePublicMatchStore, type PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
-
-type DailyPlanStatus = "idle" | "loading" | "ready" | "error";
-type WeeklyChallengeDraft = { title: string; description: string; reward: string };
+import { MiniCalendar } from "@/features/matchmaking/ui/MiniCalendar";
+import type { PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
 
 // === BLOQUE: Ruta /app/ — createFileRoute con loader ===
 // Carga datos iniciales desde backendApi (con timeout de 8s por llamada):
@@ -82,30 +70,29 @@ export const Route = createFileRoute("/app/")({
       }
     };
 
-    // Las cuatro consultas no dependen entre si; correrlas en paralelo evita sumar timeouts.
     const [backendMatches, backendCourts, backendUsers, backendSports] = await Promise.all([
-      fetchWithTimeout(() => backendApi.matches.getAll()),
-      fetchWithTimeout(() => backendApi.courts.getAll()),
-      fetchWithTimeout(() => backendApi.users.getAll()),
-      fetchWithTimeout(() => backendApi.sports.getAll()),
+      fetchWithTimeout(() => backendApi.matches.getAll(), 4000),
+      fetchWithTimeout(() => backendApi.courts.getAll(), 4000),
+      fetchWithTimeout(() => backendApi.users.getAll(), 4000),
+      fetchWithTimeout(() => backendApi.sports.getAll(), 4000),
     ]);
 
     const matches =
       backendMatches && typeof backendMatches === "object" && "data" in backendMatches
         ? (backendMatches as { data: Match[] }).data
-        : await apiClient.matches.getAll().catch(() => []);
+        : [];
     const users =
       backendUsers && typeof backendUsers === "object" && "data" in backendUsers
         ? (backendUsers as { data: User[] }).data
-        : await apiClient.users.getMatches(useAuthStore.getState().user?.id).catch(() => []);
+        : [];
     const courts =
       backendCourts && typeof backendCourts === "object" && "data" in backendCourts
         ? (backendCourts as { data: Court[] }).data
-        : await apiClient.courts.getAll().catch(() => []);
+        : [];
     const sports =
       backendSports && typeof backendSports === "object" && "data" in backendSports
         ? (backendSports as { data: SportCatalog[] }).data
-        : await apiClient.sports.getAll().catch(() => []);
+        : [];
 
     return { matches, users, courts, sports };
   },
@@ -141,497 +128,6 @@ function getSportEmoji(name: string) {
   }
 }
 
-const challengeVenueIconCache = new Map<string, L.DivIcon>();
-
-function createChallengeVenueIcon(sport: string, isSelected: boolean) {
-  const key = `${sport}_${isSelected}`;
-  if (challengeVenueIconCache.has(key)) return challengeVenueIconCache.get(key)!;
-  const emoji = getSportEmoji(sport);
-  const bg = isSelected
-    ? "linear-gradient(135deg, #f59e0b, #d97706)"
-    : "linear-gradient(135deg, #8b5cf6, #3b82f6)";
-  const shadow = isSelected
-    ? "0 0 20px rgba(251, 191, 36, 0.9)"
-    : "0 0 15px rgba(139, 92, 246, 0.7)";
-  const badge = isSelected
-    ? `<div style="position:absolute;top:-6px;right:-6px;background:#fbbf24;border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:8px;border:1px solid #fff">✓</div>`
-    : "";
-  const icon = L.divIcon({
-    html: `<div style="position:relative;display:flex;width:42px;height:42px;align-items:center;justify-content:center;background:${bg};border:2.5px solid #ffffff;border-radius:50%;box-shadow:${shadow};font-size:18px;">${emoji}${badge}</div>`,
-    className: "challenge-venue-marker",
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-    popupAnchor: [0, -20],
-  });
-  challengeVenueIconCache.set(key, icon);
-  return icon;
-}
-
-function getDailyPlanCacheKey(userId: string) {
-  const dateKey = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  return `sportmatch_daily_plan_${userId}_${dateKey}`;
-}
-
-function getWeeklyChallengeKey(userId: string) {
-  const now = new Date();
-  const bogotaDate = new Date(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(now),
-  );
-  const day = bogotaDate.getUTCDay() || 7;
-  bogotaDate.setUTCDate(bogotaDate.getUTCDate() - day + 1);
-  return `${userId}_${bogotaDate.toISOString().slice(0, 10)}`;
-}
-
-function getWeeklyChallengeResetDate(): Date {
-  const todayInBogota = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  const bogotaDate = new Date(`${todayInBogota}T00:00:00-05:00`);
-  const day = bogotaDate.getDay() || 7;
-  const nextMonday = new Date(bogotaDate);
-  nextMonday.setDate(bogotaDate.getDate() + (8 - day));
-  return nextMonday;
-}
-
-function getWeeklyChallengeCountdown() {
-  const remainingMs = Math.max(0, getWeeklyChallengeResetDate().getTime() - Date.now());
-  const days = Math.floor(remainingMs / 86_400_000);
-  const hours = Math.floor((remainingMs % 86_400_000) / 3_600_000);
-  return { days, hours };
-}
-
-function getWeeklyRefreshCounts(userId: string): number[] {
-  if (typeof window === "undefined") return [0, 0];
-  const raw = window.localStorage.getItem(
-    `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
-  );
-  if (!raw) return [0, 0];
-  try {
-    const parsed = JSON.parse(raw) as number | number[];
-    if (Array.isArray(parsed)) return [Number(parsed[0] ?? 0), Number(parsed[1] ?? 0)];
-    return [Number(parsed || 0), 0];
-  } catch {
-    return [Number(raw || 0), 0];
-  }
-}
-
-function setWeeklyRefreshCounts(userId: string, counts: number[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
-    JSON.stringify([counts[0] ?? 0, counts[1] ?? 0]),
-  );
-}
-
-function getWeeklyOverrideChallenges(userId: string): WeeklyChallengeDraft[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(
-    `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
-  );
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as WeeklyChallengeDraft | WeeklyChallengeDraft[];
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } catch {
-    return [];
-  }
-}
-
-function setWeeklyOverrideChallenges(userId: string, challenges: WeeklyChallengeDraft[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
-    JSON.stringify(challenges),
-  );
-}
-
-function getPersistedWeeklyChallengeState(
-  challenges: EngagementChallenge[],
-  weekKey: string,
-): { drafts: WeeklyChallengeDraft[]; refreshCounts: number[] } {
-  const drafts: WeeklyChallengeDraft[] = [];
-  const refreshCounts = [0, 0];
-  const seenIndexes = new Set<number>();
-  for (const challenge of challenges) {
-    const metadata = challenge.metadata ?? {};
-    if (metadata.weekKey !== weekKey || metadata.source !== "home_weekly_challenge") continue;
-    const index = Number(metadata.challengeIndex);
-    if (index !== 0 && index !== 1) continue;
-    if (seenIndexes.has(index)) continue;
-    // La API devuelve retos recientes primero; tomamos el ultimo guardado por indice.
-    // Asi un reinicio de prueba con refreshCount 0 no queda bloqueado por registros viejos.
-    seenIndexes.add(index);
-    drafts[index] = {
-      title: challenge.title,
-      description: challenge.description,
-      reward: challenge.reward_hint ?? "Recompensa sugerida al completar el reto.",
-    };
-    refreshCounts[index] = Number(metadata.refreshCount ?? 0);
-  }
-  return { drafts, refreshCounts };
-}
-
-function getWeeklySelectedVenues(userId: string): string[] {
-  if (typeof window === "undefined") return ["", ""];
-  const key = `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`;
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return ["", ""];
-  try {
-    const parsed = JSON.parse(raw) as string | string[];
-    if (Array.isArray(parsed)) return [parsed[0] ?? "", parsed[1] ?? ""];
-  } catch {
-    // Compatibilidad con versiones anteriores que guardaban un solo id como texto plano.
-  }
-  return [raw, ""];
-}
-
-function setWeeklySelectedVenues(userId: string, venueIds: string[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`,
-    JSON.stringify([venueIds[0] ?? "", venueIds[1] ?? ""]),
-  );
-}
-
-function getUserSports(user: User | null): string[] {
-  if (!user) return [];
-  const preferredSports = user.preferred_sports ?? [];
-  const weightedSports = Object.entries(user.sport_preferences?.sports_matrix ?? {})
-    .filter(([, config]) => Number(config.weight ?? 0) > 0)
-    .map(([sport]) => sport);
-  return [...new Set([...preferredSports, ...weightedSports].map((sport) => sport.trim()))].filter(
-    Boolean,
-  );
-}
-
-function getSportAffinity(user: User | null, sport: string): number {
-  if (!user || !sport) return 0;
-  const sports = getUserSports(user);
-  if (sports.length === 0) return 0;
-  if (sports.some((userSport) => userSport.toLowerCase() === sport.toLowerCase())) return 1;
-  return 0;
-}
-
-function buildWeeklyChallengeRefreshPair(
-  plan: AiRecommendationResponse | null,
-  count: number,
-): WeeklyChallengeDraft[] {
-  const venue = plan?.recommendations.find((item) => item.type === "venue")?.title;
-  const sport =
-    plan?.recommendations.find((item) => item.type === "sport")?.title ??
-    plan?.dailyChallenge.title ??
-    "tu deporte principal";
-  const variants = [
-    [
-      {
-        title: `Circuito relampago de ${sport}`,
-        description: `Completa 3 mini bloques: 8 minutos de entrada en calor, 10 minutos de tecnica repetida y un cierre de 10 intentos medibles. El reto se cumple si registras tu mejor marca sin subir la intensidad de golpe.`,
-        reward: "+55 FitCoins sugeridos si completas el circuito y registras resultado.",
-      },
-      {
-        title: "Sede testigo: prueba de precision",
-        description: venue
-          ? `Elige ${venue} u otra sede del mapa. Haz 20 minutos de practica tecnica y completa 12 intentos a una zona u objetivo definido. La empresa valida asistencia y cumplimiento.`
-          : "Elige una sede del mapa. Haz 20 minutos de practica tecnica y completa 12 intentos a una zona u objetivo definido. La empresa valida asistencia y cumplimiento.",
-        reward: "+50 FitCoins sugeridos cuando la empresa valide la actividad.",
-      },
-    ],
-    [
-      {
-        title: "Duelo de marca personal",
-        description: `Elige una metrica de ${sport}: aciertos, tiempo, control o repeticiones tecnicas. Haz 2 rondas de 7 minutos con 2 minutos de pausa y busca mejorar tu primera ronda solo un 10%.`,
-        reward: "+60 FitCoins sugeridos si registras ambas rondas.",
-      },
-      {
-        title: "Check-in de habilidad",
-        description:
-          "Selecciona una sede, realiza una sesion de 25 minutos con calentamiento, practica central y cierre suave. La empresa confirma que asististe y completaste la mision.",
-        reward: "+45 FitCoins sugeridos por validacion aprobada.",
-      },
-    ],
-    [
-      {
-        title: "Escalera de mejora medible",
-        description: `Haz una sesion de ${sport} en 3 niveles: facil, medio y reto final. En cada nivel mide una accion concreta, como precision, control, tiempo o repeticiones tecnicas.`,
-        reward: "+55 FitCoins sugeridos por progreso deportivo.",
-      },
-      {
-        title: "Empresa validadora: reto 25",
-        description:
-          "Selecciona una sede fisica y completa 25 minutos de actividad segura. La empresa revisa asistencia, disciplina del reto y registro final del usuario.",
-        reward: "+45 FitCoins sugeridos tras aprobacion de la sede.",
-      },
-    ],
-  ];
-  return variants[count % variants.length];
-}
-
-function buildSingleWeeklyChallengeRefresh(
-  plan: AiRecommendationResponse | null,
-  challengeIndex: number,
-  count: number,
-): WeeklyChallengeDraft {
-  const pair = buildWeeklyChallengeRefreshPair(plan, count + challengeIndex);
-  return pair[challengeIndex] ?? pair[0];
-}
-
-function isLegacyWeeklyChallengeDraft(challenge: WeeklyChallengeDraft | undefined): boolean {
-  if (!challenge) return true;
-  const normalizedText = `${challenge.title} ${challenge.description}`.toLowerCase();
-  return [
-    "mision duelo amistoso",
-    "reto validable en sede",
-    "coordina una actividad fisica",
-    "realiza una actividad fisica en una cancha",
-    "define deporte, hora y objetivo",
-    "selecciona una sede, asiste a la actividad",
-    "completa tu actividad deportiva",
-    "agrega deportes, conecta con jugadores",
-  ].some((legacyText) => normalizedText.includes(legacyText));
-}
-
-function buildWeeklyChallengeFromAi(
-  aiPlan: AiRecommendationResponse,
-  challengeIndex: number,
-  fallbackPlan: AiRecommendationResponse | null,
-): WeeklyChallengeDraft {
-  const challengeCards = aiPlan.recommendations.filter((item) => item.type === "challenge");
-  const selectedCard = challengeCards[challengeIndex] ?? challengeCards[0];
-
-  if (selectedCard?.title && selectedCard.description) {
-    return {
-      title: selectedCard.title,
-      description: selectedCard.description,
-      reward:
-        typeof selectedCard.metadata?.rewardHint === "string"
-          ? selectedCard.metadata.rewardHint
-          : `+${challengeIndex === 0 ? 60 : 45} FitCoins sugeridos si completas la mision y la sede la valida.`,
-    };
-  }
-
-  if (challengeIndex === 0 && aiPlan.dailyChallenge.title && aiPlan.dailyChallenge.description) {
-    return {
-      title: aiPlan.dailyChallenge.title,
-      description: aiPlan.dailyChallenge.description,
-      reward: aiPlan.dailyChallenge.rewardHint,
-    };
-  }
-
-  // Fallback defensivo: solo se usa si Vertex responde sin retos estructurados.
-  return buildSingleWeeklyChallengeRefresh(fallbackPlan, challengeIndex, challengeIndex + 1);
-}
-
-async function generateWeeklyChallengeWithVertex(
-  challengeIndex: number,
-  fallbackPlan: AiRecommendationResponse | null,
-): Promise<WeeklyChallengeDraft> {
-  const aiPlan = await withTimeout(
-    getAiRecommendations({ type: "challenges", limit: 4, language: "es" }),
-    35000,
-  );
-  return buildWeeklyChallengeFromAi(aiPlan, challengeIndex, fallbackPlan);
-}
-
-async function generateWeeklyChallengePairWithVertex(
-  fallbackPlan: AiRecommendationResponse | null,
-): Promise<WeeklyChallengeDraft[]> {
-  const aiPlan = await withTimeout(
-    getAiRecommendations({ type: "challenges", limit: 4, language: "es" }),
-    35000,
-  );
-  return [
-    buildWeeklyChallengeFromAi(aiPlan, 0, fallbackPlan),
-    buildWeeklyChallengeFromAi(aiPlan, 1, fallbackPlan),
-  ];
-}
-
-function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
-  return {
-    id: publicMatch.id,
-    title: publicMatch.title,
-    sport: publicMatch.sport,
-    date: publicMatch.date,
-    time: publicMatch.time,
-    max_players: publicMatch.maxPlayers,
-    required_level: publicMatch.level,
-    creator_id: publicMatch.creatorId,
-    status: publicMatch.status === "Full" ? "Full" : publicMatch.status,
-    court_id: publicMatch.id,
-    court: {
-      id: publicMatch.id,
-      name: publicMatch.courtName,
-      address: publicMatch.address,
-      district: publicMatch.address,
-      sport: publicMatch.sport,
-      lat: publicMatch.lat,
-      lng: publicMatch.lng,
-      price_per_hour: 0,
-      rating: 4.5,
-      reviews_count: 0,
-      is_available: true,
-    } as Court,
-    current_players: publicMatch.participants.map((participant) => ({
-      id: participant.userId,
-      name: participant.name,
-      avatar_url: participant.avatarUrl,
-    })) as User[],
-  } as Match;
-}
-
-function scoreRecommendedMatch(match: Match, user: User | null): number {
-  if (!user) return 0;
-  const sportAffinity = getSportAffinity(user, match.sport);
-
-  const matchDate = new Date(`${match.date}T${match.time || "00:00"}`);
-  if (Number.isNaN(matchDate.getTime())) return 0;
-  const now = Date.now();
-  const sixMonthsFromNow = now + 180 * 24 * 60 * 60 * 1000;
-  if (matchDate.getTime() < now || matchDate.getTime() > sixMonthsFromNow) return 0;
-
-  const sameSport = sportAffinity ? 55 : 10;
-  const sameLevel =
-    String(user.level).toLowerCase() === String(match.required_level).toLowerCase() ? 25 : 8;
-  const openBonus = match.status !== "Full" && match.status !== "Finished" ? 20 : 0;
-  const availabilityBonus = match.current_players?.length
-    ? Math.max(0, 10 - (match.current_players.length / match.max_players) * 10)
-    : 10;
-  return sameSport + sameLevel + openBonus + availabilityBonus;
-}
-
-function isStrongRecommendedMatch(match: Match, user: User | null): boolean {
-  const userSports = getUserSports(user);
-  return userSports.length === 0 || getSportAffinity(user, match.sport) > 0;
-}
-
-function scoreNearbyPlayer(
-  player: User,
-  user: User | null,
-  baseLocation: { lat: number; lng: number } | null,
-) {
-  const distance =
-    baseLocation && player.last_location_lat && player.last_location_lng
-      ? calculateDistance(
-          baseLocation.lat,
-          baseLocation.lng,
-          player.last_location_lat,
-          player.last_location_lng,
-        )
-      : player.distance_km;
-  const distanceScore =
-    typeof distance === "number" ? Math.max(0, 60 - Math.min(distance, 60)) : 15;
-  const userSports = getUserSports(user);
-  const sharesSport = player.preferred_sports?.some((sport) => getSportAffinity(user, sport) > 0);
-  const sportScore = sharesSport ? 30 : userSports.length > 0 ? 0 : 0;
-  const trustScore = Math.min(player.trust_score ?? 0, 100) / 10;
-  return { distance, score: distanceScore + sportScore + trustScore };
-}
-
-function scoreNearbyCourt(
-  court: Court,
-  user: User | null,
-  baseLocation: { lat: number; lng: number } | null,
-) {
-  const distance = baseLocation
-    ? calculateDistance(baseLocation.lat, baseLocation.lng, court.lat, court.lng)
-    : undefined;
-  const distanceScore =
-    typeof distance === "number" ? Math.max(0, 70 - Math.min(distance, 70)) : 20;
-  const userSports = getUserSports(user);
-  const sportAffinity = getSportAffinity(user, court.sport);
-  const sportScore = sportAffinity ? 30 : userSports.length > 0 ? 0 : 0;
-  const ratingScore = Math.round((court.rating ?? 4) * 2);
-  return { distance, score: distanceScore + sportScore + ratingScore };
-}
-
-function isLegacyDailyPlan(plan: AiRecommendationResponse): boolean {
-  const title = plan.dailyChallenge.title.toLowerCase();
-  const description = plan.dailyChallenge.description.toLowerCase();
-  const combined = `${title} ${description}`;
-  const nonPhysicalKeywords = [
-    "iracing",
-    "i racing",
-    "simracing",
-    "sim racing",
-    "f1 sim",
-    "f1sim",
-    "formula 1 sim",
-    "simulador",
-    "simulator",
-    "simulation",
-    "gran turismo",
-    "assetto",
-    "e-sport",
-    "esport",
-    "gaming",
-    "videojuego",
-  ];
-  return (
-    title.includes("reto de activacion") ||
-    title.includes("reto de activación") ||
-    description.includes("crea una publicacion") ||
-    description.includes("crea una publicación") ||
-    description.includes("conecta con un jugador recomendado") ||
-    nonPhysicalKeywords.some((keyword) => combined.includes(keyword))
-  );
-}
-
-function isPhysicalVenueSport(sport: string | null | undefined): boolean {
-  const normalized = (sport ?? "").toLowerCase();
-  const virtualKeywords = [
-    "iracing",
-    "simracing",
-    "sim racing",
-    "f1 sim",
-    "simulador",
-    "simulator",
-    "e-sport",
-    "esport",
-    "gaming",
-    "videojuego",
-  ];
-  return !virtualKeywords.some((keyword) => normalized.includes(keyword));
-}
-
-// === BLOQUE: Cache local del plan diario ===
-// Evita consultar el backend cada vez que se entra al Home durante el mismo dia.
-// El backend sigue siendo la fuente real; localStorage solo evita parpadeos y llamadas repetidas.
-function readCachedDailyPlan(userId: string): AiRecommendationResponse | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(getDailyPlanCacheKey(userId));
-    if (!raw) return null;
-    const plan = JSON.parse(raw) as AiRecommendationResponse;
-    const expiresAt = plan.metadata?.expiresAt ? new Date(plan.metadata.expiresAt).getTime() : 0;
-    if (expiresAt && expiresAt <= Date.now()) return null;
-    if (isLegacyDailyPlan(plan)) return null;
-    return plan;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedDailyPlan(userId: string, plan: AiRecommendationResponse) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(getDailyPlanCacheKey(userId), JSON.stringify(plan));
-  } catch {
-    // Si el navegador bloquea storage, la app sigue funcionando con el snapshot del backend.
-  }
-}
-
 // === BLOQUE: Dashboard — Componente principal del panel de inicio ===
 // Secciones:
 //   - Hero con saludo, nivel, Trust Score y partidos jugados.
@@ -643,330 +139,15 @@ function writeCachedDailyPlan(userId: string, plan: AiRecommendationResponse) {
 function Dashboard() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [selectedSport, setSelectedSport] = useState<string>("Todos");
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
   const { balance: walletBalance, initWallet } = useWalletStore();
-  const publicMatches = usePublicMatchStore((state) => state.publicMatches);
-  const cachedInitialPlan = user ? readCachedDailyPlan(user.id) : null;
-  const [dailyPlan, setDailyPlan] = useState<AiRecommendationResponse | null>(cachedInitialPlan);
-  const [dailyPlanStatus, setDailyPlanStatus] = useState<DailyPlanStatus>(
-    cachedInitialPlan ? "ready" : "idle",
-  );
-  const [dailyPlanRefreshKey, setDailyPlanRefreshKey] = useState(0);
-  const [weeklyCountdown, setWeeklyCountdown] = useState(getWeeklyChallengeCountdown);
-  const [challengeRefreshCounts, setChallengeRefreshCounts] = useState<number[]>(
-    user ? getWeeklyRefreshCounts(user.id) : [0, 0],
-  );
-  const [refreshingChallengeIndexes, setRefreshingChallengeIndexes] = useState<number[]>([]);
-  const [weeklyChallengesRestored, setWeeklyChallengesRestored] = useState(false);
-  const [overrideChallenges, setOverrideChallenges] = useState<WeeklyChallengeDraft[]>(
-    user ? getWeeklyOverrideChallenges(user.id) : [],
-  );
-  const [selectedWeeklyVenueIds, setSelectedWeeklyVenueIds] = useState<string[]>(
-    user ? getWeeklySelectedVenues(user.id) : ["", ""],
-  );
 
   useEffect(() => {
     initWallet();
   }, [initWallet]);
 
-  useEffect(() => {
-    const intervalId = globalThis.setInterval(
-      () => setWeeklyCountdown(getWeeklyChallengeCountdown()),
-      60_000,
-    );
-    return () => globalThis.clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    setChallengeRefreshCounts(getWeeklyRefreshCounts(user.id));
-    setOverrideChallenges(getWeeklyOverrideChallenges(user.id));
-    setSelectedWeeklyVenueIds(getWeeklySelectedVenues(user.id));
-    setWeeklyChallengesRestored(false);
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    if (useAuthStore.getState().isDemoMode) {
-      setWeeklyChallengesRestored(true);
-      return;
-    }
-    let active = true;
-    getEngagementChallenges()
-      .then((challenges) => {
-        if (!active) return;
-        const { drafts, refreshCounts } = getPersistedWeeklyChallengeState(
-          challenges,
-          getWeeklyChallengeKey(user.id),
-        );
-        if (drafts.length > 0) {
-          setOverrideChallenges(drafts);
-          setWeeklyOverrideChallenges(user.id, drafts);
-        }
-        if (refreshCounts.some((count) => count > 0)) {
-          setChallengeRefreshCounts(refreshCounts);
-          setWeeklyRefreshCounts(user.id, refreshCounts);
-        }
-        setWeeklyChallengesRestored(true);
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV) console.warn("No se pudieron restaurar retos persistidos:", error);
-        if (active) setWeeklyChallengesRestored(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user]);
-
-  const handleRefreshWeeklyChallenge = async (challengeIndex: number) => {
-    if (
-      !user ||
-      challengeRefreshCounts[challengeIndex] >= 1 ||
-      refreshingChallengeIndexes.includes(challengeIndex)
-    ) {
-      return;
-    }
-    setRefreshingChallengeIndexes((current) => [...new Set([...current, challengeIndex])]);
-    const nextCounts = [...challengeRefreshCounts];
-    nextCounts[challengeIndex] = (nextCounts[challengeIndex] ?? 0) + 1;
-    let nextChallenge: WeeklyChallengeDraft;
-    try {
-      // El refresh manual consume Vertex para proponer una mision nueva,
-      // personalizada y menos repetitiva que las plantillas locales.
-      nextChallenge = await generateWeeklyChallengeWithVertex(challengeIndex, dailyPlan);
-    } catch (error) {
-      if (import.meta.env.DEV) console.warn("Vertex no pudo actualizar el reto:", error);
-      nextChallenge = buildSingleWeeklyChallengeRefresh(
-        dailyPlan,
-        challengeIndex,
-        nextCounts[challengeIndex],
-      );
-    }
-    const nextChallenges = [...overrideChallenges];
-    nextChallenges[challengeIndex] = nextChallenge;
-    setWeeklyRefreshCounts(user.id, nextCounts);
-    setWeeklyOverrideChallenges(user.id, nextChallenges);
-    setChallengeRefreshCounts(nextCounts);
-    setOverrideChallenges(nextChallenges);
-
-    saveEngagementChallenge({
-      title: nextChallenge.title,
-      description: nextChallenge.description,
-      rewardHint: nextChallenge.reward,
-      metadata: {
-        source: "home_weekly_challenge",
-        weekKey: getWeeklyChallengeKey(user.id),
-        challengeIndex,
-        refreshCount: nextCounts[challengeIndex],
-        generationMode: "vertex_manual_refresh",
-      },
-    }).catch((error) => {
-      if (import.meta.env.DEV) console.warn("No se pudo persistir reto actualizado:", error);
-    });
-
-    setRefreshingChallengeIndexes((current) => current.filter((index) => index !== challengeIndex));
-
-    toast.success(`Reto ${challengeIndex + 1} actualizado`, {
-      description: "Se genero una nueva mision usando tu perfil deportivo.",
-    });
-  };
-
-  const handleSelectWeeklyVenue = (challengeIndex: number, venueId: string) => {
-    if (!user) return;
-    const nextVenueIds = [...selectedWeeklyVenueIds];
-    nextVenueIds[challengeIndex] = venueId;
-    setWeeklySelectedVenues(user.id, nextVenueIds);
-    setSelectedWeeklyVenueIds(nextVenueIds);
-    const venue = closestCourts.find((court) => court.id === venueId);
-    toast.success("Sede seleccionada para el reto", {
-      description: venue
-        ? `${venue.name} validara tu actividad cuando la completes.`
-        : "La empresa responsable validara tu actividad.",
-    });
-  };
-
-  const handleTestRegenerateWeeklyChallenges = async () => {
-    if (!user || refreshingChallengeIndexes.length > 0) return;
-    const indexes = [0, 1];
-    setRefreshingChallengeIndexes(indexes);
-
-    try {
-      // Boton de prueba: fuerza nuevos retos con Vertex sin esperar al lunes.
-      // Se persisten como la version actual de la semana para validar el flujo completo.
-      let usedAi = true;
-      let generatedChallenges: WeeklyChallengeDraft[];
-      try {
-        generatedChallenges = await generateWeeklyChallengePairWithVertex(dailyPlan);
-      } catch (error) {
-        usedAi = false;
-        if (import.meta.env.DEV) console.warn("Vertex no respondio para regenerar retos:", error);
-        generatedChallenges = indexes.map((challengeIndex) =>
-          buildSingleWeeklyChallengeRefresh(dailyPlan, challengeIndex, challengeIndex + Date.now()),
-        );
-      }
-      if (generatedChallenges.some(isLegacyWeeklyChallengeDraft)) {
-        usedAi = false;
-        generatedChallenges = indexes.map((challengeIndex) =>
-          buildSingleWeeklyChallengeRefresh(dailyPlan, challengeIndex, challengeIndex + Date.now()),
-        );
-      }
-      const nextChallenges: WeeklyChallengeDraft[] = [];
-      for (const challengeIndex of indexes) {
-        nextChallenges[challengeIndex] = generatedChallenges[challengeIndex];
-      }
-      const nextCounts = [0, 0];
-      setOverrideChallenges(nextChallenges);
-      setChallengeRefreshCounts(nextCounts);
-      setWeeklyOverrideChallenges(user.id, nextChallenges);
-      setWeeklyRefreshCounts(user.id, nextCounts);
-
-      await Promise.all(
-        indexes.map((challengeIndex) =>
-          saveEngagementChallenge({
-            title: generatedChallenges[challengeIndex].title,
-            description: generatedChallenges[challengeIndex].description,
-            rewardHint: generatedChallenges[challengeIndex].reward,
-            metadata: {
-              source: "home_weekly_challenge",
-              weekKey: getWeeklyChallengeKey(user.id),
-              challengeIndex,
-              refreshCount: 0,
-              generationMode: usedAi ? "vertex_test_regeneration" : "fallback_test_regeneration",
-            },
-          }).catch((error) => {
-            if (import.meta.env.DEV) console.warn("No se pudo persistir reto de prueba:", error);
-          }),
-        ),
-      );
-
-      if (usedAi) {
-        toast.success("Retos regenerados con IA", {
-          description: "Se crearon 2 retos nuevos usando tu perfil deportivo.",
-        });
-      } else {
-        toast.warning("Vertex no respondio a tiempo", {
-          description: "Se generaron retos deportivos de respaldo para no bloquear la prueba.",
-        });
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) console.warn("No se pudieron regenerar retos:", error);
-      toast.error("No se pudieron regenerar los retos con IA.");
-    } finally {
-      setRefreshingChallengeIndexes([]);
-    }
-  };
-
-  // === BLOQUE: Retos semanales ===
-  // Consume el snapshot del motor de recomendaciones y lo presenta como 2 retos semanales.
-  // Si no existe snapshot, el backend puede generarlo; si falla, la UI muestra reintento claro.
-  useEffect(() => {
-    if (!user) return;
-    if (useAuthStore.getState().isDemoMode) {
-      setDailyPlanStatus("error");
-      return;
-    }
-
-    const cachedPlan = readCachedDailyPlan(user.id);
-    if (cachedPlan) {
-      setDailyPlan(cachedPlan);
-      setDailyPlanStatus("ready");
-      return;
-    }
-
-    let active = true;
-    setDailyPlanStatus("loading");
-    getTodayAiRecommendations()
-      .then((plan) => {
-        if (!active) return;
-        setDailyPlan(plan);
-        writeCachedDailyPlan(user.id, plan);
-        setDailyPlanStatus("ready");
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV) console.warn("No se pudo cargar el plan deportivo diario:", error);
-        if (active) setDailyPlanStatus("error");
-      });
-    return () => {
-      active = false;
-    };
-  }, [dailyPlanRefreshKey, user]);
-
   // === BLOQUE: Racha deportiva y días de asistencia ===
-  useEffect(() => {
-    if (!user || useAuthStore.getState().isDemoMode) return;
-    if (!weeklyChallengesRestored || dailyPlanStatus !== "ready") return;
-    if (
-      !isLegacyWeeklyChallengeDraft(overrideChallenges[0]) &&
-      !isLegacyWeeklyChallengeDraft(overrideChallenges[1])
-    ) {
-      return;
-    }
-
-    let active = true;
-    const missingIndexes = [0, 1].filter((index) =>
-      isLegacyWeeklyChallengeDraft(overrideChallenges[index]),
-    );
-    setRefreshingChallengeIndexes((current) => [...new Set([...current, ...missingIndexes])]);
-
-    // Generamos retos creativos con Vertex solo si no hay retos guardados para
-    // esta semana. Luego se persisten para no consumir tokens en cada visita.
-    Promise.all(
-      missingIndexes.map(async (challengeIndex) => ({
-        challengeIndex,
-        challenge: await generateWeeklyChallengeWithVertex(challengeIndex, dailyPlan),
-      })),
-    )
-      .then(async (generatedChallenges) => {
-        if (!active) return;
-        const nextChallenges = [...overrideChallenges];
-        for (const { challengeIndex, challenge } of generatedChallenges) {
-          nextChallenges[challengeIndex] = challenge;
-        }
-        setOverrideChallenges(nextChallenges);
-        setWeeklyOverrideChallenges(user.id, nextChallenges);
-
-        await Promise.all(
-          generatedChallenges.map(({ challengeIndex, challenge }) =>
-            saveEngagementChallenge({
-              title: challenge.title,
-              description: challenge.description,
-              rewardHint: challenge.reward,
-              metadata: {
-                source: "home_weekly_challenge",
-                weekKey: getWeeklyChallengeKey(user.id),
-                challengeIndex,
-                refreshCount: challengeRefreshCounts[challengeIndex] ?? 0,
-                generationMode: "vertex_initial_weekly",
-              },
-            }).catch((error) => {
-              if (import.meta.env.DEV) console.warn("No se pudo persistir reto IA:", error);
-            }),
-          ),
-        );
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV) console.warn("No se pudieron generar retos con Vertex:", error);
-      })
-      .finally(() => {
-        if (!active) return;
-        setRefreshingChallengeIndexes((current) =>
-          current.filter((index) => !missingIndexes.includes(index)),
-        );
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [
-    challengeRefreshCounts,
-    dailyPlan,
-    dailyPlanStatus,
-    overrideChallenges,
-    user,
-    weeklyChallengesRestored,
-  ]);
-
   const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
   const [attendanceDays, setAttendanceDays] = useState<string[]>([]);
 
@@ -1105,48 +286,10 @@ function Dashboard() {
   };
 
   const [liveMatches, setLiveMatches] = useState<Match[]>(matches);
-  const [dashboardUsers, setDashboardUsers] = useState<User[]>(users);
-  const [dashboardCourts, setDashboardCourts] = useState<Court[]>(courts);
-  const [dashboardSports, setDashboardSports] = useState<SportCatalog[]>(sports);
-  const [isHydratingDashboardData, setIsHydratingDashboardData] = useState(false);
 
   useEffect(() => {
     setLiveMatches(matches);
   }, [matches]);
-
-  useEffect(() => {
-    setDashboardUsers(users);
-    setDashboardCourts(courts);
-    setDashboardSports(sports);
-  }, [courts, sports, users]);
-
-  useEffect(() => {
-    let active = true;
-    setIsHydratingDashboardData(true);
-
-    // Refresco de fondo para evitar Home vacio cuando backend/Supabase responde lento
-    // en la primera entrada. No inventa data: solo completa con consultas reales.
-    Promise.all([
-      apiClient.matches.getAll().catch(() => [] as Match[]),
-      apiClient.users.getMatches(user?.id).catch(() => [] as User[]),
-      apiClient.courts.getAll().catch(() => [] as Court[]),
-      apiClient.sports.getAll().catch(() => [] as SportCatalog[]),
-    ])
-      .then(([freshMatches, freshUsers, freshCourts, freshSports]) => {
-        if (!active) return;
-        if (freshMatches.length > 0) setLiveMatches(freshMatches);
-        if (freshUsers.length > 0) setDashboardUsers(freshUsers);
-        if (freshCourts.length > 0) setDashboardCourts(freshCourts);
-        if (freshSports.length > 0) setDashboardSports(freshSports);
-      })
-      .finally(() => {
-        if (active) setIsHydratingDashboardData(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user?.id]);
 
   // === BLOQUE: nextMatch — Próximo partido del usuario ===
   const nextMatch = useMemo(() => {
@@ -1310,85 +453,32 @@ function Dashboard() {
     checkRatingLoop();
   }, [matches, user]);
 
-  const publicMatchesForDashboard = useMemo(
-    () =>
-      publicMatches
-        .map(publicMatchToDashboardMatch)
-        .filter((match) => match.status !== "Cancelled" && match.status !== "Finished"),
-    [publicMatches],
-  );
-
-  // === BLOQUE: Partidos recomendados ===
-  // Une partidos reales con partidos publicos del tablero y los ordena por compatibilidad simple.
-  // Asi Home no queda vacio cuando el backend no trae matches, pero respeta lo que existe en /app/match.
-  const recommendedMatches = useMemo(() => {
-    const byId = new Map<string, Match>();
-    [...liveMatches, ...publicMatchesForDashboard].forEach((match) => {
-      byId.set(match.id, match);
-    });
-    const scoredMatches = [...byId.values()]
-      .map((match) => ({ match, score: scoreRecommendedMatch(match, user) }))
-      .filter(
-        ({ match, score }) => score > 0 && match.status !== "Full" && match.status !== "Finished",
-      )
-      .sort((a, b) => b.score - a.score);
-
-    const strongMatches = scoredMatches.filter(({ match }) =>
-      isStrongRecommendedMatch(match, user),
-    );
-    return (strongMatches.length > 0 ? strongMatches : scoredMatches).map(({ match }) => match);
-  }, [liveMatches, publicMatchesForDashboard, user]);
-
-  const filteredMatches =
-    selectedSport !== "Todos"
-      ? recommendedMatches.filter((m) => m.sport === selectedSport)
-      : recommendedMatches.slice(0, 4);
-  const visibleRecommendedMatches = filteredMatches.slice(0, 4);
-  const isResolvingRecommendedMatches =
-    visibleRecommendedMatches.length === 0 &&
-    (isHydratingDashboardData ||
-      (recommendedMatches.length === 0 &&
-        liveMatches.length === 0 &&
-        publicMatchesForDashboard.length === 0));
+  // Filtra partidos por deporte seleccionado.
+  const filteredMatches = selectedSport
+    ? liveMatches.filter((m) => m.sport === selectedSport)
+    : liveMatches;
 
   // Canchas más cercanas según ubicación base.
-  const nearbyPlayers = useMemo(() => {
-    return dashboardUsers
-      .filter((candidate) => candidate.id !== user?.id && candidate.user_role !== "BUSINESS")
-      .map((candidate) => ({
-        ...candidate,
-        proximity: scoreNearbyPlayer(candidate, user, baseLocation),
-      }))
-      .filter((candidate) => candidate.proximity.score > 0 || getUserSports(user).length === 0)
-      .sort((a, b) => b.proximity.score - a.proximity.score)
-      .slice(0, 4);
-  }, [dashboardUsers, user, baseLocation]);
-
   const closestCourts = useMemo(() => {
-    return [...dashboardCourts]
+    if (!baseLocation) return courts.slice(0, 5);
+    return [...courts]
       .map((c) => ({
         ...c,
-        proximity: scoreNearbyCourt(c, user, baseLocation),
-        distance: baseLocation
-          ? calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng)
-          : undefined,
+        distance: calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng),
       }))
-      .filter((court) => court.proximity.score > 0 || getUserSports(user).length === 0)
-      .sort((a, b) => b.proximity.score - a.proximity.score)
+      .sort((a, b) => a.distance - b.distance)
       .slice(0, 5);
-  }, [dashboardCourts, user, baseLocation]);
+  }, [courts, baseLocation]);
 
-  const SPORTS = [
-    { name: "Todos", emoji: "◎" },
-    ...(dashboardSports.length > 0
-      ? dashboardSports.map((s) => ({ name: s.name, emoji: getSportEmoji(s.name) }))
+  const SPORTS =
+    sports.length > 0
+      ? sports.map((s) => ({ name: s.name, emoji: getSportEmoji(s.name) }))
       : [
           { name: "Pádel", emoji: "🏓" },
           { name: "Fútbol", emoji: "⚽" },
           { name: "Tenis", emoji: "🎾" },
           { name: "Running", emoji: "🏃" },
-        ]),
-  ];
+        ];
 
   // === BLOQUE: Estados para el modal de creación de partido ===
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -1586,7 +676,7 @@ function Dashboard() {
         {SPORTS.map((s) => (
           <button
             key={s.name}
-            onClick={() => setSelectedSport(s.name)}
+            onClick={() => setSelectedSport(selectedSport === s.name ? null : s.name)}
             className={`shrink-0 px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-all ${
               selectedSport === s.name
                 ? "bg-gradient-neon text-neon-foreground shadow-neon font-semibold"
@@ -1597,21 +687,6 @@ function Dashboard() {
           </button>
         ))}
       </div>
-
-      <DailySportsPlan
-        plan={dailyPlan}
-        status={dailyPlanStatus}
-        onRetry={() => setDailyPlanRefreshKey((current) => current + 1)}
-        overrideChallenges={overrideChallenges}
-        weeklyCountdown={weeklyCountdown}
-        refreshesRemaining={challengeRefreshCounts.map((count) => Math.max(0, 1 - count))}
-        refreshingChallengeIndexes={refreshingChallengeIndexes}
-        onRefreshChallenge={handleRefreshWeeklyChallenge}
-        onTestRegenerateChallenges={handleTestRegenerateWeeklyChallenges}
-        venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
-        selectedVenueIds={selectedWeeklyVenueIds}
-        onSelectVenue={handleSelectWeeklyVenue}
-      />
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* === Columna principal (2/3) === */}
@@ -1692,11 +767,6 @@ function Dashboard() {
                 <h2 className="font-heading text-2xl tracking-wide text-foreground">
                   Partidos recomendados
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {selectedSport === "Todos"
-                    ? "Basado en partidos públicos, tu deporte y tu nivel"
-                    : `Mostrando solo partidos de ${selectedSport}`}
-                </p>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -1706,18 +776,8 @@ function Dashboard() {
               </button>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
-              {isResolvingRecommendedMatches ? (
-                <div className="col-span-2 p-10 text-center glass rounded-2xl border border-border/40">
-                  <Loader2 className="h-8 w-8 mx-auto mb-3 text-primary animate-spin" />
-                  <p className="text-sm font-medium text-foreground">
-                    Cargando partidos recomendados...
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Estamos revisando partidos públicos y compatibilidad.
-                  </p>
-                </div>
-              ) : visibleRecommendedMatches.length > 0 ? (
-                visibleRecommendedMatches.map((m) => <MatchCard key={m.id} match={m} />)
+              {filteredMatches.length > 0 ? (
+                filteredMatches.map((m) => <MatchCard key={m.id} match={m} />)
               ) : (
                 <div className="col-span-2 p-10 text-center text-muted-foreground/60 glass rounded-2xl border border-border/40">
                   <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
@@ -1848,16 +908,8 @@ function Dashboard() {
               </Link>
             </div>
             <div className="space-y-2">
-              {nearbyPlayers.map((p) => {
+              {users.slice(0, 4).map((p) => {
                 const isMe = p.id === user?.id;
-                const distanceLabel =
-                  typeof p.proximity.distance === "number"
-                    ? `${p.proximity.distance.toFixed(1)} km`
-                    : p.proximity.score >= 45
-                      ? "Prioridad alta"
-                      : p.proximity.score >= 25
-                        ? "Prioridad media"
-                        : "Prioridad general";
                 return (
                   <Link
                     key={p.id}
@@ -1882,7 +934,10 @@ function Dashboard() {
                         )}
                       </div>
                       <div className="text-[11px] text-muted-foreground/70 truncate">
-                        {p.preferred_sports?.[0] || "Sin deporte"} · {distanceLabel}
+                        {p.preferred_sports?.[0] || "Sin deporte"} ·{" "}
+                        {baseLocation && p.last_location_lat && p.last_location_lng
+                          ? `${calculateDistance(baseLocation.lat, baseLocation.lng, p.last_location_lat, p.last_location_lng).toFixed(1)} km`
+                          : `${p.distance_km || 0} km`}
                       </div>
                     </div>
                     <span className="text-[11px] text-neon flex items-center gap-1 shrink-0 font-semibold">
@@ -1891,17 +946,6 @@ function Dashboard() {
                   </Link>
                 );
               })}
-              {nearbyPlayers.length === 0 && isHydratingDashboardData && (
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
-                  <Loader2 className="mr-2 inline h-3 w-3 animate-spin" />
-                  Cargando jugadores compatibles...
-                </div>
-              )}
-              {nearbyPlayers.length === 0 && !isHydratingDashboardData && (
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
-                  Aun no hay jugadores disponibles para recomendar.
-                </div>
-              )}
             </div>
           </div>
 
@@ -1920,17 +964,6 @@ function Dashboard() {
                   variant="list"
                 />
               ))}
-              {closestCourts.length === 0 && isHydratingDashboardData && (
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
-                  <Loader2 className="mr-2 inline h-3 w-3 animate-spin" />
-                  Cargando canchas y sedes...
-                </div>
-              )}
-              {closestCourts.length === 0 && !isHydratingDashboardData && (
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-4 text-xs text-muted-foreground">
-                  Aun no hay canchas o sedes registradas para recomendar.
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -2126,427 +1159,7 @@ function Dashboard() {
   );
 }
 
-// === BLOQUE: DailySportsPlan - Resumen deportivo diario en Home ===
-// Presenta recomendaciones persistidas como una mejora contextual del dashboard,
-// sin exponer detalles tecnicos del proveedor o modelo usado por el backend.
-function DailySportsPlan({
-  plan,
-  status,
-  onRetry,
-  overrideChallenges,
-  weeklyCountdown,
-  refreshesRemaining,
-  refreshingChallengeIndexes,
-  onRefreshChallenge,
-  onTestRegenerateChallenges,
-  venues,
-  selectedVenueIds,
-  onSelectVenue,
-}: {
-  plan: AiRecommendationResponse | null;
-  status: DailyPlanStatus;
-  onRetry: () => void;
-  overrideChallenges: WeeklyChallengeDraft[];
-  weeklyCountdown: { days: number; hours: number };
-  refreshesRemaining: number[];
-  refreshingChallengeIndexes: number[];
-  onRefreshChallenge: (challengeIndex: number) => void;
-  onTestRegenerateChallenges: () => void;
-  venues: Court[];
-  selectedVenueIds: string[];
-  onSelectVenue: (challengeIndex: number, venueId: string) => void;
-}) {
-  const isLoading = status === "loading";
-  const isError = status === "error";
-  const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
-  const [activeChallengeIndex, setActiveChallengeIndex] = useState(0);
-  const activeSelectedVenueId = selectedVenueIds[activeChallengeIndex] ?? "";
-  const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
-  const selectedVenues = selectedVenueIds.map((venueId) =>
-    venues.find((venue) => venue.id === venueId),
-  );
-  const activeSelectedVenue = selectedVenues[activeChallengeIndex];
-  const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
-  const primaryOverride = overrideChallenges[0];
-  const venueOverride = overrideChallenges[1];
-  const isChallengeRefreshing = (challengeIndex: number) =>
-    refreshingChallengeIndexes.includes(challengeIndex);
-  const primaryStatusLabel = isChallengeRefreshing(0)
-    ? "Generando con IA"
-    : selectedVenues[0]
-      ? primaryOverride
-        ? "Actualizado con sede"
-        : "Sede seleccionada"
-      : primaryOverride
-        ? "Actualizado"
-        : plan
-          ? "Pendiente de sede"
-          : isLoading
-            ? "Cargando"
-            : "No cargado";
-  const venueStatusLabel = isChallengeRefreshing(1)
-    ? "Generando con IA"
-    : selectedVenues[1]
-      ? "Sede seleccionada"
-      : isLoading
-        ? "Cargando"
-        : "Pendiente de sede";
-  const weeklyChallenges = [
-    {
-      title: primaryOverride?.title ?? plan?.dailyChallenge.title ?? "Preparando reto principal",
-      description:
-        primaryOverride?.description ??
-        plan?.dailyChallenge.description ??
-        "Estamos revisando tu perfil y actividad reciente para proponerte un reto fisico de la semana.",
-      reward:
-        primaryOverride?.reward ??
-        plan?.dailyChallenge.rewardHint ??
-        "Se mostrara cuando el reto este listo",
-      statusLabel: primaryStatusLabel,
-      canRefresh: Boolean(plan) && (refreshesRemaining[0] ?? 0) > 0 && !isChallengeRefreshing(0),
-    },
-    {
-      title: venueOverride?.title ?? "Reto validable en sede",
-      description:
-        venueOverride?.description ??
-        (venueRecommendation
-          ? `Realiza una actividad fisica en una sede como ${venueRecommendation.title}. La empresa responsable validara el cumplimiento.`
-          : "Realiza una actividad fisica en una cancha, establecimiento o gym. La empresa responsable validara si cumpliste la actividad."),
-      reward: venueOverride?.reward ?? "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
-      statusLabel: venueStatusLabel,
-      canRefresh: Boolean(plan) && (refreshesRemaining[1] ?? 0) > 0 && !isChallengeRefreshing(1),
-    },
-  ];
-
-  return (
-    <div className="mb-8 rounded-2xl bg-gradient-card border border-primary/20 p-5 shadow-card">
-      <div className="flex flex-col gap-5">
-        <div
-          className={`rounded-2xl border px-4 py-3 text-xs ${
-            isLoading
-              ? "border-primary/30 bg-primary/10 text-primary"
-              : isError
-                ? "border-warning/30 bg-warning/10 text-warning"
-                : "border-neon/20 bg-neon/10 text-neon"
-          }`}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 font-bold">
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  isLoading ? "bg-primary animate-pulse" : isError ? "bg-warning" : "bg-neon"
-                }`}
-              />
-              {isLoading
-                ? "Cargando retos semanales..."
-                : isError
-                  ? "No se pudo sincronizar los retos"
-                  : "Retos semanales listos"}
-            </div>
-            {isError && (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="rounded-xl border border-warning/40 px-3 py-1.5 text-[11px] font-bold hover:bg-warning/10 transition-colors"
-              >
-                Reintentar
-              </button>
-            )}
-          </div>
-          {isError && (
-            <p className="mt-2 text-[11px] text-warning/90">
-              Revisa que el backend este levantado y que la sesion real siga activa. Mientras tanto
-              se muestra una vista base de retos.
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary mb-2">
-              <Sparkles className="h-3.5 w-3.5" />
-              Retos semanales
-            </div>
-            <h2 className="font-heading text-2xl tracking-wide text-foreground">
-              2 retos para esta semana
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-              Retos fisicos adaptados a tu perfil. Para ganar puntos, deberas elegir una sede y la
-              empresa encargada validara el cumplimiento.
-            </p>
-          </div>
-          <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-3 py-1 text-xs font-bold">
-            Reinicia en {weeklyCountdown.days}d {weeklyCountdown.hours}h
-          </span>
-        </div>
-        <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/40 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted-foreground">
-            Los retos se renuevan automaticamente cada lunes a las 00:00. Para pruebas puedes pedir
-            2 retos nuevos sin esperar al reinicio semanal.
-          </p>
-          <button
-            type="button"
-            onClick={onTestRegenerateChallenges}
-            disabled={refreshingChallengeIndexes.length > 0}
-            className="shrink-0 rounded-xl border border-primary/30 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-          >
-            {refreshingChallengeIndexes.length > 0 ? "Generando retos..." : "Reiniciar retos"}
-          </button>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-3">
-          {weeklyChallenges.map((challenge, index) => (
-            <div
-              key={challenge.title}
-              className="rounded-2xl border border-border/60 bg-background/40 p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Reto {index + 1}
-                </span>
-                <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
-                  {challenge.statusLabel}
-                </span>
-              </div>
-              <h3 className="mt-2 font-heading text-xl tracking-wide text-foreground">
-                {challenge.title}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">{challenge.description}</p>
-              <div className="mt-3 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-xs text-primary">
-                Recompensa: {challenge.reward}
-              </div>
-              <div className="mt-3 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveChallengeIndex(index);
-                    setIsVenuePickerOpen(true);
-                  }}
-                  disabled={venues.length === 0}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-left text-xs text-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-                >
-                  {selectedVenues[index]
-                    ? selectedVenues[index]?.name
-                    : venues.length > 0
-                      ? "Escoger sede para validacion"
-                      : "No hay sedes fisicas disponibles"}
-                </button>
-                <p className="text-[11px] text-muted-foreground">
-                  {selectedVenues[index]
-                    ? `${selectedVenues[index]?.name} quedara como sede responsable de validacion.`
-                    : "La empresa de la sede seleccionada podra aprobar o rechazar el cumplimiento."}
-                </p>
-              </div>
-              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-[11px] text-muted-foreground">
-                  {(refreshesRemaining[index] ?? 0) > 0
-                    ? `Te queda ${refreshesRemaining[index]} actualizacion esta semana.`
-                    : "Actualizacion semanal usada."}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onRefreshChallenge(index)}
-                  disabled={!challenge.canRefresh}
-                  className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isChallengeRefreshing(index)
-                    ? "Generando con IA..."
-                    : challenge.canRefresh
-                      ? `Actualizar reto ${index + 1}`
-                      : "Sin actualizaciones"}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Dialog open={isVenuePickerOpen} onOpenChange={setIsVenuePickerOpen}>
-          <DialogContent className="max-w-3xl bg-background border border-border/60 rounded-3xl p-5">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-2xl tracking-wide">
-                Escoge una sede en el mapa
-              </DialogTitle>
-              <DialogDescription>
-                Selecciona la sede o empresa donde realizaras los retos. La empresa responsable
-                podra aprobar o rechazar el cumplimiento desde su panel.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="mt-4">
-              <ChallengeVenueMap
-                isOpen={isVenuePickerOpen}
-                venues={venues}
-                selectedVenueId={activeSelectedVenueId}
-                selectedVenue={activeSelectedVenue}
-                challengeLabel={`Reto ${activeChallengeIndex + 1}`}
-                onSelectVenue={(venueId) => onSelectVenue(activeChallengeIndex, venueId)}
-                onConfirm={() => setIsVenuePickerOpen(false)}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <div className="text-xs text-muted-foreground">
-              Logro sugerido: <span className="text-foreground">{achievement}</span>
-            </div>
-            {venueRecommendation && (
-              <div className="text-xs text-muted-foreground mt-1">
-                Sede sugerida: <span className="text-foreground">{venueRecommendation.title}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ChallengeVenueMap({
-  isOpen,
-  venues,
-  selectedVenueId,
-  selectedVenue,
-  challengeLabel,
-  onSelectVenue,
-  onConfirm,
-}: {
-  isOpen: boolean;
-  venues: Court[];
-  selectedVenueId: string;
-  selectedVenue: Court | undefined;
-  challengeLabel: string;
-  onSelectVenue: (venueId: string) => void;
-  onConfirm: () => void;
-}) {
-  const [isMapReady, setIsMapReady] = useState(false);
-  const venuesSignature = useMemo(
-    () => venues.map((venue) => `${venue.id}:${venue.lat}:${venue.lng}`).join("|"),
-    [venues],
-  );
-  const center: [number, number] = selectedVenue
-    ? [selectedVenue.lat, selectedVenue.lng]
-    : venues[0]
-      ? [venues[0].lat, venues[0].lng]
-      : [-12.0464, -77.0428];
-
-  function MapResizer() {
-    const map = useMap();
-    useEffect(() => {
-      if (!isOpen) return;
-
-      const container = map.getContainer();
-      const resizeMap = () => {
-        map.invalidateSize({ animate: false });
-        const size = map.getSize();
-        // Leaflet puede reportar listo antes de tener ancho real dentro del modal.
-        // Esperamos un tamaño util para evitar el mapa recortado de la primera apertura.
-        if (size.x >= 360 && size.y >= 300) setIsMapReady(true);
-      };
-      const frameIds = [
-        globalThis.requestAnimationFrame(resizeMap),
-        globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resizeMap)),
-      ];
-      const timeoutIds = [80, 180, 360, 700, 1100].map((delay) =>
-        globalThis.setTimeout(resizeMap, delay),
-      );
-      const observer = new ResizeObserver(resizeMap);
-      observer.observe(container);
-
-      return () => {
-        frameIds.forEach((frameId) => globalThis.cancelAnimationFrame(frameId));
-        timeoutIds.forEach((timeoutId) => globalThis.clearTimeout(timeoutId));
-        observer.disconnect();
-      };
-    }, [isOpen, map, venuesSignature]);
-    useEffect(() => {
-      map.setView(center, 13, { animate: false });
-    }, [center, map]);
-    return null;
-  }
-
-  useEffect(() => {
-    // Reiniciamos el loader solo cuando cambia la lista real de sedes.
-    // Seleccionar un marcador no debe mostrar "Cargando sedes" otra vez.
-    setIsMapReady(false);
-  }, [isOpen, venuesSignature]);
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
-      <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border bg-muted">
-        {!isMapReady && (
-          <div className="absolute inset-0 z-[500] grid place-items-center bg-background/80 backdrop-blur-sm">
-            <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground shadow-card">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Renderizando mapa y sedes...
-            </div>
-          </div>
-        )}
-        <MapContainer
-          center={center}
-          zoom={13}
-          className="h-full w-full"
-          scrollWheelZoom={false}
-          dragging
-        >
-          <MapResizer />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {venues.map((venue) => {
-            const isSelected = venue.id === selectedVenueId;
-            return (
-              <Marker
-                key={venue.id}
-                position={[venue.lat, venue.lng]}
-                icon={createChallengeVenueIcon(venue.sport, isSelected)}
-                eventHandlers={{ click: () => onSelectVenue(venue.id) }}
-              >
-                <Popup>
-                  <div className="min-w-[180px] text-sm">
-                    <div className="font-bold text-foreground">{venue.name}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{venue.sport}</div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">
-                      Empresa responsable de validacion
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MapContainer>
-      </div>
-
-      <aside className="rounded-2xl border border-border bg-card p-4 shadow-card">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
-          {challengeLabel}
-        </div>
-        <h3 className="mt-2 font-heading text-xl tracking-wide">
-          {selectedVenue ? selectedVenue.name : "Selecciona una sede"}
-        </h3>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {selectedVenue
-            ? `${selectedVenue.sport} · ${selectedVenue.district || selectedVenue.address || "Sede deportiva"}`
-            : "Haz click en un pin del mapa para asignar la empresa que validara este reto."}
-        </p>
-        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3 text-[11px] text-muted-foreground">
-          La empresa de esta sede revisara si el usuario cumplio el reto.
-        </div>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={!selectedVenue}
-          className="mt-4 w-full rounded-xl bg-gradient-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Confirmar sede
-        </button>
-      </aside>
-    </div>
-  );
-}
-
+// === BLOQUE: Stat — Componente de tarjeta de estadística ===
 function Stat({
   icon,
   label,
@@ -2576,9 +1189,11 @@ function MatchCard({ match }: { match: Match }) {
   const [joined, setJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  const currentParticipants = match.current_players?.length || 0;
-  const spotsTaken = joined ? currentParticipants + 1 : currentParticipants;
+  const hasUserJoined = match.current_players?.some((p) => p.id === user?.id) || joined;
+  const currentParticipants = match.current_players?.filter((p) => p.id !== user?.id).length || 0;
+  const spotsTaken = hasUserJoined ? currentParticipants + 1 : currentParticipants;
   const isFull = spotsTaken >= match.max_players;
 
   const courtFee = match.court
@@ -2590,10 +1205,43 @@ function MatchCard({ match }: { match: Match }) {
   const fifteenMinsBefore = matchStart.getTime() - 15 * 60 * 1000;
   const twoHoursAfter = matchStart.getTime() + 2 * 60 * 60 * 1000;
 
-  const isParticipant =
-    match.creator_id === user?.id ||
-    match.current_players?.some((p) => p.id === user?.id) ||
-    joined;
+  const isParticipant = match.creator_id === user?.id || hasUserJoined;
+  const calendarPlayers =
+    isParticipant && user && !match.current_players?.some((p) => p.id === user.id)
+      ? [...(match.current_players ?? []), user]
+      : (match.current_players ?? []);
+  const creatorProfile = calendarPlayers.find((player) => player.id === match.creator_id);
+  const calendarMatch: PublicMatch = {
+    id: match.id,
+    creatorId: match.creator_id,
+    creatorName: creatorProfile?.name ?? "Organizador",
+    creatorAvatar: creatorProfile?.avatar_url ?? "",
+    title: match.title,
+    sport: match.sport,
+    level: match.required_level,
+    courtName: match.court?.name ?? "Sin cancha asignada",
+    address: match.court?.address ?? "Direccion por confirmar",
+    lat: match.court?.lat ?? 0,
+    lng: match.court?.lng ?? 0,
+    date: match.date,
+    time: match.time,
+    maxPlayers: match.max_players,
+    participants: calendarPlayers.map((player) => ({
+      userId: player.id,
+      name: player.name,
+      avatarUrl: player.avatar_url,
+      joinedAt: new Date().toISOString(),
+    })),
+    status:
+      match.status === "IN_PROGRESS"
+        ? "Open"
+        : match.status === "Full" || isFull
+          ? "Full"
+          : match.status === "Finished" || match.status === "Cancelled"
+            ? match.status
+            : "Open",
+    createdAt: match.created_at,
+  };
 
   const showCheckIn =
     isParticipant &&
@@ -2614,15 +1262,30 @@ function MatchCard({ match }: { match: Match }) {
     setTimeout(async () => {
       try {
         if (!useAuthStore.getState().isDemoMode) {
-          const { error } = await withTimeout(
-            supabase.from("match_participants").insert({
-              match_id: match.id,
-              user_id: user?.id,
-              status: "ACCEPTED",
-            }),
-          );
-          if (error) throw error;
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          if (!token) throw new Error("No active session found.");
+
+          const res = await backendApi.matches.join(token, match.id);
+          if (res.error) throw new Error(res.error);
         }
+        if (user) {
+          // Sincronización inmediata en memoria para consistencia y respuesta instantánea (alta disponibilidad)
+          const { MOCK_MATCHES } = await import("@/shared/api/apiClient");
+          const mockMatch = MOCK_MATCHES.find((m) => m.id === match.id);
+          if (mockMatch) {
+            if (!mockMatch.current_players) mockMatch.current_players = [];
+            if (!mockMatch.current_players.some((p) => p.id === user.id)) {
+              mockMatch.current_players.push(user);
+            }
+          }
+
+          if (!match.current_players) match.current_players = [];
+          if (!match.current_players.some((p) => p.id === user.id)) {
+            match.current_players.push(user);
+          }
+        }
+
         setIsJoining(false);
         setJoined(true);
         toast.success("¡Te uniste al partido!", {
@@ -2801,6 +1464,18 @@ function MatchCard({ match }: { match: Match }) {
           </button>
         )}
       </div>
+      {isParticipant && (
+        <button
+          type="button"
+          onClick={() => setIsCalendarOpen(true)}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+          id={`dashboard-open-calendar-${match.id}`}
+          title="Ver en Calendario"
+        >
+          <CalendarDays className="h-4 w-4" />
+          Ver en Calendario
+        </button>
+      )}
       <div className="mt-4 h-1.5 rounded-full bg-muted/30 overflow-hidden">
         <div
           className="h-full bg-gradient-primary rounded-full transition-all duration-700 ease-out"
@@ -2814,6 +1489,9 @@ function MatchCard({ match }: { match: Match }) {
         cost={courtFee}
         balance={user?.fitcoins_balance ?? 0}
       />
+      {isCalendarOpen && (
+        <MiniCalendar match={calendarMatch} onClose={() => setIsCalendarOpen(false)} />
+      )}
     </div>
   );
 }

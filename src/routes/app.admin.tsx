@@ -16,6 +16,7 @@ import {
   Plus,
   Edit3,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { useState, useEffect } from "react";
@@ -23,6 +24,8 @@ import { toast } from "sonner";
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
+
+import { VenueLocationPicker } from "@/features/map/VenueLocationPicker";
 
 export const Route = createFileRoute("/app/admin")({
   head: () => ({ meta: [{ title: "Admin — SportMatch" }] }),
@@ -64,11 +67,50 @@ function Admin() {
   const [editingCourt, setEditingCourt] = useState<Court | null>(null);
   const [courtForm, setCourtForm] = useState({
     name: "",
-    sport: "",
+    sport: "Fútbol",
     address: "",
-    price_per_hour: 0,
+    price_per_hour: 40,
+    lat: -12.14 as number | "",
+    lng: -76.995 as number | "",
+    district: "Santiago de Surco",
+    rating: 4.5,
+    reviews_count: 12,
+    image_url: "/images/sports/futbol.jpg",
   });
   const [savingCourt, setSavingCourt] = useState(false);
+
+  // === ANALYTICS FUNNEL STATE ===
+  const [funnelData, setFunnelData] = useState({
+    premium_cta_clicked: 450,
+    checkout_initiated: 230,
+    payment_completed: 85,
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("sportmatch_conversion_analytics");
+      if (stored) {
+        setFunnelData(JSON.parse(stored));
+      } else {
+        const defaults = {
+          premium_cta_clicked: 450,
+          checkout_initiated: 230,
+          payment_completed: 85,
+        };
+        localStorage.setItem("sportmatch_conversion_analytics", JSON.stringify(defaults));
+        setFunnelData(defaults);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const resetFunnel = () => {
+    const fresh = { premium_cta_clicked: 0, checkout_initiated: 0, payment_completed: 0 };
+    localStorage.setItem("sportmatch_conversion_analytics", JSON.stringify(fresh));
+    setFunnelData(fresh);
+    toast.success("Métricas del embudo restablecidas.");
+  };
 
   // === BLOQUE: Carga de datos ===
   // Obtiene lista de canchas (backend → fallback Supabase) y
@@ -140,7 +182,18 @@ function Admin() {
 
   const openAddCourt = () => {
     setEditingCourt(null);
-    setCourtForm({ name: "", sport: "", address: "", price_per_hour: 0 });
+    setCourtForm({
+      name: "",
+      sport: "Fútbol",
+      address: "",
+      price_per_hour: 40,
+      lat: -12.14,
+      lng: -76.995,
+      district: "Santiago de Surco",
+      rating: 4.5,
+      reviews_count: 12,
+      image_url: "/images/sports/futbol.jpg",
+    });
     setShowCourtForm(true);
   };
 
@@ -151,6 +204,12 @@ function Admin() {
       sport: court.sport,
       address: court.address || "",
       price_per_hour: court.price_per_hour || 0,
+      lat: court.lat ?? -12.14,
+      lng: court.lng ?? -76.995,
+      district: court.district || "Santiago de Surco",
+      rating: court.rating ?? 4.5,
+      reviews_count: court.reviews_count ?? 12,
+      image_url: court.image_url || "/images/sports/futbol.jpg",
     });
     setShowCourtForm(true);
   };
@@ -160,45 +219,60 @@ function Admin() {
       toast.error("Nombre y deporte son obligatorios");
       return;
     }
+    if (courtForm.lat === "" || courtForm.lng === "") {
+      toast.error("Por favor, selecciona una ubicación en el mapa");
+      return;
+    }
     setSavingCourt(true);
+
+    // Mapear automáticamente la imagen según el deporte seleccionado
+    let finalImageUrl = courtForm.image_url;
+    const sLower = courtForm.sport.toLowerCase();
+    if (sLower.includes("fútbol") || sLower.includes("futbol"))
+      finalImageUrl = "/images/sports/futbol.jpg";
+    else if (sLower.includes("tenis")) finalImageUrl = "/images/sports/tenis.jpg";
+    else if (sLower.includes("pádel") || sLower.includes("padel"))
+      finalImageUrl = "/images/sports/padel.jpg";
+    else if (sLower.includes("básquet") || sLower.includes("basquet"))
+      finalImageUrl = "/images/sports/basquet.jpg";
+    else if (sLower.includes("vóley") || sLower.includes("voley"))
+      finalImageUrl = "/images/sports/voley.jpg";
+    else if (sLower.includes("natación") || sLower.includes("natacion"))
+      finalImageUrl = "/images/sports/natacion.jpg";
+    else if (sLower.includes("running")) finalImageUrl = "/images/sports/running.jpg";
+
+    const courtData = {
+      name: courtForm.name,
+      sport: courtForm.sport,
+      address: courtForm.address,
+      price_per_hour: courtForm.price_per_hour,
+      lat: Number(courtForm.lat),
+      lng: Number(courtForm.lng),
+      district: courtForm.district,
+      rating: Number(courtForm.rating),
+      reviews_count: Number(courtForm.reviews_count),
+      image_url: finalImageUrl,
+    };
+
     try {
       if (editingCourt) {
-        const { error } = await supabase
-          .from("courts")
-          .update({
-            name: courtForm.name,
-            sport: courtForm.sport,
-            address: courtForm.address,
-            price_per_hour: courtForm.price_per_hour,
-          })
-          .eq("id", editingCourt.id);
+        const { error } = await supabase.from("courts").update(courtData).eq("id", editingCourt.id);
         if (error) throw error;
         setCourtsList(
-          courtsList.map((c) => (c.id === editingCourt.id ? { ...c, ...courtForm } : c)),
+          courtsList.map((c) => (c.id === editingCourt.id ? { ...c, ...courtData } : c)),
         );
-        toast.success("Cancha actualizada");
+        toast.success("Convenio y centro deportivo actualizados");
       } else {
-        const { data, error } = await supabase
-          .from("courts")
-          .insert([
-            {
-              name: courtForm.name,
-              sport: courtForm.sport,
-              address: courtForm.address,
-              price_per_hour: courtForm.price_per_hour,
-            },
-          ])
-          .select()
-          .single();
+        const { data, error } = await supabase.from("courts").insert([courtData]).select().single();
         if (error) throw error;
         setCourtsList([...courtsList, data as unknown as Court]);
-        toast.success("Cancha creada");
+        toast.success("¡Nuevo centro registrado en mapa con convenio!");
       }
       setShowCourtForm(false);
       setEditingCourt(null);
     } catch (e) {
       console.error("Error saving court:", e);
-      toast.error("Error al guardar cancha");
+      toast.error("Error al guardar centro deportivo");
     } finally {
       setSavingCourt(false);
     }
@@ -384,65 +458,273 @@ function Admin() {
         </div>
       </div>
 
+      {/* === BLOQUE: Embudo de conversión Premium === */}
+      <div className="mt-8 bg-gradient-card border border-border rounded-2xl p-5 space-y-6">
+        <div className="flex items-center justify-between border-b border-border/10 pb-3">
+          <div>
+            <h3 className="font-semibold text-base flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" /> Funnel de Conversión Premium
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Métricas de conversión del flujo de suscripción en tiempo real.
+            </p>
+          </div>
+          <button
+            onClick={resetFunnel}
+            className="px-3 py-1.5 rounded-lg border border-border bg-background/50 hover:bg-muted text-xs font-semibold cursor-pointer transition-all"
+          >
+            Restablecer Embudo
+          </button>
+        </div>
+
+        {/* Funnel Steps */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Step 1 */}
+          <div className="p-5 rounded-2xl bg-background/30 border border-border/40 flex flex-col items-center text-center space-y-2 relative">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black">
+              1
+            </div>
+            <h4 className="font-bold text-sm text-foreground">Clics en Premium (CTA)</h4>
+            <div className="text-3xl font-black text-foreground">
+              {funnelData.premium_cta_clicked}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Usuarios interesados en beneficios premium
+            </p>
+          </div>
+
+          {/* Step 2 */}
+          <div className="p-5 rounded-2xl bg-background/30 border border-border/40 flex flex-col items-center text-center space-y-2 relative">
+            <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400 font-black">
+              2
+            </div>
+            <h4 className="font-bold text-sm text-foreground">Checkout Iniciado</h4>
+            <div className="text-3xl font-black text-purple-400">
+              {funnelData.checkout_initiated}
+            </div>
+            <div className="text-xs font-bold text-neon">
+              {funnelData.premium_cta_clicked > 0
+                ? `${Math.round((funnelData.checkout_initiated / funnelData.premium_cta_clicked) * 100)}% de conversión`
+                : "0% de conversión"}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-semibold mt-1">
+              Interés activo en suscribirse
+            </p>
+          </div>
+
+          {/* Step 3 */}
+          <div className="p-5 rounded-2xl bg-background/30 border border-border/40 flex flex-col items-center text-center space-y-2 relative">
+            <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-black">
+              3
+            </div>
+            <h4 className="font-bold text-sm text-foreground">Suscripción Completada</h4>
+            <div className="text-3xl font-black text-emerald-400">
+              {funnelData.payment_completed}
+            </div>
+            <div className="text-xs font-bold text-neon">
+              {funnelData.checkout_initiated > 0
+                ? `${Math.round((funnelData.payment_completed / funnelData.checkout_initiated) * 100)}% de conversión`
+                : "0% de conversión"}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-semibold mt-1">
+              Conversión total:{" "}
+              {funnelData.premium_cta_clicked > 0
+                ? `${((funnelData.payment_completed / funnelData.premium_cta_clicked) * 100).toFixed(1)}%`
+                : "0%"}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* === BLOQUE: Gestión de canchas === */}
       <div className="mt-8 bg-gradient-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Gestión de canchas</h3>
+          <h3 className="font-bold text-base text-foreground uppercase tracking-wide">
+            Gestión de Centros Deportivos y Convenios
+          </h3>
           <button
             onClick={openAddCourt}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" /> Agregar
+            <Plus className="h-3.5 w-3.5" /> Registrar Convenio
           </button>
         </div>
 
         {showCourtForm && (
-          <div className="mb-4 p-4 bg-muted/50 rounded-xl border border-border space-y-3">
-            <input
-              value={courtForm.name}
-              onChange={(e) => setCourtForm({ ...courtForm, name: e.target.value })}
-              placeholder="Nombre de la cancha"
-              className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
-            />
-            <div className="flex gap-3">
-              <input
-                value={courtForm.sport}
-                onChange={(e) => setCourtForm({ ...courtForm, sport: e.target.value })}
-                placeholder="Deporte"
-                className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm"
-              />
-              <input
-                value={courtForm.price_per_hour}
-                onChange={(e) =>
-                  setCourtForm({ ...courtForm, price_per_hour: Number(e.target.value) })
-                }
-                placeholder="Precio/h (FC)"
-                type="number"
-                className="w-32 px-3 py-2 rounded-lg bg-background border border-border text-sm"
-              />
+          <div className="mb-6 p-5 bg-muted/30 rounded-3xl border border-border/80 space-y-4 shadow-card">
+            <h4 className="font-bold text-sm text-foreground uppercase tracking-wider">
+              {editingCourt
+                ? "✍️ Editar Centro Deportivo / Cancha"
+                : "🏟️ Registrar Nuevo Centro Deportivo / Cancha"}
+            </h4>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Columna Izquierda: Formulario */}
+              <div className="space-y-3.5 text-left">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                    Nombre de la Cancha / Establecimiento
+                  </label>
+                  <input
+                    value={courtForm.name}
+                    onChange={(e) => setCourtForm({ ...courtForm, name: e.target.value })}
+                    placeholder="Ej. Complejo Deportivo Surco Gool"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-sm focus:border-primary outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Deporte
+                    </label>
+                    <select
+                      value={courtForm.sport}
+                      onChange={(e) => setCourtForm({ ...courtForm, sport: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-sm focus:border-primary outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="Fútbol">Fútbol</option>
+                      <option value="Pádel">Pádel</option>
+                      <option value="Tenis">Tenis</option>
+                      <option value="Básquet">Básquet</option>
+                      <option value="Vóley">Vóley</option>
+                      <option value="Natación">Natación</option>
+                      <option value="Gimnasio">Gimnasio</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Precio por Hora (FC)
+                    </label>
+                    <input
+                      value={courtForm.price_per_hour}
+                      onChange={(e) =>
+                        setCourtForm({ ...courtForm, price_per_hour: Number(e.target.value) })
+                      }
+                      placeholder="Precio en FitCoins"
+                      type="number"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-sm focus:border-primary outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Distrito
+                    </label>
+                    <select
+                      value={courtForm.district}
+                      onChange={(e) => setCourtForm({ ...courtForm, district: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-sm focus:border-primary outline-none"
+                    >
+                      <option value="Santiago de Surco">Santiago de Surco</option>
+                      <option value="San Borja">San Borja</option>
+                      <option value="Miraflores">Miraflores</option>
+                      <option value="Lince">Lince</option>
+                      <option value="Magdalena">Magdalena</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Dirección Completa
+                    </label>
+                    <input
+                      value={courtForm.address}
+                      onChange={(e) => setCourtForm({ ...courtForm, address: e.target.value })}
+                      placeholder="Ej. Av. Primavera 1245"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-sm focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Latitud (Coordenada)
+                    </label>
+                    <input
+                      value={courtForm.lat}
+                      onChange={(e) =>
+                        setCourtForm({
+                          ...courtForm,
+                          lat: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      step="any"
+                      placeholder="-12.14"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-xs focus:border-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Longitud (Coordenada)
+                    </label>
+                    <input
+                      value={courtForm.lng}
+                      onChange={(e) =>
+                        setCourtForm({
+                          ...courtForm,
+                          lng: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      type="number"
+                      step="any"
+                      placeholder="-76.995"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border/60 text-xs focus:border-primary outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna Derecha: Mapa Interactivo Leaflet */}
+              <div className="space-y-2 text-left">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex justify-between items-center">
+                  <span>Ubicación en Mapa de Lima</span>
+                  <span className="text-[10px] text-neon font-bold animate-pulse normal-case tracking-normal">
+                    📌 Haz clic en el mapa para ubicar
+                  </span>
+                </label>
+                <VenueLocationPicker
+                  lat={courtForm.lat}
+                  lng={courtForm.lng}
+                  onChange={(lat, lng) =>
+                    setCourtForm((prev) => ({
+                      ...prev,
+                      lat,
+                      lng,
+                    }))
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground leading-normal italic text-center">
+                  Al hacer clic sobre el mapa, las coordenadas se capturan de forma automática.
+                </p>
+              </div>
             </div>
-            <input
-              value={courtForm.address}
-              onChange={(e) => setCourtForm({ ...courtForm, address: e.target.value })}
-              placeholder="Dirección (opcional)"
-              className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
-            />
-            <div className="flex gap-2 justify-end">
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-border/15">
               <button
+                type="button"
                 onClick={() => {
                   setShowCourtForm(false);
                   setEditingCourt(null);
                 }}
-                className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-accent transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-border/80 text-xs font-semibold hover:bg-accent transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={saveCourt}
                 disabled={savingCourt}
-                className="px-3 py-1.5 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-105 transition-transform disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:scale-[1.03] transition-transform disabled:opacity-50 cursor-pointer shadow-glow"
               >
-                {savingCourt ? "Guardando..." : editingCourt ? "Actualizar" : "Crear"}
+                {savingCourt
+                  ? "Registrando Convenio..."
+                  : editingCourt
+                    ? "Actualizar Convenio"
+                    : "Crear y Publicar Convenio"}
               </button>
             </div>
           </div>

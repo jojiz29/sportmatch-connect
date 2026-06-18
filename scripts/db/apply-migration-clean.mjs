@@ -8,7 +8,10 @@ for (const line of env.split(/\r?\n/)) {
   const i = t.indexOf("=");
   if (i === -1) continue;
   const k = t.slice(0, i).trim();
-  const v = t.slice(i + 1).trim();
+  let v = t.slice(i + 1).trim();
+  if (v.startsWith('"') && v.endsWith('"')) {
+    v = v.slice(1, -1);
+  }
   if (/^[A-Z_][A-Z0-9_]*$/.test(k) && !process.env[k]) process.env[k] = v;
 }
 

@@ -9,6 +9,8 @@ import { MOCK_USERS } from "@/shared/api/apiClient";
 import { Match } from "@/entities/types";
 import { withTimeout } from "@/shared/api/timeoutHelper";
 import { cryptoSecureRandomString } from "@/shared/lib/crypto";
+import { aiSecurityService } from "@/features/ai-security";
+import { toast } from "sonner";
 
 // === BLOQUE: MENSAJE DE CHAT ===
 export interface ChatMessage {
@@ -280,11 +282,46 @@ export const useChatStore = create<ChatState>()(
         // Esta validación protege todos los puntos de entrada, no solo el formulario del chat.
         if (!chatId || (!normalizedText && !mediaUrl)) return;
 
+        const isDemo =
+          useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
+
+        // Moderación inteligente con IA (Smart Block) antes del envío
+        if (!isDemo && normalizedText) {
+          try {
+            const evaluation = await withTimeout(
+              aiSecurityService.evaluateSecurity(normalizedText, "mensaje"),
+              5000,
+            );
+            if (evaluation.action_recommended === "block" || evaluation.ensemble_score >= 75) {
+              toast.error(
+                "Mensaje bloqueado: tu cuenta ha sido restringida temporalmente debido a infracciones de las normas de seguridad.",
+              );
+              chatLog("send:blocked", { chatId, reason: evaluation.reasoning || "Filtro de IA" });
+              return;
+            }
+          } catch (error: any) {
+            console.error("[chat] Error en moderación:", error);
+            const errorMsg = error?.message || "";
+            if (
+              errorMsg.includes("restringida") ||
+              errorMsg.includes("Forbidden") ||
+              errorMsg.includes("bloqueado") ||
+              errorMsg.includes("403")
+            ) {
+              toast.error("Tu cuenta está restringida temporalmente para enviar mensajes.");
+              return; // Bloquea el envío si la cuenta está restringida
+            }
+            // Fallback (fail-open) para errores de red, backend offline, 500 o timeouts.
+            console.warn(
+              "[chat] Moderación de seguridad no disponible. Permitiendo envío por resiliencia.",
+              error,
+            );
+          }
+        }
+
         const user = useAuthStore.getState().user;
         const sender_id = user ? user.id : "unknown";
         const newMessageId = `msg_${Date.now()}_${cryptoSecureRandomString(5)}`;
-        const isDemo =
-          useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
         const sendingMetadata = { ...metadata, delivery_status: "sending" };
         const sentMetadata = { ...metadata, delivery_status: "sent" };
 

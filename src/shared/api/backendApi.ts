@@ -504,6 +504,111 @@ export const backendApi = {
       });
     },
   },
+
+  // ------------------------------------------------------------
+  // PAYMENTS & SUBSCRIPTIONS
+  // ------------------------------------------------------------
+  payments: {
+    async checkout(token: string, successUrl: string, cancelUrl: string) {
+      return fetchApi<{ url: string; mock?: boolean }>("/payments/checkout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ successUrl, cancelUrl }),
+      });
+    },
+
+    async portal(token: string, returnUrl: string) {
+      return fetchApi<{ url: string; mock?: boolean }>("/payments/portal", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ returnUrl }),
+      });
+    },
+
+    async mockUpgrade(token: string) {
+      return fetchApi<{ success: boolean; message: string }>("/payments/mock-upgrade", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+
+    async mockDowngrade(token: string) {
+      return fetchApi<{ success: boolean; message: string }>("/payments/mock-downgrade", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+  },
+
+  // ------------------------------------------------------------
+  // AI (Inteligencia Artificial & Seguridad)
+  // ------------------------------------------------------------
+  ai: {
+    async moderateAdvanced(
+      token: string,
+      data: {
+        userId: string;
+        content: string;
+        contextType: "mensaje" | "comentario" | "perfil";
+        metadata?: Record<string, unknown>;
+      },
+    ) {
+      return fetchApi<{
+        ensemble_score: number;
+        signals: { name: string; score: number; description?: string }[];
+        action_recommended: "allow" | "warn" | "block";
+        reasoning: string;
+      }>("/ai/moderate/advanced", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      });
+    },
+
+    async coachChat(
+      token: string,
+      data: {
+        message: string;
+        history?: { role: "user" | "assistant"; text: string }[];
+        language?: string;
+      },
+    ) {
+      return fetchApi<{
+        reply: string;
+        suggestions: string[];
+        messagesRemaining: number;
+        metadata: { tokens: number; model: string; latencyMs: number };
+      }>("/ai/coach/chat", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      });
+    },
+
+    async recommendSnack(
+      token: string,
+      data: {
+        sport: string;
+        duration: number;
+        intensity: string;
+        matchId?: string;
+        language?: string;
+      },
+    ) {
+      return fetchApi<{
+        snack_name: string;
+        calories: number;
+        ingredients: string[];
+        reasoning: string;
+        calories_burned: number;
+        snack_image?: string;
+      }>("/ai/premium/nutrition", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      });
+    },
+  },
 };
 
 export default backendApi;

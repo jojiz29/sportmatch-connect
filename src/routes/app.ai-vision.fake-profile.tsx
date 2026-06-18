@@ -4,8 +4,8 @@ import { FakeProfileDetector } from "@/features/ai-vision/ui/FakeProfileDetector
 export const Route = createFileRoute("/app/ai-vision/fake-profile")({
   head: () => ({
     meta: [
-      { title: "Fake Profile Detector — SportMatch" },
-      { name: "description", content: "Detecta si una foto de perfil fue generada por IA" },
+      { title: "Veracidad de persona — SportMatch" },
+      { name: "description", content: "Verifica si una foto muestra una persona real" },
     ],
   }),
   component: FakeProfilePage,

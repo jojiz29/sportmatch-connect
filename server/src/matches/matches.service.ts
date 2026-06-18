@@ -13,15 +13,34 @@ export class MatchesService {
 
   async findAll(sport?: string) {
     try {
-      if (sport) {
-        return await this.prisma.$queryRawUnsafe(
-          `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches WHERE sport = $1 LIMIT 50`,
-          [sport],
-        );
-      }
-      return await this.prisma.$queryRawUnsafe(
-        `SELECT id, title, sport, date, time, max_players, status, creator_id, court_id FROM matches LIMIT 50`,
-      );
+      const matches = await this.prisma.matches.findMany({
+        where: sport ? { sport } : undefined,
+        include: {
+          court: true,
+          creator: true,
+          match_participants: {
+            include: {
+              user: true,
+            },
+          },
+        },
+        take: 50,
+      });
+
+      // Mapear match_participants a current_players
+      return matches.map((m) => {
+        const players = m.match_participants ? m.match_participants.map((p) => p.user) : [];
+
+        // Incluir también al creador en la lista de jugadores si no está ya
+        if (m.creator && !players.some((p) => p.id === m.creator.id)) {
+          players.unshift(m.creator);
+        }
+
+        return {
+          ...m,
+          current_players: players,
+        };
+      });
     } catch (error) {
       console.error("MatchesService.findAll error:", error);
       throw error;
@@ -32,13 +51,30 @@ export class MatchesService {
     try {
       const match = await this.prisma.matches.findUnique({
         where: { id },
+        include: {
+          court: true,
+          creator: true,
+          match_participants: {
+            include: {
+              user: true,
+            },
+          },
+        },
       });
 
       if (!match) {
         throw new NotFoundException("Match not found");
       }
 
-      return match;
+      const players = match.match_participants ? match.match_participants.map((p) => p.user) : [];
+      if (match.creator && !players.some((p) => p.id === match.creator.id)) {
+        players.unshift(match.creator);
+      }
+
+      return {
+        ...match,
+        current_players: players,
+      };
     } catch (error) {
       console.error("MatchesService.findOne error:", error);
       throw error;
@@ -123,6 +159,20 @@ export class MatchesService {
 
       if (!match) {
         throw new NotFoundException("Match not found");
+      }
+
+      // Evitar error de clave duplicada si ya se encuentra unido
+      const existing = await this.prisma.match_participants.findUnique({
+        where: {
+          match_id_user_id: {
+            match_id: matchId,
+            user_id: userId,
+          },
+        },
+      });
+
+      if (existing) {
+        return existing;
       }
 
       return await this.prisma.match_participants.create({

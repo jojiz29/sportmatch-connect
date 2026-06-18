@@ -43,4 +43,12 @@ export class ProfilesController {
   async verifyDni(@Request() req: { user: { userId: string } }, @Body() data: { dni: string }) {
     return this.profilesService.verifyDni(req.user.userId, data.dni);
   }
+
+  @Post("verify-photo")
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Verify profile photo authenticity" })
+  async verifyPhoto(@Request() req: { user: { userId: string } }) {
+    return this.profilesService.verifyPhoto(req.user.userId);
+  }
 }

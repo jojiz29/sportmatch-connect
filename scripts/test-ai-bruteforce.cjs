@@ -38,7 +38,9 @@ const COLORS = {
 };
 
 async function runTests() {
-  console.log(`${COLORS.bold}${COLORS.cyan}============================================================`);
+  console.log(
+    `${COLORS.bold}${COLORS.cyan}============================================================`,
+  );
   console.log("             SportMatch Gemini Diagnostic Tool (CJS)");
   console.log(`============================================================${COLORS.reset}\n`);
 
@@ -49,14 +51,21 @@ async function runTests() {
   const projectId = process.env.GOOGLE_CLOUD_PROJECT;
   const location = process.env.VERTEX_AI_LOCATION || "global";
   const modelId = process.env.VERTEX_AI_MODEL_ID || "gemini-3.5-flash";
-  const credentialsPath = path.resolve(process.cwd(), "server/credentials/google-cloud-credentials.json");
+  const credentialsPath = path.resolve(
+    process.cwd(),
+    "server/credentials/google-cloud-credentials.json",
+  );
 
   console.log(`${COLORS.bold}Environment Variables loaded:${COLORS.reset}`);
-  console.log(`  GOOGLE_GENAI_API_KEY: ${apiKey ? "PROVED (starts with " + apiKey.slice(0, 10) + "...)" : "MISSING"}`);
+  console.log(
+    `  GOOGLE_GENAI_API_KEY: ${apiKey ? "PROVED (starts with " + apiKey.slice(0, 10) + "...)" : "MISSING"}`,
+  );
   console.log(`  GOOGLE_CLOUD_PROJECT: ${projectId || "MISSING"}`);
   console.log(`  VERTEX_AI_LOCATION:   ${location}`);
   console.log(`  VERTEX_AI_MODEL_ID:   ${modelId}`);
-  console.log(`  Credentials path:     ${credentialsPath} (${fs.existsSync(credentialsPath) ? "EXISTS" : "MISSING"})\n`);
+  console.log(
+    `  Credentials path:     ${credentialsPath} (${fs.existsSync(credentialsPath) ? "EXISTS" : "MISSING"})\n`,
+  );
 
   // ---------------------------------------------------------------------------
   // MÉTODO 1: SDK de Google AI Studio (@google/genai)
@@ -200,7 +209,9 @@ async function runTests() {
   // ---------------------------------------------------------------------------
   // MÉTODO 4: Autenticación por defecto de Google (ADC) + REST a Vertex AI
   // ---------------------------------------------------------------------------
-  console.log(`${COLORS.bold}--- running Método 4 (Google ADC + REST a Vertex)... ---${COLORS.reset}`);
+  console.log(
+    `${COLORS.bold}--- running Método 4 (Google ADC + REST a Vertex)... ---${COLORS.reset}`,
+  );
   if (!fs.existsSync(credentialsPath) && !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
     results.push({
       method: "Método 4: Google ADC + REST a Vertex",
@@ -212,7 +223,7 @@ async function runTests() {
     try {
       const googleAuthOptions = {};
       const credentialsJsonRaw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-      
+
       const auth = new GoogleAuth({
         keyFile: credentialsJsonRaw ? undefined : credentialsPath,
         credentials: credentialsJsonRaw ? JSON.parse(credentialsJsonRaw) : undefined,
@@ -233,14 +244,14 @@ async function runTests() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           contents: [
             {
               role: "user",
               parts: [{ text: prompt }],
-            }
+            },
           ],
           systemInstruction: {
             role: "system",
@@ -279,7 +290,9 @@ async function runTests() {
   // ---------------------------------------------------------------------------
   // MÉTODO 5: Vertex AI Express Mode (API Key Directa)
   // ---------------------------------------------------------------------------
-  console.log(`${COLORS.bold}--- running Método 5 (Vertex AI Express Mode con Key)... ---${COLORS.reset}`);
+  console.log(
+    `${COLORS.bold}--- running Método 5 (Vertex AI Express Mode con Key)... ---${COLORS.reset}`,
+  );
   if (!apiKey) {
     results.push({
       method: "Método 5: Vertex AI Express Mode (API Key)",
@@ -290,53 +303,55 @@ async function runTests() {
   } else {
     try {
       const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          }
-        ],
-        generationConfig: {
-          maxOutputTokens: 200,
-        },
-      }),
-    });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 200,
+          },
+        }),
+      });
 
-    const data = await res.json();
-    console.log("Raw Response Method 5:", JSON.stringify(data, null, 2));
-    if (!res.ok) {
-      throw new Error(JSON.stringify(data));
+      const data = await res.json();
+      console.log("Raw Response Method 5:", JSON.stringify(data, null, 2));
+      if (!res.ok) {
+        throw new Error(JSON.stringify(data));
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+      results.push({
+        method: "Método 5: Vertex AI Express Mode (API Key)",
+        status: "SUCCESS",
+        details: `Respuesta: "${text}"`,
+      });
+      console.log(`${COLORS.green}✅ SUCCESS: Respuesta: "${text}"${COLORS.reset}\n`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push({
+        method: "Método 5: Vertex AI Express Mode (API Key)",
+        status: "FAILED",
+        details: msg,
+      });
+      console.log(`${COLORS.red}✕ FAILED: ${msg}${COLORS.reset}\n`);
     }
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-    results.push({
-      method: "Método 5: Vertex AI Express Mode (API Key)",
-      status: "SUCCESS",
-      details: `Respuesta: "${text}"`,
-    });
-    console.log(`${COLORS.green}✅ SUCCESS: Respuesta: "${text}"${COLORS.reset}\n`);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    results.push({
-      method: "Método 5: Vertex AI Express Mode (API Key)",
-      status: "FAILED",
-      details: msg,
-    });
-    console.log(`${COLORS.red}✕ FAILED: ${msg}${COLORS.reset}\n`);
   }
-}
 
   // ---------------------------------------------------------------------------
   // MOSTRAR RESUMEN FINAL
   // ---------------------------------------------------------------------------
-  console.log(`${COLORS.bold}${COLORS.cyan}============================================================`);
+  console.log(
+    `${COLORS.bold}${COLORS.cyan}============================================================`,
+  );
   console.log("                      DIAGNOSTIC SUMMARY");
   console.log(`============================================================${COLORS.reset}`);
-  
+
   for (const r of results) {
     const symbol = r.status === "SUCCESS" ? "✅" : "❌";
     const color = r.status === "SUCCESS" ? COLORS.green : COLORS.red;
@@ -346,10 +361,14 @@ async function runTests() {
 
   const firstSuccess = results.find((r) => r.status === "SUCCESS");
   if (firstSuccess) {
-    console.log(`${COLORS.bold}${COLORS.green}🎉 ¡Victoria! Encontré al menos un método que funciona: "${firstSuccess.method}"${COLORS.reset}`);
-    
+    console.log(
+      `${COLORS.bold}${COLORS.green}🎉 ¡Victoria! Encontré al menos un método que funciona: "${firstSuccess.method}"${COLORS.reset}`,
+    );
+
     if (firstSuccess.method.includes("Google AI Studio")) {
-      console.log(`\n${COLORS.bold}Bloque de código para copiar en 'vertex-ai.service.ts':${COLORS.reset}`);
+      console.log(
+        `\n${COLORS.bold}Bloque de código para copiar en 'vertex-ai.service.ts':${COLORS.reset}`,
+      );
       console.log(`
 ------------------------------------------------------------
 import { GoogleGenAI } from "@google/genai";
@@ -367,7 +386,9 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
 ------------------------------------------------------------
       `);
     } else if (firstSuccess.method.includes("Llamada REST Pura")) {
-      console.log(`\n${COLORS.bold}Bloque de código para copiar en 'vertex-ai.service.ts' (REST Pura):${COLORS.reset}`);
+      console.log(
+        `\n${COLORS.bold}Bloque de código para copiar en 'vertex-ai.service.ts' (REST Pura):${COLORS.reset}`,
+      );
       console.log(`
 ------------------------------------------------------------
 async generateContent(prompt: string) {
@@ -383,12 +404,18 @@ async generateContent(prompt: string) {
 ------------------------------------------------------------
       `);
     } else if (firstSuccess.method.includes("Vertex AI (JSON)")) {
-      console.log(`\n${COLORS.bold}Tu archivo JSON actual y credenciales de Vertex AI funcionan perfectamente.${COLORS.reset}`);
+      console.log(
+        `\n${COLORS.bold}Tu archivo JSON actual y credenciales de Vertex AI funcionan perfectamente.${COLORS.reset}`,
+      );
     } else if (firstSuccess.method.includes("Google ADC")) {
-      console.log(`\n${COLORS.bold}Se requiere autenticación por token portador (Bearer ADC) para Vertex AI.${COLORS.reset}`);
+      console.log(
+        `\n${COLORS.bold}Se requiere autenticación por token portador (Bearer ADC) para Vertex AI.${COLORS.reset}`,
+      );
     }
   } else {
-    console.log(`${COLORS.bold}${COLORS.red}❌ Ningún método de conexión funcionó. Revisa que tu clave API esté activa y sin restricciones en Google Cloud Console o que el API Generative Language esté activa en tu proyecto.${COLORS.reset}`);
+    console.log(
+      `${COLORS.bold}${COLORS.red}❌ Ningún método de conexión funcionó. Revisa que tu clave API esté activa y sin restricciones en Google Cloud Console o que el API Generative Language esté activa en tu proyecto.${COLORS.reset}`,
+    );
   }
 }
 

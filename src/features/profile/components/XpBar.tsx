@@ -58,7 +58,7 @@ export function XpBar({
       onLevelUp(prev, liveInfo.level);
     }
     prevLevelRef.current = liveInfo.level;
-  }, [liveInfo, onLevelUp]);
+  }, [liveInfo?.level, onLevelUp]);
 
   // Unificamos XpInfo y customInfo en un solo shape
   const info: XpBarInfo | null = customInfo

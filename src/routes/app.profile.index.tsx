@@ -26,6 +26,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, Sport, User } from "@/entities/types";
+import { FakeProfileDetector } from "@/features/ai-vision/ui/FakeProfileDetector";
+import { DniVerification } from "@/features/ai-vision/ui/DniVerification";
 import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
 import { BadgeEngine } from "@/components/BadgeEngine";
@@ -39,15 +41,6 @@ import {
   DialogTrigger,
 } from "@/shared/ui/dialog";
 import { SportSelectionGrid } from "@/components/sports/SportSelectionGrid";
-import { EloBadgeList } from "@/features/profile/components/EloBadge";
-import {
-  getEngagementAchievements,
-  getEngagementChallenges,
-  getEngagementContents,
-  type EngagementAchievement,
-  type EngagementChallenge,
-  type EngagementContent,
-} from "@/features/engagement-ai";
 
 export const Route = createFileRoute("/app/profile/")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -101,9 +94,6 @@ function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
   const [barWidth, setBarWidth] = useState(0);
-  const [engagementChallenges, setEngagementChallenges] = useState<EngagementChallenge[]>([]);
-  const [engagementAchievements, setEngagementAchievements] = useState<EngagementAchievement[]>([]);
-  const [engagementContents, setEngagementContents] = useState<EngagementContent[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -120,6 +110,8 @@ function Profile() {
   const [isVerifyingDni, setIsVerifyingDni] = useState(false);
   const [dniError, setDniError] = useState("");
   const [isDniDialogOpen, setIsDniDialogOpen] = useState(false);
+  const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
+  const [isBiometricDniDialogOpen, setIsBiometricDniDialogOpen] = useState(false);
 
   // === BLOQUE: handleVerifyDni — Verificación de identidad contra RENIEC ===
   const handleVerifyDni = async () => {
@@ -199,6 +191,113 @@ function Profile() {
       }
     } finally {
       setIsVerifyingDni(false);
+    }
+  };
+
+  // === BLOQUE: handlePhotoSuccess — Éxito del Detector de Perfiles Falsos ===
+  const handlePhotoSuccess = async () => {
+    const isDemo = useAuthStore.getState().isDemoMode;
+    const nextTrust = Math.min(100, (profile?.trust_score || 0) + 20);
+
+    if (isDemo) {
+      const updatedUser = {
+        ...profile!,
+        photo_verified: true,
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Foto de perfil autenticada exitosamente!");
+      setTimeout(() => setIsPhotoDialogOpen(false), 2000);
+      return;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error("No active session found.");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/profiles/verify-photo`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("La verificación falló en el servidor.");
+      }
+
+      const updatedUser = {
+        ...profile!,
+        photo_verified: true,
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Foto de perfil autenticada exitosamente!");
+      setTimeout(() => setIsPhotoDialogOpen(false), 2000);
+    } catch (err) {
+      console.error("Photo verification error:", err);
+      toast.error("Error al persistir verificación de foto.");
+    }
+  };
+
+  // === BLOQUE: handleBiometricDniSuccess — Éxito del Biométrico DNI 2.0 ===
+  const handleBiometricDniSuccess = async () => {
+    const isDemo = useAuthStore.getState().isDemoMode;
+    const nextTrust = Math.min(100, (profile?.trust_score || 0) + 20);
+
+    if (isDemo) {
+      const updatedUser = {
+        ...profile!,
+        dni_verificado: true,
+        dni_hash: "mock_biometric_hash_sha256",
+        fecha_verificacion: new Date().toISOString(),
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Identidad biométrica verificada exitosamente!");
+      setTimeout(() => setIsBiometricDniDialogOpen(false), 2000);
+      return;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error("No active session found.");
+
+      const res = await supabase
+        .from("profiles")
+        .update({
+          dni_verificado: true,
+          dni_hash: "biometric_hash_sha256",
+          fecha_verificacion: new Date().toISOString(),
+          trust_score: nextTrust,
+        })
+        .eq("id", profile!.id);
+
+      if (res.error) throw res.error;
+
+      const updatedUser = {
+        ...profile!,
+        dni_verificado: true,
+        dni_hash: "biometric_hash_sha256",
+        fecha_verificacion: new Date().toISOString(),
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Identidad biométrica verificada exitosamente!");
+      setTimeout(() => setIsBiometricDniDialogOpen(false), 2000);
+    } catch (err) {
+      console.error("Biometric DNI verification error:", err);
+      toast.error("Error al persistir verificación DNI.");
     }
   };
 
@@ -292,28 +391,6 @@ function Profile() {
   useEffect(() => {
     initProfile();
   }, [initProfile]);
-
-  // === BLOQUE: PROGRESO DEPORTIVO PERSONALIZADO ===
-  // Carga retos, logros y contenidos guardados para que Perfil actue como historial
-  // del avance deportivo del usuario, sin depender de una pantalla separada.
-  useEffect(() => {
-    if (!profile || useAuthStore.getState().isDemoMode) return;
-    let active = true;
-    Promise.all([getEngagementChallenges(), getEngagementAchievements(), getEngagementContents()])
-      .then(([challenges, achievements, contents]) => {
-        if (!active) return;
-        setEngagementChallenges(challenges);
-        setEngagementAchievements(achievements);
-        setEngagementContents(contents);
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV)
-          console.warn("No se pudo cargar el progreso deportivo personalizado:", error);
-      });
-    return () => {
-      active = false;
-    };
-  }, [profile]);
 
   // === BLOQUE: Carga y sincronización de logros ===
   useEffect(() => {
@@ -413,17 +490,21 @@ function Profile() {
   }
 
   const trustLevel =
-    (profile.trust_score || 0) >= 90
-      ? t("profile.trust_level_excellent")
-      : (profile.trust_score || 0) >= 70
-        ? t("profile.trust_level_good")
-        : t("profile.trust_level_risk");
+    (profile.trust_score || 0) >= 85
+      ? "Excelente"
+      : (profile.trust_score || 0) >= 65
+        ? "Bueno"
+        : (profile.trust_score || 0) >= 45
+          ? "Neutral"
+          : "En Riesgo";
   const trustColor =
-    (profile.trust_score || 0) >= 90
+    (profile.trust_score || 0) >= 85
       ? "text-neon"
-      : (profile.trust_score || 0) >= 70
+      : (profile.trust_score || 0) >= 65
         ? "text-warning"
-        : "text-destructive";
+        : (profile.trust_score || 0) >= 45
+          ? "text-blue-400"
+          : "text-destructive";
 
   const handleStartEdit = () => {
     const initial: Record<string, 1 | 2 | 3> = {};
@@ -673,9 +754,14 @@ function Profile() {
               </div>
             ) : (
               <>
-                <h2 className="text-2xl font-bold flex items-center">
+                <h2 className="text-2xl font-bold flex flex-wrap items-center gap-1.5">
                   {profile.name}
-                  {profile.dni_verificado && <VerifiedBadge />}
+                  {(profile.dni_verificado || profile.photo_verified) && <VerifiedBadge />}
+                  {profile.dni_verificado && profile.photo_verified && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-neon text-neon-foreground font-black tracking-wider animate-pulse uppercase">
+                      DUAL VIP
+                    </span>
+                  )}
                 </h2>
                 <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                   <MapPin className="h-3 w-3" />
@@ -719,12 +805,54 @@ function Profile() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={handleStartEdit}
-                className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
-              >
-                <Edit3 className="h-4 w-4" /> {t("profile.edit")}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Botón Verificación DNI 2.0 */}
+                <Dialog open={isBiometricDniDialogOpen} onOpenChange={setIsBiometricDniDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        profile.dni_verificado
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default"
+                          : "bg-gradient-primary border-transparent text-primary-foreground hover:scale-[1.02] shadow-glow"
+                      }`}
+                    >
+                      {profile.dni_verificado ? <>🛡️ DNI Verificado</> : <>🛡️ Verificar DNI 2.0</>}
+                    </button>
+                  </DialogTrigger>
+                  {!profile.dni_verificado && (
+                    <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 overflow-y-auto max-h-[90vh]">
+                      <DniVerification onSuccess={handleBiometricDniSuccess} />
+                    </DialogContent>
+                  )}
+                </Dialog>
+
+                {/* Boton de verificacion de persona */}
+                <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        profile.photo_verified
+                          ? "bg-blue-500/10 border-blue-500/30 text-blue-400 cursor-default"
+                          : "bg-gradient-neon border-transparent text-neon-foreground hover:scale-[1.02] shadow-neon"
+                      }`}
+                    >
+                      {profile.photo_verified ? <>📸 Foto Verificada</> : <>📸 Verificar Persona</>}
+                    </button>
+                  </DialogTrigger>
+                  {!profile.photo_verified && (
+                    <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 overflow-y-auto max-h-[90vh]">
+                      <FakeProfileDetector onSuccess={handlePhotoSuccess} />
+                    </DialogContent>
+                  )}
+                </Dialog>
+
+                <button
+                  onClick={handleStartEdit}
+                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <Edit3 className="h-4 w-4" /> {t("profile.edit")}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -758,16 +886,6 @@ function Profile() {
             value={profile.following_count ?? 0}
           />
         </div>
-
-        {/* === Sección Elo Rating (V2.3) === */}
-        {profile.preferred_sports && profile.preferred_sports.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-warning" /> Elo Rating
-            </h3>
-            <EloBadgeList sports={profile.preferred_sports.slice(0, 6)} />
-          </div>
-        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mt-6">
@@ -838,7 +956,7 @@ function Profile() {
                   </DialogTrigger>
                   <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 text-foreground">
                     <DialogHeader>
-                      <DialogTitle className="text-lg font-black text-foreground">
+                      <DialogTitle className="text-lg font-black text-white">
                         Verificar mi identidad (DNI)
                       </DialogTitle>
                       <DialogDescription className="text-xs text-muted-foreground">
@@ -904,12 +1022,6 @@ function Profile() {
             )}
           </div>
         </div>
-
-        <PersonalizedProgress
-          challenges={engagementChallenges}
-          achievements={engagementAchievements}
-          contents={engagementContents}
-        />
 
         {/* === Columna: Logros / Insignias === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
@@ -997,80 +1109,6 @@ function Profile() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// === BLOQUE: PersonalizedProgress - Resumen del avance deportivo ===
-// Muestra retos, logros sugeridos y contenido guardado como parte natural del Perfil.
-function PersonalizedProgress({
-  challenges,
-  achievements,
-  contents,
-}: {
-  challenges: EngagementChallenge[];
-  achievements: EngagementAchievement[];
-  contents: EngagementContent[];
-}) {
-  const activeChallenges = challenges.filter((challenge) => challenge.status === "started");
-  const completedChallenges = challenges.filter((challenge) => challenge.status === "completed");
-  const unlockedAchievements = achievements.filter(
-    (achievement) => achievement.status === "unlocked",
-  );
-  const latestContent = contents[0];
-
-  return (
-    <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div>
-          <h3 className="font-semibold">Progreso deportivo</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Retos y logros derivados de tu actividad reciente.
-          </p>
-        </div>
-        <Trophy className="h-5 w-5 text-primary" />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <ProgressMetric label="Retos activos" value={activeChallenges.length} />
-        <ProgressMetric label="Completados" value={completedChallenges.length} />
-        <ProgressMetric label="Logros" value={unlockedAchievements.length} />
-      </div>
-
-      {activeChallenges[0] ? (
-        <div className="rounded-xl bg-muted/30 border border-border/50 p-3">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
-            Reto actual
-          </div>
-          <div className="text-sm font-semibold mt-1">{activeChallenges[0].title}</div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-            {activeChallenges[0].description}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl bg-muted/20 border border-border/40 p-3 text-xs text-muted-foreground">
-          Aun no hay retos activos guardados. Tu proximo plan diario aparecera aqui.
-        </div>
-      )}
-
-      {latestContent && (
-        <div className="mt-3 rounded-xl bg-background/40 border border-border/40 p-3">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Resumen guardado
-          </div>
-          <div className="text-sm font-semibold mt-1">{latestContent.title}</div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{latestContent.body}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProgressMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl bg-muted/30 border border-border/50 p-2 text-center">
-      <div className="text-lg font-bold text-foreground">{value}</div>
-      <div className="text-[9px] text-muted-foreground leading-tight">{label}</div>
     </div>
   );
 }

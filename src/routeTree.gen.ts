@@ -27,6 +27,7 @@ import { Route as AppIotRouteImport } from './routes/app.iot'
 import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppEngagementRouteImport } from './routes/app.engagement'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
+import { Route as AppCoachRouteImport } from './routes/app.coach'
 import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
 import { Route as AppAiVisionRouteImport } from './routes/app.ai-vision'
@@ -134,6 +135,11 @@ const AppCourtsRoute = AppCourtsRouteImport.update({
   path: '/courts',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCoachRoute = AppCoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChatRoute = AppChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/app/ai-vision': typeof AppAiVisionRouteWithChildren
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
+  '/app/coach': typeof AppCoachRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/engagement': typeof AppEngagementRoute
   '/app/feed': typeof AppFeedRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/app/admin': typeof AppAdminRoute
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
+  '/app/coach': typeof AppCoachRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/engagement': typeof AppEngagementRoute
   '/app/feed': typeof AppFeedRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/app/ai-vision': typeof AppAiVisionRouteWithChildren
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
+  '/app/coach': typeof AppCoachRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
   '/app/engagement': typeof AppEngagementRoute
   '/app/feed': typeof AppFeedRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
+    | '/app/coach'
     | '/app/courts'
     | '/app/engagement'
     | '/app/feed'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/business'
     | '/app/chat'
+    | '/app/coach'
     | '/app/courts'
     | '/app/engagement'
     | '/app/feed'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/app/ai-vision'
     | '/app/business'
     | '/app/chat'
+    | '/app/coach'
     | '/app/courts'
     | '/app/engagement'
     | '/app/feed'
@@ -562,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/courts'
       fullPath: '/app/courts'
       preLoaderRoute: typeof AppCourtsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/coach': {
+      id: '/app/coach'
+      path: '/coach'
+      fullPath: '/app/coach'
+      preLoaderRoute: typeof AppCoachRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/chat': {
@@ -742,6 +761,7 @@ interface AppRouteChildren {
   AppAiVisionRoute: typeof AppAiVisionRouteWithChildren
   AppBusinessRoute: typeof AppBusinessRoute
   AppChatRoute: typeof AppChatRoute
+  AppCoachRoute: typeof AppCoachRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
   AppEngagementRoute: typeof AppEngagementRoute
   AppFeedRoute: typeof AppFeedRoute
@@ -764,6 +784,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAiVisionRoute: AppAiVisionRouteWithChildren,
   AppBusinessRoute: AppBusinessRoute,
   AppChatRoute: AppChatRoute,
+  AppCoachRoute: AppCoachRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,
   AppEngagementRoute: AppEngagementRoute,
   AppFeedRoute: AppFeedRoute,

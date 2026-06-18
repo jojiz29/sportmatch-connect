@@ -121,14 +121,16 @@ export interface User {
   user_sports?: { sport_id: string; level: 1 | 2 | 3 }[];
   onboarding_completed?: boolean;
   push_token?: string | null;
-  gender?: "Masculino" | "Femenino" | "Mixto";
+  gender?: "Masculino" | "Femenino" | "Otro";
   dni_verificado?: boolean;
+  photo_verified?: boolean;
   dni_hash?: string | null;
   dni_intentos?: number;
   fecha_verificacion?: string | null;
   xp?: number;
   xp_level?: number;
   xp_to_next_level?: number;
+  tier?: "FREE" | "PREMIUM";
 }
 
 // === BLOQUE: SEDE / CANCHA DEPORTIVA ===
@@ -345,8 +347,8 @@ export interface Ad {
   views: number;
   clicks: number;
   contacts: number;
-  is_featured: boolean;
-  is_premium: boolean;
+  is_featured: boolean; // placeholder for monetization
+  is_premium: boolean; // placeholder for monetization
   created_at: string;
 }
 

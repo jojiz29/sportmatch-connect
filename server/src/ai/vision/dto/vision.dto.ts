@@ -124,10 +124,16 @@ export class FormAnalyzeResponseDto {
 // ==============================================================
 
 export class FakeProfileResponseDto {
-  @ApiProperty({ description: "Si la foto se detecta como generada por IA", example: false })
+  @ApiProperty({
+    description: "Si existe evidencia alta de imagen artificial, alterada o sin persona real",
+    example: false,
+  })
   isFake!: boolean;
 
-  @ApiProperty({ description: "Score de autenticidad 0-100 (mayor = más auténtica)", example: 92 })
+  @ApiProperty({
+    description: "Porcentaje de veracidad de persona real 0-100 (mayor = mas verificable)",
+    example: 92,
+  })
   authenticityScore!: number;
 
   @ApiProperty({

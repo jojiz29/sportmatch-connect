@@ -6,7 +6,6 @@
 
 import {
   Injectable,
-  Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -33,17 +32,15 @@ function matchNames(profileName: string, apiName: string): boolean {
 
 @Injectable()
 export class ProfilesService {
-  private readonly logger = new Logger(ProfilesService.name);
-
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
     try {
       return await this.prisma.$queryRawUnsafe(
-        `SELECT id, name, avatar_url, city, bio, trust_score, dni_verificado, fecha_verificacion FROM profiles LIMIT 30`,
+        `SELECT id, name, avatar_url, city, bio, trust_score, dni_verificado, photo_verified, fecha_verificacion FROM profiles LIMIT 30`,
       );
     } catch (error) {
-      this.logger.error("ProfilesService.findAll error:", error);
+      console.error("ProfilesService.findAll error:", error);
       throw error;
     }
   }
@@ -51,7 +48,7 @@ export class ProfilesService {
   async findOne(id: string) {
     try {
       const results = await this.prisma.$queryRawUnsafe(
-        `SELECT id, name, avatar_url, city, bio, trust_score, dni_verificado, fecha_verificacion, age, gender, preferred_sports, matches_played, level, user_role, company_name, business_category, is_sponsored, is_admin FROM profiles WHERE id = $1 LIMIT 1`,
+        `SELECT id, name, avatar_url, city, bio, trust_score, dni_verificado, photo_verified, fecha_verificacion, age, gender, preferred_sports, matches_played, level, user_role, company_name, business_category, is_sponsored, is_admin FROM profiles WHERE id = $1 LIMIT 1`,
         [id],
       );
       const profile = Array.isArray(results) ? results[0] : results;
@@ -62,7 +59,7 @@ export class ProfilesService {
 
       return profile;
     } catch (error) {
-      this.logger.error("ProfilesService.findOne error:", error);
+      console.error("ProfilesService.findOne error:", error);
       throw error;
     }
   }
@@ -77,7 +74,7 @@ export class ProfilesService {
         data,
       });
     } catch (error) {
-      this.logger.error("ProfilesService.update error:", error);
+      console.error("ProfilesService.update error:", error);
       throw error;
     }
   }
@@ -142,10 +139,7 @@ export class ProfilesService {
         }
         apiFullName = `${apiNombres} ${apiApePaterno} ${apiApeMaterno}`.trim();
       } else {
-        const apiKey = process.env.VERIFICAPE_API_KEY;
-        if (!apiKey) {
-          throw new Error("VERIFICAPE_API_KEY no está configurada en el entorno.");
-        }
+        const apiKey = process.env.VERIFICAPE_API_KEY || "vp_live_2eef1b0a64d44e268af708478d9f5ea1";
         const url = `https://api.verificape.com/v2/dni/${dni}`;
 
         try {
@@ -170,7 +164,7 @@ export class ProfilesService {
           apiFullName =
             resData.data.fullName || `${apiNombres} ${apiApePaterno} ${apiApeMaterno}`.trim();
         } catch (apiErr) {
-          this.logger.error("RENIEC API Request Error:", apiErr);
+          console.error("RENIEC API Request Error:", apiErr);
           throw new BadRequestException(
             "No se pudo completar la consulta con RENIEC en este momento. Inténtalo de nuevo más tarde.",
           );
@@ -203,7 +197,7 @@ export class ProfilesService {
           dni_hash: hashedDni,
           dni_intentos: 0,
           fecha_verificacion: new Date(),
-          trust_score: Math.min(100, (profile.trust_score || 0) + 15),
+          trust_score: Math.min(100, (profile.trust_score || 0) + 20),
         },
       });
 
@@ -217,7 +211,39 @@ export class ProfilesService {
         },
       };
     } catch (err) {
-      this.logger.error("ProfilesService.verifyDni error:", err);
+      console.error("ProfilesService.verifyDni error:", err);
+      throw err;
+    }
+  }
+
+  async verifyPhoto(userId: string) {
+    try {
+      const profile = await this.prisma.profiles.findUnique({
+        where: { id: userId },
+      });
+
+      if (!profile) {
+        throw new NotFoundException("Perfil no encontrado.");
+      }
+
+      const updated = await this.prisma.profiles.update({
+        where: { id: userId },
+        data: {
+          photo_verified: true,
+          trust_score: Math.min(100, (profile.trust_score || 0) + 20),
+        },
+      });
+
+      return {
+        success: true,
+        message: "Foto de perfil verificada exitosamente.",
+        profile: {
+          photo_verified: updated.photo_verified,
+          trust_score: updated.trust_score,
+        },
+      };
+    } catch (err) {
+      console.error("ProfilesService.verifyPhoto error:", err);
       throw err;
     }
   }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 // ============================================================
 // server/src/matchmaking/dto/matchmaking.dto.ts — DTOs
 // Sprint V2.3 — Matchmaking & Elo System

@@ -101,8 +101,12 @@ export class SocialController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "Dejar de seguir a un usuario" })
   @HttpCode(HttpStatus.NO_CONTENT)
-  unfollow(@Param("userId") followingId: string, @Request() req: { user: { userId: string } }) {
-    return this.socialService.unfollow(req.user.userId, followingId);
+  async unfollow(
+    @Param("userId") followingId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    await this.socialService.unfollow(req.user.userId, followingId);
+    return;
   }
 
   // ==============================================================

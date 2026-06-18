@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // === BLOQUE: IMPORTACIÓN DE DEPENDENCIAS ===
 import React, { useState, useEffect } from "react";
 import {
@@ -22,6 +23,7 @@ import {
   MessageSquare,
   Calendar,
   Search,
+  Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
@@ -37,6 +39,7 @@ import { BookingModal } from "@/components/BookingModal";
 export function SquadExplorer() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.user);
+  const login = useAuthStore((state) => state.login);
   const [squads, setSquads] = useState<Squad[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [memberships, setMemberships] = useState<Record<string, boolean>>({});
@@ -61,6 +64,20 @@ export function SquadExplorer() {
   const [description, setDescription] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  // === ESTADOS SQUAD VS SQUAD (COMPETICIÓN PREMIUM) ===
+  const [dashTab, setDashTab] = useState<"booking" | "challenges">("booking");
+  const [challenges, setChallenges] = useState<any[]>([]);
+  const [loadingChallenges, setLoadingChallenges] = useState<boolean>(false);
+  const [targetRivalSquadId, setTargetRivalSquadId] = useState<string>("");
+  const [challengeSport, setChallengeSport] = useState<string>("Tenis");
+  const [challengeDate, setChallengeDate] = useState<string>("");
+  const [challengeTime, setChallengeTime] = useState<string>("");
+  const [challengeBet, setChallengeBet] = useState<number>(100);
+  const [showChallengeForm, setShowChallengeForm] = useState<boolean>(false);
+  const [reports, setReports] = useState<
+    Record<string, { winnerSquadId?: string; reporterId?: string }>
+  >({});
 
   // === BLOQUE: CARGA INICIAL DE SQUADS ===
   // Obtiene la lista de squads y verifica membresías en paralelo.
@@ -148,6 +165,48 @@ export function SquadExplorer() {
       })
       .finally(() => setLoadingCourts(false));
   }, [currentUser]);
+
+  // === CARGA DE RETOS SQUAD VS SQUAD (PREMIUM) ===
+  useEffect(() => {
+    if (!selectedSquad || dashTab !== "challenges") return;
+    const squadId = selectedSquad.id;
+    let active = true;
+
+    async function loadChallenges() {
+      try {
+        setLoadingChallenges(true);
+        if (useAuthStore.getState().isDemoMode) {
+          const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
+          const allChallenges = stored ? JSON.parse(stored) : [];
+          const filtered = allChallenges.filter(
+            (c: any) => c.challenger_squad_id === squadId || c.challenged_squad_id === squadId,
+          );
+          if (active) setChallenges(filtered);
+        } else {
+          const { data, error } = await supabase
+            .from("squad_challenges")
+            .select("*")
+            .or(`challenger_squad_id.eq.${squadId},challenged_squad_id.eq.${squadId}`)
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            console.error("Error loading squad challenges:", error);
+          } else if (data && active) {
+            setChallenges(data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load challenges:", err);
+      } finally {
+        if (active) setLoadingChallenges(false);
+      }
+    }
+
+    loadChallenges();
+    return () => {
+      active = false;
+    };
+  }, [selectedSquad, dashTab]);
 
   // === BLOQUE: REALTIME — NUEVOS SQUADS EN VIVO ===
   useEffect(() => {
@@ -303,6 +362,218 @@ export function SquadExplorer() {
     }
   };
 
+  // === GESTIÓN DE RETOS SQUAD VS SQUAD ===
+  const handleLaunchChallenge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !selectedSquad || !targetRivalSquadId) return;
+
+    if (currentUser.fitcoins_balance < challengeBet) {
+      toast.error("No tienes suficientes FitCoins para cubrir la apuesta del reto.");
+      return;
+    }
+
+    const newChallenge = {
+      id: useAuthStore.getState().isDemoMode ? `challenge-${Date.now()}` : undefined,
+      challenger_squad_id: selectedSquad.id,
+      challenged_squad_id: targetRivalSquadId,
+      sport: challengeSport,
+      scheduled_date: challengeDate || new Date().toLocaleDateString(),
+      scheduled_time: challengeTime || "20:00",
+      court_id: null,
+      bet_amount: challengeBet,
+      status: "PENDING",
+      winner_squad_id: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      if (useAuthStore.getState().isDemoMode) {
+        const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
+        const allChallenges = stored ? JSON.parse(stored) : [];
+        allChallenges.push(newChallenge);
+        localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(allChallenges));
+        setChallenges((prev) => [newChallenge, ...prev]);
+        toast.success("¡Reto enviado exitosamente (Modo Demo)!");
+      } else {
+        const { error } = await supabase.from("squad_challenges").insert(newChallenge);
+        if (error) throw error;
+        toast.success("¡Reto oficial enviado con éxito!");
+        const { data } = await supabase
+          .from("squad_challenges")
+          .select("*")
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
+        if (data) setChallenges(data);
+      }
+      setShowChallengeForm(false);
+    } catch (err: any) {
+      toast.error("Error al lanzar reto: " + err.message);
+    }
+  };
+
+  const handleAcceptChallenge = async (challengeId: string) => {
+    if (!selectedSquad) return;
+    try {
+      if (useAuthStore.getState().isDemoMode) {
+        const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
+        const allChallenges = stored ? JSON.parse(stored) : [];
+        const updated = allChallenges.map((c: any) =>
+          c.id === challengeId
+            ? { ...c, status: "ACCEPTED", updated_at: new Date().toISOString() }
+            : c,
+        );
+        localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(updated));
+        toast.success("¡Reto Aceptado! La apuesta de FitCoins ha sido reservada.");
+        setChallenges(
+          updated.filter(
+            (c: any) =>
+              c.challenger_squad_id === selectedSquad.id ||
+              c.challenged_squad_id === selectedSquad.id,
+          ),
+        );
+      } else {
+        const { error } = await supabase
+          .from("squad_challenges")
+          .update({ status: "ACCEPTED", updated_at: new Date() })
+          .eq("id", challengeId);
+        if (error) throw error;
+        toast.success("¡Reto Aceptado exitosamente!");
+        const { data } = await supabase
+          .from("squad_challenges")
+          .select("*")
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
+        if (data) setChallenges(data);
+      }
+    } catch (err: any) {
+      toast.error("Error al aceptar reto: " + err.message);
+    }
+  };
+
+  const handleRejectChallenge = async (challengeId: string) => {
+    if (!selectedSquad) return;
+    try {
+      if (useAuthStore.getState().isDemoMode) {
+        const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
+        const allChallenges = stored ? JSON.parse(stored) : [];
+        const updated = allChallenges.map((c: any) =>
+          c.id === challengeId
+            ? { ...c, status: "REJECTED", updated_at: new Date().toISOString() }
+            : c,
+        );
+        localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(updated));
+        toast.success("Reto rechazado.");
+        setChallenges(
+          updated.filter(
+            (c: any) =>
+              c.challenger_squad_id === selectedSquad.id ||
+              c.challenged_squad_id === selectedSquad.id,
+          ),
+        );
+      } else {
+        const { error } = await supabase
+          .from("squad_challenges")
+          .update({ status: "REJECTED", updated_at: new Date() })
+          .eq("id", challengeId);
+        if (error) throw error;
+        toast.success("Reto rechazado.");
+        const { data } = await supabase
+          .from("squad_challenges")
+          .select("*")
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
+        if (data) setChallenges(data);
+      }
+    } catch (err: any) {
+      toast.error("Error al rechazar reto: " + err.message);
+    }
+  };
+
+  const handleReportWinner = async (challengeId: string, winnerSquadId: string) => {
+    if (!currentUser || !selectedSquad) return;
+    try {
+      if (useAuthStore.getState().isDemoMode) {
+        const stored = localStorage.getItem("sportmatch_demo_squad_challenges");
+        const allChallenges = stored ? JSON.parse(stored) : [];
+        const challenge = allChallenges.find((c: any) => c.id === challengeId);
+
+        if (challenge) {
+          const bet = challenge.bet_amount;
+          const updated = allChallenges.map((c: any) =>
+            c.id === challengeId
+              ? {
+                  ...c,
+                  status: "COMPLETED",
+                  winner_squad_id: winnerSquadId,
+                  updated_at: new Date().toISOString(),
+                }
+              : c,
+          );
+          localStorage.setItem("sportmatch_demo_squad_challenges", JSON.stringify(updated));
+
+          const challengerSquad = squads.find((s) => s.id === challenge.challenger_squad_id);
+          const challengedSquad = squads.find((s) => s.id === challenge.challenged_squad_id);
+          const challengerCaptainId = challengerSquad?.creator_id || "";
+          const challengedCaptainId = challengedSquad?.creator_id || "";
+
+          const storedBalances = localStorage.getItem("sportmatch_demo_balances");
+          const balances = storedBalances ? JSON.parse(storedBalances) : {};
+
+          const winnerCaptainId =
+            winnerSquadId === challenge.challenger_squad_id
+              ? challengerCaptainId
+              : challengedCaptainId;
+          const loserCaptainId =
+            winnerSquadId === challenge.challenger_squad_id
+              ? challengedCaptainId
+              : challengerCaptainId;
+
+          balances[winnerCaptainId] = (balances[winnerCaptainId] || 1000) + bet;
+          balances[loserCaptainId] = Math.max(0, (balances[loserCaptainId] || 1000) - bet);
+          localStorage.setItem("sportmatch_demo_balances", JSON.stringify(balances));
+
+          if (currentUser.id === winnerCaptainId) {
+            login({ ...currentUser, fitcoins_balance: currentUser.fitcoins_balance + bet });
+          } else if (currentUser.id === loserCaptainId) {
+            login({
+              ...currentUser,
+              fitcoins_balance: Math.max(0, currentUser.fitcoins_balance - bet),
+            });
+          }
+
+          toast.success(`¡Reto completado! Se transfirieron ${bet} FitCoins al equipo ganador.`);
+          setChallenges(
+            updated.filter(
+              (c: any) =>
+                c.challenger_squad_id === selectedSquad.id ||
+                c.challenged_squad_id === selectedSquad.id,
+            ),
+          );
+        }
+      } else {
+        const { error } = await supabase
+          .from("squad_challenges")
+          .update({ status: "COMPLETED", winner_squad_id: winnerSquadId, updated_at: new Date() })
+          .eq("id", challengeId);
+        if (error) throw error;
+        toast.success("Resultado reportado y guardado.");
+        const { data } = await supabase
+          .from("squad_challenges")
+          .select("*")
+          .or(
+            `challenger_squad_id.eq.${selectedSquad.id},challenged_squad_id.eq.${selectedSquad.id}`,
+          );
+        if (data) setChallenges(data);
+      }
+    } catch (err: any) {
+      toast.error("Error al reportar resultado: " + err.message);
+    }
+  };
+
   if (!currentUser) return null;
 
   // === BLOQUE: DASHBOARD DEL SQUAD SELECCIONADO ===
@@ -412,64 +683,338 @@ export function SquadExplorer() {
             )}
           </div>
 
-          {/* Columna de reserva colectiva */}
+          {/* Panel Principal de Acción (Reserva o Retos) */}
           <div className="md:col-span-2 bg-gradient-card border border-border rounded-3xl p-5 shadow-card space-y-4 flex flex-col h-[500px]">
-            <div className="pb-2 border-b border-border/50">
-              <h3 className="font-semibold text-sm flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-electric" /> Reserva Colectiva (Dividir Costo)
-              </h3>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Al reservar desde este panel, el costo se dividirá automáticamente en partes iguales
-                entre todos los miembros activos del Squad.
-              </p>
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-border/20 pb-3">
+              <button
+                type="button"
+                onClick={() => setDashTab("booking")}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  dashTab === "booking"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+              >
+                Reserva Colectiva
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashTab("challenges")}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  dashTab === "challenges"
+                    ? "bg-gradient-primary text-white shadow-glow"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+              >
+                Retos Competitivos (Premium) ⚔️
+              </button>
             </div>
-            {loadingCourts ? (
-              <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-electric" />
-              </div>
+
+            {dashTab === "booking" ? (
+              <>
+                <div className="pb-1">
+                  <h3 className="font-semibold text-xs text-foreground flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5 text-electric" /> Reserva Colectiva (Dividir
+                    Costo)
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Al reservar desde este panel, el costo se dividirá en partes iguales entre los
+                    miembros del Squad.
+                  </p>
+                </div>
+                {loadingCourts ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-electric" />
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto space-y-3.5 pr-1">
+                    {squadCourts.slice(0, 8).map((court) => {
+                      const bookingMembersCount = squadMembers.length || 1;
+                      const priceSplit = (court.price_per_hour + 3) / bookingMembersCount;
+                      return (
+                        <div
+                          key={court.id}
+                          className="p-4 bg-background/40 border border-border/50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-primary/40 transition-colors"
+                        >
+                          <div className="flex gap-3">
+                            <img
+                              src={court.image_url}
+                              alt={court.name}
+                              className="h-14 w-20 rounded-xl object-cover border border-border"
+                            />
+                            <div>
+                              <h4 className="font-semibold text-xs text-foreground leading-snug">
+                                {court.name}
+                              </h4>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {court.sport} · {court.address}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className="text-[10px] text-muted-foreground">
+                                  Cancha: S/ {court.price_per_hour}/h
+                                </span>
+                                <span className="text-[10px] text-neon font-bold">
+                                  Tu parte: S/ {Math.ceil(priceSplit)} FC
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setSelectedCourtForBooking(court)}
+                            disabled={!isUserMember}
+                            className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:shadow-glow transition-all shrink-0 w-full sm:w-auto text-center disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                          >
+                            Reserva Colectiva
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="flex-1 overflow-y-auto space-y-3.5 pr-1">
-                {squadCourts.slice(0, 8).map((court) => {
-                  const bookingMembersCount = squadMembers.length || 1;
-                  const priceSplit = (court.price_per_hour + 3) / bookingMembersCount;
-                  return (
-                    <div
-                      key={court.id}
-                      className="p-4 bg-background/40 border border-border/50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-primary/40 transition-colors"
+              // RETOS SQUAD VS SQUAD TAB
+              <div className="flex-1 flex flex-col overflow-hidden space-y-3">
+                {currentUser.tier !== "PREMIUM" ? (
+                  // Locked State for non-premium
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Lock className="h-6 w-6 animate-pulse" />
+                    </div>
+                    <h4 className="font-bold text-sm text-foreground">
+                      Retos de Competición requiere Premium
+                    </h4>
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      Para poder retar a otros equipos y apostar FitCoins en encuentros oficiales,
+                      debes tener una suscripción Premium activa.
+                    </p>
+                    <button
+                      onClick={() => navigate({ to: "/app/coach" })}
+                      className="px-4 py-2 rounded-xl bg-gradient-primary text-white font-bold text-xs shadow-glow cursor-pointer"
                     >
-                      <div className="flex gap-3">
-                        <img
-                          src={court.image_url}
-                          alt={court.name}
-                          className="h-14 w-20 rounded-xl object-cover border border-border"
-                        />
-                        <div>
-                          <h4 className="font-semibold text-xs text-foreground leading-snug">
-                            {court.name}
-                          </h4>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {court.sport} · {court.address}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            <span className="text-[10px] text-muted-foreground">
-                              Cancha: S/ {court.price_per_hour}/h
-                            </span>
-                            <span className="text-[10px] text-neon font-bold">
-                              Tu parte: S/ {Math.ceil(priceSplit)} FC
-                            </span>
+                      Obtener Premium ★
+                    </button>
+                  </div>
+                ) : (
+                  // Active challenges management
+                  <div className="flex-1 flex flex-col overflow-hidden space-y-3">
+                    {/* Send Challenge Form Toggle */}
+                    <div className="flex justify-between items-center pb-2 border-b border-border/10">
+                      <h4 className="text-xs font-bold text-foreground">Competencias del Squad</h4>
+                      {selectedSquad.creator_id === currentUser.id && !showChallengeForm && (
+                        <button
+                          onClick={() => {
+                            const other = squads.find((s) => s.id !== selectedSquad.id);
+                            if (other) setTargetRivalSquadId(other.id);
+                            setShowChallengeForm(true);
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-gradient-primary text-white text-[10px] font-bold shadow-glow hover:scale-105 transition-all cursor-pointer"
+                        >
+                          Lanzar Reto ⚔️
+                        </button>
+                      )}
+                    </div>
+
+                    {showChallengeForm ? (
+                      <form
+                        onSubmit={handleLaunchChallenge}
+                        className="p-4 bg-background/50 border border-border/40 rounded-2xl space-y-3 animate-fade-in text-left"
+                      >
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Rival
+                            </label>
+                            <select
+                              value={targetRivalSquadId}
+                              onChange={(e) => setTargetRivalSquadId(e.target.value)}
+                              className="w-full bg-background border border-border/40 rounded-xl px-2 py-1.5 text-xs text-foreground focus:outline-none"
+                              required
+                            >
+                              {squads
+                                .filter((s) => s.id !== selectedSquad.id)
+                                .map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Deporte
+                            </label>
+                            <select
+                              value={challengeSport}
+                              onChange={(e) => setChallengeSport(e.target.value)}
+                              className="w-full bg-background border border-border/40 rounded-xl px-2 py-1.5 text-xs text-foreground focus:outline-none"
+                            >
+                              <option>Tenis</option>
+                              <option>Pádel</option>
+                              <option>Fútbol</option>
+                              <option>Básquet</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Fecha
+                            </label>
+                            <input
+                              type="date"
+                              value={challengeDate}
+                              onChange={(e) => setChallengeDate(e.target.value)}
+                              className="w-full bg-background border border-border/40 rounded-xl px-2 py-1 text-xs text-foreground focus:outline-none"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">
+                              Apuesta (FitCoins)
+                            </label>
+                            <select
+                              value={challengeBet}
+                              onChange={(e) => setChallengeBet(parseInt(e.target.value) || 100)}
+                              className="w-full bg-background border border-border/40 rounded-xl px-2 py-1.5 text-xs text-foreground focus:outline-none"
+                            >
+                              <option value="100">100 FC</option>
+                              <option value="250">250 FC</option>
+                              <option value="500">500 FC</option>
+                              <option value="1000">1000 FC</option>
+                            </select>
                           </div>
                         </div>
+
+                        <div className="flex justify-end gap-2 text-[10px] pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowChallengeForm(false)}
+                            className="px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-muted-foreground cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-3 py-1.5 rounded-lg bg-neon text-neon-foreground font-bold shadow-neon cursor-pointer"
+                          >
+                            Enviar Reto
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      // Challenges List
+                      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                        {loadingChallenges ? (
+                          <div className="text-center py-10 text-muted-foreground text-xs">
+                            Cargando retos...
+                          </div>
+                        ) : challenges.length === 0 ? (
+                          <div className="text-center py-10 text-muted-foreground text-xs">
+                            No hay retos activos. ¡Reta a un equipo rival!
+                          </div>
+                        ) : (
+                          challenges.map((c) => {
+                            const isChallenger = c.challenger_squad_id === selectedSquad.id;
+                            const opponentSquadId = isChallenger
+                              ? c.challenged_squad_id
+                              : c.challenger_squad_id;
+                            const opponent = squads.find((s) => s.id === opponentSquadId);
+                            const opponentName = opponent?.name || "Squad Rival";
+                            const isCaptain = selectedSquad.creator_id === currentUser.id;
+
+                            return (
+                              <div
+                                key={c.id}
+                                className="p-4 bg-background/40 border border-border/30 rounded-2xl space-y-2 text-left hover:border-primary/20 transition-all"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span
+                                    className={`text-[9px] px-2 py-0.5 rounded font-black tracking-wider uppercase ${
+                                      c.status === "PENDING"
+                                        ? "bg-amber-500/20 text-amber-400"
+                                        : c.status === "ACCEPTED"
+                                          ? "bg-emerald-500/20 text-emerald-400"
+                                          : "bg-zinc-500/20 text-zinc-400"
+                                    }`}
+                                  >
+                                    {c.status}
+                                  </span>
+                                  <span className="text-[10px] text-neon font-extrabold">
+                                    ⚔️ Apuesta: {c.bet_amount} FC
+                                  </span>
+                                </div>
+
+                                <div className="text-xs font-semibold text-foreground">
+                                  {isChallenger
+                                    ? `Retaste a: ${opponentName}`
+                                    : `Fuiste retado por: ${opponentName}`}
+                                </div>
+
+                                <div className="text-[10px] text-muted-foreground flex gap-3">
+                                  <span>Deporte: {c.sport}</span>
+                                  <span>Fecha: {c.scheduled_date}</span>
+                                  <span>Hora: {c.scheduled_time}</span>
+                                </div>
+
+                                {/* Actions depending on state & role */}
+                                {c.status === "PENDING" && !isChallenger && isCaptain && (
+                                  <div className="flex gap-2 pt-1 text-[10px]">
+                                    <button
+                                      onClick={() => handleAcceptChallenge(c.id)}
+                                      className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-white font-bold cursor-pointer"
+                                    >
+                                      Aceptar
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectChallenge(c.id)}
+                                      className="px-2.5 py-1.5 rounded-lg bg-rose-500 text-white font-bold cursor-pointer"
+                                    >
+                                      Rechazar
+                                    </button>
+                                  </div>
+                                )}
+
+                                {c.status === "ACCEPTED" && isCaptain && (
+                                  <div className="pt-2 border-t border-border/10 space-y-1.5">
+                                    <div className="text-[9px] uppercase font-bold text-muted-foreground">
+                                      Reportar Ganador (Capitán)
+                                    </div>
+                                    <div className="flex gap-2 text-[10px]">
+                                      <button
+                                        onClick={() => handleReportWinner(c.id, selectedSquad.id)}
+                                        className="px-2.5 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 font-bold cursor-pointer"
+                                      >
+                                        Ganamos Nosotros
+                                      </button>
+                                      <button
+                                        onClick={() => handleReportWinner(c.id, opponentSquadId)}
+                                        className="px-2.5 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted font-bold cursor-pointer"
+                                      >
+                                        Ganó Rival
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {c.status === "COMPLETED" && (
+                                  <div className="text-[10px] font-semibold text-emerald-400 mt-1">
+                                    🏆 Ganador:{" "}
+                                    {c.winner_squad_id === selectedSquad.id
+                                      ? "¡Ganaste!"
+                                      : opponentName}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
-                      <button
-                        onClick={() => setSelectedCourtForBooking(court)}
-                        disabled={!isUserMember}
-                        className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground text-xs font-bold hover:shadow-glow transition-all shrink-0 w-full sm:w-auto text-center disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-                      >
-                        Reserva Colectiva
-                      </button>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

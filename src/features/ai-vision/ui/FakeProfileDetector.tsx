@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -16,14 +16,25 @@ import type { SupportedLanguage } from "../model/types";
 interface FakeProfileDetectorProps {
   language?: SupportedLanguage;
   className?: string;
+  onSuccess?: () => void;
 }
 
-export function FakeProfileDetector({ language, className = "" }: FakeProfileDetectorProps) {
+export function FakeProfileDetector({
+  language,
+  className = "",
+  onSuccess,
+}: FakeProfileDetectorProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<Blob | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { analyzing, result, error, analyze, clear } = useFakeProfileDetector(language);
+
+  useEffect(() => {
+    if (result && result.authenticityScore >= 70) {
+      onSuccess?.();
+    }
+  }, [result, onSuccess]);
 
   const handleFile = useCallback(
     (selectedFile: Blob) => {
@@ -63,6 +74,7 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
         ? "bg-warning/10 border-warning/30"
         : "bg-destructive/10 border-destructive/30"
     : "";
+  const showAiWarning = result ? result.isFake || result.authenticityScore < 40 : false;
 
   return (
     <div className={`space-y-5 ${className}`}>
@@ -72,8 +84,10 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
           <ScanFace className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-foreground">Fake Profile Detector</h3>
-          <p className="text-xs text-muted-foreground">Detecta fotos de perfil generadas por IA</p>
+          <h3 className="text-base font-bold text-foreground">Veracidad de persona</h3>
+          <p className="text-xs text-muted-foreground">
+            Verifica si la foto muestra una persona real
+          </p>
         </div>
       </div>
 
@@ -88,7 +102,7 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
           </div>
           <div className="text-center">
             <p className="text-sm font-semibold text-foreground">Sube una foto de perfil</p>
-            <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP &middot; Máx 10MB</p>
+            <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP &middot; Max 10MB</p>
           </div>
           <input
             ref={inputRef}
@@ -117,6 +131,15 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
         )}
       </AnimatePresence>
 
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-primary">Prompt de uso</p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground/85">
+          Sube una foto frontal, clara y sin filtros extremos. La imagen se enviara a Computer
+          Vision para estimar si aparece una persona real, revisar consistencia del rostro y
+          detectar senales fuertes de edicion o generacion artificial.
+        </p>
+      </div>
+
       {/* Actions */}
       {preview && !analyzing && !result && !error && (
         <button
@@ -125,7 +148,7 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-all cursor-pointer"
         >
           <ScanFace className="h-4 w-4" />
-          Detectar si es IA
+          Verificar persona
         </button>
       )}
 
@@ -133,7 +156,7 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
       {analyzing && (
         <div className="flex items-center justify-center gap-2 px-4 py-4 rounded-xl bg-primary/5 border border-primary/20 text-primary text-sm">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Analizando autenticidad...
+          Analizando veracidad de persona...
         </div>
       )}
 
@@ -157,12 +180,14 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
             <div className="flex items-center gap-3">
               {result.authenticityScore >= 70 ? (
                 <ShieldCheck className="h-8 w-8 text-success" />
+              ) : result.authenticityScore >= 40 ? (
+                <ShieldAlert className="h-8 w-8 text-warning" />
               ) : (
                 <ShieldAlert className="h-8 w-8 text-destructive" />
               )}
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Autenticidad</p>
-                <p className={`text-2xl font-bold ${scoreColor}`}>{result.authenticityScore}/100</p>
+                <p className="text-xs text-muted-foreground font-medium">Veracidad de persona</p>
+                <p className={`text-2xl font-bold ${scoreColor}`}>{result.authenticityScore}%</p>
               </div>
             </div>
             <div className="text-right">
@@ -178,24 +203,49 @@ export function FakeProfileDetector({ language, className = "" }: FakeProfileDet
             className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${
               result.authenticityScore >= 70
                 ? "bg-success/10 border-success/30"
-                : "bg-destructive/10 border-destructive/30"
+                : result.authenticityScore >= 40
+                  ? "bg-warning/10 border-warning/30"
+                  : "bg-destructive/10 border-destructive/30"
             }`}
           >
             {result.authenticityScore >= 70 ? (
               <ShieldCheck className="h-5 w-5 text-success shrink-0" />
+            ) : result.authenticityScore >= 40 ? (
+              <ShieldAlert className="h-5 w-5 text-warning shrink-0" />
             ) : (
               <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
             )}
             <p
               className={`text-sm font-semibold ${
-                result.authenticityScore >= 70 ? "text-success" : "text-destructive"
+                result.authenticityScore >= 70
+                  ? "text-success"
+                  : result.authenticityScore >= 40
+                    ? "text-warning"
+                    : "text-destructive"
               }`}
             >
               {result.authenticityScore >= 70
-                ? "Foto auténtica — perfil verificado"
-                : "Posible foto generada por IA"}
+                ? "Persona real probable - perfil verificable"
+                : result.authenticityScore >= 40
+                  ? "Veracidad media - revisa la foto"
+                  : "Veracidad baja - posible imagen artificial"}
             </p>
           </div>
+
+          {showAiWarning && (
+            <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">
+                  Senales elevadas de imagen artificial o alterada
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-destructive/85">
+                  Esta advertencia solo aparece cuando la veracidad humana es baja o el analisis
+                  detecta evidencia fuerte.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Explanation */}
           <div className="p-4 rounded-xl bg-accent/30 border border-border/50">

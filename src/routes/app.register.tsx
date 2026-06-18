@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: Ruta de Registro de Usuario ===
 // Formulario de registro con selector de rol (PLAYER / BUSINESS),
 // validación estricta de email (RFC + whitelist de dominios + TLDs),
@@ -25,7 +26,6 @@ const ALLOWED_DOMAINS = [
   "icloud.com",
   "protonmail.com",
   "sportmatch.app",
-  "sportmatch.com",
   "puka.com",
 ];
 
@@ -149,10 +149,7 @@ function RegisterPage() {
     },
     onSubmit: async (vals) => {
       const newUser = {
-        id:
-          typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+        id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
         name: role === "BUSINESS" ? vals.companyName : vals.fullName,
         age: role === "BUSINESS" ? 0 : 25,
@@ -180,8 +177,19 @@ function RegisterPage() {
         password: vals.password,
       };
 
-      await register(newUser);
-      navigate({ to: role === "BUSINESS" ? "/app/business" : "/app" });
+      try {
+        await register(newUser);
+        navigate({ to: role === "BUSINESS" ? "/app/business" : "/app" });
+      } catch (err: any) {
+        if (err.message === "CONFIRMATION_PENDING") {
+          toast.success(
+            "¡Registro exitoso! Por favor, verifica tu correo electrónico para activar tu cuenta.",
+          );
+          navigate({ to: "/login" });
+        } else {
+          throw err;
+        }
+      }
     },
     successMessage: t("register.success_toast"),
   });

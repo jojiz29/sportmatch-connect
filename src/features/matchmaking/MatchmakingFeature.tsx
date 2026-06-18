@@ -12,9 +12,6 @@ import {
   Swords,
   Clock3,
   Check,
-  Search,
-  Loader2,
-  Trophy,
 } from "lucide-react";
 import { useMatchmaking } from "./useMatchmaking";
 import { User, Match, Sport } from "@/entities/types";
@@ -38,52 +35,11 @@ import {
   respondToPlayerChallenge,
 } from "@/shared/api/challengeService";
 import { getPlayerConnections, createPlayerConnection } from "@/shared/api/connectionService";
-import { MatchResultModal } from "./ui/MatchResultModal";
-import type { QueueStatus } from "@/entities/types";
-import {
-  getTodayAiRecommendations,
-  type AiRecommendationCard,
-  type AiRecommendationResponse,
-} from "@/features/engagement-ai";
 
 // === BLOQUE: COMPONENTE PRINCIPAL DE MATCHMAKING ===
 // Carrusel de recomendaciones de jugadores con swipe, conexión y desafío.
 interface MatchmakingFeatureProps {
   readonly initialStack: User[];
-}
-
-function getMatchmakingSuggestionCacheKey(userId: string) {
-  const dateKey = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  return `sportmatch_match_suggestions_${userId}_${dateKey}`;
-}
-
-function readCachedMatchmakingSuggestions(userId: string): AiRecommendationCard[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(getMatchmakingSuggestionCacheKey(userId));
-    if (!raw) return null;
-    return JSON.parse(raw) as AiRecommendationCard[];
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedMatchmakingSuggestions(userId: string, response: AiRecommendationResponse) {
-  if (typeof window === "undefined") return;
-  const relevantTypes: AiRecommendationCard["type"][] = ["player", "sport", "challenge", "venue"];
-  const suggestions = response.recommendations
-    .filter((item) => relevantTypes.includes(item.type))
-    .slice(0, 3);
-  window.localStorage.setItem(
-    getMatchmakingSuggestionCacheKey(userId),
-    JSON.stringify(suggestions),
-  );
-  return suggestions;
 }
 
 export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
@@ -102,46 +58,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   const [receivedChallenges, setReceivedChallenges] = useState<PlayerChallenge[]>([]);
   const [resolvingChallengeId, setResolvingChallengeId] = useState<string | null>(null);
   const [contactedUserIds, setContactedUserIds] = useState<string[]>([]);
-  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
-  const [queueSport, setQueueSport] = useState<string>("");
-  const [isQueueLoading, setIsQueueLoading] = useState(false);
-  const [foundMatch, setFoundMatch] = useState<{
-    matched_with: string;
-    sport: string;
-  } | null>(null);
-  const [showResultModal, setShowResultModal] = useState(false);
-  const [smartSuggestions, setSmartSuggestions] = useState<AiRecommendationCard[]>([]);
-  const [isLoadingSmartSuggestions, setIsLoadingSmartSuggestions] = useState(false);
-
-  // === BLOQUE: SUGERENCIAS CONTEXTUALES ===
-  // Reutiliza el snapshot diario para mostrar pistas utiles dentro del matchmaking.
-  // No crea un modulo separado: complementa la decision desde esta pantalla.
-  useEffect(() => {
-    if (!currentUser || useAuthStore.getState().isDemoMode) return;
-    const cachedSuggestions = readCachedMatchmakingSuggestions(currentUser.id);
-    if (cachedSuggestions) {
-      setSmartSuggestions(cachedSuggestions);
-      return;
-    }
-
-    let active = true;
-    setIsLoadingSmartSuggestions(true);
-    getTodayAiRecommendations()
-      .then((response) => {
-        if (!active) return;
-        setSmartSuggestions(writeCachedMatchmakingSuggestions(currentUser.id, response) ?? []);
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV)
-          console.warn("No se pudieron cargar sugerencias para matchmaking:", error);
-      })
-      .finally(() => {
-        if (active) setIsLoadingSmartSuggestions(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [currentUser]);
 
   // === BLOQUE: CARGA DE PARTIDOS DEL USUARIO INSPECCIONADO ===
   // Cuando se abre el perfil de un candidato, carga sus partidos desde backend o Supabase.
@@ -280,73 +196,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
     };
   }, [currentUser]);
 
-  // === BLOQUE: COLA DE MATCHMAKING (V2.3) ===
-  const handleEnterQueue = async () => {
-    const sport = queueSport || (activeSport === "Todos" ? preferredSports[0] : activeSport);
-    if (!sport || !baseLocation) return;
-    setIsQueueLoading(true);
-    try {
-      await backendApi.matchmaking.enterQueue(sport, baseLocation.lat, baseLocation.lng, 10);
-      setQueueStatus("WAITING");
-      setQueueSport(sport);
-      toast.success("Buscando partido...", {
-        description: `Te avisaremos cuando encontremos rival para ${sport}.`,
-      });
-    } catch {
-      toast.error("No se pudo entrar a la cola");
-    } finally {
-      setIsQueueLoading(false);
-    }
-  };
-
-  const handleLeaveQueue = async () => {
-    const sport = queueSport;
-    if (!sport) return;
-    setIsQueueLoading(true);
-    try {
-      await backendApi.matchmaking.leaveQueue(sport);
-      setQueueStatus(null);
-      setFoundMatch(null);
-      toast.info("Búsqueda cancelada");
-    } catch {
-      toast.error("No se pudo salir de la cola");
-    } finally {
-      setIsQueueLoading(false);
-    }
-  };
-
-  // === BLOQUE: REALTIME — Cola de matchmaking (V2.3) ===
-  useEffect(() => {
-    if (!currentUser) return;
-    const channel = supabase
-      .channel(`matchmaking-queue-${currentUser.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "matchmaking_queue",
-          filter: `user_id=eq.${currentUser.id}`,
-        },
-        (payload) => {
-          const row = payload.new as { status: string; matched_with: string; sport: string };
-          if (row.status === "FOUND" && row.matched_with) {
-            setQueueStatus("FOUND");
-            setFoundMatch({ matched_with: row.matched_with, sport: row.sport });
-            toast.success("Match encontrado!", {
-              description: `Tienes un rival para ${row.sport}. Coordina tu partido.`,
-              duration: 8000,
-            });
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser]);
-
   // === BLOQUE: SUSCRIPCIÓN REALTIME A CONEXIONES MUTUAS ===
   // Escucha insercciones en player_connections; si el otro usuario conectó primero,
   // muestra el modal de match para que el primero también lo vea.
@@ -392,7 +241,8 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
-    const handleConnections = (connections: { connected_user_id: string }[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleConnections = (connections: any[]) => {
       if (!active) return;
       const ids = connections.map((c) => c.connected_user_id);
       setContactedUserIds((current) => Array.from(new Set([...current, ...ids])));
@@ -409,6 +259,37 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   // Envía solicitud de conexión; si es mutua, abre modal de match.
   const handleConnect = async (target: User) => {
     if (!currentUser || isSavingConnection) return;
+
+    // Verificar límites diarios de Me Gusta (Freemium)
+    const isPremium = currentUser.tier === "PREMIUM";
+    const plan = localStorage.getItem(`sportmatch_subscription_plan_${currentUser.id}`) || "free";
+
+    let likesLimit = 5;
+    if (isPremium) {
+      if (plan === "bronce") likesLimit = 20;
+      else if (plan === "plata") likesLimit = 50;
+      else likesLimit = 9999; // oro es ilimitado
+    }
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const likesKey = `sportmatch_daily_likes_${currentUser.id}`;
+    const likesSaved = localStorage.getItem(likesKey);
+    let likesData = likesSaved ? JSON.parse(likesSaved) : { date: todayStr, count: 0 };
+
+    if (likesData.date !== todayStr) {
+      likesData = { date: todayStr, count: 0 };
+    }
+
+    if (likesData.count >= likesLimit) {
+      toast.error(
+        `Has alcanzado tu límite diario de ${likesLimit} Me Gusta/Conexiones. ¡Suscríbete a un plan superior para continuar!`,
+        {
+          duration: 5000,
+        },
+      );
+      return;
+    }
+
     const recommendation = rankedStack.find((item) => item.user.id === target.id);
     try {
       setIsSavingConnection(true);
@@ -420,6 +301,11 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
           (activeSport === "Todos" ? target.preferred_sports?.[0] : activeSport),
         compatibilityScore: recommendation?.score ?? null,
       });
+
+      // Incrementar contador de likes
+      likesData.count += 1;
+      localStorage.setItem(likesKey, JSON.stringify(likesData));
+
       setContactedUserIds((current) =>
         current.includes(target.id) ? current : [...current, target.id],
       );
@@ -563,12 +449,8 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={1}
                 onDragEnd={(e, info) => {
-                  const swipeSport =
-                    activeSport === "Todos"
-                      ? p.user.preferred_sports?.[0] || "Fútbol"
-                      : activeSport;
-                  if (info.offset.x > 100) swipe(p.user.id, "like", swipeSport);
-                  else if (info.offset.x < -100) swipe(p.user.id, "pass", swipeSport);
+                  if (info.offset.x > 100) swipe(p.user.id, "like");
+                  else if (info.offset.x < -100) swipe(p.user.id, "pass");
                 }}
                 className="absolute inset-0 bg-gradient-card border border-border rounded-3xl shadow-card overflow-hidden transition-all cursor-grab active:cursor-grabbing"
                 style={{
@@ -669,13 +551,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 {isTop && (
                   <div className="flex items-center justify-center gap-5 px-5 pt-3 pb-5 border-t border-border/40 mt-auto">
                     <button
-                      onClick={() => {
-                        const swipeSport =
-                          activeSport === "Todos"
-                            ? p.user.preferred_sports?.[0] || "Fútbol"
-                            : activeSport;
-                        swipe(p.user.id, "pass", swipeSport);
-                      }}
+                      onClick={() => swipe(p.user.id, "pass")}
                       className="h-14 w-14 rounded-full border border-red-500/30 bg-red-500/8 hover:bg-red-500/20 active:scale-90 text-red-400 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg"
                       aria-label={t("matchmaking.keep_swiping")}
                     >
@@ -791,57 +667,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
 
       {/* ── Panel lateral de compatibilidad y desafíos ── */}
       <div className="space-y-4">
-        {(isLoadingSmartSuggestions || smartSuggestions.length > 0) && (
-          <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5">
-            <h3 className="font-semibold flex items-center gap-2">
-              {isLoadingSmartSuggestions ? (
-                <Loader2 className="h-4 w-4 text-neon animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4 text-neon" />
-              )}{" "}
-              Sugerencias para conectar
-            </h3>
-            <div className="mt-4 space-y-3">
-              {isLoadingSmartSuggestions
-                ? Array.from({ length: 2 }).map((_, index) => (
-                    <div
-                      key={`smart-suggestion-loading-${index}`}
-                      className="rounded-xl bg-muted/30 border border-border/50 p-3 animate-pulse"
-                    >
-                      <div className="h-3 w-2/3 rounded bg-muted" />
-                      <div className="mt-2 h-2 w-full rounded bg-muted" />
-                      <div className="mt-1 h-2 w-4/5 rounded bg-muted" />
-                    </div>
-                  ))
-                : smartSuggestions.map((suggestion) => (
-                    <div
-                      key={suggestion.id}
-                      className="rounded-xl bg-muted/30 border border-border/50 p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-foreground">
-                            {suggestion.title}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {suggestion.description}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">
-                          {Math.round(suggestion.score)}%
-                        </span>
-                      </div>
-                      {suggestion.reasons[0] && (
-                        <div className="mt-2 text-[11px] text-muted-foreground">
-                          {suggestion.reasons[0]}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-            </div>
-          </div>
-        )}
-
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-neon" /> {t("matchmaking.compatibility")}
@@ -859,91 +684,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               />
               <Bar label={t("matchmaking.distance")} value={topRecommendation.breakdown.location} />
               <Bar label={t("matchmaking.reputation")} value={topRecommendation.breakdown.trust} />
-            </div>
-          )}
-        </div>
-
-        {/* ── Cola de matchmaking (V2.3) ── */}
-        <div className="bg-gradient-card border border-border rounded-2xl p-5">
-          <h3 className="font-semibold flex items-center gap-2 mb-3">
-            <Search className="h-4 w-4 text-neon" /> Buscar Partido
-          </h3>
-          {queueStatus === "WAITING" ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin text-neon" />
-                Buscando rival en {queueSport}...
-              </div>
-              <button
-                onClick={handleLeaveQueue}
-                disabled={isQueueLoading}
-                className="w-full py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors cursor-pointer"
-              >
-                Cancelar búsqueda
-              </button>
-            </div>
-          ) : queueStatus === "FOUND" && foundMatch ? (
-            <div className="space-y-3">
-              <div className="p-3 rounded-xl bg-neon/10 border border-neon/20 text-sm text-center">
-                <Trophy className="h-6 w-6 mx-auto text-neon mb-1" />
-                <div className="font-semibold text-neon">Match encontrado!</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Rival para {foundMatch.sport}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setQueueStatus(null);
-                    setFoundMatch(null);
-                    setShowResultModal(true);
-                  }}
-                  className="flex-1 py-2 rounded-lg bg-gradient-primary text-primary-foreground text-xs font-semibold hover:scale-[1.02] transition-transform cursor-pointer"
-                >
-                  Coordinar partido
-                </button>
-                <button
-                  onClick={() => {
-                    setQueueStatus(null);
-                    setFoundMatch(null);
-                  }}
-                  className="py-2 px-3 rounded-lg border border-border text-xs hover:bg-accent transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <select
-                value={queueSport || (activeSport === "Todos" ? "" : activeSport)}
-                onChange={(e) => setQueueSport(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
-              >
-                <option value="">Selecciona deporte</option>
-                {preferredSports.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleEnterQueue}
-                disabled={
-                  isQueueLoading || !baseLocation || (!queueSport && activeSport === "Todos")
-                }
-                className="w-full py-2 rounded-lg bg-gradient-primary text-primary-foreground text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-              >
-                {isQueueLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Entrando...
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-4 w-4" /> Buscar rival
-                  </>
-                )}
-              </button>
             </div>
           )}
         </div>
@@ -1205,15 +945,23 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 </button>
                 <button
                   onClick={async () => {
-                    const chatStore = useChatStore.getState();
-                    const chatId = await chatStore.createChat(matchedUser.id);
-                    if (!chatId) {
+                    try {
+                      const chatStore = useChatStore.getState();
+                      const chatId = await chatStore.createChat(matchedUser.id);
+                      if (!chatId) {
+                        toast.error("No se pudo abrir el chat del match");
+                        return;
+                      }
+                      chatStore.setActiveConversation(chatId);
+                      setMatchedUser(null);
+                      navigate({ to: "/app/chat" });
+                    } catch (error) {
+                      console.error("[chat] match-open-no-greet:error", {
+                        targetUserId: matchedUser.id,
+                        error,
+                      });
                       toast.error("No se pudo abrir el chat del match");
-                      return;
                     }
-                    chatStore.setActiveConversation(chatId);
-                    setMatchedUser(null);
-                    navigate({ to: "/app/chat" });
                   }}
                   className="w-full py-3 rounded-xl border border-neon/30 bg-neon/10 text-neon text-sm font-semibold hover:bg-neon/15 cursor-pointer"
                 >
@@ -1346,15 +1094,6 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Modal de resultado de partido (V2.3) */}
-      {showResultModal && foundMatch && (
-        <MatchResultModal
-          opponentId={foundMatch.matched_with}
-          sport={foundMatch.sport}
-          onClose={() => setShowResultModal(false)}
-        />
-      )}
     </div>
   );
 }
@@ -1408,7 +1147,8 @@ function Bar({ label, value }: Readonly<{ label: string; value: number }>) {
   );
 }
 
-function getTrustLevelLabel(score: number, t: (key: string) => string): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getTrustLevelLabel(score: number, t: any): string {
   if (score >= 90) return t("profile.trust_level_excellent");
   if (score >= 70) return t("profile.trust_level_good");
   return t("profile.trust_level_risk");

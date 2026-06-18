@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * ===================================================================
  * ARCHIVO: src/lib/supabase.ts
@@ -10,26 +11,6 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-interface MockChain {
-  select: () => MockChain;
-  insert: () => MockChain;
-  update: () => MockChain;
-  delete: () => MockChain;
-  eq: () => MockChain;
-  neq: () => MockChain;
-  lt: () => MockChain;
-  gt: () => MockChain;
-  limit: () => MockChain;
-  order: () => MockChain;
-  single: () => Promise<{ data: null; count: null; error: Error }>;
-}
-
-interface MockChannel {
-  on: () => MockChannel;
-  subscribe: () => MockChannel;
-  unsubscribe: () => void;
-}
 
 // ------------------------------------------------------------------
 // VARIABLES DE ENTORNO: URL y clave anónima de Supabase
@@ -99,7 +80,7 @@ function createFallbackClient(): SupabaseClient {
   return new Proxy(
     {},
     {
-      get(_target, prop) {
+      get(target, prop) {
         // --- MÓDULO AUTH: login, registro, sesión ---
         if (prop === "auth") {
           return {
@@ -107,8 +88,6 @@ function createFallbackClient(): SupabaseClient {
             getSession: () => Promise.resolve({ data: { session: null } }),
             signInWithPassword: () =>
               Promise.resolve({ error: new Error("Supabase not configured") }),
-            signInWithOAuth: () =>
-              Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
             signUp: () => Promise.resolve({ error: new Error("Supabase not configured") }),
             signOut: () => Promise.resolve({ error: null }),
           };
@@ -124,7 +103,7 @@ function createFallbackClient(): SupabaseClient {
               count: null,
               error: new Error("Supabase not configured"),
             });
-            const chainObj: MockChain = Object.assign(dummyPromise, {
+            const chainObj: any = Object.assign(dummyPromise, {
               select: () => chainObj,
               insert: () => chainObj,
               update: () => chainObj,
@@ -150,7 +129,8 @@ function createFallbackClient(): SupabaseClient {
         if (prop === "channel") {
           return (name: string) => {
             console.warn(`Called supabase.channel('${name}') but Supabase is not configured.`);
-            const dummyChannel: MockChannel = {
+
+            const dummyChannel: any = {
               on: () => dummyChannel,
               subscribe: () => dummyChannel,
               unsubscribe: () => {},

@@ -14,16 +14,19 @@ explicad que es explicabilidad simulada con un disclaimer explícito en la UI
 ## Por qué no usamos SHAP real
 
 ### Opción 1: SHAP oficial en Python
+
 - ❌ Requiere Python como dependencia del backend (ahora es TypeScript puro).
 - ❌ El cálculo es pesado (N! permutaciones para features categóricas).
 - ❌ Para un sprint de 7 días, era overengineering injustificable.
 
 ### Opción 2: Puerto JavaScript de SHAP (`shap-js`)
+
 - ❌ No existe un puerto oficial y mantenido.
 - ❌ La librería `shap` de Python es la referencia; los puertos no oficiales
   tienen años sin mantenimiento.
 
 ### Opción 3 (elegida): Contribuciones marginales con disclaimer
+
 - ✅ Implementable en TypeScript puro, sin dependencias nuevas.
 - ✅ Tests unitarios simples y rápidos.
 - ✅ Visualmente equivalente al usuario final.
@@ -41,6 +44,7 @@ contribution = ((value - baseline) / max(|baseline|, ε))
 ```
 
 donde:
+
 - `value` = valor crudo observado para esta feature
 - `baseline` = valor típico (media histórica del modelo)
 - `positiveDirection` = `+1` si valor alto sube la predicción, `-1` si baja
@@ -52,13 +56,13 @@ al cliente.
 
 ## Diferencia con SHAP real
 
-| Aspecto | SHAP real | Esta implementación |
-|---|---|---|
-| Fundamento teórico | Teoría de juegos (Shapley values) | Desviación marginal heurística |
-| Garantías | Eficiencia, simetría, dummy | Ninguna formal |
-| Tiempo de cómputo | O(2^N) en N features | O(N) |
-| Valores que satisfacen | Suma contributions = predicción - base | Aproximado, no exacto |
-| Librería | `shap` (Python) | Custom TypeScript |
+| Aspecto                | SHAP real                              | Esta implementación            |
+| ---------------------- | -------------------------------------- | ------------------------------ |
+| Fundamento teórico     | Teoría de juegos (Shapley values)      | Desviación marginal heurística |
+| Garantías              | Eficiencia, simetría, dummy            | Ninguna formal                 |
+| Tiempo de cómputo      | O(2^N) en N features                   | O(N)                           |
+| Valores que satisfacen | Suma contributions = predicción - base | Aproximado, no exacto          |
+| Librería               | `shap` (Python)                        | Custom TypeScript              |
 
 ## ¿Por qué el disclaimer es importante?
 
@@ -76,6 +80,7 @@ al cliente.
 ## Dónde aparece el disclaimer
 
 1. **En la UI** — `ShapExplanation.tsx` muestra el texto:
+
    > "Drivers SHAP-style (explicabilidad simulada, no SHAP oficial)"
 
 2. **En el código** — `ShapExplainerService.ts` tiene un bloque de

@@ -6,14 +6,14 @@ basadas en datos: **Dynamic Pricing**, **Ads Optimizer** y **Churn Predictor**.
 
 ## 📚 Índice de documentos
 
-| Doc | Contenido |
-|---|---|
-| [README.md](README.md) | Este archivo — overview, cómo levantar, troubleshooting |
-| [pricing-model.md](pricing-model.md) | Feature #9 — Dynamic Pricing: fórmula, supuestos, casos edge |
-| [ads-optimizer.md](ads-optimizer.md) | Feature #21 — Ads Optimizer: UCB1 bandit + LLM rewriter |
-| [churn-predictor.md](churn-predictor.md) | Feature #23 — Churn Predictor: RFM-lite scoring |
-| [data-pipeline.md](data-pipeline.md) | Schema `usage_metrics` + queries SQL + índices |
-| [shap-explainability.md](shap-explainability.md) | ⚠️ Disclaimer: NO usamos la librería SHAP oficial |
+| Doc                                              | Contenido                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| [README.md](README.md)                           | Este archivo — overview, cómo levantar, troubleshooting      |
+| [pricing-model.md](pricing-model.md)             | Feature #9 — Dynamic Pricing: fórmula, supuestos, casos edge |
+| [ads-optimizer.md](ads-optimizer.md)             | Feature #21 — Ads Optimizer: UCB1 bandit + LLM rewriter      |
+| [churn-predictor.md](churn-predictor.md)         | Feature #23 — Churn Predictor: RFM-lite scoring              |
+| [data-pipeline.md](data-pipeline.md)             | Schema `usage_metrics` + queries SQL + índices               |
+| [shap-explainability.md](shap-explainability.md) | ⚠️ Disclaimer: NO usamos la librería SHAP oficial            |
 
 ## 🎯 Visión general
 
@@ -26,6 +26,7 @@ POST /api/v1/ai/b2b/churn/predict → Feature #23
 ```
 
 Todos comparten:
+
 - **Arquitectura híbrida**: stats en TS + Vertex AI genera la narrativa.
 - **Rate limit**: 60 req/min por usuario (bucket unificado `"b2b"`).
 - **Response shape uniforme**: `{drivers: ShapFeature[], narrative: string, metadata: AiMetadata}`.
@@ -83,6 +84,7 @@ npx vite
 ```
 
 Configurar `.env`:
+
 ```
 VITE_API_URL=http://localhost:3000
 VITE_SUPABASE_URL=https://xxx.supabase.co
@@ -146,6 +148,7 @@ cada uno genera una llamada al LLM, podemos agotar el bucket.
 de 60 req/min (más permisivo que los endpoints AI de jugadores).
 
 **Si sigue fallando:**
+
 - Reducir `temperature` en `b2b-ai.service.ts:120` para hacer caching más
   efectivo en Vertex AI.
 - Activar la caché de respuestas en el cliente: si `metadata.latencyMs < 100`,
@@ -172,6 +175,7 @@ Verificar que el anuncio fue creado por el business actual.
 
 Si `narrative === "Sin datos suficientes para generar una explicación."`,
 significa que:
+
 - El LLM Vertex AI falló (timeout, quota, etc.) Y
 - El skeleton fallback tampoco pudo generar nada (todos los drivers están en 0).
 
@@ -194,19 +198,19 @@ los campos en 0), pero los modelos no tendrán engagement data.
 
 ## 📊 Métricas de testing
 
-| Suite | Tests | Estado |
-|---|---|---|
-| `server/src/ai/b2b/__tests__/pricing-engine.service.spec.ts` | 19 | ✅ |
-| `server/src/ai/b2b/__tests__/ads-optimizer.service.spec.ts` | 13 | ✅ |
-| `server/src/ai/b2b/__tests__/churn-predictor.service.spec.ts` | 12 | ✅ |
-| `server/src/ai/b2b/__tests__/data-pipeline.service.spec.ts` | 11 | ✅ |
-| `server/src/ai/b2b/__tests__/b2b-ai.controller.spec.ts` | 4 | ✅ |
-| **Total backend** | **59** | **✅** |
-| `src/features/b2b-ai/__tests__/pricingHelpers.test.ts` | 26 | ✅ |
-| `src/features/b2b-ai/__tests__/b2bAiApi.test.ts` | 8 | ✅ |
-| `src/features/b2b-ai/__tests__/useB2bAiStore.test.ts` | 13 | ✅ |
-| **Total frontend** | **47** | **✅** |
-| **TOTAL sprint B2B Intelligence** | **106 tests** | **✅** |
+| Suite                                                         | Tests         | Estado |
+| ------------------------------------------------------------- | ------------- | ------ |
+| `server/src/ai/b2b/__tests__/pricing-engine.service.spec.ts`  | 19            | ✅     |
+| `server/src/ai/b2b/__tests__/ads-optimizer.service.spec.ts`   | 13            | ✅     |
+| `server/src/ai/b2b/__tests__/churn-predictor.service.spec.ts` | 12            | ✅     |
+| `server/src/ai/b2b/__tests__/data-pipeline.service.spec.ts`   | 11            | ✅     |
+| `server/src/ai/b2b/__tests__/b2b-ai.controller.spec.ts`       | 4             | ✅     |
+| **Total backend**                                             | **59**        | **✅** |
+| `src/features/b2b-ai/__tests__/pricingHelpers.test.ts`        | 26            | ✅     |
+| `src/features/b2b-ai/__tests__/b2bAiApi.test.ts`              | 8             | ✅     |
+| `src/features/b2b-ai/__tests__/useB2bAiStore.test.ts`         | 13            | ✅     |
+| **Total frontend**                                            | **47**        | **✅** |
+| **TOTAL sprint B2B Intelligence**                             | **106 tests** | **✅** |
 
 ## ⚖️ Disclaimer académico
 

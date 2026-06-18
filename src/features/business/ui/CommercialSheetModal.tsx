@@ -20,7 +20,6 @@ import { User } from "@/entities/types";
 import { useAdsStore } from "../model/useAdsStore";
 import { toast } from "sonner";
 import { getSportFallbackImage } from "@/shared/lib/imageUtils";
-import { usageMetricsService } from "@/shared/api/usageMetricsService";
 
 interface CommercialSheetModalProps {
   business: User | null;
@@ -41,12 +40,6 @@ export function CommercialSheetModal({
     if (isOpen && business) {
       // Fetch ads for this specific business
       fetchAds(business.id);
-
-      // B2B-AI tracking: registra que un usuario vio el perfil comercial.
-      // Este evento alimenta el modelo de Churn Predictor (engagement) y
-      // Ads Optimizer (impresiones del perfil).
-      // Fire-and-forget: el error se loguea pero no rompe la UI.
-      void usageMetricsService.track(business.id, "profile_view");
 
       // Track general view action for all ads of this business on sheet open
       // This increases the "views" metric dynamically

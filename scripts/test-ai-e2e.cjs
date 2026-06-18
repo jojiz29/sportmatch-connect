@@ -37,7 +37,9 @@ async function runRealE2E() {
     dotenv.config({ path: rootEnvPath });
   }
 
-  console.log(`${COLORS.bold}${COLORS.cyan}============================================================`);
+  console.log(
+    `${COLORS.bold}${COLORS.cyan}============================================================`,
+  );
   console.log("            SportMatch E2E Chat Integration Test");
   console.log(`============================================================${COLORS.reset}\n`);
 
@@ -51,25 +53,29 @@ async function runRealE2E() {
     process.exit(1);
   }
 
-  console.log(`${COLORS.bold}1. Inicializando clientes de Supabase con .env del servidor...${COLORS.reset}`);
+  console.log(
+    `${COLORS.bold}1. Inicializando clientes de Supabase con .env del servidor...${COLORS.reset}`,
+  );
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
+    auth: { autoRefreshToken: false, persistSession: false },
   });
   const supabaseClient = createClient(supabaseUrl, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
+    auth: { autoRefreshToken: false, persistSession: false },
   });
   console.log(`${COLORS.green}✓ Clientes de Supabase inicializados.${COLORS.reset}\n`);
 
   // 2. Crear usuario temporal de QA
   const email = "qa_test_e2e_sportmatch@sportmatch.app";
   const password = "TemporaryPassword123!QA";
-  console.log(`${COLORS.bold}2. Creando/actualizando usuario de pruebas en Supabase Auth...${COLORS.reset}`);
-  
+  console.log(
+    `${COLORS.bold}2. Creando/actualizando usuario de pruebas en Supabase Auth...${COLORS.reset}`,
+  );
+
   let userId = "";
   try {
     const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-    const existing = userList?.users?.find(u => u.email === email);
-    
+    const existing = userList?.users?.find((u) => u.email === email);
+
     if (existing) {
       userId = existing.id;
       console.log(`   Usuario existente encontrado (ID: ${userId}). Actualizando contraseña...`);
@@ -79,7 +85,7 @@ async function runRealE2E() {
         email,
         password,
         email_confirm: true,
-        user_metadata: { user_role: "PLAYER" }
+        user_metadata: { user_role: "PLAYER" },
       });
       if (createError) throw createError;
       userId = newUser.user.id;
@@ -87,22 +93,22 @@ async function runRealE2E() {
     }
 
     // Crear su perfil en la base de datos para que la app no falle por falta de perfil
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .upsert({
-        id: userId,
-        name: "Edwin QA Tester",
-        email,
-        level: "Elite",
-        trust_score: 99,
-        fitcoins_balance: 3500,
-        preferred_sports: ["pádel", "fútbol"]
-      });
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
+      id: userId,
+      name: "Edwin QA Tester",
+      email,
+      level: "Elite",
+      trust_score: 99,
+      fitcoins_balance: 3500,
+      preferred_sports: ["pádel", "fútbol"],
+    });
     if (profileError) {
       console.warn("   Advertencia (perfil):", profileError.message);
     }
   } catch (err) {
-    console.error(`${COLORS.red}✕ Falló la preparación del usuario de pruebas: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}`);
+    console.error(
+      `${COLORS.red}✕ Falló la preparación del usuario de pruebas: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}`,
+    );
     process.exit(1);
   }
   console.log(`${COLORS.green}✓ Usuario de pruebas preparado.${COLORS.reset}\n`);
@@ -111,14 +117,18 @@ async function runRealE2E() {
   console.log(`${COLORS.bold}3. Iniciando sesión de usuario de pruebas...${COLORS.reset}`);
   let accessToken = "";
   try {
-    const { data: sessionData, error: sessionError } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.signInWithPassword(
+      {
+        email,
+        password,
+      },
+    );
     if (sessionError) throw sessionError;
     accessToken = sessionData.session.access_token;
   } catch (err) {
-    console.error(`${COLORS.red}✕ Falló el inicio de sesión: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}`);
+    console.error(
+      `${COLORS.red}✕ Falló el inicio de sesión: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}`,
+    );
     // Limpieza antes de salir
     await supabaseAdmin.auth.admin.deleteUser(userId);
     process.exit(1);
@@ -127,7 +137,7 @@ async function runRealE2E() {
 
   const headers = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${accessToken}`,
+    Authorization: `Bearer ${accessToken}`,
   };
 
   // 4. Probar Endpoint de Bienvenida (Welcome Chat)
@@ -147,7 +157,9 @@ async function runRealE2E() {
     console.log(`${COLORS.green}✅ BIENVENIDA EXITOSA!${COLORS.reset}`);
     console.log(`   Respuesta Sporty:\n   "${data.reply}"\n`);
   } catch (err) {
-    console.error(`${COLORS.red}❌ BIENVENIDA FALLIDA: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}\n`);
+    console.error(
+      `${COLORS.red}❌ BIENVENIDA FALLIDA: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}\n`,
+    );
   }
 
   // 5. Probar Endpoint de Chat General (Chat Conversation)
@@ -172,7 +184,9 @@ async function runRealE2E() {
     console.log(`   Respuesta Sporty:\n   "${data.reply}"`);
     console.log(`   Sugerencias de seguimiento:\n   ${JSON.stringify(data.suggestions)}\n`);
   } catch (err) {
-    console.error(`${COLORS.red}❌ CHAT FALLIDO: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}\n`);
+    console.error(
+      `${COLORS.red}❌ CHAT FALLIDO: ${err instanceof Error ? err.message : String(err)}${COLORS.reset}\n`,
+    );
   }
 
   // 6. Limpieza final de la cuenta de pruebas
@@ -182,10 +196,15 @@ async function runRealE2E() {
     await supabaseAdmin.auth.admin.deleteUser(userId);
     console.log(`${COLORS.green}✓ Limpieza completada con éxito.${COLORS.reset}\n`);
   } catch (err) {
-    console.warn("   Advertencia durante la limpieza:", err instanceof Error ? err.message : String(err));
+    console.warn(
+      "   Advertencia durante la limpieza:",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
-  console.log(`${COLORS.bold}${COLORS.green}🎉 TEST E2E FINALIZADO CON ÉXITO ABSOLUTO!${COLORS.reset}`);
+  console.log(
+    `${COLORS.bold}${COLORS.green}🎉 TEST E2E FINALIZADO CON ÉXITO ABSOLUTO!${COLORS.reset}`,
+  );
 }
 
 runRealE2E().catch(console.error);

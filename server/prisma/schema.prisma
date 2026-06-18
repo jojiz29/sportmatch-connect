@@ -22,9 +22,13 @@ model profiles {
   city                 String?
   avatar_url           String?   @map("avatar_url")
   bio                  String?
-  trust_score          Int?      @default(100) @map("trust_score")
+  trust_score          Int?      @default(50) @map("trust_score")
+  photo_verified       Boolean?  @default(false) @map("photo_verified")
   fitcoins_balance     Int?      @default(0) @map("fitcoins_balance")
   level                Int?
+  level_label          String?   @map("level_label")
+  xp                   Int?      @default(0) @map("xp")
+  xp_to_next_level     Int?      @default(100) @map("xp_to_next_level")
   preferred_sports     String[]  @map("preferred_sports")
   matches_played       Int?      @default(0) @map("matches_played")
   last_location_lat    Float?    @map("last_location_lat")
@@ -42,9 +46,12 @@ model profiles {
   dni_hash             String?   @map("dni_hash")
   dni_intentos         Int?      @default(0) @map("dni_intentos")
   fecha_verificacion   DateTime? @map("fecha_verificacion")
+  tier                 String?   @default("FREE")
+  last_login_at        DateTime? @map("last_login_at")
 
   posts                posts[]
   created_matches      matches[] @relation("match_creator")
+  won_matches          matches[] @relation("match_winner")
   match_participants   match_participants[]
   wallet_transactions  wallet_transactions[]
   notifications        notifications[]
@@ -58,130 +65,13 @@ model profiles {
   bookings             bookings[]
   sent_messages        messages[]            @relation("sender_messages")
   received_messages    messages[]            @relation("receiver_messages")
-  engagement_events    engagement_events[]
-  engagement_embedding engagement_embeddings?
-  engagement_challenges engagement_challenges[]
-  engagement_achievements engagement_achievements[]
-  engagement_contents engagement_contents[]
-  engagement_recommendation_snapshots engagement_recommendation_snapshots[]
+  blocked_users        user_blocks[]         @relation("blocker_relation")
+  blocked_by           user_blocks[]         @relation("blocked_relation")
+  moderation_logs      moderation_logs[]
+  subscription         subscriptions?
+  nutrition_logs       premium_nutrition_logs[]
 
   @@map("profiles")
-}
-
-model engagement_events {
-  id          String   @id @default(uuid())
-  user_id     String   @map("user_id")
-  event_type  String   @map("event_type")
-  entity_type String?  @map("entity_type")
-  entity_id   String?  @map("entity_id")
-  metadata    Json     @default("{}")
-  dedupe_key  String?  @map("dedupe_key")
-  created_at  DateTime @default(now()) @map("created_at")
-
-  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, dedupe_key])
-  @@index([user_id, created_at])
-  @@index([event_type])
-  @@map("engagement_events")
-}
-
-model engagement_embeddings {
-  id               String   @id @default(uuid())
-  user_id          String   @unique @map("user_id")
-  embedding_vector Float[]  @default([]) @map("embedding_vector")
-  provider         String
-  dimension        Int
-  metadata         Json     @default("{}")
-  generated_at     DateTime @default(now()) @map("generated_at")
-  updated_at       DateTime @updatedAt @map("updated_at")
-
-  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([provider])
-  @@index([generated_at])
-  @@map("engagement_embeddings")
-}
-
-model engagement_challenges {
-  id          String   @id @default(uuid())
-  user_id     String   @map("user_id")
-  title       String
-  description String
-  reward_hint String?  @map("reward_hint")
-  status      String   @default("started")
-  source      String   @default("engagement_page")
-  metadata    Json     @default("{}")
-  started_at  DateTime @default(now()) @map("started_at")
-  completed_at DateTime? @map("completed_at")
-  updated_at  DateTime @updatedAt @map("updated_at")
-
-  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id, status])
-  @@index([started_at])
-  @@map("engagement_challenges")
-}
-
-model engagement_achievements {
-  id               String   @id @default(uuid())
-  user_id          String   @map("user_id")
-  name             String
-  description      String
-  unlock_condition String?  @map("unlock_condition")
-  status           String   @default("saved")
-  source           String   @default("engagement_page")
-  metadata         Json     @default("{}")
-  saved_at         DateTime @default(now()) @map("saved_at")
-  unlocked_at      DateTime? @map("unlocked_at")
-  updated_at       DateTime @updatedAt @map("updated_at")
-
-  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id, status])
-  @@index([saved_at])
-  @@map("engagement_achievements")
-}
-
-model engagement_contents {
-  id           String   @id @default(uuid())
-  user_id      String   @map("user_id")
-  content_type String   @map("content_type")
-  title        String
-  body         String
-  source       String   @default("engagement_page")
-  metadata     Json     @default("{}")
-  saved_at     DateTime @default(now()) @map("saved_at")
-  updated_at   DateTime @updatedAt @map("updated_at")
-
-  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id, content_type])
-  @@index([saved_at])
-  @@map("engagement_contents")
-}
-
-model engagement_recommendation_snapshots {
-  id                  String   @id @default(uuid())
-  user_id             String   @map("user_id")
-  recommendation_date DateTime @map("recommendation_date") @db.Date
-  type                String   @default("overview")
-  language            String   @default("es")
-  payload             Json
-  model               String
-  experiment_variant  String   @map("experiment_variant")
-  status              String   @default("ready")
-  stale_reason        String?  @map("stale_reason")
-  generated_at        DateTime @default(now()) @map("generated_at")
-  expires_at          DateTime @map("expires_at")
-  updated_at          DateTime @updatedAt @map("updated_at")
-
-  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, recommendation_date, type, language])
-  @@index([user_id, status])
-  @@index([expires_at])
-  @@map("engagement_recommendation_snapshots")
 }
 
 model posts {
@@ -235,16 +125,20 @@ model matches {
   court_id    String?  @map("court_id")
   sport        String
   title        String
-  date         DateTime @db.Date
-  time         DateTime @db.Time(6)
-  max_players  Int?     @map("max_players")
-  required_level String? @map("required_level")
+  date         String
+  time         String
+  max_players  Int      @map("max_players")
+  required_level String @map("required_level")
   creator_id   String   @map("creator_id")
-  status       String
+  status       String?
+  winner_id    String?  @map("winner_id")
+  score_home   Int?     @map("score_home")
+  score_away   Int?     @map("score_away")
   created_at   DateTime @default(now()) @map("created_at")
 
   court        courts?   @relation(fields: [court_id], references: [id])
   creator      profiles  @relation("match_creator", fields: [creator_id], references: [id])
+  winner       profiles? @relation("match_winner", fields: [winner_id], references: [id])
   match_participants match_participants[]
 
   @@map("matches")
@@ -264,31 +158,29 @@ model match_participants {
 }
 
 model courts {
-  id                String   @id @default(uuid())
+  id                String  @id @default(uuid())
   name              String
   sport             String
-  price_per_hour    Int      @map("price_per_hour")
+  price_per_hour    Int     @map("price_per_hour")
   rating            Float
-  reviews_count     Int      @map("reviews_count")
+  reviews_count     Int     @map("reviews_count")
   lat               Float
   lng               Float
-  image_url         String?  @map("image_url")
+  image_url         String? @map("image_url")
   amenities         String[]
-  is_available      Boolean  @default(true) @map("is_available")
+  is_available      Boolean @default(true) @map("is_available")
   address           String?
-  max_players       Int?     @map("max_players")
+  max_players       Int?    @map("max_players")
   operating_hours   String[] @map("operating_hours")
   district          String?
-  is_sponsored      Boolean  @default(false) @map("is_sponsored")
-  owner_id          String?  @map("owner_id")
+  is_sponsored      Boolean @default(false) @map("is_sponsored")
+  owner_id          String? @map("owner_id")
   created_at        DateTime @default(now()) @map("created_at")
-  ar_model_url      String?  @map("ar_model_url")
-  ar_scale          Float?   @default(1.0) @map("ar_scale")
-  ar_rotation       Json?    @map("ar_rotation")
 
   matches           matches[]
   reviews           reviews[]
   bookings          bookings[]
+  squad_challenges  squad_challenges[]
 
   @@map("courts")
 }
@@ -346,19 +238,24 @@ model squads {
 
   creator     profiles     @relation("squad_creator", fields: [creator_id], references: [id])
   squad_members squad_members[]
+  challenged_challenges squad_challenges[] @relation("challenged_squad")
+  challenger_challenges squad_challenges[] @relation("challenger_squad")
+  won_challenges        squad_challenges[] @relation("winner_squad")
 
   @@map("squads")
 }
 
 model squad_members {
+  id         String   @id
   squad_id   String   @map("squad_id")
-  user_id    String   @map("user_id")
+  profile_id String   @map("profile_id")
+  role       String
   joined_at  DateTime @default(now()) @map("joined_at")
 
   squad      squads   @relation(fields: [squad_id], references: [id], onDelete: Cascade)
-  user       profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user       profiles @relation(fields: [profile_id], references: [id], onDelete: Cascade)
 
-  @@id([squad_id, user_id])
+  @@unique([squad_id, profile_id])
   @@map("squad_members")
 }
 
@@ -438,4 +335,94 @@ model messages {
   receiver   profiles @relation("receiver_messages", fields: [receiver_id], references: [id], onDelete: Cascade)
 
   @@map("messages")
+}
+
+model moderation_logs {
+  id                 String   @id @default(uuid())
+  user_id            String   @map("user_id")
+  content            String?
+  context_type       String   @map("context_type")
+  ensemble_score     Int      @map("ensemble_score")
+  action_recommended String   @map("action_recommended")
+  reasoning          String?  @map("reasoning")
+  created_at         DateTime @default(now()) @map("created_at")
+
+  user               profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("moderation_logs")
+}
+
+model user_blocks {
+  blocker_id       String    @map("blocker_id")
+  blocked_id       String    @map("blocked_id")
+  reason           String?
+  created_at       DateTime  @default(now()) @map("created_at")
+  ensemble_score   Int?      @map("ensemble_score")
+  timestamp_inicio DateTime? @map("timestamp_inicio")
+  timestamp_fin    DateTime? @map("timestamp_fin")
+
+  blocker          profiles  @relation("blocker_relation", fields: [blocker_id], references: [id], onDelete: Cascade)
+  blocked          profiles  @relation("blocked_relation", fields: [blocked_id], references: [id], onDelete: Cascade)
+
+  @@id([blocker_id, blocked_id])
+  @@map("user_blocks")
+}
+
+model subscriptions {
+  id                     String    @id @default(uuid())
+  user_id                String    @unique @map("user_id")
+  stripe_customer_id     String?   @map("stripe_customer_id")
+  stripe_subscription_id String?   @map("stripe_subscription_id")
+  status                 String
+  price_id               String?   @map("price_id")
+  tier                   String?   @default("FREE")
+  current_period_end     DateTime? @map("current_period_end")
+  created_at             DateTime  @default(now()) @map("created_at")
+  updated_at             DateTime  @updatedAt @map("updated_at")
+
+  user                   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model squad_challenges {
+  id                  String   @id @default(uuid())
+  challenger_squad_id String   @map("challenger_squad_id")
+  challenged_squad_id String   @map("challenged_squad_id")
+  sport               String
+  scheduled_date      String   @map("scheduled_date")
+  scheduled_time      String   @map("scheduled_time")
+  court_id            String?  @map("court_id")
+  bet_amount          Int      @map("bet_amount")
+  status              String?  @default("PENDING")
+  winner_squad_id     String?  @map("winner_squad_id")
+  created_at          DateTime @default(now()) @map("created_at")
+  updated_at          DateTime @updatedAt @map("updated_at")
+
+  challenger_squad    squads   @relation("challenger_squad", fields: [challenger_squad_id], references: [id], onDelete: Cascade)
+  challenged_squad    squads   @relation("challenged_squad", fields: [challenged_squad_id], references: [id], onDelete: Cascade)
+  winner_squad        squads?  @relation("winner_squad", fields: [winner_squad_id], references: [id])
+  court               courts?  @relation(fields: [court_id], references: [id])
+
+  @@map("squad_challenges")
+}
+
+model premium_nutrition_logs {
+  id              String   @id @default(uuid())
+  user_id         String   @map("user_id")
+  match_id        String?  @map("match_id")
+  sport           String
+  duration        Int
+  intensity       String
+  calories_burned Int      @map("calories_burned")
+  snack_name      String   @map("snack_name")
+  snack_image     String?  @map("snack_image")
+  calories        Int
+  ingredients     String[]
+  reasoning       String
+  created_at      DateTime @default(now()) @map("created_at")
+
+  user            profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("premium_nutrition_logs")
 }
