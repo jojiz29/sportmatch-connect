@@ -25,6 +25,7 @@ import { Route as AppMatchRouteImport } from './routes/app.match'
 import { Route as AppMapRouteImport } from './routes/app.map'
 import { Route as AppIotRouteImport } from './routes/app.iot'
 import { Route as AppFeedRouteImport } from './routes/app.feed'
+import { Route as AppEngagementRouteImport } from './routes/app.engagement'
 import { Route as AppCourtsRouteImport } from './routes/app.courts'
 import { Route as AppChatRouteImport } from './routes/app.chat'
 import { Route as AppBusinessRouteImport } from './routes/app.business'
@@ -123,6 +124,11 @@ const AppFeedRoute = AppFeedRouteImport.update({
   path: '/feed',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEngagementRoute = AppEngagementRouteImport.update({
+  id: '/engagement',
+  path: '/engagement',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCourtsRoute = AppCourtsRouteImport.update({
   id: '/courts',
   path: '/courts',
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
+  '/app/engagement': typeof AppEngagementRoute
   '/app/feed': typeof AppFeedRoute
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
+  '/app/engagement': typeof AppEngagementRoute
   '/app/feed': typeof AppFeedRoute
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/app/business': typeof AppBusinessRoute
   '/app/chat': typeof AppChatRoute
   '/app/courts': typeof AppCourtsRouteWithChildren
+  '/app/engagement': typeof AppEngagementRoute
   '/app/feed': typeof AppFeedRoute
   '/app/iot': typeof AppIotRoute
   '/app/map': typeof AppMapRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
+    | '/app/engagement'
     | '/app/feed'
     | '/app/iot'
     | '/app/map'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
+    | '/app/engagement'
     | '/app/feed'
     | '/app/iot'
     | '/app/map'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/app/business'
     | '/app/chat'
     | '/app/courts'
+    | '/app/engagement'
     | '/app/feed'
     | '/app/iot'
     | '/app/map'
@@ -536,6 +548,13 @@ declare module '@tanstack/react-router' {
       path: '/feed'
       fullPath: '/app/feed'
       preLoaderRoute: typeof AppFeedRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/engagement': {
+      id: '/app/engagement'
+      path: '/engagement'
+      fullPath: '/app/engagement'
+      preLoaderRoute: typeof AppEngagementRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/courts': {
@@ -724,6 +743,7 @@ interface AppRouteChildren {
   AppBusinessRoute: typeof AppBusinessRoute
   AppChatRoute: typeof AppChatRoute
   AppCourtsRoute: typeof AppCourtsRouteWithChildren
+  AppEngagementRoute: typeof AppEngagementRoute
   AppFeedRoute: typeof AppFeedRoute
   AppIotRoute: typeof AppIotRoute
   AppMapRoute: typeof AppMapRoute
@@ -745,6 +765,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBusinessRoute: AppBusinessRoute,
   AppChatRoute: AppChatRoute,
   AppCourtsRoute: AppCourtsRouteWithChildren,
+  AppEngagementRoute: AppEngagementRoute,
   AppFeedRoute: AppFeedRoute,
   AppIotRoute: AppIotRoute,
   AppMapRoute: AppMapRoute,

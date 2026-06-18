@@ -18,7 +18,14 @@ interface DBWeeklyChallenge {
   completed_at: string | null;
 }
 
-export function WeeklyChallengesCard({ className }: { className?: string }) {
+export function WeeklyChallengesCard({
+  className,
+  maxItems,
+}: {
+  className?: string;
+  // Permite reutilizar la tarjeta en pantallas compactas sin mostrar todos los retos.
+  maxItems?: number;
+}) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [challenges, setChallenges] = useState<DBWeeklyChallenge[]>([]);
@@ -93,7 +100,7 @@ export function WeeklyChallengesCard({ className }: { className?: string }) {
         </p>
       ) : (
         <div className="space-y-4">
-          {challenges.map((c) => {
+          {challenges.slice(0, maxItems).map((c) => {
             const progress = c.goal > 0 ? Math.min(c.progress / c.goal, 1) : 0;
             const isComplete = c.progress >= c.goal;
             const isClaiming = claimingId === c.id;

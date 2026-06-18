@@ -40,6 +40,7 @@ import {
 import { getPlayerConnections, createPlayerConnection } from "@/shared/api/connectionService";
 import { MatchResultModal } from "./ui/MatchResultModal";
 import type { QueueStatus } from "@/entities/types";
+import { getTodayAiRecommendations, type AiRecommendationCard } from "@/features/engagement-ai";
 
 // === BLOQUE: COMPONENTE PRINCIPAL DE MATCHMAKING ===
 // Carrusel de recomendaciones de jugadores con swipe, conexión y desafío.
@@ -71,6 +72,35 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
     sport: string;
   } | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [smartSuggestions, setSmartSuggestions] = useState<AiRecommendationCard[]>([]);
+
+  // === BLOQUE: SUGERENCIAS CONTEXTUALES ===
+  // Reutiliza el snapshot diario para mostrar pistas utiles dentro del matchmaking.
+  // No crea un modulo separado: complementa la decision desde esta pantalla.
+  useEffect(() => {
+    if (!currentUser || useAuthStore.getState().isDemoMode) return;
+    let active = true;
+    getTodayAiRecommendations()
+      .then((response) => {
+        if (!active) return;
+        const relevantTypes: AiRecommendationCard["type"][] = [
+          "player",
+          "sport",
+          "challenge",
+          "venue",
+        ];
+        setSmartSuggestions(
+          response.recommendations.filter((item) => relevantTypes.includes(item.type)).slice(0, 3),
+        );
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV)
+          console.warn("No se pudieron cargar sugerencias para matchmaking:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
 
   // === BLOQUE: CARGA DE PARTIDOS DEL USUARIO INSPECCIONADO ===
   // Cuando se abre el perfil de un candidato, carga sus partidos desde backend o Supabase.
@@ -720,6 +750,41 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
 
       {/* ── Panel lateral de compatibilidad y desafíos ── */}
       <div className="space-y-4">
+        {smartSuggestions.length > 0 && (
+          <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-neon" /> Sugerencias para conectar
+            </h3>
+            <div className="mt-4 space-y-3">
+              {smartSuggestions.map((suggestion) => (
+                <div
+                  key={suggestion.id}
+                  className="rounded-xl bg-muted/30 border border-border/50 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-foreground">
+                        {suggestion.title}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {suggestion.description}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">
+                      {Math.round(suggestion.score)}%
+                    </span>
+                  </div>
+                  {suggestion.reasons[0] && (
+                    <div className="mt-2 text-[11px] text-muted-foreground">
+                      {suggestion.reasons[0]}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-neon" /> {t("matchmaking.compatibility")}

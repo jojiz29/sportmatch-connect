@@ -28,6 +28,26 @@ import {
 } from "@/shared/api/venueActivityService";
 import { toast } from "sonner";
 
+// === BLOQUE: safeMapLoad - Proteccion de primera carga del mapa ===
+// Evita que una consulta secundaria lenta deje el Mapa Comercial en skeleton indefinidamente.
+async function safeMapLoad<T>(label: string, loader: () => Promise<T>, fallback: T, ms = 5000) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<T>((resolve) => {
+      timeoutId = setTimeout(() => {
+        if (import.meta.env.DEV) console.warn(`[Mapa Comercial] Timeout cargando ${label}`);
+        resolve(fallback);
+      }, ms);
+    });
+    return await Promise.race([loader(), timeout]);
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn(`[Mapa Comercial] Error cargando ${label}:`, error);
+    return fallback;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export const Route = createFileRoute("/app/map")({
   head: () => ({
     meta: [
@@ -51,25 +71,30 @@ export const Route = createFileRoute("/app/map")({
   loader: async () => {
     if (useAuthStore.getState().isDemoMode) {
       const [matches, businesses, venues, players, squads] = await Promise.all([
-        apiClient.matches.getAll().catch(() => []),
-        apiClient.users.getBusinesses().catch(() => []),
-        apiClient.venues.getAll().catch(() => []),
-        apiClient.users.getMatches().catch(() => []),
-        getSquads().catch(() => []),
+        safeMapLoad("partidos demo", () => apiClient.matches.getAll(), [] as Match[]),
+        safeMapLoad("empresas demo", () => apiClient.users.getBusinesses(), [] as User[]),
+        safeMapLoad("sedes demo", () => apiClient.venues.getAll(), [] as Venue[]),
+        safeMapLoad("jugadores demo", () => apiClient.users.getMatches(), [] as User[]),
+        safeMapLoad("equipos demo", () => getSquads(), [] as Squad[]),
       ]);
       return { matches, businesses, venues, players, squads };
     }
 
-    const [backendMatches] = await Promise.all([backendApi.matches.getAll().catch(() => null)]);
+    const backendMatches = await safeMapLoad(
+      "partidos backend",
+      () => backendApi.matches.getAll(),
+      null,
+      3500,
+    );
 
     const [matches, businesses, venues, players, squads] = await Promise.all([
       backendMatches && backendMatches.data
         ? Promise.resolve(backendMatches.data as Match[])
-        : apiClient.matches.getAll().catch(() => []),
-      apiClient.users.getBusinesses().catch(() => []),
-      apiClient.venues.getAll().catch(() => []),
-      apiClient.users.getMatches().catch(() => []),
-      getSquads().catch(() => []),
+        : safeMapLoad("partidos", () => apiClient.matches.getAll(), [] as Match[], 3500),
+      safeMapLoad("empresas", () => apiClient.users.getBusinesses(), [] as User[], 3500),
+      safeMapLoad("sedes", () => apiClient.venues.getAll(), [] as Venue[], 3500),
+      safeMapLoad("jugadores", () => apiClient.users.getMatches(), [] as User[], 3500),
+      safeMapLoad("equipos", () => getSquads(), [] as Squad[], 3500),
     ]);
     return { matches, businesses, venues, players, squads };
   },

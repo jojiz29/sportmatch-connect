@@ -24,7 +24,7 @@ model profiles {
   bio                  String?
   trust_score          Int?      @default(100) @map("trust_score")
   fitcoins_balance     Int?      @default(0) @map("fitcoins_balance")
-  level                String?
+  level                Int?
   preferred_sports     String[]  @map("preferred_sports")
   matches_played       Int?      @default(0) @map("matches_played")
   last_location_lat    Float?    @map("last_location_lat")
@@ -58,8 +58,130 @@ model profiles {
   bookings             bookings[]
   sent_messages        messages[]            @relation("sender_messages")
   received_messages    messages[]            @relation("receiver_messages")
+  engagement_events    engagement_events[]
+  engagement_embedding engagement_embeddings?
+  engagement_challenges engagement_challenges[]
+  engagement_achievements engagement_achievements[]
+  engagement_contents engagement_contents[]
+  engagement_recommendation_snapshots engagement_recommendation_snapshots[]
 
   @@map("profiles")
+}
+
+model engagement_events {
+  id          String   @id @default(uuid())
+  user_id     String   @map("user_id")
+  event_type  String   @map("event_type")
+  entity_type String?  @map("entity_type")
+  entity_id   String?  @map("entity_id")
+  metadata    Json     @default("{}")
+  dedupe_key  String?  @map("dedupe_key")
+  created_at  DateTime @default(now()) @map("created_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, dedupe_key])
+  @@index([user_id, created_at])
+  @@index([event_type])
+  @@map("engagement_events")
+}
+
+model engagement_embeddings {
+  id               String   @id @default(uuid())
+  user_id          String   @unique @map("user_id")
+  embedding_vector Float[]  @default([]) @map("embedding_vector")
+  provider         String
+  dimension        Int
+  metadata         Json     @default("{}")
+  generated_at     DateTime @default(now()) @map("generated_at")
+  updated_at       DateTime @updatedAt @map("updated_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([provider])
+  @@index([generated_at])
+  @@map("engagement_embeddings")
+}
+
+model engagement_challenges {
+  id          String   @id @default(uuid())
+  user_id     String   @map("user_id")
+  title       String
+  description String
+  reward_hint String?  @map("reward_hint")
+  status      String   @default("started")
+  source      String   @default("engagement_page")
+  metadata    Json     @default("{}")
+  started_at  DateTime @default(now()) @map("started_at")
+  completed_at DateTime? @map("completed_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, status])
+  @@index([started_at])
+  @@map("engagement_challenges")
+}
+
+model engagement_achievements {
+  id               String   @id @default(uuid())
+  user_id          String   @map("user_id")
+  name             String
+  description      String
+  unlock_condition String?  @map("unlock_condition")
+  status           String   @default("saved")
+  source           String   @default("engagement_page")
+  metadata         Json     @default("{}")
+  saved_at         DateTime @default(now()) @map("saved_at")
+  unlocked_at      DateTime? @map("unlocked_at")
+  updated_at       DateTime @updatedAt @map("updated_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, status])
+  @@index([saved_at])
+  @@map("engagement_achievements")
+}
+
+model engagement_contents {
+  id           String   @id @default(uuid())
+  user_id      String   @map("user_id")
+  content_type String   @map("content_type")
+  title        String
+  body         String
+  source       String   @default("engagement_page")
+  metadata     Json     @default("{}")
+  saved_at     DateTime @default(now()) @map("saved_at")
+  updated_at   DateTime @updatedAt @map("updated_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, content_type])
+  @@index([saved_at])
+  @@map("engagement_contents")
+}
+
+model engagement_recommendation_snapshots {
+  id                  String   @id @default(uuid())
+  user_id             String   @map("user_id")
+  recommendation_date DateTime @map("recommendation_date") @db.Date
+  type                String   @default("overview")
+  language            String   @default("es")
+  payload             Json
+  model               String
+  experiment_variant  String   @map("experiment_variant")
+  status              String   @default("ready")
+  stale_reason        String?  @map("stale_reason")
+  generated_at        DateTime @default(now()) @map("generated_at")
+  expires_at          DateTime @map("expires_at")
+  updated_at          DateTime @updatedAt @map("updated_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, recommendation_date, type, language])
+  @@index([user_id, status])
+  @@index([expires_at])
+  @@map("engagement_recommendation_snapshots")
 }
 
 model posts {
@@ -113,12 +235,12 @@ model matches {
   court_id    String?  @map("court_id")
   sport        String
   title        String
-  date         String
-  time         String
-  max_players  Int      @map("max_players")
-  required_level String @map("required_level")
+  date         DateTime @db.Date
+  time         DateTime @db.Time(6)
+  max_players  Int?     @map("max_players")
+  required_level String? @map("required_level")
   creator_id   String   @map("creator_id")
-  status       String?
+  status       String
   created_at   DateTime @default(now()) @map("created_at")
 
   court        courts?   @relation(fields: [court_id], references: [id])

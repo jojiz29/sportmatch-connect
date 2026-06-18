@@ -21,6 +21,7 @@ import { SettingsModule } from "./settings/settings.module";
 import { SocialModule } from "./social/social.module";
 import { MatchmakingModule } from "./matchmaking/matchmaking.module";
 import { ArModule } from "./ar/ar.module";
+import { EngagementModule } from "./engagement/engagement.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ArModule } from "./ar/ar.module";
     SocialModule,
     MatchmakingModule,
     ArModule,
+    EngagementModule,
   ],
   controllers: [HealthController],
 })

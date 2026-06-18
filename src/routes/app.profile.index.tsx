@@ -40,6 +40,14 @@ import {
 } from "@/shared/ui/dialog";
 import { SportSelectionGrid } from "@/components/sports/SportSelectionGrid";
 import { EloBadgeList } from "@/features/profile/components/EloBadge";
+import {
+  getEngagementAchievements,
+  getEngagementChallenges,
+  getEngagementContents,
+  type EngagementAchievement,
+  type EngagementChallenge,
+  type EngagementContent,
+} from "@/features/engagement-ai";
 
 export const Route = createFileRoute("/app/profile/")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -93,6 +101,9 @@ function Profile() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
   const [barWidth, setBarWidth] = useState(0);
+  const [engagementChallenges, setEngagementChallenges] = useState<EngagementChallenge[]>([]);
+  const [engagementAchievements, setEngagementAchievements] = useState<EngagementAchievement[]>([]);
+  const [engagementContents, setEngagementContents] = useState<EngagementContent[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -281,6 +292,28 @@ function Profile() {
   useEffect(() => {
     initProfile();
   }, [initProfile]);
+
+  // === BLOQUE: PROGRESO DEPORTIVO PERSONALIZADO ===
+  // Carga retos, logros y contenidos guardados para que Perfil actue como historial
+  // del avance deportivo del usuario, sin depender de una pantalla separada.
+  useEffect(() => {
+    if (!profile || useAuthStore.getState().isDemoMode) return;
+    let active = true;
+    Promise.all([getEngagementChallenges(), getEngagementAchievements(), getEngagementContents()])
+      .then(([challenges, achievements, contents]) => {
+        if (!active) return;
+        setEngagementChallenges(challenges);
+        setEngagementAchievements(achievements);
+        setEngagementContents(contents);
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV)
+          console.warn("No se pudo cargar el progreso deportivo personalizado:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [profile]);
 
   // === BLOQUE: Carga y sincronización de logros ===
   useEffect(() => {
@@ -872,6 +905,12 @@ function Profile() {
           </div>
         </div>
 
+        <PersonalizedProgress
+          challenges={engagementChallenges}
+          achievements={engagementAchievements}
+          contents={engagementContents}
+        />
+
         {/* === Columna: Logros / Insignias === */}
         <div className="bg-gradient-card border border-border rounded-2xl p-5">
           <h3 className="font-semibold mb-4">{t("profile.achievements")}</h3>
@@ -958,6 +997,80 @@ function Profile() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// === BLOQUE: PersonalizedProgress - Resumen del avance deportivo ===
+// Muestra retos, logros sugeridos y contenido guardado como parte natural del Perfil.
+function PersonalizedProgress({
+  challenges,
+  achievements,
+  contents,
+}: {
+  challenges: EngagementChallenge[];
+  achievements: EngagementAchievement[];
+  contents: EngagementContent[];
+}) {
+  const activeChallenges = challenges.filter((challenge) => challenge.status === "started");
+  const completedChallenges = challenges.filter((challenge) => challenge.status === "completed");
+  const unlockedAchievements = achievements.filter(
+    (achievement) => achievement.status === "unlocked",
+  );
+  const latestContent = contents[0];
+
+  return (
+    <div className="bg-gradient-card border border-primary/20 rounded-2xl p-5">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 className="font-semibold">Progreso deportivo</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Retos y logros derivados de tu actividad reciente.
+          </p>
+        </div>
+        <Trophy className="h-5 w-5 text-primary" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <ProgressMetric label="Retos activos" value={activeChallenges.length} />
+        <ProgressMetric label="Completados" value={completedChallenges.length} />
+        <ProgressMetric label="Logros" value={unlockedAchievements.length} />
+      </div>
+
+      {activeChallenges[0] ? (
+        <div className="rounded-xl bg-muted/30 border border-border/50 p-3">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
+            Reto actual
+          </div>
+          <div className="text-sm font-semibold mt-1">{activeChallenges[0].title}</div>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            {activeChallenges[0].description}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-muted/20 border border-border/40 p-3 text-xs text-muted-foreground">
+          Aun no hay retos activos guardados. Tu proximo plan diario aparecera aqui.
+        </div>
+      )}
+
+      {latestContent && (
+        <div className="mt-3 rounded-xl bg-background/40 border border-border/40 p-3">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Resumen guardado
+          </div>
+          <div className="text-sm font-semibold mt-1">{latestContent.title}</div>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{latestContent.body}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProgressMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-muted/30 border border-border/50 p-2 text-center">
+      <div className="text-lg font-bold text-foreground">{value}</div>
+      <div className="text-[9px] text-muted-foreground leading-tight">{label}</div>
     </div>
   );
 }

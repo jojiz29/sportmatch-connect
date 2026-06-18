@@ -36,6 +36,10 @@ import { useTranslation } from "react-i18next";
 import { CourtCard } from "@/components/CourtCard";
 import { BookingModal } from "@/components/BookingModal";
 import { VerifiedBadge } from "@/shared/ui/VerifiedBadge";
+import { getTodayAiRecommendations, type AiRecommendationResponse } from "@/features/engagement-ai";
+import { usePublicMatchStore, type PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
+
+type DailyPlanStatus = "idle" | "loading" | "ready" | "error";
 
 // === BLOQUE: Ruta /app/ — createFileRoute con loader ===
 // Carga datos iniciales desde backendApi (con timeout de 8s por llamada):
@@ -123,6 +127,199 @@ function getSportEmoji(name: string) {
   }
 }
 
+function getDailyPlanCacheKey(userId: string) {
+  const dateKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return `sportmatch_daily_plan_${userId}_${dateKey}`;
+}
+
+function getWeeklyChallengeKey(userId: string) {
+  const now = new Date();
+  const bogotaDate = new Date(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now),
+  );
+  const day = bogotaDate.getUTCDay() || 7;
+  bogotaDate.setUTCDate(bogotaDate.getUTCDate() - day + 1);
+  return `${userId}_${bogotaDate.toISOString().slice(0, 10)}`;
+}
+
+function getWeeklyRefreshCount(userId: string): number {
+  if (typeof window === "undefined") return 0;
+  return Number(
+    window.localStorage.getItem(
+      `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
+    ) ?? 0,
+  );
+}
+
+function setWeeklyRefreshCount(userId: string, count: number) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    `sportmatch_weekly_challenge_refresh_${getWeeklyChallengeKey(userId)}`,
+    String(count),
+  );
+}
+
+function getWeeklyOverrideChallenge(userId: string) {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(
+    `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
+  );
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as { title: string; description: string; reward: string };
+  } catch {
+    return null;
+  }
+}
+
+function setWeeklyOverrideChallenge(
+  userId: string,
+  challenge: { title: string; description: string; reward: string },
+) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
+    JSON.stringify(challenge),
+  );
+}
+
+function buildWeeklyChallengeRefresh(plan: AiRecommendationResponse | null, count: number) {
+  const venue = plan?.recommendations.find((item) => item.type === "venue")?.title;
+  const variants = [
+    {
+      title: "Reto tecnica y constancia",
+      description:
+        "Completa una rutina fisica de 35 minutos: calentamiento, practica tecnica y movilidad final.",
+      reward: "+50 FitCoins sugeridos si completas el reto y luego eliges una sede validable.",
+    },
+    {
+      title: "Reto sede deportiva",
+      description: venue
+        ? `Elige ${venue} u otra sede cercana para realizar una sesion fisica verificable esta semana.`
+        : "Elige una sede cercana para realizar una sesion fisica verificable esta semana.",
+      reward: "+45 FitCoins sugeridos cuando una empresa valide la actividad.",
+    },
+    {
+      title: "Reto partido o entrenamiento",
+      description:
+        "Coordina una actividad fisica con al menos una persona compatible y define lugar, fecha y hora.",
+      reward: "+60 FitCoins sugeridos si conviertes el reto en actividad real.",
+    },
+  ];
+  return variants[count % variants.length];
+}
+
+function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
+  return {
+    id: publicMatch.id,
+    title: publicMatch.title,
+    sport: publicMatch.sport,
+    date: publicMatch.date,
+    time: publicMatch.time,
+    max_players: publicMatch.maxPlayers,
+    required_level: publicMatch.level,
+    creator_id: publicMatch.creatorId,
+    status: publicMatch.status === "Full" ? "Full" : publicMatch.status,
+    court_id: publicMatch.id,
+    court: {
+      id: publicMatch.id,
+      name: publicMatch.courtName,
+      address: publicMatch.address,
+      district: publicMatch.address,
+      sport: publicMatch.sport,
+      lat: publicMatch.lat,
+      lng: publicMatch.lng,
+      price_per_hour: 0,
+      rating: 4.5,
+      reviews_count: 0,
+      is_available: true,
+    } as Court,
+    current_players: publicMatch.participants.map((participant) => ({
+      id: participant.userId,
+      name: participant.name,
+      avatar_url: participant.avatarUrl,
+    })) as User[],
+  } as Match;
+}
+
+function scoreRecommendedMatch(match: Match, user: User | null): number {
+  if (!user) return 0;
+  const sameSport = user.preferred_sports?.includes(match.sport as never) ? 50 : 0;
+  const sameLevel =
+    String(user.level).toLowerCase() === String(match.required_level).toLowerCase() ? 30 : 0;
+  const openBonus = match.status !== "Full" && match.status !== "Finished" ? 20 : 0;
+  return sameSport + sameLevel + openBonus;
+}
+
+function isLegacyDailyPlan(plan: AiRecommendationResponse): boolean {
+  const title = plan.dailyChallenge.title.toLowerCase();
+  const description = plan.dailyChallenge.description.toLowerCase();
+  const combined = `${title} ${description}`;
+  const nonPhysicalKeywords = [
+    "iracing",
+    "i racing",
+    "simracing",
+    "sim racing",
+    "f1 sim",
+    "f1sim",
+    "formula 1 sim",
+    "simulador",
+    "simulator",
+    "simulation",
+    "gran turismo",
+    "assetto",
+    "e-sport",
+    "esport",
+    "gaming",
+    "videojuego",
+  ];
+  return (
+    title.includes("reto de activacion") ||
+    title.includes("reto de activación") ||
+    description.includes("crea una publicacion") ||
+    description.includes("crea una publicación") ||
+    description.includes("conecta con un jugador recomendado") ||
+    nonPhysicalKeywords.some((keyword) => combined.includes(keyword))
+  );
+}
+
+// === BLOQUE: Cache local del plan diario ===
+// Evita consultar el backend cada vez que se entra al Home durante el mismo dia.
+// El backend sigue siendo la fuente real; localStorage solo evita parpadeos y llamadas repetidas.
+function readCachedDailyPlan(userId: string): AiRecommendationResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(getDailyPlanCacheKey(userId));
+    if (!raw) return null;
+    const plan = JSON.parse(raw) as AiRecommendationResponse;
+    const expiresAt = plan.metadata?.expiresAt ? new Date(plan.metadata.expiresAt).getTime() : 0;
+    if (expiresAt && expiresAt <= Date.now()) return null;
+    if (isLegacyDailyPlan(plan)) return null;
+    return plan;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedDailyPlan(userId: string, plan: AiRecommendationResponse) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(getDailyPlanCacheKey(userId), JSON.stringify(plan));
+  } catch {
+    // Si el navegador bloquea storage, la app sigue funcionando con el snapshot del backend.
+  }
+}
+
 // === BLOQUE: Dashboard — Componente principal del panel de inicio ===
 // Secciones:
 //   - Hero con saludo, nivel, Trust Score y partidos jugados.
@@ -137,10 +334,77 @@ function Dashboard() {
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
   const { balance: walletBalance, initWallet } = useWalletStore();
+  const publicMatches = usePublicMatchStore((state) => state.publicMatches);
+  const cachedInitialPlan = user ? readCachedDailyPlan(user.id) : null;
+  const [dailyPlan, setDailyPlan] = useState<AiRecommendationResponse | null>(cachedInitialPlan);
+  const [dailyPlanStatus, setDailyPlanStatus] = useState<DailyPlanStatus>(
+    cachedInitialPlan ? "ready" : "idle",
+  );
+  const [dailyPlanRefreshKey, setDailyPlanRefreshKey] = useState(0);
+  const [challengeRefreshCount, setChallengeRefreshCount] = useState(
+    user ? getWeeklyRefreshCount(user.id) : 0,
+  );
+  const [overrideChallenge, setOverrideChallenge] = useState(
+    user ? getWeeklyOverrideChallenge(user.id) : null,
+  );
 
   useEffect(() => {
     initWallet();
   }, [initWallet]);
+
+  useEffect(() => {
+    if (!user) return;
+    setChallengeRefreshCount(getWeeklyRefreshCount(user.id));
+    setOverrideChallenge(getWeeklyOverrideChallenge(user.id));
+  }, [user]);
+
+  const handleRefreshWeeklyChallenge = () => {
+    if (!user || challengeRefreshCount >= 1) return;
+    const nextCount = challengeRefreshCount + 1;
+    const nextChallenge = buildWeeklyChallengeRefresh(dailyPlan, nextCount);
+    setWeeklyRefreshCount(user.id, nextCount);
+    setWeeklyOverrideChallenge(user.id, nextChallenge);
+    setChallengeRefreshCount(nextCount);
+    setOverrideChallenge(nextChallenge);
+    toast.success("Reto actualizado", {
+      description: "Usaste tu actualizacion semanal disponible.",
+    });
+  };
+
+  // === BLOQUE: Retos semanales ===
+  // Consume el snapshot del motor de recomendaciones y lo presenta como 2 retos semanales.
+  // Si no existe snapshot, el backend puede generarlo; si falla, la UI muestra reintento claro.
+  useEffect(() => {
+    if (!user) return;
+    if (useAuthStore.getState().isDemoMode) {
+      setDailyPlanStatus("error");
+      return;
+    }
+
+    const cachedPlan = readCachedDailyPlan(user.id);
+    if (cachedPlan) {
+      setDailyPlan(cachedPlan);
+      setDailyPlanStatus("ready");
+      return;
+    }
+
+    let active = true;
+    setDailyPlanStatus("loading");
+    getTodayAiRecommendations()
+      .then((plan) => {
+        if (!active) return;
+        setDailyPlan(plan);
+        writeCachedDailyPlan(user.id, plan);
+        setDailyPlanStatus("ready");
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) console.warn("No se pudo cargar el plan deportivo diario:", error);
+        if (active) setDailyPlanStatus("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [dailyPlanRefreshKey, user]);
 
   // === BLOQUE: Racha deportiva y días de asistencia ===
   const [streak, setStreak] = useState<{ current_streak: number; max_streak: number } | null>(null);
@@ -448,10 +712,27 @@ function Dashboard() {
     checkRatingLoop();
   }, [matches, user]);
 
-  // Filtra partidos por deporte seleccionado.
+  const publicMatchesForDashboard = useMemo(
+    () => publicMatches.map(publicMatchToDashboardMatch),
+    [publicMatches],
+  );
+
+  // === BLOQUE: Partidos recomendados ===
+  // Une partidos reales con partidos publicos del tablero y los ordena por compatibilidad simple.
+  // Asi Home no queda vacio cuando el backend no trae matches, pero respeta lo que existe en /app/match.
+  const recommendedMatches = useMemo(() => {
+    const byId = new Map<string, Match>();
+    [...liveMatches, ...publicMatchesForDashboard].forEach((match) => {
+      byId.set(match.id, match);
+    });
+    return [...byId.values()].sort(
+      (a, b) => scoreRecommendedMatch(b, user) - scoreRecommendedMatch(a, user),
+    );
+  }, [liveMatches, publicMatchesForDashboard, user]);
+
   const filteredMatches = selectedSport
-    ? liveMatches.filter((m) => m.sport === selectedSport)
-    : liveMatches;
+    ? recommendedMatches.filter((m) => m.sport === selectedSport)
+    : recommendedMatches;
 
   // Canchas más cercanas según ubicación base.
   const closestCourts = useMemo(() => {
@@ -683,6 +964,15 @@ function Dashboard() {
         ))}
       </div>
 
+      <DailySportsPlan
+        plan={dailyPlan}
+        status={dailyPlanStatus}
+        onRetry={() => setDailyPlanRefreshKey((current) => current + 1)}
+        overrideChallenge={overrideChallenge}
+        refreshesRemaining={Math.max(0, 1 - challengeRefreshCount)}
+        onRefreshChallenge={handleRefreshWeeklyChallenge}
+      />
+
       <div className="grid lg:grid-cols-3 gap-6">
         {/* === Columna principal (2/3) === */}
         <div className="lg:col-span-2 space-y-6">
@@ -763,7 +1053,7 @@ function Dashboard() {
                   Partidos recomendados
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Curado por IA según tu nivel y horarios
+                  Basado en partidos públicos, tu deporte y tu nivel
                 </p>
               </div>
               <button
@@ -1157,7 +1447,186 @@ function Dashboard() {
   );
 }
 
-// === BLOQUE: Stat — Componente de tarjeta de estadística ===
+// === BLOQUE: DailySportsPlan - Resumen deportivo diario en Home ===
+// Presenta recomendaciones persistidas como una mejora contextual del dashboard,
+// sin exponer detalles tecnicos del proveedor o modelo usado por el backend.
+function DailySportsPlan({
+  plan,
+  status,
+  onRetry,
+  overrideChallenge,
+  refreshesRemaining,
+  onRefreshChallenge,
+}: {
+  plan: AiRecommendationResponse | null;
+  status: DailyPlanStatus;
+  onRetry: () => void;
+  overrideChallenge: { title: string; description: string; reward: string } | null;
+  refreshesRemaining: number;
+  onRefreshChallenge: () => void;
+}) {
+  const isLoading = status === "loading";
+  const isError = status === "error";
+  const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
+  const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
+  const weeklyChallenges = [
+    {
+      title: overrideChallenge?.title ?? plan?.dailyChallenge.title ?? "Preparando reto principal",
+      description:
+        overrideChallenge?.description ??
+        plan?.dailyChallenge.description ??
+        "Estamos revisando tu perfil y actividad reciente para proponerte un reto fisico de la semana.",
+      reward:
+        overrideChallenge?.reward ??
+        plan?.dailyChallenge.rewardHint ??
+        "Se mostrara cuando el reto este listo",
+      statusLabel: overrideChallenge
+        ? "Actualizado"
+        : plan
+          ? "Generado"
+          : isLoading
+            ? "Cargando"
+            : "No cargado",
+      canRefresh: Boolean(plan) && refreshesRemaining > 0,
+    },
+    {
+      title: "Reto validable en sede",
+      description: venueRecommendation
+        ? `Elige una sede cercana como ${venueRecommendation.title} para realizar una actividad fisica. La empresa responsable validara el cumplimiento.`
+        : "Elige una cancha, establecimiento o gym cercano para realizar el reto. La empresa responsable validara si cumpliste la actividad.",
+      reward: "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
+      statusLabel: "Pendiente de sede",
+      canRefresh: false,
+    },
+  ];
+
+  return (
+    <div className="mb-8 rounded-2xl bg-gradient-card border border-primary/20 p-5 shadow-card">
+      <div className="flex flex-col gap-5">
+        <div
+          className={`rounded-2xl border px-4 py-3 text-xs ${
+            isLoading
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : isError
+                ? "border-warning/30 bg-warning/10 text-warning"
+                : "border-neon/20 bg-neon/10 text-neon"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 font-bold">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isLoading ? "bg-primary animate-pulse" : isError ? "bg-warning" : "bg-neon"
+                }`}
+              />
+              {isLoading
+                ? "Cargando retos semanales..."
+                : isError
+                  ? "No se pudo sincronizar los retos"
+                  : "Retos semanales listos"}
+            </div>
+            {isError && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="rounded-xl border border-warning/40 px-3 py-1.5 text-[11px] font-bold hover:bg-warning/10 transition-colors"
+              >
+                Reintentar
+              </button>
+            )}
+          </div>
+          {isError && (
+            <p className="mt-2 text-[11px] text-warning/90">
+              Revisa que el backend este levantado y que la sesion real siga activa. Mientras tanto
+              se muestra una vista base de retos.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary mb-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              Retos semanales
+            </div>
+            <h2 className="font-heading text-2xl tracking-wide text-foreground">
+              2 retos para esta semana
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+              Retos fisicos adaptados a tu perfil. Para ganar puntos, deberas elegir una sede y la
+              empresa encargada validara el cumplimiento.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-3 py-1 text-xs font-bold">
+            Maximo 2 por semana
+          </span>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-3">
+          {weeklyChallenges.map((challenge, index) => (
+            <div
+              key={challenge.title}
+              className="rounded-2xl border border-border/60 bg-background/40 p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Reto {index + 1}
+                </span>
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                  {challenge.statusLabel}
+                </span>
+              </div>
+              <h3 className="mt-2 font-heading text-xl tracking-wide text-foreground">
+                {challenge.title}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">{challenge.description}</p>
+              <div className="mt-3 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-xs text-primary">
+                Recompensa: {challenge.reward}
+              </div>
+              {index === 0 && (
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-[11px] text-muted-foreground">
+                    {refreshesRemaining > 0
+                      ? `Te queda ${refreshesRemaining} actualizacion esta semana.`
+                      : "Actualizacion semanal usada."}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onRefreshChallenge}
+                    disabled={!challenge.canRefresh}
+                    className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Actualizar reto
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <div className="text-xs text-muted-foreground">
+              Logro sugerido: <span className="text-foreground">{achievement}</span>
+            </div>
+            {venueRecommendation && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Sede sugerida: <span className="text-foreground">{venueRecommendation.title}</span>
+              </div>
+            )}
+          </div>
+          <Link
+            to="/app/map"
+            className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-primary text-primary-foreground font-bold text-sm shadow-glow hover:scale-105 active:scale-95 transition-all"
+          >
+            Explorar sedes <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Stat({
   icon,
   label,
