@@ -22,7 +22,8 @@ model profiles {
   city                 String?
   avatar_url           String?   @map("avatar_url")
   bio                  String?
-  trust_score          Int?      @default(100) @map("trust_score")
+  trust_score          Int?      @default(50) @map("trust_score")
+  photo_verified       Boolean?  @default(false) @map("photo_verified")
   fitcoins_balance     Int?      @default(0) @map("fitcoins_balance")
   level                Int?
   level_label          String?   @map("level_label")

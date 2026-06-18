@@ -241,6 +241,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   useEffect(() => {
     if (!currentUser) return;
     let active = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleConnections = (connections: any[]) => {
       if (!active) return;
       const ids = connections.map((c) => c.connected_user_id);
@@ -258,6 +259,37 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
   // Envía solicitud de conexión; si es mutua, abre modal de match.
   const handleConnect = async (target: User) => {
     if (!currentUser || isSavingConnection) return;
+
+    // Verificar límites diarios de Me Gusta (Freemium)
+    const isPremium = currentUser.tier === "PREMIUM";
+    const plan = localStorage.getItem(`sportmatch_subscription_plan_${currentUser.id}`) || "free";
+
+    let likesLimit = 5;
+    if (isPremium) {
+      if (plan === "bronce") likesLimit = 20;
+      else if (plan === "plata") likesLimit = 50;
+      else likesLimit = 9999; // oro es ilimitado
+    }
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const likesKey = `sportmatch_daily_likes_${currentUser.id}`;
+    const likesSaved = localStorage.getItem(likesKey);
+    let likesData = likesSaved ? JSON.parse(likesSaved) : { date: todayStr, count: 0 };
+
+    if (likesData.date !== todayStr) {
+      likesData = { date: todayStr, count: 0 };
+    }
+
+    if (likesData.count >= likesLimit) {
+      toast.error(
+        `Has alcanzado tu límite diario de ${likesLimit} Me Gusta/Conexiones. ¡Suscríbete a un plan superior para continuar!`,
+        {
+          duration: 5000,
+        },
+      );
+      return;
+    }
+
     const recommendation = rankedStack.find((item) => item.user.id === target.id);
     try {
       setIsSavingConnection(true);
@@ -269,6 +301,11 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
           (activeSport === "Todos" ? target.preferred_sports?.[0] : activeSport),
         compatibilityScore: recommendation?.score ?? null,
       });
+
+      // Incrementar contador de likes
+      likesData.count += 1;
+      localStorage.setItem(likesKey, JSON.stringify(likesData));
+
       setContactedUserIds((current) =>
         current.includes(target.id) ? current : [...current, target.id],
       );
@@ -1110,6 +1147,7 @@ function Bar({ label, value }: Readonly<{ label: string; value: number }>) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getTrustLevelLabel(score: number, t: any): string {
   if (score >= 90) return t("profile.trust_level_excellent");
   if (score >= 70) return t("profile.trust_level_good");

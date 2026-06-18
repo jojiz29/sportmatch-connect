@@ -26,6 +26,8 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Match, Sport, User } from "@/entities/types";
+import { FakeProfileDetector } from "@/features/ai-vision/ui/FakeProfileDetector";
+import { DniVerification } from "@/features/ai-vision/ui/DniVerification";
 import { useNSFWJS } from "@/shared/hooks/useNSFWJS";
 import { useStrictForm } from "@/shared/hooks/useStrictForm";
 import { BadgeEngine } from "@/components/BadgeEngine";
@@ -108,6 +110,8 @@ function Profile() {
   const [isVerifyingDni, setIsVerifyingDni] = useState(false);
   const [dniError, setDniError] = useState("");
   const [isDniDialogOpen, setIsDniDialogOpen] = useState(false);
+  const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
+  const [isBiometricDniDialogOpen, setIsBiometricDniDialogOpen] = useState(false);
 
   // === BLOQUE: handleVerifyDni — Verificación de identidad contra RENIEC ===
   const handleVerifyDni = async () => {
@@ -187,6 +191,113 @@ function Profile() {
       }
     } finally {
       setIsVerifyingDni(false);
+    }
+  };
+
+  // === BLOQUE: handlePhotoSuccess — Éxito del Detector de Perfiles Falsos ===
+  const handlePhotoSuccess = async () => {
+    const isDemo = useAuthStore.getState().isDemoMode;
+    const nextTrust = Math.min(100, (profile?.trust_score || 0) + 20);
+
+    if (isDemo) {
+      const updatedUser = {
+        ...profile!,
+        photo_verified: true,
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Foto de perfil autenticada exitosamente!");
+      setTimeout(() => setIsPhotoDialogOpen(false), 2000);
+      return;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error("No active session found.");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/profiles/verify-photo`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("La verificación falló en el servidor.");
+      }
+
+      const updatedUser = {
+        ...profile!,
+        photo_verified: true,
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Foto de perfil autenticada exitosamente!");
+      setTimeout(() => setIsPhotoDialogOpen(false), 2000);
+    } catch (err) {
+      console.error("Photo verification error:", err);
+      toast.error("Error al persistir verificación de foto.");
+    }
+  };
+
+  // === BLOQUE: handleBiometricDniSuccess — Éxito del Biométrico DNI 2.0 ===
+  const handleBiometricDniSuccess = async () => {
+    const isDemo = useAuthStore.getState().isDemoMode;
+    const nextTrust = Math.min(100, (profile?.trust_score || 0) + 20);
+
+    if (isDemo) {
+      const updatedUser = {
+        ...profile!,
+        dni_verificado: true,
+        dni_hash: "mock_biometric_hash_sha256",
+        fecha_verificacion: new Date().toISOString(),
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Identidad biométrica verificada exitosamente!");
+      setTimeout(() => setIsBiometricDniDialogOpen(false), 2000);
+      return;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error("No active session found.");
+
+      const res = await supabase
+        .from("profiles")
+        .update({
+          dni_verificado: true,
+          dni_hash: "biometric_hash_sha256",
+          fecha_verificacion: new Date().toISOString(),
+          trust_score: nextTrust,
+        })
+        .eq("id", profile!.id);
+
+      if (res.error) throw res.error;
+
+      const updatedUser = {
+        ...profile!,
+        dni_verificado: true,
+        dni_hash: "biometric_hash_sha256",
+        fecha_verificacion: new Date().toISOString(),
+        trust_score: nextTrust,
+      };
+      useAuthStore.setState({ user: updatedUser });
+      useProfileStore.setState({ profile: updatedUser });
+      toast.success("¡Identidad biométrica verificada exitosamente!");
+      setTimeout(() => setIsBiometricDniDialogOpen(false), 2000);
+    } catch (err) {
+      console.error("Biometric DNI verification error:", err);
+      toast.error("Error al persistir verificación DNI.");
     }
   };
 
@@ -379,17 +490,21 @@ function Profile() {
   }
 
   const trustLevel =
-    (profile.trust_score || 0) >= 90
-      ? t("profile.trust_level_excellent")
-      : (profile.trust_score || 0) >= 70
-        ? t("profile.trust_level_good")
-        : t("profile.trust_level_risk");
+    (profile.trust_score || 0) >= 85
+      ? "Excelente"
+      : (profile.trust_score || 0) >= 65
+        ? "Bueno"
+        : (profile.trust_score || 0) >= 45
+          ? "Neutral"
+          : "En Riesgo";
   const trustColor =
-    (profile.trust_score || 0) >= 90
+    (profile.trust_score || 0) >= 85
       ? "text-neon"
-      : (profile.trust_score || 0) >= 70
+      : (profile.trust_score || 0) >= 65
         ? "text-warning"
-        : "text-destructive";
+        : (profile.trust_score || 0) >= 45
+          ? "text-blue-400"
+          : "text-destructive";
 
   const handleStartEdit = () => {
     const initial: Record<string, 1 | 2 | 3> = {};
@@ -639,9 +754,14 @@ function Profile() {
               </div>
             ) : (
               <>
-                <h2 className="text-2xl font-bold flex items-center">
+                <h2 className="text-2xl font-bold flex flex-wrap items-center gap-1.5">
                   {profile.name}
-                  {profile.dni_verificado && <VerifiedBadge />}
+                  {(profile.dni_verificado || profile.photo_verified) && <VerifiedBadge />}
+                  {profile.dni_verificado && profile.photo_verified && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-neon text-neon-foreground font-black tracking-wider animate-pulse uppercase">
+                      DUAL VIP
+                    </span>
+                  )}
                 </h2>
                 <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                   <MapPin className="h-3 w-3" />
@@ -685,12 +805,58 @@ function Profile() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={handleStartEdit}
-                className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
-              >
-                <Edit3 className="h-4 w-4" /> {t("profile.edit")}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Botón Verificación DNI 2.0 */}
+                <Dialog open={isBiometricDniDialogOpen} onOpenChange={setIsBiometricDniDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        profile.dni_verificado
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default"
+                          : "bg-gradient-primary border-transparent text-primary-foreground hover:scale-[1.02] shadow-glow"
+                      }`}
+                    >
+                      {profile.dni_verificado ? <>🛡️ DNI Verificado</> : <>🛡️ Verificar DNI 2.0</>}
+                    </button>
+                  </DialogTrigger>
+                  {!profile.dni_verificado && (
+                    <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 overflow-y-auto max-h-[90vh]">
+                      <DniVerification onSuccess={handleBiometricDniSuccess} />
+                    </DialogContent>
+                  )}
+                </Dialog>
+
+                {/* Botón Detector Foto IA */}
+                <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        profile.photo_verified
+                          ? "bg-blue-500/10 border-blue-500/30 text-blue-400 cursor-default"
+                          : "bg-gradient-neon border-transparent text-neon-foreground hover:scale-[1.02] shadow-neon"
+                      }`}
+                    >
+                      {profile.photo_verified ? (
+                        <>📸 Foto Verificada</>
+                      ) : (
+                        <>📸 Verificar Foto (IA)</>
+                      )}
+                    </button>
+                  </DialogTrigger>
+                  {!profile.photo_verified && (
+                    <DialogContent className="max-w-md bg-background/95 border-border shadow-2xl rounded-3xl p-6 overflow-y-auto max-h-[90vh]">
+                      <FakeProfileDetector onSuccess={handlePhotoSuccess} />
+                    </DialogContent>
+                  )}
+                </Dialog>
+
+                <button
+                  onClick={handleStartEdit}
+                  className="px-4 py-2 rounded-xl glass flex items-center gap-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <Edit3 className="h-4 w-4" /> {t("profile.edit")}
+                </button>
+              </div>
             )}
           </div>
         </div>

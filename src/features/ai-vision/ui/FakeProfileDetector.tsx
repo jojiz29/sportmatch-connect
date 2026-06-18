@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -16,14 +16,25 @@ import type { SupportedLanguage } from "../model/types";
 interface FakeProfileDetectorProps {
   language?: SupportedLanguage;
   className?: string;
+  onSuccess?: () => void;
 }
 
-export function FakeProfileDetector({ language, className = "" }: FakeProfileDetectorProps) {
+export function FakeProfileDetector({
+  language,
+  className = "",
+  onSuccess,
+}: FakeProfileDetectorProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<Blob | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { analyzing, result, error, analyze, clear } = useFakeProfileDetector(language);
+
+  useEffect(() => {
+    if (result && result.authenticityScore >= 70) {
+      onSuccess?.();
+    }
+  }, [result, onSuccess]);
 
   const handleFile = useCallback(
     (selectedFile: Blob) => {

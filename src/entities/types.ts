@@ -123,6 +123,7 @@ export interface User {
   push_token?: string | null;
   gender?: "Masculino" | "Femenino" | "Otro";
   dni_verificado?: boolean;
+  photo_verified?: boolean;
   dni_hash?: string | null;
   dni_intentos?: number;
   fecha_verificacion?: string | null;

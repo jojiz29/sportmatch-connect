@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
@@ -11,9 +12,6 @@ import {
   Apple,
   MessageSquare,
   History,
-  TrendingUp,
-  RotateCcw,
-  Zap,
 } from "lucide-react";
 import { backendApi } from "@/shared/api/backendApi";
 import { supabase } from "@/shared/api/supabase";
@@ -65,7 +63,7 @@ function CoachPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"chat" | "nutrition">("chat");
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const { isProcessing: isPayingPremium, processPayment } = usePaymentGatewayStore();
+  const { processPayment } = usePaymentGatewayStore();
 
   // === ANALYTICS FUNNEL LOGGER ===
   const logFunnelEvent = (
@@ -449,11 +447,38 @@ function CoachInfoPanel() {
 // ==============================================================
 function CoachChatTab() {
   const isDemoMode = useAuthStore((s) => s.isDemoMode);
+  const user = useAuthStore((s) => s.user);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messagesRemaining, setMessagesRemaining] = useState<number>(20);
+  const [chatCount, setChatCount] = useState(0);
+  const [chatLimit, setChatLimit] = useState(3);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      const isPremium = user.tier === "PREMIUM";
+      const plan = localStorage.getItem(`sportmatch_subscription_plan_${user.id}`) || "free";
+
+      let limit = 3;
+      if (isPremium) {
+        if (plan === "bronce") limit = 15;
+        else if (plan === "plata") limit = 50;
+        else limit = 9999;
+      }
+      setChatLimit(limit);
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      const chatKey = `sportmatch_chat_usage_${user.id}`;
+      const chatSaved = localStorage.getItem(chatKey);
+      const chatData = chatSaved ? JSON.parse(chatSaved) : { date: todayStr, count: 0 };
+      if (chatData.date === todayStr) {
+        setChatCount(chatData.count);
+      } else {
+        setChatCount(0);
+      }
+    }
+  }, [user]);
 
   // Load welcome message on start
   useEffect(() => {
@@ -506,9 +531,6 @@ function CoachChatTab() {
                 timestamp: new Date().toLocaleTimeString(),
               },
             ]);
-            if (res.data.messagesRemaining !== undefined) {
-              setMessagesRemaining(res.data.messagesRemaining);
-            }
             setLoading(false);
             return;
           }
@@ -544,13 +566,46 @@ function CoachChatTab() {
     const messageText = textToSend || input;
     if (!messageText.trim()) return;
 
-    // Limit check bypassed as requested by user
-    /*
-    if (messagesRemaining <= 0) {
-      toast.error("Límite diario de 20 mensajes alcanzado.");
-      return;
+    // Verificar límites de interacciones con el Chatbot (Freemium)
+    const isPremium = user?.tier === "PREMIUM";
+    const plan = localStorage.getItem(`sportmatch_subscription_plan_${user?.id}`) || "free";
+
+    let limit = 3;
+    if (isPremium) {
+      if (plan === "bronce") limit = 15;
+      else if (plan === "plata") limit = 50;
+      else limit = 9999;
     }
-    */
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const chatKey = `sportmatch_chat_usage_${user?.id}`;
+    const chatSaved = localStorage.getItem(chatKey);
+    let chatData = chatSaved ? JSON.parse(chatSaved) : { date: todayStr, count: 0 };
+
+    if (chatData.date !== todayStr) {
+      chatData = { date: todayStr, count: 0 };
+    }
+
+    if (limit < 9999) {
+      if (plan === "free" && chatData.count >= limit) {
+        toast.error(
+          "Has alcanzado tu límite de prueba de 3 interacciones gratuitas con el Coach Sporty. Suscríbete para continuar conversando.",
+          { duration: 5000 },
+        );
+        return;
+      } else if (chatData.count >= limit) {
+        toast.error(
+          `Has alcanzado tu límite diario de ${limit} mensajes en tu plan. ¡Suscríbete a un plan superior para continuar!`,
+          { duration: 5000 },
+        );
+        return;
+      }
+    }
+
+    // Incrementar contador y guardar
+    chatData.count += 1;
+    localStorage.setItem(chatKey, JSON.stringify(chatData));
+    setChatCount(chatData.count);
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -597,7 +652,6 @@ function CoachChatTab() {
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
-        setMessagesRemaining((prev) => Math.max(0, prev - 1));
         setLoading(false);
       }, 1000);
       return;
@@ -631,7 +685,6 @@ function CoachChatTab() {
           throw new Error(res.error);
         } else if (res.data) {
           const replyText = res.data.reply;
-          const remaining = res.data.messagesRemaining;
           setMessages((prev) => [
             ...prev,
             {
@@ -641,12 +694,9 @@ function CoachChatTab() {
               timestamp: new Date().toLocaleTimeString(),
             },
           ]);
-          if (remaining !== undefined) {
-            setMessagesRemaining(remaining);
-          }
-          setLoading(false);
-          return;
         }
+        setLoading(false);
+        return;
       } catch (backendErr: any) {
         console.warn("Coach IA backend error, falling back to mock reply:", backendErr);
       }
@@ -694,7 +744,9 @@ function CoachChatTab() {
 
         <div className="text-right">
           <div className="text-xs text-muted-foreground">Mensajes Hoy</div>
-          <div className="text-sm font-bold text-primary">Ilimitados</div>
+          <div className="text-sm font-bold text-primary">
+            {chatLimit >= 9999 ? "Ilimitados" : `${chatCount}/${chatLimit}`}
+          </div>
         </div>
       </div>
 
