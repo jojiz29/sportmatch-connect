@@ -1262,14 +1262,12 @@ function MatchCard({ match }: { match: Match }) {
     setTimeout(async () => {
       try {
         if (!useAuthStore.getState().isDemoMode) {
-          const { error } = await withTimeout(
-            supabase.from("match_participants").insert({
-              match_id: match.id,
-              user_id: user?.id,
-              status: "ACCEPTED",
-            }),
-          );
-          if (error) throw error;
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          if (!token) throw new Error("No active session found.");
+
+          const res = await backendApi.matches.join(token, match.id);
+          if (res.error) throw new Error(res.error);
         }
         if (user) {
           // Sincronización inmediata en memoria para consistencia y respuesta instantánea (alta disponibilidad)
