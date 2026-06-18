@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { CalendarDays, Clock, MapPin, Trophy, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -58,12 +60,32 @@ export function MiniCalendar({ match, onClose }: MiniCalendarProps) {
   const days = buildMonthGrid(matchDate);
   const participants = match.participants ?? [];
 
-  return (
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] isolate flex items-end justify-center p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={`mini-calendar-title-${match.id}`}
@@ -81,7 +103,7 @@ export function MiniCalendar({ match, onClose }: MiniCalendarProps) {
         animate={{ y: 0, scale: 1 }}
         exit={{ y: 32, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-3xl border border-border bg-card shadow-card sm:max-w-3xl sm:rounded-3xl"
+        className="relative max-h-[calc(100vh-1rem)] w-full overflow-y-auto rounded-t-3xl border border-border bg-card shadow-card sm:max-h-[92vh] sm:max-w-3xl sm:rounded-3xl"
         id={`mini-calendar-${match.id}`}
       >
         <header className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-4 sm:px-5">
@@ -196,6 +218,7 @@ export function MiniCalendar({ match, onClose }: MiniCalendarProps) {
           </aside>
         </div>
       </motion.section>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }

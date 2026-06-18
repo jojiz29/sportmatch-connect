@@ -826,7 +826,7 @@ function Profile() {
                   )}
                 </Dialog>
 
-                {/* Botón Detector Foto IA */}
+                {/* Boton de verificacion de persona */}
                 <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
                   <DialogTrigger asChild>
                     <button
@@ -836,11 +836,7 @@ function Profile() {
                           : "bg-gradient-neon border-transparent text-neon-foreground hover:scale-[1.02] shadow-neon"
                       }`}
                     >
-                      {profile.photo_verified ? (
-                        <>📸 Foto Verificada</>
-                      ) : (
-                        <>📸 Verificar Foto (IA)</>
-                      )}
+                      {profile.photo_verified ? <>📸 Foto Verificada</> : <>📸 Verificar Persona</>}
                     </button>
                   </DialogTrigger>
                   {!profile.photo_verified && (

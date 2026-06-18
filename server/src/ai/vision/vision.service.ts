@@ -150,17 +150,19 @@ export class VisionService {
     const lang = language || "es";
     const promptByLang: Record<string, string> = {
       es:
-        "Eres un experto en detección de imágenes generadas por IA. Analiza esta foto de perfil y determina si fue generada por IA o es una foto real. " +
+        "Eres un experto en verificacion visual de perfiles. Analiza la imagen enviada y determina si muestra una persona real y verificable. " +
+        "No entregues un porcentaje de IA: entrega un porcentaje de veracidad humana/persona real. Marca isFake=true solo si hay evidencia fuerte de imagen artificial, alterada o si no aparece una persona real. " +
         "Responde ESTRICTAMENTE en formato JSON sin markdown ni texto adicional:\n" +
         "{\n" +
-        '  "isFake": boolean (true si parece generada por IA),\n' +
-        '  "authenticityScore": number 0-100 (100 = totalmente real, 0 = totalmente fake),\n' +
-        '  "explanation": string (explicación del análisis en 2-3 oraciones),\n' +
-        '  "confidence": number 0-1 (nivel de confianza del análisis),\n' +
-        '  "signals": string[] (señales específicas que sustentan la decisión, ej: "textura de piel artificial", "iluminación incoherente", "dedos distorsionados")\n' +
+        '  "isFake": boolean (true solo con evidencia alta de imagen artificial/alterada o ausencia de persona real),\n' +
+        '  "authenticityScore": number 0-100 (100 = persona real muy probable, 0 = artificial o no verificable),\n' +
+        '  "explanation": string (explicacion del analisis en 2-3 oraciones),\n' +
+        '  "confidence": number 0-1 (nivel de confianza del analisis),\n' +
+        '  "signals": string[] (senales especificas: rostro visible, consistencia facial, iluminacion, piel, artefactos, edicion o ausencia de persona)\n' +
         "}",
       en:
-        "You are an expert in detecting AI-generated images. Analyze this profile photo and determine if it was AI-generated or real. " +
+        "You are an expert in visual profile verification. Analyze the submitted image and determine whether it shows a real, verifiable person. " +
+        "Do not return an AI percentage: return a human/person authenticity percentage. Set isFake=true only when there is strong evidence of an artificial/edited image or no real person appears. " +
         "Respond STRICTLY in JSON format without markdown:\n" +
         "{\n" +
         '  "isFake": boolean,\n' +
@@ -170,7 +172,8 @@ export class VisionService {
         '  "signals": string[]\n' +
         "}",
       pt:
-        "Você é um especialista em detecção de imagens geradas por IA. Analise esta foto de perfil e determine se foi gerada por IA ou é real. " +
+        "Voce e especialista em verificacao visual de perfis. Analise a imagem enviada e determine se mostra uma pessoa real e verificavel. " +
+        "Nao retorne uma porcentagem de IA: retorne uma porcentagem de veracidade humana/pessoa real. Marque isFake=true apenas se houver evidencia forte de imagem artificial, alterada ou se nao aparecer uma pessoa real. " +
         "Responda ESTRITAMENTE em formato JSON sem markdown:\n" +
         "{\n" +
         '  "isFake": boolean,\n' +

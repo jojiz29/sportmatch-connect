@@ -16,12 +16,14 @@ describe("MatchesService", () => {
     prismaMock = {
       $queryRawUnsafe: jest.fn(),
       matches: {
+        findMany: jest.fn(),
         findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
       },
       match_participants: {
+        findUnique: jest.fn(),
         create: jest.fn(),
         deleteMany: jest.fn(),
       },
@@ -46,25 +48,30 @@ describe("MatchesService", () => {
 
   describe("findAll", () => {
     it("debe buscar partidos sin deporte", async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.matches.findMany.mockResolvedValue([]);
       const res = await service.findAll();
-      expect(prismaMock.$queryRawUnsafe).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT id, title, sport"),
+      expect(prismaMock.matches.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: undefined,
+          take: 50,
+        }),
       );
       expect(res).toEqual([]);
     });
 
     it("debe buscar partidos filtrando por deporte", async () => {
-      prismaMock.$queryRawUnsafe.mockResolvedValue([]);
+      prismaMock.matches.findMany.mockResolvedValue([]);
       await service.findAll("futbol");
-      expect(prismaMock.$queryRawUnsafe).toHaveBeenCalledWith(
-        expect.stringContaining("WHERE sport = $1"),
-        ["futbol"],
+      expect(prismaMock.matches.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { sport: "futbol" },
+          take: 50,
+        }),
       );
     });
 
-    it("debe lanzar el error si $queryRawUnsafe falla", async () => {
-      prismaMock.$queryRawUnsafe.mockRejectedValue(new Error("fail"));
+    it("debe lanzar el error si findMany falla", async () => {
+      prismaMock.matches.findMany.mockRejectedValue(new Error("fail"));
       await expect(service.findAll()).rejects.toThrow("fail");
     });
   });
@@ -73,7 +80,7 @@ describe("MatchesService", () => {
     it("debe devolver el partido si existe", async () => {
       prismaMock.matches.findUnique.mockResolvedValue({ id: "m1" });
       const res = await service.findOne("m1");
-      expect(res).toEqual({ id: "m1" });
+      expect(res).toEqual({ id: "m1", current_players: [] });
     });
 
     it("debe lanzar NotFoundException si no existe", async () => {
@@ -153,6 +160,7 @@ describe("MatchesService", () => {
 
     it("debe agregar participante", async () => {
       prismaMock.matches.findUnique.mockResolvedValue({ id: "m1" });
+      prismaMock.match_participants.findUnique.mockResolvedValue(null);
       prismaMock.match_participants.create.mockResolvedValue({ match_id: "m1", user_id: "u1" });
 
       const res = await service.join("m1", "u1");

@@ -435,14 +435,14 @@ function AiVisionOverview() {
               <div className="flex-1 min-w-0 pr-16">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                    Fake Profile Detector
+                    Veracidad de persona
                   </h3>
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
                     PRO
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                  Evalua si una foto de perfil parece real o generada por IA.
+                  Evalua si una foto de perfil muestra una persona real y verificable.
                 </p>
                 <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
                   Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
