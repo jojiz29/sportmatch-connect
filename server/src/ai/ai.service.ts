@@ -722,6 +722,8 @@ Reglas:
     let telemetryContext: Array<{ deporte: string; fecha: string; hora: string; cancha: string }> =
       [];
     let userProfile: any = null;
+    let recommendedCourts: any[] = [];
+    let activeMatches: any[] = [];
 
     if (isDbHealthy) {
       try {
@@ -773,6 +775,30 @@ Reglas:
           hora: p.match.time,
           cancha: p.match.court?.name || "Cancha genérica",
         }));
+
+        // 4. Canchas deportivas recomendadas para el usuario
+        recommendedCourts = await this.prisma.courts.findMany({
+          where: {
+            sport: {
+              in: userProfile?.preferred_sports || ["Fútbol", "Pádel"],
+            },
+          },
+          take: 3,
+        });
+
+        // 5. Partidos públicos/abiertos disponibles (Pichangas)
+        activeMatches = await this.prisma.matches.findMany({
+          where: {
+            sport: {
+              in: userProfile?.preferred_sports || ["Fútbol", "Pádel"],
+            },
+            status: "OPEN",
+          },
+          include: {
+            court: true,
+          },
+          take: 3,
+        });
       } catch (dbErr) {
         this.logger.error(`Database query failed in coachChat: ${dbErr.message}`);
         // Keep fallback values to avoid crashing/hanging the request
@@ -810,6 +836,31 @@ Reglas:
           : "No especificadas",
     };
 
+    const userContext: UserPersonalizedContext = {
+      name: userProfileContext.nombre,
+      city: userProfileContext.ciudad,
+      preferredSports: userProfileContext.deportes_preferidos.map((s: string) => ({
+        sport: s,
+        level: userProfileContext.nivel,
+      })),
+      mutualMatches: [],
+      recommendedCourts: recommendedCourts.map((c) => ({
+        name: c.name,
+        sport: c.sport,
+        price: c.price_per_hour,
+        rating: c.rating,
+        district: c.district || "Surco",
+      })),
+      activeMatches: activeMatches.map((m) => ({
+        title: m.title,
+        sport: m.sport,
+        date: m.date,
+        time: m.time,
+        requiredLevel: m.required_level,
+        courtName: m.court?.name || "Sin cancha",
+      })),
+    };
+
     const coachPrompt = `Eres Sporty Coach, un entrenador e instructor de alto rendimiento deportivo de SportMatch Connect.
 Estás chateando 1-a-1 con un atleta y necesitas darle respuestas personalizadas basadas en su perfil, ubicación y contexto.
 
@@ -836,6 +887,7 @@ Mantén la respuesta concisa y al grano (máx 150 palabras). Da consejos prácti
         history: history,
         language: language,
         temperature: 0.7,
+        userContext,
       });
     } catch (err) {
       // Fallback local por si Vertex AI falla o no está configurado (por ejemplo, en modo Demo sin API keys)
