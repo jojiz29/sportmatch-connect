@@ -99,13 +99,22 @@ export class AiConfigService implements OnModuleInit {
           );
         }
       } else if (credentialsPath) {
-        const absolutePath = path.isAbsolute(credentialsPath)
+        let absolutePath = path.isAbsolute(credentialsPath)
           ? credentialsPath
           : path.resolve(process.cwd(), credentialsPath);
 
         if (!fs.existsSync(absolutePath)) {
+          // Intentamos resolver relativo a la raíz del backend (server/)
+          // Soportando así la ejecución unificada con dev-stack.mjs desde la raíz del repo.
+          const alternativePath = path.resolve(__dirname, "..", "..", credentialsPath);
+          if (fs.existsSync(alternativePath)) {
+            absolutePath = alternativePath;
+          }
+        }
+
+        if (!fs.existsSync(absolutePath)) {
           throw new Error(
-            "El archivo de credenciales de Vertex AI no existe. " +
+            `El archivo de credenciales de Vertex AI no existe en la ruta: ${absolutePath}. ` +
               "Verifica la variable GOOGLE_APPLICATION_CREDENTIALS.",
           );
         }
