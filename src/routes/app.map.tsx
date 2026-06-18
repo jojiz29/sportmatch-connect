@@ -600,17 +600,10 @@ function MapPage() {
   }, [sortedBusinesses, selectedDistrict]);
 
   const filteredVenues = useMemo(() => {
-    const businessOwnerIds = new Set(
-      (data.businesses || [])
-        .filter((business) => business.user_role === "BUSINESS")
-        .map((business) => business.id),
-    );
-    // El mapa comercial solo muestra sedes creadas y administradas por una cuenta empresa.
+    // El mapa comercial muestra sedes creadas por cuentas empresa. No dependemos de que
+    // el perfil del negocio llegue en la consulta lateral, porque esa lista puede venir paginada.
     const list = (data.venues || []).filter(
-      (venue) =>
-        Boolean(venue.owner_id) &&
-        businessOwnerIds.has(venue.owner_id as string) &&
-        hasValidLimaCoordinates(venue),
+      (venue) => Boolean(venue.owner_id) && hasValidLimaCoordinates(venue),
     );
     if (!selectedDistrict) return list;
     return list.filter((c) =>

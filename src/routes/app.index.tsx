@@ -1,7 +1,6 @@
 // === BLOQUE: IMPORTS — Dependencias del dashboard principal ===
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -1626,11 +1625,6 @@ function DailySportsPlan({
   const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
   const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
-  const mapCenter: [number, number] = selectedVenue
-    ? [selectedVenue.lat, selectedVenue.lng]
-    : venues[0]
-      ? [venues[0].lat, venues[0].lng]
-      : [-12.0464, -77.0428];
   const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
   const weeklyChallenges = [
     {
@@ -1643,22 +1637,30 @@ function DailySportsPlan({
         overrideChallenge?.reward ??
         plan?.dailyChallenge.rewardHint ??
         "Se mostrara cuando el reto este listo",
-      statusLabel: overrideChallenge
-        ? "Actualizado"
-        : plan
-          ? "Generado"
-          : isLoading
-            ? "Cargando"
-            : "No cargado",
+      statusLabel: selectedVenue
+        ? overrideChallenge
+          ? "Actualizado con sede"
+          : "Sede seleccionada"
+        : overrideChallenge
+          ? "Actualizado"
+          : plan
+            ? "Pendiente de sede"
+            : isLoading
+              ? "Cargando"
+              : "No cargado",
       canRefresh: Boolean(plan) && refreshesRemaining > 0,
     },
     {
       title: "Reto validable en sede",
       description: venueRecommendation
-        ? `Elige una sede cercana como ${venueRecommendation.title} para realizar una actividad fisica. La empresa responsable validara el cumplimiento.`
-        : "Elige una cancha, establecimiento o gym cercano para realizar el reto. La empresa responsable validara si cumpliste la actividad.",
+        ? `Realiza una actividad fisica en una sede como ${venueRecommendation.title}. La empresa responsable validara el cumplimiento.`
+        : "Realiza una actividad fisica en una cancha, establecimiento o gym. La empresa responsable validara si cumpliste la actividad.",
       reward: "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
-      statusLabel: selectedVenue ? "Sede seleccionada" : "Pendiente de sede",
+      statusLabel: selectedVenue
+        ? "Sede seleccionada"
+        : isLoading
+          ? "Cargando"
+          : "Pendiente de sede",
       canRefresh: false,
     },
   ];
@@ -1746,27 +1748,25 @@ function DailySportsPlan({
               <div className="mt-3 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-xs text-primary">
                 Recompensa: {challenge.reward}
               </div>
-              {index === 1 && (
-                <div className="mt-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsVenuePickerOpen(true)}
-                    disabled={venues.length === 0}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-left text-xs text-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-                  >
-                    {selectedVenue
-                      ? selectedVenue.name
-                      : venues.length > 0
-                        ? "Escoger sede en el mapa"
-                        : "No hay sedes fisicas disponibles"}
-                  </button>
-                  <p className="text-[11px] text-muted-foreground">
-                    {selectedVenue
-                      ? `${selectedVenue.name} quedara como sede responsable de validacion.`
-                      : "Cuando elijas una sede, la empresa asociada podra validar el cumplimiento."}
-                  </p>
-                </div>
-              )}
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setIsVenuePickerOpen(true)}
+                  disabled={venues.length === 0}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-left text-xs text-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  {selectedVenue
+                    ? selectedVenue.name
+                    : venues.length > 0
+                      ? "Escoger sede para validacion"
+                      : "No hay sedes fisicas disponibles"}
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  {selectedVenue
+                    ? `${selectedVenue.name} quedara como sede responsable de validacion.`
+                    : "La empresa de la sede seleccionada podra aprobar o rechazar el cumplimiento."}
+                </p>
+              </div>
               {index === 0 && (
                 <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <span className="text-[11px] text-muted-foreground">
@@ -1780,7 +1780,7 @@ function DailySportsPlan({
                     disabled={!challenge.canRefresh}
                     className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Actualizar reto
+                    {challenge.canRefresh ? "Actualizar reto principal" : "Sin actualizaciones"}
                   </button>
                 </div>
               )}
@@ -1789,88 +1789,72 @@ function DailySportsPlan({
         </div>
 
         <Dialog open={isVenuePickerOpen} onOpenChange={setIsVenuePickerOpen}>
-          <DialogContent className="max-w-4xl bg-background border border-border/60 rounded-3xl p-0 overflow-hidden">
-            <DialogHeader className="p-5 pb-3">
+          <DialogContent className="max-w-3xl bg-background border border-border/60 rounded-3xl p-6">
+            <DialogHeader>
               <DialogTitle className="font-heading text-2xl tracking-wide">
-                Escoge la sede del reto
+                Escoge la sede para validar tus retos
               </DialogTitle>
               <DialogDescription>
                 Selecciona la cancha, establecimiento o gym donde realizaras el reto. La empresa
-                responsable revisara y aprobara si cumpliste la actividad.
+                responsable podra aprobar o rechazar el cumplimiento desde su panel.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid lg:grid-cols-[1.2fr_0.8fr] border-t border-border/60">
-              <div className="h-[360px] bg-muted">
-                <MapContainer center={mapCenter} zoom={13} className="h-full w-full">
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {venues.map((venue) => {
-                    const isSelected = venue.id === selectedVenueId;
-                    return (
-                      <CircleMarker
-                        key={venue.id}
-                        center={[venue.lat, venue.lng]}
-                        radius={isSelected ? 12 : 9}
-                        pathOptions={{
-                          color: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
-                          fillColor: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
-                          fillOpacity: 0.7,
-                        }}
-                        eventHandlers={{ click: () => onSelectVenue(venue.id) }}
+
+            <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs text-muted-foreground">
+              Esta seleccion aplica para los 2 retos semanales. La sede queda como responsable de
+              supervisar la evidencia o asistencia del usuario.
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 max-h-[420px] overflow-y-auto pr-1">
+              {venues.map((venue) => {
+                const isSelected = venue.id === selectedVenueId;
+                const venueDistance = (venue as Court & { distance?: number }).distance;
+                const distanceText =
+                  typeof venueDistance === "number"
+                    ? `${venueDistance.toFixed(1)} km`
+                    : venue.district || "Sede disponible";
+                return (
+                  <button
+                    key={venue.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectVenue(venue.id);
+                      setIsVenuePickerOpen(false);
+                    }}
+                    className={`group rounded-2xl border p-4 text-left transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-glow"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-accent/40"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-foreground truncate">
+                          {venue.name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {venue.sport} · {distanceText}
+                        </div>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
                       >
-                        <Popup>
-                          <div className="min-w-[180px] text-sm">
-                            <div className="font-bold">{venue.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {venue.district || venue.address}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onSelectVenue(venue.id);
-                                setIsVenuePickerOpen(false);
-                              }}
-                              className="mt-2 w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"
-                            >
-                              Usar esta sede
-                            </button>
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    );
-                  })}
-                </MapContainer>
-              </div>
-              <div className="max-h-[360px] overflow-y-auto p-4 space-y-2">
-                {venues.map((venue) => {
-                  const isSelected = venue.id === selectedVenueId;
-                  return (
-                    <button
-                      key={venue.id}
-                      type="button"
-                      onClick={() => {
-                        onSelectVenue(venue.id);
-                        setIsVenuePickerOpen(false);
-                      }}
-                      className={`w-full rounded-2xl border p-3 text-left transition-colors ${
-                        isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-card hover:bg-accent"
-                      }`}
-                    >
-                      <div className="text-sm font-bold text-foreground">{venue.name}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {venue.sport} · {venue.district || venue.address || "Sede deportiva"}
-                      </div>
-                      <div className="mt-2 text-[11px] text-muted-foreground">
-                        Empresa responsable: validara asistencia y cumplimiento del reto.
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                        {isSelected ? "Elegida" : "Elegir"}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-[11px] text-muted-foreground">
+                      {venue.address || "Direccion registrada por la empresa"}
+                    </div>
+                    <div className="mt-3 rounded-xl bg-background/60 border border-border/50 px-3 py-2 text-[11px] text-muted-foreground">
+                      Empresa responsable: validara asistencia y cumplimiento del reto.
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </DialogContent>
         </Dialog>
