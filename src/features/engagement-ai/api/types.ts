@@ -192,6 +192,37 @@ export interface EngagementChallenge {
   completed_at?: string | null;
 }
 
+export type BusinessChallengeValidationStatus = "pending" | "approved" | "rejected";
+
+export interface BusinessVenueChallenge {
+  id: string;
+  title: string;
+  description: string;
+  reward_hint?: string | null;
+  status: EngagementChallenge["status"];
+  validationStatus: BusinessChallengeValidationStatus;
+  validationNote?: string | null;
+  rewardFitcoins: number;
+  started_at: string;
+  completed_at?: string | null;
+  metadata: Record<string, unknown>;
+  user: {
+    id: string;
+    name?: string | null;
+    avatar_url?: string | null;
+    city?: string | null;
+    level?: number | null;
+    preferred_sports?: string[];
+  } | null;
+  venue: {
+    id: string;
+    name: string;
+    sport?: string | null;
+    district?: string | null;
+    address?: string | null;
+  };
+}
+
 export interface EngagementAchievementInput {
   name: string;
   description: string;

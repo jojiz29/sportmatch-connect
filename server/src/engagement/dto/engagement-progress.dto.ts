@@ -32,6 +32,21 @@ export class SaveEngagementChallengeDto {
 }
 
 /**
+ * Estado que una empresa puede asignar a un reto realizado en una de sus sedes.
+ * Se guarda en metadata para respetar el constraint existente de status.
+ */
+export class UpdateBusinessChallengeValidationDto {
+  @IsIn(["pending", "approved", "rejected"])
+  status!: "pending" | "approved" | "rejected";
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  @Transform(trimText)
+  note?: string;
+}
+
+/**
  * Logro sugerido por el motor de recomendaciones.
  * Guardarlo indica interes; desbloquearlo puede agregarse luego desde reglas reales.
  */

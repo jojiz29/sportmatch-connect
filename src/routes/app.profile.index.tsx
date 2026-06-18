@@ -41,6 +41,7 @@ import {
   DialogTrigger,
 } from "@/shared/ui/dialog";
 import { SportSelectionGrid } from "@/components/sports/SportSelectionGrid";
+import { EngagementAchievement, getEngagementAchievements } from "@/features/engagement-ai";
 
 export const Route = createFileRoute("/app/profile/")({
   head: () => ({ meta: [{ title: "Perfil — SportMatch" }] }),
@@ -93,6 +94,7 @@ function Profile() {
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [unlockedKeys, setUnlockedKeys] = useState<string[]>([]);
+  const [validatedTrophies, setValidatedTrophies] = useState<EngagementAchievement[]>([]);
   const [barWidth, setBarWidth] = useState(0);
 
   useEffect(() => {
@@ -102,6 +104,33 @@ function Profile() {
       }, 100);
       return () => clearTimeout(timer);
     }
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    let active = true;
+
+    async function loadValidatedTrophies() {
+      try {
+        // Trofeos creados por empresas al aprobar retos semanales en sus sedes.
+        const achievements = await getEngagementAchievements();
+        if (!active) return;
+        setValidatedTrophies(
+          achievements.filter(
+            (achievement) =>
+              achievement.status === "unlocked" && achievement.source === "business_validation",
+          ),
+        );
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn("No se pudieron cargar trofeos validados:", err);
+        if (active) setValidatedTrophies([]);
+      }
+    }
+
+    loadValidatedTrophies();
+    return () => {
+      active = false;
+    };
   }, [profile]);
 
   const { analyzeImage } = useNSFWJS();
@@ -1064,6 +1093,30 @@ function Profile() {
               );
             })}
           </div>
+          {validatedTrophies.length > 0 && (
+            <div className="mt-5 border-t border-border/50 pt-4">
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-neon">
+                Trofeos validados por empresas
+              </h4>
+              <div className="space-y-2">
+                {validatedTrophies.slice(0, 4).map((trophy) => (
+                  <div
+                    key={trophy.id}
+                    className="rounded-xl border border-neon/25 bg-neon/10 p-3 text-xs"
+                  >
+                    <div className="flex items-center gap-2 font-bold text-foreground">
+                      <Trophy className="h-4 w-4 text-neon" />
+                      {trophy.name}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-muted-foreground">{trophy.description}</p>
+                    <span className="mt-2 inline-flex rounded-full bg-neon/15 px-2 py-0.5 text-[10px] font-bold uppercase text-neon">
+                      Completado
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* === Columna: Historial reciente de partidos === */}

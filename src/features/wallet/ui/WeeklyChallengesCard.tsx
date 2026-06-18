@@ -1,11 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Loader2, Check, Zap } from "lucide-react";
+import { Trophy, Loader2, Check, MapPin, Clock, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/shared/api/supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { cn } from "@/lib/utils";
+import { backendApi } from "@/shared/api/backendApi";
+import type { Court } from "@/entities/types";
+import {
+  EngagementChallenge,
+  getEngagementChallenges,
+  saveEngagementChallenge,
+} from "@/features/engagement-ai";
 
 interface DBWeeklyChallenge {
   id: string;
@@ -19,6 +25,45 @@ interface DBWeeklyChallenge {
   completed_at: string | null;
 }
 
+type VenueValidationStatus = "pending" | "approved" | "rejected";
+
+interface VenueValidationState {
+  status: VenueValidationStatus;
+  venueName?: string;
+  engagementChallengeId: string;
+}
+
+function mapWeeklyVenueValidations(items: EngagementChallenge[]) {
+  return items.reduce<Record<string, VenueValidationState>>((acc, item) => {
+    const weeklyChallengeId = item.metadata?.weeklyChallengeId;
+    if (typeof weeklyChallengeId !== "string") return acc;
+
+    const status =
+      item.metadata?.validationStatus === "approved" ||
+      item.metadata?.validationStatus === "rejected" ||
+      item.metadata?.validationStatus === "pending"
+        ? item.metadata.validationStatus
+        : item.status === "completed"
+          ? "approved"
+          : item.status === "dismissed"
+            ? "rejected"
+            : "pending";
+
+    if (!acc[weeklyChallengeId]) {
+      acc[weeklyChallengeId] = {
+        status,
+        venueName:
+          typeof item.metadata?.selectedVenueName === "string"
+            ? item.metadata.selectedVenueName
+            : undefined,
+        engagementChallengeId: item.id,
+      };
+    }
+
+    return acc;
+  }, {});
+}
+
 export function WeeklyChallengesCard({
   className,
   maxItems,
@@ -30,24 +75,80 @@ export function WeeklyChallengesCard({
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [challenges, setChallenges] = useState<DBWeeklyChallenge[]>([]);
+  const [venues, setVenues] = useState<Court[]>([]);
+  const [selectedVenueByChallenge, setSelectedVenueByChallenge] = useState<Record<string, string>>(
+    {},
+  );
+  const [validationByChallenge, setValidationByChallenge] = useState<
+    Record<string, VenueValidationState>
+  >({});
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [savingVenueId, setSavingVenueId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    loadChallenges();
-  }, [user]);
-
-  const loadChallenges = async () => {
+  const loadChallenges = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc("get_weekly_challenges");
+      const [{ data, error }, courtsResponse, engagementChallenges] = await Promise.all([
+        supabase.rpc("get_weekly_challenges"),
+        backendApi.courts.getAll().catch(() => null),
+        getEngagementChallenges().catch(() => [] as EngagementChallenge[]),
+      ]);
       if (error) throw error;
       setChallenges((data || []) as DBWeeklyChallenge[]);
+      setVenues(Array.isArray(courtsResponse?.data) ? courtsResponse.data : []);
+      setValidationByChallenge(mapWeeklyVenueValidations(engagementChallenges));
     } catch (err) {
       console.error("Error loading weekly challenges:", err);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    loadChallenges();
+  }, [loadChallenges, user]);
+
+  const handleSelectVenueForChallenge = async (challenge: DBWeeklyChallenge) => {
+    const selectedVenueId = selectedVenueByChallenge[challenge.id];
+    const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
+    if (!selectedVenue) return;
+
+    setSavingVenueId(challenge.id);
+    try {
+      // Creamos una solicitud de validación empresarial sin alterar el reto semanal base.
+      // La empresa verá este registro en "Mis sedes" y decidirá si el usuario cumplió.
+      const saved = await saveEngagementChallenge({
+        title: challenge.description || typeLabel(challenge.challenge_type),
+        description:
+          challenge.description ||
+          `Reto semanal ${typeLabel(challenge.challenge_type)} validable en sede.`,
+        rewardHint: `${challenge.reward_xp} XP · ${challenge.reward_fitcoins} FitCoins`,
+        metadata: {
+          source: "home_weekly_challenge",
+          weeklyChallengeId: challenge.id,
+          challengeType: challenge.challenge_type,
+          selectedVenueId: selectedVenue.id,
+          selectedVenueName: selectedVenue.name,
+          validationStatus: "pending",
+          rewardFitcoins: challenge.reward_fitcoins,
+          trophyName: `Trofeo semanal: ${challenge.description || typeLabel(challenge.challenge_type)}`,
+        },
+      });
+
+      setValidationByChallenge((current) => ({
+        ...current,
+        [challenge.id]: {
+          status: "pending",
+          venueName: selectedVenue.name,
+          engagementChallengeId: saved.id,
+        },
+      }));
+    } catch (err) {
+      console.error("Error saving venue validation:", err);
+    } finally {
+      setSavingVenueId(null);
     }
   };
 
@@ -105,6 +206,9 @@ export function WeeklyChallengesCard({
             const progress = c.goal > 0 ? Math.min(c.progress / c.goal, 1) : 0;
             const isComplete = c.progress >= c.goal;
             const isClaiming = claimingId === c.id;
+            const validation = validationByChallenge[c.id];
+            const isVenueSaving = savingVenueId === c.id;
+            const canChooseVenue = !validation || validation.status === "rejected";
 
             return (
               <div key={c.id} className="space-y-1.5">
@@ -142,6 +246,72 @@ export function WeeklyChallengesCard({
                     </button>
                   ) : null}
                 </div>
+                {validation ? (
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs",
+                      validation.status === "approved"
+                        ? "border-neon/30 bg-neon/10 text-neon"
+                        : validation.status === "rejected"
+                          ? "border-red-500/30 bg-red-500/10 text-red-400"
+                          : "border-warning/30 bg-warning/10 text-warning",
+                    )}
+                  >
+                    {validation.status === "approved" ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : validation.status === "rejected" ? (
+                      <XCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      <Clock className="h-3.5 w-3.5" />
+                    )}
+                    <span className="font-semibold">
+                      {validation.status === "approved"
+                        ? "Validado por la empresa"
+                        : validation.status === "rejected"
+                          ? "No cumplió, puedes intentar otra sede"
+                          : "Pendiente de validación empresarial"}
+                    </span>
+                    {validation.venueName && (
+                      <span className="truncate text-muted-foreground">
+                        · {validation.venueName}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
+                {canChooseVenue && venues.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <select
+                      value={selectedVenueByChallenge[c.id] ?? ""}
+                      onChange={(event) =>
+                        setSelectedVenueByChallenge((current) => ({
+                          ...current,
+                          [c.id]: event.target.value,
+                        }))
+                      }
+                      className="min-h-[36px] rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    >
+                      <option value="">Elegir sede para validación</option>
+                      {venues.slice(0, 30).map((venue) => (
+                        <option key={venue.id} value={venue.id}>
+                          {venue.name} {venue.district ? `- ${venue.district}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVenueForChallenge(c)}
+                      disabled={!selectedVenueByChallenge[c.id] || isVenueSaving}
+                      className="inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-xl border border-primary/30 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                    >
+                      {isVenueSaving ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <MapPin className="h-3.5 w-3.5" />
+                      )}
+                      Asignar
+                    </button>
+                  </div>
+                )}
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <motion.div
                     className={cn(

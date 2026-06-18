@@ -89,7 +89,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await signOut();
-    navigate({ to: "/login" });
+    // Despues de purgar las stores, replace evita volver con "atrás" a una vista autenticada.
+    await navigate({ to: "/login", replace: true });
+    if (window.location.pathname !== "/login") {
+      window.location.assign("/login");
+    }
   };
 
   if (isRegister) {

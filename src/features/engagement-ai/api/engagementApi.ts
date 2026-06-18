@@ -2,6 +2,8 @@ import { supabase } from "@/shared/api/supabase";
 import {
   AiRecommendationResponse,
   AiRecommendationType,
+  BusinessChallengeValidationStatus,
+  BusinessVenueChallenge,
   EngagementAnalytics,
   EngagementAchievement,
   EngagementAchievementEvaluation,
@@ -213,6 +215,44 @@ export async function getEngagementChallenges(): Promise<EngagementChallenge[]> 
   }
 
   return response.json() as Promise<EngagementChallenge[]>;
+}
+
+/** Lista retos que usuarios asignaron a sedes de la empresa autenticada. */
+export async function getBusinessVenueChallenges(): Promise<BusinessVenueChallenge[]> {
+  const authorization = await getAuthorizationHeader();
+  const response = await fetch(`${API_URL}/engagement/business/venue-challenges`, {
+    headers: authorization,
+  });
+
+  if (!response.ok) {
+    throw new Error(`No se pudo listar retos de sedes (${response.status}).`);
+  }
+
+  return response.json() as Promise<BusinessVenueChallenge[]>;
+}
+
+/** Actualiza la validacion empresarial de un reto realizado en una sede propia. */
+export async function updateBusinessVenueChallengeStatus(
+  challengeId: string,
+  status: BusinessChallengeValidationStatus,
+  note?: string,
+): Promise<EngagementChallenge> {
+  const authorization = await getAuthorizationHeader();
+  const response = await fetch(
+    `${API_URL}/engagement/business/venue-challenges/${challengeId}/status`,
+    {
+      method: "POST",
+      headers: { ...authorization, "Content-Type": "application/json" },
+      body: JSON.stringify({ status, note }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(body.message || `No se pudo validar el reto (${response.status}).`);
+  }
+
+  return response.json() as Promise<EngagementChallenge>;
 }
 
 /** Completa un reto persistido. */
