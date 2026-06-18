@@ -192,6 +192,27 @@ function getWeeklyChallengeKey(userId: string) {
   return `${userId}_${bogotaDate.toISOString().slice(0, 10)}`;
 }
 
+function getWeeklyChallengeResetDate(): Date {
+  const todayInBogota = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const bogotaDate = new Date(`${todayInBogota}T00:00:00-05:00`);
+  const day = bogotaDate.getDay() || 7;
+  const nextMonday = new Date(bogotaDate);
+  nextMonday.setDate(bogotaDate.getDate() + (8 - day));
+  return nextMonday;
+}
+
+function getWeeklyChallengeCountdown() {
+  const remainingMs = Math.max(0, getWeeklyChallengeResetDate().getTime() - Date.now());
+  const days = Math.floor(remainingMs / 86_400_000);
+  const hours = Math.floor((remainingMs % 86_400_000) / 3_600_000);
+  return { days, hours };
+}
+
 function getWeeklyRefreshCounts(userId: string): number[] {
   if (typeof window === "undefined") return [0, 0];
   const raw = window.localStorage.getItem(
@@ -280,6 +301,25 @@ function setWeeklySelectedVenues(userId: string, venueIds: string[]) {
     `sportmatch_weekly_challenge_venue_${getWeeklyChallengeKey(userId)}`,
     JSON.stringify([venueIds[0] ?? "", venueIds[1] ?? ""]),
   );
+}
+
+function getUserSports(user: User | null): string[] {
+  if (!user) return [];
+  const preferredSports = user.preferred_sports ?? [];
+  const weightedSports = Object.entries(user.sport_preferences?.sports_matrix ?? {})
+    .filter(([, config]) => Number(config.weight ?? 0) > 0)
+    .map(([sport]) => sport);
+  return [...new Set([...preferredSports, ...weightedSports].map((sport) => sport.trim()))].filter(
+    Boolean,
+  );
+}
+
+function getSportAffinity(user: User | null, sport: string): number {
+  if (!user || !sport) return 0;
+  const sports = getUserSports(user);
+  if (sports.length === 0) return 0;
+  if (sports.some((userSport) => userSport.toLowerCase() === sport.toLowerCase())) return 1;
+  return 0;
 }
 
 function buildWeeklyChallengeRefreshPair(
@@ -431,11 +471,24 @@ function publicMatchToDashboardMatch(publicMatch: PublicMatch): Match {
 
 function scoreRecommendedMatch(match: Match, user: User | null): number {
   if (!user) return 0;
-  const sameSport = user.preferred_sports?.includes(match.sport as never) ? 50 : 0;
+  const userSports = getUserSports(user);
+  const sportAffinity = getSportAffinity(user, match.sport);
+  if (userSports.length > 0 && sportAffinity === 0) return 0;
+
+  const matchDate = new Date(`${match.date}T${match.time || "00:00"}`);
+  if (Number.isNaN(matchDate.getTime())) return 0;
+  const now = Date.now();
+  const sixMonthsFromNow = now + 180 * 24 * 60 * 60 * 1000;
+  if (matchDate.getTime() < now || matchDate.getTime() > sixMonthsFromNow) return 0;
+
+  const sameSport = sportAffinity ? 55 : 10;
   const sameLevel =
-    String(user.level).toLowerCase() === String(match.required_level).toLowerCase() ? 30 : 0;
+    String(user.level).toLowerCase() === String(match.required_level).toLowerCase() ? 25 : 8;
   const openBonus = match.status !== "Full" && match.status !== "Finished" ? 20 : 0;
-  return sameSport + sameLevel + openBonus;
+  const availabilityBonus = match.current_players?.length
+    ? Math.max(0, 10 - (match.current_players.length / match.max_players) * 10)
+    : 10;
+  return sameSport + sameLevel + openBonus + availabilityBonus;
 }
 
 function scoreNearbyPlayer(
@@ -454,11 +507,9 @@ function scoreNearbyPlayer(
       : player.distance_km;
   const distanceScore =
     typeof distance === "number" ? Math.max(0, 60 - Math.min(distance, 60)) : 15;
-  const sportScore = player.preferred_sports?.some((sport) =>
-    user?.preferred_sports?.includes(sport),
-  )
-    ? 25
-    : 0;
+  const userSports = getUserSports(user);
+  const sharesSport = player.preferred_sports?.some((sport) => getSportAffinity(user, sport) > 0);
+  const sportScore = sharesSport ? 30 : userSports.length > 0 ? -100 : 0;
   const trustScore = Math.min(player.trust_score ?? 0, 100) / 10;
   return { distance, score: distanceScore + sportScore + trustScore };
 }
@@ -473,7 +524,9 @@ function scoreNearbyCourt(
     : undefined;
   const distanceScore =
     typeof distance === "number" ? Math.max(0, 70 - Math.min(distance, 70)) : 20;
-  const sportScore = user?.preferred_sports?.includes(court.sport as never) ? 25 : 0;
+  const userSports = getUserSports(user);
+  const sportAffinity = getSportAffinity(user, court.sport);
+  const sportScore = sportAffinity ? 30 : userSports.length > 0 ? -100 : 0;
   const ratingScore = Math.round((court.rating ?? 4) * 2);
   return { distance, score: distanceScore + sportScore + ratingScore };
 }
@@ -575,6 +628,7 @@ function Dashboard() {
     cachedInitialPlan ? "ready" : "idle",
   );
   const [dailyPlanRefreshKey, setDailyPlanRefreshKey] = useState(0);
+  const [weeklyCountdown, setWeeklyCountdown] = useState(getWeeklyChallengeCountdown);
   const [challengeRefreshCounts, setChallengeRefreshCounts] = useState<number[]>(
     user ? getWeeklyRefreshCounts(user.id) : [0, 0],
   );
@@ -590,6 +644,14 @@ function Dashboard() {
   useEffect(() => {
     initWallet();
   }, [initWallet]);
+
+  useEffect(() => {
+    const intervalId = globalThis.setInterval(
+      () => setWeeklyCountdown(getWeeklyChallengeCountdown()),
+      60_000,
+    );
+    return () => globalThis.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -697,6 +759,60 @@ function Dashboard() {
         ? `${venue.name} validara tu actividad cuando la completes.`
         : "La empresa responsable validara tu actividad.",
     });
+  };
+
+  const handleTestRegenerateWeeklyChallenges = async () => {
+    if (!user || refreshingChallengeIndexes.length > 0) return;
+    const indexes = [0, 1];
+    setRefreshingChallengeIndexes(indexes);
+
+    try {
+      // Boton de prueba: fuerza nuevos retos con Vertex sin esperar al lunes.
+      // Se persisten como la version actual de la semana para validar el flujo completo.
+      const generatedChallenges = await Promise.all(
+        indexes.map(async (challengeIndex) => ({
+          challengeIndex,
+          challenge: await generateWeeklyChallengeWithVertex(challengeIndex, dailyPlan),
+        })),
+      );
+      const nextChallenges: WeeklyChallengeDraft[] = [];
+      for (const { challengeIndex, challenge } of generatedChallenges) {
+        nextChallenges[challengeIndex] = challenge;
+      }
+      const nextCounts = [0, 0];
+      setOverrideChallenges(nextChallenges);
+      setChallengeRefreshCounts(nextCounts);
+      setWeeklyOverrideChallenges(user.id, nextChallenges);
+      setWeeklyRefreshCounts(user.id, nextCounts);
+
+      await Promise.all(
+        generatedChallenges.map(({ challengeIndex, challenge }) =>
+          saveEngagementChallenge({
+            title: challenge.title,
+            description: challenge.description,
+            rewardHint: challenge.reward,
+            metadata: {
+              source: "home_weekly_challenge",
+              weekKey: getWeeklyChallengeKey(user.id),
+              challengeIndex,
+              refreshCount: 0,
+              generationMode: "vertex_test_regeneration",
+            },
+          }).catch((error) => {
+            if (import.meta.env.DEV) console.warn("No se pudo persistir reto de prueba:", error);
+          }),
+        ),
+      );
+
+      toast.success("Retos regenerados con IA", {
+        description: "Se crearon 2 retos nuevos usando tu perfil deportivo.",
+      });
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn("No se pudieron regenerar retos:", error);
+      toast.error("No se pudieron regenerar los retos con IA.");
+    } finally {
+      setRefreshingChallengeIndexes([]);
+    }
   };
 
   // === BLOQUE: Retos semanales ===
@@ -1115,7 +1231,10 @@ function Dashboard() {
   }, [matches, user]);
 
   const publicMatchesForDashboard = useMemo(
-    () => publicMatches.map(publicMatchToDashboardMatch),
+    () =>
+      publicMatches
+        .map(publicMatchToDashboardMatch)
+        .filter((match) => match.status !== "Cancelled" && match.status !== "Finished"),
     [publicMatches],
   );
 
@@ -1154,6 +1273,7 @@ function Dashboard() {
         ...candidate,
         proximity: scoreNearbyPlayer(candidate, user, baseLocation),
       }))
+      .filter((candidate) => candidate.proximity.score > 0)
       .sort((a, b) => b.proximity.score - a.proximity.score)
       .slice(0, 4);
   }, [users, user, baseLocation]);
@@ -1167,6 +1287,7 @@ function Dashboard() {
           ? calculateDistance(baseLocation.lat, baseLocation.lng, c.lat, c.lng)
           : undefined,
       }))
+      .filter((court) => court.proximity.score > 0)
       .sort((a, b) => b.proximity.score - a.proximity.score)
       .slice(0, 5);
   }, [courts, user, baseLocation]);
@@ -1396,9 +1517,11 @@ function Dashboard() {
         status={dailyPlanStatus}
         onRetry={() => setDailyPlanRefreshKey((current) => current + 1)}
         overrideChallenges={overrideChallenges}
+        weeklyCountdown={weeklyCountdown}
         refreshesRemaining={challengeRefreshCounts.map((count) => Math.max(0, 1 - count))}
         refreshingChallengeIndexes={refreshingChallengeIndexes}
         onRefreshChallenge={handleRefreshWeeklyChallenge}
+        onTestRegenerateChallenges={handleTestRegenerateWeeklyChallenges}
         venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
         selectedVenueIds={selectedWeeklyVenueIds}
         onSelectVenue={handleSelectWeeklyVenue}
@@ -1913,9 +2036,11 @@ function DailySportsPlan({
   status,
   onRetry,
   overrideChallenges,
+  weeklyCountdown,
   refreshesRemaining,
   refreshingChallengeIndexes,
   onRefreshChallenge,
+  onTestRegenerateChallenges,
   venues,
   selectedVenueIds,
   onSelectVenue,
@@ -1924,9 +2049,11 @@ function DailySportsPlan({
   status: DailyPlanStatus;
   onRetry: () => void;
   overrideChallenges: WeeklyChallengeDraft[];
+  weeklyCountdown: { days: number; hours: number };
   refreshesRemaining: number[];
   refreshingChallengeIndexes: number[];
   onRefreshChallenge: (challengeIndex: number) => void;
+  onTestRegenerateChallenges: () => void;
   venues: Court[];
   selectedVenueIds: string[];
   onSelectVenue: (challengeIndex: number, venueId: string) => void;
@@ -2051,8 +2178,22 @@ function DailySportsPlan({
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-primary/10 text-primary border border-primary/20 px-3 py-1 text-xs font-bold">
-            Maximo 2 por semana
+            Reinicia en {weeklyCountdown.days}d {weeklyCountdown.hours}h
           </span>
+        </div>
+        <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-background/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Los retos se renuevan automaticamente cada lunes a las 00:00. Para pruebas puedes pedir
+            2 retos nuevos sin esperar al reinicio semanal.
+          </p>
+          <button
+            type="button"
+            onClick={onTestRegenerateChallenges}
+            disabled={refreshingChallengeIndexes.length > 0}
+            className="shrink-0 rounded-xl border border-primary/30 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+          >
+            {refreshingChallengeIndexes.length > 0 ? "Generando retos..." : "Reiniciar retos"}
+          </button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-3">
@@ -2240,7 +2381,7 @@ function ChallengeVenueMap({
           <div className="absolute inset-0 z-[500] grid place-items-center bg-background/80 backdrop-blur-sm">
             <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground shadow-card">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Cargando sedes...
+              Renderizando mapa y sedes...
             </div>
           </div>
         )}
@@ -2255,9 +2396,6 @@ function ChallengeVenueMap({
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            eventHandlers={{
-              load: () => setIsMapReady(true),
-            }}
           />
           {venues.map((venue) => {
             const isSelected = venue.id === selectedVenueId;
