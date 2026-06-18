@@ -1,6 +1,7 @@
 // === BLOQUE: IMPORTS — Dependencias del dashboard principal ===
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 
 import { apiClient } from "@/shared/api/apiClient";
 import { backendApi } from "@/shared/api/backendApi";
@@ -41,6 +42,7 @@ import { getTodayAiRecommendations, type AiRecommendationResponse } from "@/feat
 import { usePublicMatchStore, type PublicMatch } from "@/features/matchmaking/usePublicMatchStore";
 
 type DailyPlanStatus = "idle" | "loading" | "ready" | "error";
+type WeeklyChallengeDraft = { title: string; description: string; reward: string };
 
 // === BLOQUE: Ruta /app/ — createFileRoute con loader ===
 // Carga datos iniciales desde backendApi (con timeout de 8s por llamada):
@@ -173,27 +175,25 @@ function setWeeklyRefreshCount(userId: string, count: number) {
   );
 }
 
-function getWeeklyOverrideChallenge(userId: string) {
-  if (typeof window === "undefined") return null;
+function getWeeklyOverrideChallenges(userId: string): WeeklyChallengeDraft[] {
+  if (typeof window === "undefined") return [];
   const raw = window.localStorage.getItem(
     `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
   );
-  if (!raw) return null;
+  if (!raw) return [];
   try {
-    return JSON.parse(raw) as { title: string; description: string; reward: string };
+    const parsed = JSON.parse(raw) as WeeklyChallengeDraft | WeeklyChallengeDraft[];
+    return Array.isArray(parsed) ? parsed : [parsed];
   } catch {
-    return null;
+    return [];
   }
 }
 
-function setWeeklyOverrideChallenge(
-  userId: string,
-  challenge: { title: string; description: string; reward: string },
-) {
+function setWeeklyOverrideChallenges(userId: string, challenges: WeeklyChallengeDraft[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(
     `sportmatch_weekly_challenge_override_${getWeeklyChallengeKey(userId)}`,
-    JSON.stringify(challenge),
+    JSON.stringify(challenges),
   );
 }
 
@@ -214,28 +214,57 @@ function setWeeklySelectedVenue(userId: string, venueId: string) {
   );
 }
 
-function buildWeeklyChallengeRefresh(plan: AiRecommendationResponse | null, count: number) {
+function buildWeeklyChallengeRefreshPair(
+  plan: AiRecommendationResponse | null,
+  count: number,
+): WeeklyChallengeDraft[] {
   const venue = plan?.recommendations.find((item) => item.type === "venue")?.title;
+  const sport =
+    plan?.recommendations.find((item) => item.type === "sport")?.title ??
+    plan?.dailyChallenge.title ??
+    "tu deporte principal";
   const variants = [
-    {
-      title: "Reto tecnica y constancia",
-      description:
-        "Completa una rutina fisica de 35 minutos: calentamiento, practica tecnica y movilidad final.",
-      reward: "+50 FitCoins sugeridos si completas el reto y luego eliges una sede validable.",
-    },
-    {
-      title: "Reto sede deportiva",
-      description: venue
-        ? `Elige ${venue} u otra sede cercana para realizar una sesion fisica verificable esta semana.`
-        : "Elige una sede cercana para realizar una sesion fisica verificable esta semana.",
-      reward: "+45 FitCoins sugeridos cuando una empresa valide la actividad.",
-    },
-    {
-      title: "Reto partido o entrenamiento",
-      description:
-        "Coordina una actividad fisica con al menos una persona compatible y define lugar, fecha y hora.",
-      reward: "+60 FitCoins sugeridos si conviertes el reto en actividad real.",
-    },
+    [
+      {
+        title: "Reto tecnica y constancia",
+        description: `Completa 35 minutos de practica fisica enfocada en ${sport}: calentamiento, tecnica y movilidad final.`,
+        reward: "+50 FitCoins sugeridos si completas el reto y eliges una sede validable.",
+      },
+      {
+        title: "Reto sede deportiva",
+        description: venue
+          ? `Realiza una sesion verificable en ${venue} u otra sede cercana seleccionada.`
+          : "Realiza una sesion verificable en una sede cercana seleccionada.",
+        reward: "+45 FitCoins sugeridos cuando la empresa valide la actividad.",
+      },
+    ],
+    [
+      {
+        title: "Reto partido o entrenamiento",
+        description:
+          "Coordina una actividad fisica con al menos una persona compatible y define lugar, fecha y hora.",
+        reward: "+60 FitCoins sugeridos si conviertes el reto en actividad real.",
+      },
+      {
+        title: "Reto asistencia validada",
+        description:
+          "Elige una sede, asiste a realizar tu actividad y deja que la empresa confirme el cumplimiento.",
+        reward: "+40 FitCoins sugeridos por validacion aprobada.",
+      },
+    ],
+    [
+      {
+        title: "Reto mejora semanal",
+        description: `Realiza una sesion corta de ${sport} y registra una mejora concreta: resistencia, precision o constancia.`,
+        reward: "+55 FitCoins sugeridos por progreso deportivo.",
+      },
+      {
+        title: "Reto sede responsable",
+        description:
+          "Selecciona una sede fisica para que la empresa supervise el reto y confirme si cumpliste.",
+        reward: "+45 FitCoins sugeridos tras aprobacion de la sede.",
+      },
+    ],
   ];
   return variants[count % variants.length];
 }
@@ -422,8 +451,8 @@ function Dashboard() {
   const [challengeRefreshCount, setChallengeRefreshCount] = useState(
     user ? getWeeklyRefreshCount(user.id) : 0,
   );
-  const [overrideChallenge, setOverrideChallenge] = useState(
-    user ? getWeeklyOverrideChallenge(user.id) : null,
+  const [overrideChallenges, setOverrideChallenges] = useState<WeeklyChallengeDraft[]>(
+    user ? getWeeklyOverrideChallenges(user.id) : [],
   );
   const [selectedWeeklyVenueId, setSelectedWeeklyVenueId] = useState(
     user ? getWeeklySelectedVenue(user.id) : "",
@@ -436,20 +465,20 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     setChallengeRefreshCount(getWeeklyRefreshCount(user.id));
-    setOverrideChallenge(getWeeklyOverrideChallenge(user.id));
+    setOverrideChallenges(getWeeklyOverrideChallenges(user.id));
     setSelectedWeeklyVenueId(getWeeklySelectedVenue(user.id));
   }, [user]);
 
   const handleRefreshWeeklyChallenge = () => {
     if (!user || challengeRefreshCount >= 1) return;
     const nextCount = challengeRefreshCount + 1;
-    const nextChallenge = buildWeeklyChallengeRefresh(dailyPlan, nextCount);
+    const nextChallenges = buildWeeklyChallengeRefreshPair(dailyPlan, nextCount);
     setWeeklyRefreshCount(user.id, nextCount);
-    setWeeklyOverrideChallenge(user.id, nextChallenge);
+    setWeeklyOverrideChallenges(user.id, nextChallenges);
     setChallengeRefreshCount(nextCount);
-    setOverrideChallenge(nextChallenge);
-    toast.success("Reto actualizado", {
-      description: "Usaste tu actualizacion semanal disponible.",
+    setOverrideChallenges(nextChallenges);
+    toast.success("Retos actualizados", {
+      description: "Se actualizaron los 2 retos con base en tu perfil deportivo.",
     });
   };
 
@@ -1087,7 +1116,7 @@ function Dashboard() {
         plan={dailyPlan}
         status={dailyPlanStatus}
         onRetry={() => setDailyPlanRefreshKey((current) => current + 1)}
-        overrideChallenge={overrideChallenge}
+        overrideChallenges={overrideChallenges}
         refreshesRemaining={Math.max(0, 1 - challengeRefreshCount)}
         onRefreshChallenge={handleRefreshWeeklyChallenge}
         venues={closestCourts.filter((court) => isPhysicalVenueSport(court.sport))}
@@ -1603,7 +1632,7 @@ function DailySportsPlan({
   plan,
   status,
   onRetry,
-  overrideChallenge,
+  overrideChallenges,
   refreshesRemaining,
   onRefreshChallenge,
   venues,
@@ -1613,7 +1642,7 @@ function DailySportsPlan({
   plan: AiRecommendationResponse | null;
   status: DailyPlanStatus;
   onRetry: () => void;
-  overrideChallenge: { title: string; description: string; reward: string } | null;
+  overrideChallenges: WeeklyChallengeDraft[];
   refreshesRemaining: number;
   onRefreshChallenge: () => void;
   venues: Court[];
@@ -1626,22 +1655,24 @@ function DailySportsPlan({
   const venueRecommendation = plan?.recommendations.find((item) => item.type === "venue");
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
   const achievement = plan?.achievementIdea.name ?? "Proximo logro deportivo";
+  const primaryOverride = overrideChallenges[0];
+  const venueOverride = overrideChallenges[1];
   const weeklyChallenges = [
     {
-      title: overrideChallenge?.title ?? plan?.dailyChallenge.title ?? "Preparando reto principal",
+      title: primaryOverride?.title ?? plan?.dailyChallenge.title ?? "Preparando reto principal",
       description:
-        overrideChallenge?.description ??
+        primaryOverride?.description ??
         plan?.dailyChallenge.description ??
         "Estamos revisando tu perfil y actividad reciente para proponerte un reto fisico de la semana.",
       reward:
-        overrideChallenge?.reward ??
+        primaryOverride?.reward ??
         plan?.dailyChallenge.rewardHint ??
         "Se mostrara cuando el reto este listo",
       statusLabel: selectedVenue
-        ? overrideChallenge
+        ? primaryOverride
           ? "Actualizado con sede"
           : "Sede seleccionada"
-        : overrideChallenge
+        : primaryOverride
           ? "Actualizado"
           : plan
             ? "Pendiente de sede"
@@ -1651,11 +1682,13 @@ function DailySportsPlan({
       canRefresh: Boolean(plan) && refreshesRemaining > 0,
     },
     {
-      title: "Reto validable en sede",
-      description: venueRecommendation
-        ? `Realiza una actividad fisica en una sede como ${venueRecommendation.title}. La empresa responsable validara el cumplimiento.`
-        : "Realiza una actividad fisica en una cancha, establecimiento o gym. La empresa responsable validara si cumpliste la actividad.",
-      reward: "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
+      title: venueOverride?.title ?? "Reto validable en sede",
+      description:
+        venueOverride?.description ??
+        (venueRecommendation
+          ? `Realiza una actividad fisica en una sede como ${venueRecommendation.title}. La empresa responsable validara el cumplimiento.`
+          : "Realiza una actividad fisica en una cancha, establecimiento o gym. La empresa responsable validara si cumpliste la actividad."),
+      reward: venueOverride?.reward ?? "+40 FitCoins sugeridos cuando la empresa apruebe el reto.",
       statusLabel: selectedVenue
         ? "Sede seleccionada"
         : isLoading
@@ -1780,7 +1813,7 @@ function DailySportsPlan({
                     disabled={!challenge.canRefresh}
                     className="rounded-xl border border-border px-3 py-1.5 text-[11px] font-bold text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {challenge.canRefresh ? "Actualizar reto principal" : "Sin actualizaciones"}
+                    {challenge.canRefresh ? "Actualizar los 2 retos" : "Sin actualizaciones"}
                   </button>
                 </div>
               )}
@@ -1805,7 +1838,15 @@ function DailySportsPlan({
               supervisar la evidencia o asistencia del usuario.
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 max-h-[420px] overflow-y-auto pr-1">
+            <div className="mt-4">
+              <ChallengeVenueMap
+                venues={venues}
+                selectedVenueId={selectedVenueId}
+                onSelectVenue={onSelectVenue}
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 max-h-[300px] overflow-y-auto pr-1">
               {venues.map((venue) => {
                 const isSelected = venue.id === selectedVenueId;
                 const venueDistance = (venue as Court & { distance?: number }).distance;
@@ -1872,6 +1913,80 @@ function DailySportsPlan({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ChallengeVenueMap({
+  venues,
+  selectedVenueId,
+  onSelectVenue,
+}: {
+  venues: Court[];
+  selectedVenueId: string;
+  onSelectVenue: (venueId: string) => void;
+}) {
+  const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
+  const center: [number, number] = selectedVenue
+    ? [selectedVenue.lat, selectedVenue.lng]
+    : venues[0]
+      ? [venues[0].lat, venues[0].lng]
+      : [-12.0464, -77.0428];
+
+  function MapResizer() {
+    const map = useMap();
+    useEffect(() => {
+      const timeoutId = globalThis.setTimeout(() => map.invalidateSize(), 120);
+      return () => globalThis.clearTimeout(timeoutId);
+    }, [map]);
+    useEffect(() => {
+      map.flyTo(center, Math.max(map.getZoom(), 13), { duration: 0.4 });
+    }, [center, map]);
+    return null;
+  }
+
+  return (
+    <div className="h-72 overflow-hidden rounded-2xl border border-border bg-muted">
+      <MapContainer center={center} zoom={13} className="h-full w-full" scrollWheelZoom={false}>
+        <MapResizer />
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {venues.map((venue) => {
+          const isSelected = venue.id === selectedVenueId;
+          return (
+            <CircleMarker
+              key={venue.id}
+              center={[venue.lat, venue.lng]}
+              radius={isSelected ? 12 : 8}
+              pathOptions={{
+                color: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
+                fillColor: isSelected ? "hsl(var(--primary))" : "hsl(var(--neon))",
+                fillOpacity: isSelected ? 0.85 : 0.55,
+                weight: isSelected ? 3 : 2,
+              }}
+              eventHandlers={{ click: () => onSelectVenue(venue.id) }}
+            >
+              <Popup>
+                <div className="min-w-[170px] text-sm">
+                  <div className="font-bold">{venue.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {venue.sport} · {venue.district || venue.address || "Sede deportiva"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelectVenue(venue.id)}
+                    className="mt-2 w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"
+                  >
+                    Seleccionar sede
+                  </button>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+      </MapContainer>
     </div>
   );
 }
