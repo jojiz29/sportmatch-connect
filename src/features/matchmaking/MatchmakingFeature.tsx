@@ -912,15 +912,23 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
                 </button>
                 <button
                   onClick={async () => {
-                    const chatStore = useChatStore.getState();
-                    const chatId = await chatStore.createChat(matchedUser.id);
-                    if (!chatId) {
+                    try {
+                      const chatStore = useChatStore.getState();
+                      const chatId = await chatStore.createChat(matchedUser.id);
+                      if (!chatId) {
+                        toast.error("No se pudo abrir el chat del match");
+                        return;
+                      }
+                      chatStore.setActiveConversation(chatId);
+                      setMatchedUser(null);
+                      navigate({ to: "/app/chat" });
+                    } catch (error) {
+                      console.error("[chat] match-open-no-greet:error", {
+                        targetUserId: matchedUser.id,
+                        error,
+                      });
                       toast.error("No se pudo abrir el chat del match");
-                      return;
                     }
-                    chatStore.setActiveConversation(chatId);
-                    setMatchedUser(null);
-                    navigate({ to: "/app/chat" });
                   }}
                   className="w-full py-3 rounded-xl border border-neon/30 bg-neon/10 text-neon text-sm font-semibold hover:bg-neon/15 cursor-pointer"
                 >

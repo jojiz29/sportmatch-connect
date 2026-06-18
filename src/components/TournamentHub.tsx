@@ -1,7 +1,5 @@
 // === BLOQUE: IMPORTACIONES ===
-// Dependencias: React (hooks useState/useMemo), notificaciones sonner, iconos Lucide, stores de chat y autenticación,
-// datos mock de usuarios, y componentes SquadBuilder/MatchupVersus
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Trophy,
@@ -11,19 +9,16 @@ import {
   Zap,
   Search,
   MessageSquare,
-  UserPlus,
-  Plus,
+  RefreshCw,
+  Sliders,
 } from "lucide-react";
 import { useChatStore } from "@/features/chat/useChatStore";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { MOCK_USERS } from "@/shared/api/apiClient";
-import { SquadBuilder } from "./SquadBuilder";
-import { MatchupVersus } from "./MatchupVersus";
-import { User } from "@/entities/types";
+import { getSquads } from "@/shared/api/squadService";
+import { User, Squad } from "@/entities/types";
 
 // === BLOQUE: INTERFACES DE TIPOS ===
-// Team: representa un equipo con nombre, semilla de logo, puntaje opcional y estado de ganador
-// MatchNode: representa un enfrentamiento entre dos equipos con un ganador opcional
 interface Team {
   id: string;
   name: string;
@@ -31,6 +26,7 @@ interface Team {
   score?: number;
   isWinner?: boolean;
 }
+
 interface MatchNode {
   id: string;
   teamA: Team;
@@ -38,131 +34,379 @@ interface MatchNode {
   winnerId?: string;
 }
 
-// === BLOQUE: EQUIPOS PREDEFINIDOS ===
-// 8 equipos ficticios para poblar la llave de cuartos de final del torneo
-const PRESET_TEAMS: Team[] = [
-  { id: "t1", name: "Real Madrid SportMatch", logoSeed: "real" },
-  { id: "t2", name: "Alianza F.C.", logoSeed: "alianza" },
-  { id: "t3", name: "Sporting Cristal Connect", logoSeed: "cristal" },
-  { id: "t4", name: "Deportivo Universitario", logoSeed: "u" },
-  { id: "t5", name: "Pádel Club San Isidro", logoSeed: "padel" },
-  { id: "t6", name: "Los Galácticos del Rímac", logoSeed: "galacticos" },
-  { id: "t7", name: "La Maquinaria F.C.", logoSeed: "maquina" },
-  { id: "t8", name: "Sport Matchers Surco", logoSeed: "surco" },
+// === BLOQUE: ESCUADRAS LOCALES DE COMPLEMENTO ===
+// Equipos realistas de Lima para rellenar las llaves si hay pocos Squads creados en la BD.
+// Esto evita la data genérica "sucia" anterior y ofrece una atmósfera deportiva real de Lima.
+const AMATEUR_LIMA_SQUADS: Team[] = [
+  { id: "local-1", name: "Surco Pichanga Club", logoSeed: "surco-pichanga" },
+  { id: "local-2", name: "La Molina Pádel Team", logoSeed: "molina-padel" },
+  { id: "local-3", name: "Miraflores Tenis Squad", logoSeed: "mira-tenis" },
+  { id: "local-4", name: "San Borja Básquet F.C.", logoSeed: "borja-basket" },
+  { id: "local-5", name: "Lince Vóley Club", logoSeed: "lince-voley" },
+  { id: "local-6", name: "Chorrillos FC", logoSeed: "chorri-fc" },
+  { id: "local-7", name: "Barranco Running Squad", logoSeed: "barranco-run" },
+  { id: "local-8", name: "San Isidro Pádel Pro", logoSeed: "isidro-padel" },
+  { id: "local-9", name: "Magdalena Básquet Hub", logoSeed: "magda-basket" },
+  { id: "local-10", name: "Surquillo Pichanga Club", logoSeed: "surquillo-pich" },
+  { id: "local-11", name: "La Victoria Futsal", logoSeed: "victoria-futsal" },
+  { id: "local-12", name: "San Miguel Vóley Team", logoSeed: "miguel-voley" },
+  { id: "local-13", name: "Pueblo Libre Pádel", logoSeed: "pueblo-padel" },
+  { id: "local-14", name: "Ate Fútbol Asociación", logoSeed: "ate-futbol" },
+  { id: "local-15", name: "Jesús María Tenis Club", logoSeed: "jesus-tenis" },
+  { id: "local-16", name: "Comas Pichangueros F.C.", logoSeed: "comas-pich" },
 ];
 
-// === BLOQUE: CONFIGURACIÓN DE FORMATOS POR DEPORTE ===
-// Define cantidad de titulares, suplentes y formatos disponibles para cada disciplina
 const SPORT_FORMAT_CONFIG: Record<string, { starters: number; subs: number; formats: string[] }> = {
-  Fútbol: { starters: 11, subs: 4, formats: ["5vs5", "7vs7", "11vs11"] },
+  Fútbol: { starters: 7, subs: 3, formats: ["5vs5", "7vs7", "11vs11"] },
   Vóley: { starters: 6, subs: 3, formats: ["6vs6"] },
   Pádel: { starters: 2, subs: 1, formats: ["2vs2"] },
   Tenis: { starters: 2, subs: 1, formats: ["1vs1", "2vs2"] },
+  Básquet: { starters: 5, subs: 2, formats: ["3vs3", "5vs5"] },
 };
 
-// === BLOQUE: COMPONENTE PRINCIPAL DEL HUB DE TORNEOS ===
-// Centro de torneos relámpago con simulador de llaves eliminatorias (cuartos -> semis -> final),
-// panel de gestión de escuadra táctica, reclutamiento de jugadores por chat y visualización de brackets
 export function TournamentHub() {
   const currentUser = useAuthStore((state) => state.user);
 
-  // === BLOQUE: ESTADOS DE NAVEGACIÓN Y SIMULACIÓN ===
+  // === ESTADOS DE NAVEGACIÓN Y CONFIGURACIÓN ===
   const [activeTab, setActiveTab] = useState<"brackets" | "squads">("brackets");
-  const [simulationStep, setSimulationStep] = useState<"init" | "quarters" | "semis" | "finals">(
-    "init",
-  );
-  const [isVersusOpen, setIsVersusOpen] = useState(false);
-
-  // === BLOQUE: ESTADOS DEL PANEL DE ESCUADRA ===
-  const [isSquadPanelOpen, setIsSquadPanelOpen] = useState(true);
-  const [selectedSport, setSelectedSport] = useState<"Fútbol" | "Vóley" | "Pádel">("Fútbol");
+  const [selectedSport, setSelectedSport] = useState<
+    "Fútbol" | "Vóley" | "Pádel" | "Básquet" | "Tenis"
+  >("Fútbol");
   const [squadFormat, setSquadFormat] = useState<string>("7vs7");
+  const [tournamentSize, setTournamentSize] = useState<2 | 4 | 8 | 16>(8); // 2 = Final, 4 = Semis, 8 = Cuartos, 16 = Octavos
   const [championshipCode, setChampionshipCode] = useState("COPA-CHAMP-2026");
   const [searchCodeInput, setSearchCodeInput] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
-  // Miembros de la escuadra (poblados con datos mock del usuario actual + jugadores ficticios)
-  const [squadMembers, setSquadMembers] = useState<
-    { id: string; name: string; level: string; position: string; isSub?: boolean }[]
-  >(() => [
-    {
-      id: currentUser?.id || "me",
-      name: currentUser?.name || "Edwin Flores",
-      level: "Elite",
-      position: "MID",
-    },
-    { id: "user-fabiola", name: "Fabiola Rivas", level: "Intermedio", position: "DEF" },
-    { id: "user-1", name: "Carlos Mendoza", level: "Avanzado", position: "GK" },
-    { id: "user-2", name: "Ana Sofía Prado", level: "Intermedio", position: "FWD" },
-    { id: "user-3", name: "Juan Diego Torres", level: "Avanzado", position: "MID", isSub: true },
-  ]);
+  // === ESTADOS DE LA BASE DE DATOS DE SQUADS ===
+  const [dbSquads, setDbSquads] = useState<Squad[]>([]);
+  const [isLoadingSquads, setIsLoadingSquads] = useState(true);
 
-  // === BLOQUE: CÁLCULO DINÁMICO DE LÍMITES DE ESCUADRA ===
-  // Resuelve la cantidad de titulares y suplentes según el deporte y formato seleccionados
-  const activeConfig = useMemo(() => {
-    const config = SPORT_FORMAT_CONFIG[selectedSport] || {
-      starters: 11,
-      subs: 4,
-      formats: ["5vs5", "7vs7", "11vs11"],
-    };
-    let startersCount = config.starters;
-    if (selectedSport === "Fútbol") {
-      startersCount = squadFormat === "5vs5" ? 5 : squadFormat === "7vs7" ? 7 : 11;
-    }
-    return { startersLimit: startersCount, subsLimit: config.subs };
-  }, [selectedSport, squadFormat]);
-
-  // Listas separadas de titulares y suplentes según los límites calculados
-  const startersList = useMemo(
-    () => squadMembers.filter((m) => !m.isSub).slice(0, activeConfig.startersLimit),
-    [squadMembers, activeConfig],
-  );
-  const subsList = useMemo(
-    () =>
-      squadMembers
-        .filter((m) => m.isSub || squadMembers.indexOf(m) >= activeConfig.startersLimit)
-        .slice(0, activeConfig.subsLimit),
-    [squadMembers, activeConfig],
-  );
-
-  // === BLOQUE: ESTRUCTURA DE LLAVES (BRACKETS) ===
-  // Cuartos (4 nodos), Semifinales (2 nodos) y Final (1 nodo)
+  // === ESTADOS DE LA LLAVE (BRACKETS) DINÁMICA ===
   const [brackets, setBrackets] = useState<{
+    round16: MatchNode[];
     quarters: MatchNode[];
     semis: MatchNode[];
     finals: MatchNode[];
   }>({
-    quarters: [
-      { id: "q1", teamA: { ...PRESET_TEAMS[0] }, teamB: { ...PRESET_TEAMS[1] } },
-      { id: "q2", teamA: { ...PRESET_TEAMS[2] }, teamB: { ...PRESET_TEAMS[3] } },
-      { id: "q3", teamA: { ...PRESET_TEAMS[4] }, teamB: { ...PRESET_TEAMS[5] } },
-      { id: "q4", teamA: { ...PRESET_TEAMS[6] }, teamB: { ...PRESET_TEAMS[7] } },
-    ],
-    semis: [
-      {
-        id: "s1",
-        teamA: { id: "pending-s1-a", name: "Clasificado Q1", logoSeed: "p1" },
-        teamB: { id: "pending-s1-b", name: "Clasificado Q2", logoSeed: "p2" },
-      },
-      {
-        id: "s2",
-        teamA: { id: "pending-s2-a", name: "Clasificado Q3", logoSeed: "p3" },
-        teamB: { id: "pending-s2-b", name: "Clasificado Q4", logoSeed: "p4" },
-      },
-    ],
-    finals: [
-      {
-        id: "f1",
-        teamA: { id: "pending-f1-a", name: "Clasificado Semifinal 1", logoSeed: "p5" },
-        teamB: { id: "pending-f1-b", name: "Clasificado Semifinal 2", logoSeed: "p6" },
-      },
-    ],
+    round16: [],
+    quarters: [],
+    semis: [],
+    finals: [],
   });
 
+  const [simulationStep, setSimulationStep] = useState<
+    "init" | "round16" | "quarters" | "semis" | "finals"
+  >("init");
   const [champion, setChampion] = useState<Team | null>(null);
 
-  // === BLOQUE: BÚSQUEDA DE USUARIOS ===
-  // Filtra los usuarios mock excluyendo al usuario actual
+  // === CARGAR SQUADS REALES DESDE LA BASE DE DATOS ===
+  useEffect(() => {
+    let active = true;
+    setIsLoadingSquads(true);
+    getSquads()
+      .then((list) => {
+        if (active) {
+          setDbSquads(list);
+          setIsLoadingSquads(false);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load real squads for tournament:", err);
+        if (active) setIsLoadingSquads(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // === INICIALIZACIÓN DINÁMICA DE LA LLAVE DE TORNEO ===
+  // Crea los emparejamientos utilizando Squads reales del sistema
+  // y completando los espacios vacíos con escuadras amateur de Lima.
+  const initializeTournament = () => {
+    // 1. Convertir los squads de la base de datos a formato de equipo (Team)
+    const realTeams: Team[] = dbSquads.map((s) => ({
+      id: s.id,
+      name: s.name,
+      logoSeed: s.avatar_url || s.name,
+    }));
+
+    // 2. Barajar y tomar de los equipos de Lima predefinidos si faltan para completar la llave
+    const neededCount = tournamentSize;
+    let combinedTeams: Team[] = [...realTeams];
+
+    if (combinedTeams.length < neededCount) {
+      const remainingCount = neededCount - combinedTeams.length;
+      const shuffler = [...AMATEUR_LIMA_SQUADS].sort(() => 0.5 - Math.random());
+      combinedTeams = [...combinedTeams, ...shuffler.slice(0, remainingCount)];
+    } else {
+      combinedTeams = combinedTeams.slice(0, neededCount);
+    }
+
+    // Asegurar orden aleatorio
+    combinedTeams = combinedTeams.sort(() => 0.5 - Math.random());
+
+    // 3. Crear nodos de partidos para la primera ronda activa según el tamaño seleccionado
+    const r16Nodes: MatchNode[] = [];
+    const qNodes: MatchNode[] = [];
+    const sNodes: MatchNode[] = [];
+    const fNodes: MatchNode[] = [];
+
+    if (tournamentSize === 16) {
+      for (let i = 0; i < 8; i++) {
+        r16Nodes.push({
+          id: `r16-${i + 1}`,
+          teamA: combinedTeams[i * 2],
+          teamB: combinedTeams[i * 2 + 1],
+        });
+      }
+      // Rellenar rondas posteriores con marcadores de posición pendientes
+      for (let i = 0; i < 4; i++) {
+        qNodes.push({
+          id: `q-${i + 1}`,
+          teamA: {
+            id: `pending-q-${i + 1}-a`,
+            name: `Ganador R16 #${i * 2 + 1}`,
+            logoSeed: "pending",
+          },
+          teamB: {
+            id: `pending-q-${i + 1}-b`,
+            name: `Ganador R16 #${i * 2 + 2}`,
+            logoSeed: "pending",
+          },
+        });
+      }
+    }
+
+    if (tournamentSize >= 8) {
+      for (let i = 0; i < 4; i++) {
+        const teamA = tournamentSize === 8 ? combinedTeams[i * 2] : qNodes[i].teamA;
+        const teamB = tournamentSize === 8 ? combinedTeams[i * 2 + 1] : qNodes[i].teamB;
+        qNodes[i] = { id: `q-${i + 1}`, teamA, teamB };
+      }
+    }
+
+    // Semifinales
+    for (let i = 0; i < 2; i++) {
+      const teamA =
+        tournamentSize === 4
+          ? combinedTeams[i * 2]
+          : {
+              id: `pending-s-${i + 1}-a`,
+              name: `Ganador Cuartos #${i * 2 + 1}`,
+              logoSeed: "pending",
+            };
+      const teamB =
+        tournamentSize === 4
+          ? combinedTeams[i * 2 + 1]
+          : {
+              id: `pending-s-${i + 1}-b`,
+              name: `Ganador Cuartos #${i * 2 + 2}`,
+              logoSeed: "pending",
+            };
+      sNodes.push({ id: `s-${i + 1}`, teamA, teamB });
+    }
+
+    // Final
+    const teamAF =
+      tournamentSize === 2
+        ? combinedTeams[0]
+        : { id: "pending-f-a", name: "Ganador Semifinal 1", logoSeed: "pending" };
+    const teamBF =
+      tournamentSize === 2
+        ? combinedTeams[1]
+        : { id: "pending-f-b", name: "Ganador Semifinal 2", logoSeed: "pending" };
+    fNodes.push({ id: "f-1", teamA: teamAF, teamB: teamBF });
+
+    setBrackets({
+      round16: r16Nodes,
+      quarters: qNodes,
+      semis: sNodes,
+      finals: fNodes,
+    });
+
+    setChampion(null);
+    setSimulationStep("init");
+    toast.success(
+      `¡Torneo de ${selectedSport} (${tournamentSize} Squads) inicializado con éxito!`,
+      {
+        description: `Código de llave asignado: ${championshipCode}`,
+      },
+    );
+  };
+
+  // Inicializar al montar y cuando cambie el tamaño del torneo o los squads
+  useEffect(() => {
+    if (!isLoadingSquads) {
+      initializeTournament();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournamentSize, dbSquads, isLoadingSquads, selectedSport]);
+
+  // === SIMULACIÓN DE RONDA ACTUAL ===
+  // Avanza la simulación generando resultados reales y lógicos para el deporte activo
+  const handleSimulateStep = () => {
+    if (simulationStep === "init") {
+      if (tournamentSize === 16) {
+        // Simular Octavos de Final y promover a Cuartos
+        const simulatedR16 = brackets.round16.map((match) => {
+          const scoreA = Math.floor(Math.random() * 4);
+          const scoreB = Math.floor(Math.random() * 4);
+          const isWinnerA = scoreA >= scoreB;
+          return {
+            ...match,
+            teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
+            teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
+            winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
+          };
+        });
+
+        const nextQuarters = brackets.quarters.map((match, i) => {
+          const winnerA =
+            simulatedR16[i * 2].winnerId === simulatedR16[i * 2].teamA.id
+              ? simulatedR16[i * 2].teamA
+              : simulatedR16[i * 2].teamB;
+          const winnerB =
+            simulatedR16[i * 2 + 1].winnerId === simulatedR16[i * 2 + 1].teamA.id
+              ? simulatedR16[i * 2 + 1].teamA
+              : simulatedR16[i * 2 + 1].teamB;
+          return {
+            ...match,
+            teamA: { ...winnerA, score: undefined, isWinner: undefined },
+            teamB: { ...winnerB, score: undefined, isWinner: undefined },
+          };
+        });
+
+        setBrackets((prev) => ({
+          ...prev,
+          round16: simulatedR16,
+          quarters: nextQuarters,
+        }));
+        setSimulationStep("round16");
+        toast.success("¡Octavos de final simulados exitosamente!");
+        return;
+      }
+      setSimulationStep("round16"); // saltar directo si el tamaño es menor
+    }
+
+    if (simulationStep === "init" || simulationStep === "round16") {
+      if (tournamentSize >= 8) {
+        // Simular Cuartos y promover a Semis
+        const simulatedQuarters = brackets.quarters.map((match) => {
+          const scoreA = Math.floor(Math.random() * 5);
+          const scoreB = Math.floor(Math.random() * 5);
+          const isWinnerA = scoreA >= scoreB;
+          return {
+            ...match,
+            teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
+            teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
+            winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
+          };
+        });
+
+        const nextSemis = brackets.semis.map((match, i) => {
+          const winnerA =
+            simulatedQuarters[i * 2].winnerId === simulatedQuarters[i * 2].teamA.id
+              ? simulatedQuarters[i * 2].teamA
+              : simulatedQuarters[i * 2].teamB;
+          const winnerB =
+            simulatedQuarters[i * 2 + 1].winnerId === simulatedQuarters[i * 2 + 1].teamA.id
+              ? simulatedQuarters[i * 2 + 1].teamA
+              : simulatedQuarters[i * 2 + 1].teamB;
+          return {
+            ...match,
+            teamA: { ...winnerA, score: undefined, isWinner: undefined },
+            teamB: { ...winnerB, score: undefined, isWinner: undefined },
+          };
+        });
+
+        setBrackets((prev) => ({
+          ...prev,
+          quarters: simulatedQuarters,
+          semis: nextSemis,
+        }));
+        setSimulationStep("quarters");
+        toast.success("¡Cuartos de final completados!");
+        return;
+      }
+      setSimulationStep("quarters"); // saltar si es menor de 8
+    }
+
+    if (simulationStep === "quarters") {
+      // Simular Semifinales y promover a la Gran Final
+      const simulatedSemis = brackets.semis.map((match) => {
+        const scoreA = Math.floor(Math.random() * 3) + 1;
+        const scoreB = Math.floor(Math.random() * 3) + 1;
+        const isWinnerA = scoreA >= scoreB;
+        return {
+          ...match,
+          teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
+          teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
+          winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
+        };
+      });
+
+      const nextFinal = brackets.finals.map((match) => {
+        const winnerA =
+          simulatedSemis[0].winnerId === simulatedSemis[0].teamA.id
+            ? simulatedSemis[0].teamA
+            : simulatedSemis[0].teamB;
+        const winnerB =
+          simulatedSemis[1].winnerId === simulatedSemis[1].teamA.id
+            ? simulatedSemis[1].teamA
+            : simulatedSemis[1].teamB;
+        return {
+          ...match,
+          teamA: { ...winnerA, score: undefined, isWinner: undefined },
+          teamB: { ...winnerB, score: undefined, isWinner: undefined },
+        };
+      });
+
+      setBrackets((prev) => ({
+        ...prev,
+        semis: simulatedSemis,
+        finals: nextFinal,
+      }));
+      setSimulationStep("semis");
+      toast.success("¡Semifinales completadas!");
+    } else if (simulationStep === "semis") {
+      // Simular la Gran Final y coronar Campeón
+      const match = brackets.finals[0];
+      const scoreA = Math.floor(Math.random() * 3) + 1;
+      const scoreB = Math.floor(Math.random() * 3) + 1;
+      const isWinnerA = scoreA >= scoreB;
+      const winnerTeam = isWinnerA ? match.teamA : match.teamB;
+
+      setBrackets((prev) => ({
+        ...prev,
+        finals: [
+          {
+            ...match,
+            teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
+            teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
+            winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
+          },
+        ],
+      }));
+
+      setChampion(winnerTeam);
+      setSimulationStep("finals");
+      toast.success(`🏆 ¡${winnerTeam.name} se coronó Campeón de la Copa!`, {
+        description: "Recompensas de FitCoins distribuidas a la escuadra.",
+        duration: 8000,
+      });
+    }
+  };
+
+  const handleJoinByCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchCodeInput.trim()) return;
+    setChampionshipCode(searchCodeInput.toUpperCase());
+    setSearchCodeInput("");
+    toast.success(`¡Te has unido exitosamente al torneo [ ${searchCodeInput.toUpperCase()} ]!`);
+  };
+
+  // === BÚSQUEDA DE USUARIOS PARA RECLUTAMIENTO ===
   const filteredUsers = useMemo(() => {
     if (!userSearchQuery.trim()) return [];
     return MOCK_USERS.filter(
@@ -171,8 +415,6 @@ export function TournamentHub() {
     ).slice(0, 5);
   }, [userSearchQuery, currentUser]);
 
-  // === BLOQUE: INVITACIÓN POR CHAT ===
-  // Envía un mensaje de invitación al torneo a través del chat real usando la store de chat
   const handleInviteUserByChat = async (targetUser: User) => {
     try {
       const chatStore = useChatStore.getState();
@@ -193,415 +435,286 @@ export function TournamentHub() {
     }
   };
 
-  // === BLOQUE: AGREGAR MIEMBRO A LA ESCUADRA ===
-  // Añade un jugador a la lista de miembros, determinando si es titular o suplente según los límites
-  const handleAddMemberToSquad = (player: User) => {
-    if (squadMembers.some((m) => m.id === player.id)) {
-      toast.warning("El jugador ya es parte de la escuadra.");
-      return;
-    }
-    const isSub = squadMembers.filter((m) => !m.isSub).length >= activeConfig.startersLimit;
-    setSquadMembers((prev) => [
-      ...prev,
-      {
-        id: player.id,
-        name: player.name,
-        level: player.level || "Intermedio",
-        position: player.user_sports?.[0]?.sport_id === "Pádel" ? "MID" : "DEF",
-        isSub,
-      },
-    ]);
-    toast.success(`¡${player.name} agregado a la escuadra!`);
-  };
-
-  // === BLOQUE: UNIRSE POR CÓDIGO DE TORNEO ===
-  const handleJoinByCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchCodeInput.trim()) return;
-    setChampionshipCode(searchCodeInput.toUpperCase());
-    setSearchCodeInput("");
-    toast.success(`¡Te has unido exitosamente al torneo [ ${searchCodeInput.toUpperCase()} ]!`);
-  };
-
-  // === BLOQUE: LÓGICA DE SIMULACIÓN DEL TORNEO ===
-  // Avanza la simulación por etapas: init -> quarters -> semis -> finals
-  // Cada etapa genera puntajes aleatorios y promueve a los ganadores a la siguiente ronda
-  const handleSimulateStep = () => {
-    if (simulationStep === "init") {
-      const newQuarters = brackets.quarters.map((match) => {
-        const scoreA = Math.floor(Math.random() * 5);
-        const scoreB = Math.floor(Math.random() * 5);
-        const isWinnerA = scoreA >= scoreB;
-        return {
-          ...match,
-          teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
-          teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
-          winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
-        };
-      });
-      setBrackets((prev) => ({
-        ...prev,
-        quarters: newQuarters,
-        semis: [
-          {
-            id: "s1",
-            teamA: {
-              ...(newQuarters[0].winnerId === newQuarters[0].teamA.id
-                ? newQuarters[0].teamA
-                : newQuarters[0].teamB),
-              score: undefined,
-              isWinner: undefined,
-            },
-            teamB: {
-              ...(newQuarters[1].winnerId === newQuarters[1].teamA.id
-                ? newQuarters[1].teamA
-                : newQuarters[1].teamB),
-              score: undefined,
-              isWinner: undefined,
-            },
-          },
-          {
-            id: "s2",
-            teamA: {
-              ...(newQuarters[2].winnerId === newQuarters[2].teamA.id
-                ? newQuarters[2].teamA
-                : newQuarters[2].teamB),
-              score: undefined,
-              isWinner: undefined,
-            },
-            teamB: {
-              ...(newQuarters[3].winnerId === newQuarters[3].teamA.id
-                ? newQuarters[3].teamA
-                : newQuarters[3].teamB),
-              score: undefined,
-              isWinner: undefined,
-            },
-          },
-        ],
-      }));
-      setSimulationStep("quarters");
-      toast.success("¡Cuartos de final completados!");
-    } else if (simulationStep === "quarters") {
-      const newSemis = brackets.semis.map((match) => {
-        const scoreA = Math.floor(Math.random() * 4) + 1;
-        const scoreB = Math.floor(Math.random() * 4) + 1;
-        const isWinnerA = scoreA >= scoreB;
-        return {
-          ...match,
-          teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
-          teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
-          winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
-        };
-      });
-      setBrackets((prev) => ({
-        ...prev,
-        semis: newSemis,
-        finals: [
-          {
-            id: "f1",
-            teamA: {
-              ...(newSemis[0].winnerId === newSemis[0].teamA.id
-                ? newSemis[0].teamA
-                : newSemis[0].teamB),
-              score: undefined,
-              isWinner: undefined,
-            },
-            teamB: {
-              ...(newSemis[1].winnerId === newSemis[1].teamA.id
-                ? newSemis[1].teamA
-                : newSemis[1].teamB),
-              score: undefined,
-              isWinner: undefined,
-            },
-          },
-        ],
-      }));
-      setSimulationStep("semis");
-      toast.success("¡Semifinales completadas!");
-    } else if (simulationStep === "semis") {
-      const match = brackets.finals[0];
-      const scoreA = Math.floor(Math.random() * 3) + 1;
-      const scoreB = Math.floor(Math.random() * 3) + 1;
-      const isWinnerA = scoreA >= scoreB;
-      const winnerTeam = isWinnerA ? match.teamA : match.teamB;
-      setBrackets((prev) => ({
-        ...prev,
-        finals: [
-          {
-            ...match,
-            teamA: { ...match.teamA, score: scoreA, isWinner: isWinnerA },
-            teamB: { ...match.teamB, score: scoreB, isWinner: !isWinnerA },
-            winnerId: isWinnerA ? match.teamA.id : match.teamB.id,
-          },
-        ],
-      }));
-      setChampion(winnerTeam);
-      setSimulationStep("finals");
-      toast.success(`¡El torneo ha terminado! Campeón: ${winnerTeam.name}`, { icon: "🏆" });
-    }
-  };
-
-  // === BLOQUE: REINICIO DEL TORNEO ===
-  const handleResetTournament = () => {
-    setBrackets({
-      quarters: [
-        { id: "q1", teamA: { ...PRESET_TEAMS[0] }, teamB: { ...PRESET_TEAMS[1] } },
-        { id: "q2", teamA: { ...PRESET_TEAMS[2] }, teamB: { ...PRESET_TEAMS[3] } },
-        { id: "q3", teamA: { ...PRESET_TEAMS[4] }, teamB: { ...PRESET_TEAMS[5] } },
-        { id: "q4", teamA: { ...PRESET_TEAMS[6] }, teamB: { ...PRESET_TEAMS[7] } },
-      ],
-      semis: [
-        {
-          id: "s1",
-          teamA: { id: "pending-s1-a", name: "Clasificado Q1", logoSeed: "p1" },
-          teamB: { id: "pending-s1-b", name: "Clasificado Q2", logoSeed: "p2" },
-        },
-        {
-          id: "s2",
-          teamA: { id: "pending-s2-a", name: "Clasificado Q3", logoSeed: "p3" },
-          teamB: { id: "pending-s2-b", name: "Clasificado Q4", logoSeed: "p4" },
-        },
-      ],
-      finals: [
-        {
-          id: "f1",
-          teamA: { id: "pending-f1-a", name: "Clasificado Semifinal 1", logoSeed: "p5" },
-          teamB: { id: "pending-f1-b", name: "Clasificado Semifinal 2", logoSeed: "p6" },
-        },
-      ],
-    });
-    setChampion(null);
-    setSimulationStep("init");
-    toast.info("Torneo reiniciado.");
-  };
-
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      {/* === BLOQUE: PANEL DE ENCABEZADO === */}
-      {/* Banner principal con badge "Mundial SportMatch 2026", título y selector de pestañas */}
+    <div className="space-y-8 max-w-7xl mx-auto animate-fade-in text-foreground">
+      {/* === BANNER ENCABEZADO === */}
       <div className="bg-gradient-card border border-border rounded-3xl p-6 md:p-8 shadow-card relative overflow-hidden">
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-          <div>
+          <div className="text-left">
             <span className="text-[10px] text-neon uppercase font-black tracking-widest bg-neon/15 px-3 py-1 rounded-full border border-neon/20">
-              Mundial SportMatch 2026
+              Copa de Squads SportMatch 2026
             </span>
             <h1 className="font-heading text-4xl md:text-5xl tracking-wide text-foreground mt-3">
-              Centro de Torneos Relámpago
+              Campeonato entre Escuadras
             </h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-              Crea tu escuadra táctica, recluta jugadores reales por chat y compite en brackets en
-              vivo.
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl leading-relaxed">
+              Compite en llaves dinámicas entre tu propio Squad y otros equipos de la base de datos
+              de Lima. Simula brackets y sube el Trust de tu club.
             </p>
           </div>
-          {/* Selector de pestañas: Llave Eliminatoria / Mi Escuadra Táctica */}
+          {/* Selector de pestañas */}
           <div className="flex gap-2 bg-background/50 border border-border p-1 rounded-2xl">
             <button
               onClick={() => setActiveTab("brackets")}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === "brackets" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <Swords className="h-4 w-4" /> Llave Eliminatoria
+              <Swords className="h-4 w-4" /> Llaves de Torneo
             </button>
             <button
               onClick={() => setActiveTab("squads")}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === "squads" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:text-foreground"}`}
             >
-              <Users className="h-4 w-4" /> Mi Escuadra Táctica
+              <Users className="h-4 w-4" /> Mis Miembros
             </button>
           </div>
         </div>
       </div>
 
-      {/* === BLOQUE: CONTENIDO SEGÚN PESTAÑA ACTIVA === */}
+      {/* === CONTENIDO DE PESTAÑAS === */}
       {activeTab === "squads" ? (
-        <SquadBuilder />
+        <div className="grid grid-cols-1 gap-6 bg-gradient-card border border-border rounded-3xl p-6 shadow-card text-left">
+          <div className="flex justify-between items-center pb-4 border-b border-white/5">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-2 text-foreground">
+                <Users className="h-5 w-5 text-neon" /> Miembros de mi Escuadra
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Recluta y organiza a tus titulares de cara al campeonato actual.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-neon bg-neon/10 px-3 py-1 rounded-full border border-neon/20">
+              Código del Torneo: {championshipCode}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+            {/* Lista de Miembros en Escuadra */}
+            <div className="lg:col-span-2 space-y-4">
+              <h4 className="text-sm font-black uppercase tracking-wider text-muted-foreground mb-1">
+                Alineación Tactica (Titulares)
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {MOCK_USERS.slice(0, 4).map((u, idx) => (
+                  <div
+                    key={u.id}
+                    className="p-4 bg-background/50 border border-border/80 rounded-2xl flex items-center gap-3"
+                  >
+                    <img
+                      src={u.avatar_url}
+                      alt=""
+                      className="h-10 w-10 rounded-xl bg-muted object-cover"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-foreground flex items-center gap-1">
+                        {u.name}{" "}
+                        {idx === 0 && (
+                          <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold">
+                            CAP
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground font-semibold mt-0.5">
+                        {selectedSport} · {u.level || "Intermedio"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Panel de Reclutamiento de Jugadores Reales */}
+            <div className="bg-background/40 border border-border rounded-2xl p-4 space-y-4">
+              <div className="pb-2 border-b border-white/5">
+                <h4 className="text-sm font-black text-foreground">Buscar Jugadores Reales</h4>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Invítalos a jugar el torneo mediante el Chat
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  placeholder="Buscar deportista..."
+                  className="w-full bg-background/60 border border-border rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-primary text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                {filteredUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between p-2 bg-background/30 border border-border/40 rounded-xl animate-scale-in"
+                  >
+                    <div className="min-w-0 flex items-center gap-2">
+                      <img
+                        src={u.avatar_url}
+                        alt=""
+                        className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">{u.name}</div>
+                        <div className="text-[9px] text-muted-foreground truncate">
+                          {u.preferred_sports?.[0]} · {u.level}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleInviteUserByChat(u)}
+                      className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer border-0 flex items-center justify-center"
+                      title="Invitar por Chat"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {!userSearchQuery && (
+                  <p className="text-[10px] text-muted-foreground/60 italic text-center py-4">
+                    Escribe un nombre para reclutar deportistas...
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          {/* === PANEL IZQUIERDO: GESTIÓN DE ESCUADRA === */}
-          <div className="col-span-1 bg-gradient-card border border-border rounded-3xl p-4 shadow-card space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          {/* === PANEL DE CONTROL IZQUIERDO === */}
+          <div className="col-span-1 bg-gradient-card border border-border rounded-3xl p-5 shadow-card space-y-5 text-left">
+            <div>
               <h3 className="font-heading text-lg tracking-wide text-foreground flex items-center gap-2">
-                <Users className="h-4.5 w-4.5 text-neon" /> Mi Escuadra
+                <Sliders className="h-4.5 w-4.5 text-neon" /> Configurar Copa
               </h3>
-              <button
-                onClick={() => setIsSquadPanelOpen(!isSquadPanelOpen)}
-                className="text-xs font-bold text-neon hover:underline cursor-pointer"
-              >
-                {isSquadPanelOpen ? "Ocultar" : "Mostrar"}
-              </button>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Define los parámetros del campeonato
+              </p>
             </div>
-            {isSquadPanelOpen && (
-              <div className="space-y-4 animate-scale-in text-left">
-                {/* Selector de disciplina */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                    Disciplina
+
+            <div className="space-y-4">
+              {/* Disciplina */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                  Disciplina
+                </label>
+                <div className="grid grid-cols-5 gap-1 bg-background/50 p-1 border border-border rounded-xl">
+                  {(["Fútbol", "Vóley", "Pádel", "Básquet", "Tenis"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        setSelectedSport(s);
+                        setSquadFormat(SPORT_FORMAT_CONFIG[s]?.formats[0] || "5vs5");
+                      }}
+                      className={`py-1.5 rounded-lg text-[9px] font-black tracking-wide transition-all cursor-pointer ${selectedSport === s ? "bg-primary text-primary-foreground font-black" : "text-muted-foreground hover:text-foreground"}`}
+                      title={s}
+                    >
+                      {s === "Fútbol"
+                        ? "⚽"
+                        : s === "Vóley"
+                          ? "🏐"
+                          : s === "Pádel"
+                            ? "🏓"
+                            : s === "Básquet"
+                              ? "🏀"
+                              : "🎾"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Formato */}
+              {selectedSport === "Fútbol" && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                    Formato táctico
                   </label>
-                  <div className="grid grid-cols-3 gap-1 bg-background/40 p-1 border border-border/50 rounded-xl">
-                    {(["Fútbol", "Vóley", "Pádel"] as const).map((s) => (
+                  <div className="grid grid-cols-3 gap-1 bg-background/50 p-1 border border-border rounded-xl">
+                    {SPORT_FORMAT_CONFIG["Fútbol"].formats.map((f) => (
                       <button
-                        key={s}
-                        onClick={() => {
-                          setSelectedSport(s);
-                          setSquadFormat(SPORT_FORMAT_CONFIG[s]?.formats[0] || "5vs5");
-                        }}
-                        className={`py-1 rounded-lg text-[10px] font-black tracking-wide transition-all cursor-pointer ${selectedSport === s ? "bg-primary text-primary-foreground font-black" : "text-muted-foreground hover:text-foreground"}`}
+                        key={f}
+                        onClick={() => setSquadFormat(f)}
+                        className={`py-1 rounded-lg text-[10px] font-black tracking-wide transition-all cursor-pointer ${squadFormat === f ? "bg-primary text-primary-foreground font-black" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        {s === "Fútbol" ? "⚽ Fub" : s === "Vóley" ? "🏐 Vol" : "🏓 Pad"}
+                        {f}
                       </button>
                     ))}
                   </div>
                 </div>
-                {/* Selector de formato (solo Fútbol) */}
-                {selectedSport === "Fútbol" && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                      Formato
-                    </label>
-                    <div className="grid grid-cols-3 gap-1 bg-background/40 p-1 border border-border/50 rounded-xl">
-                      {["5vs5", "7vs7", "11vs11"].map((fmt) => (
-                        <button
-                          key={fmt}
-                          onClick={() => setSquadFormat(fmt)}
-                          className={`py-1 rounded-lg text-[9px] font-black transition-all cursor-pointer ${squadFormat === fmt ? "bg-gradient-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                          {fmt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Lista de titulares */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                    <span>
-                      Titulares ({startersList.length} / {activeConfig.startersLimit})
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                    {startersList.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-white/5"
-                      >
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-foreground truncate">
-                            {member.name}
-                          </div>
-                          <div className="text-[9px] text-muted-foreground font-medium">
-                            {member.position} · {member.level}
-                          </div>
-                        </div>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-neon/15 text-neon uppercase">
-                          TIT
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Lista de suplentes */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                    <span>
-                      Suplentes ({subsList.length} / {activeConfig.subsLimit})
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 max-h-24 overflow-y-auto">
-                    {subsList.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-white/5"
-                      >
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-foreground truncate">
-                            {member.name}
-                          </div>
-                          <div className="text-[9px] text-muted-foreground font-medium">
-                            {member.position} · {member.level}
-                          </div>
-                        </div>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300 uppercase">
-                          SUPL
-                        </span>
-                      </div>
-                    ))}
-                    {subsList.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground/60 italic">
-                        Sin suplentes inscritos.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* === PANEL CENTRAL: LLAVES Y CONTROLADOR === */}
-          <div className="col-span-1 lg:col-span-2 space-y-6">
-            {/* Control de código de torneo */}
-            <div className="bg-gradient-card border border-border/70 p-5 rounded-3xl shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="text-left">
-                <span className="text-[9px] bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
-                  Código de Torneo
-                </span>
-                <h4 className="text-sm font-black text-foreground mt-1.5 flex items-center gap-1.5 font-mono">
-                  {championshipCode}
-                </h4>
+              {/* Tamaño de llave */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                  Tamaño de la Llave (Squads)
+                </label>
+                <div className="grid grid-cols-4 gap-1 bg-background/50 p-1 border border-border rounded-xl">
+                  {([2, 4, 8, 16] as const).map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setTournamentSize(size)}
+                      className={`py-1.5 rounded-lg text-[10px] font-black tracking-wide transition-all cursor-pointer ${tournamentSize === size ? "bg-primary text-primary-foreground font-black" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <form onSubmit={handleJoinByCode} className="flex gap-2 w-full md:w-auto">
-                <input
-                  type="text"
-                  value={searchCodeInput}
-                  onChange={(e) => setSearchCodeInput(e.target.value)}
-                  placeholder="CÓDIGO-DE-TORNEO..."
-                  className="bg-background/80 border border-border rounded-xl px-3 py-2 text-xs focus:outline-none text-foreground w-full md:w-40 font-mono"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-black text-xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                >
-                  Unirse
-                </button>
+
+              <div className="h-px bg-border/40" />
+
+              {/* Unirse por código */}
+              <form onSubmit={handleJoinByCode} className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                  Unirse a Campeonato
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchCodeInput}
+                    onChange={(e) => setSearchCodeInput(e.target.value)}
+                    placeholder="Código de Torneo..."
+                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-xs uppercase tracking-widest text-foreground focus:outline-none focus:border-primary pr-12"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1.5 bg-primary text-primary-foreground rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    Unirme
+                  </button>
+                </div>
               </form>
             </div>
+          </div>
 
-            {/* Barra de control de simulación */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-card border border-border/70 p-5 rounded-3xl shadow-card">
+          {/* === PANEL DERECHO: VISUALIZACIÓN DE BRACKETS === */}
+          <div className="col-span-1 lg:col-span-3 bg-gradient-card border border-border rounded-3xl p-5 shadow-card space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-3 border-b border-white/5">
               <div className="text-left">
-                <p className="text-xs font-bold text-primary uppercase tracking-wider">
-                  Controlador de Eliminatoria
+                <h3 className="font-heading text-xl tracking-wide text-foreground flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-warning" /> Brackets de Eliminatoria (
+                  {tournamentSize} Squads)
+                </h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Simula partidos y promueve a los Squads en tiempo real
                 </p>
-                <h4 className="text-sm font-semibold text-foreground mt-0.5">
-                  {simulationStep === "init" && "Comienza el torneo desde Cuartos"}
-                  {simulationStep === "quarters" && "Jugar las Semifinales de campeonato"}
-                  {simulationStep === "semis" && "¡Llegó el momento de la Gran Final!"}
-                  {simulationStep === "finals" && "Torneo finalizado con éxito"}
-                </h4>
               </div>
-              <div className="flex gap-3 w-full sm:w-auto flex-wrap">
-                {simulationStep !== "init" && (
-                  <button
-                    onClick={handleResetTournament}
-                    className="px-4 py-2.5 rounded-xl border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all cursor-pointer"
-                  >
-                    Reiniciar Llaves
-                  </button>
-                )}
-                {simulationStep === "semis" && (
-                  <button
-                    onClick={() => setIsVersusOpen(true)}
-                    className="px-4 py-2.5 rounded-xl border-2 border-primary text-primary bg-primary/5 text-xs font-bold hover:bg-primary/15 transition-all flex items-center gap-1.5 cursor-pointer shadow-glow animate-pulse"
-                  >
-                    <Swords className="h-4 w-4" /> Ver Enfrentamiento (VS)
-                  </button>
-                )}
+              <div className="flex gap-2">
+                <button
+                  onClick={initializeTournament}
+                  className="px-4 py-2 rounded-xl bg-accent border border-border text-foreground font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  title="Reiniciar Llave"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Re-sortear
+                </button>
                 {simulationStep !== "finals" && (
                   <button
                     onClick={handleSimulateStep}
-                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-gradient-primary text-primary-foreground font-black text-xs tracking-wider shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-gradient-primary text-primary-foreground font-black text-xs flex items-center justify-center gap-1.5 shadow-glow cursor-pointer"
                   >
                     <Zap className="h-3.5 w-3.5 animate-pulse" />
-                    {simulationStep === "init" && "Simular Cuartos"}
+                    {simulationStep === "init" &&
+                      (tournamentSize === 16 ? "Simular Octavos" : "Simular Cuartos")}
+                    {simulationStep === "round16" && "Simular Cuartos"}
                     {simulationStep === "quarters" && "Simular Semifinales"}
                     {simulationStep === "semis" && "Simular Gran Final"}
                   </button>
@@ -609,30 +722,53 @@ export function TournamentHub() {
               </div>
             </div>
 
-            {/* === VISUALIZACIÓN DE LLAVES === */}
-            <div
-              className="bg-background/25 border border-border/50 rounded-3xl p-4 md:p-8 overflow-x-auto"
-              id="tournament-hub-tour"
-            >
-              <div className="min-w-[900px] flex justify-between items-center gap-6 py-6 relative">
-                {/* Cuartos de Final */}
-                <div className="flex-1 space-y-8">
-                  <div className="text-center pb-2 border-b border-border/20">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-                      Cuartos de Final
-                    </span>
+            {/* Brackets visuales */}
+            <div className="bg-background/25 border border-border/50 rounded-2xl p-4 md:p-6 overflow-x-auto">
+              <div className="min-w-[850px] flex justify-between items-center gap-4 py-4 relative">
+                {/* Octavos de Final (Solo si size = 16) */}
+                {tournamentSize === 16 && (
+                  <div className="flex-1 space-y-4">
+                    <div className="text-center pb-1.5 border-b border-border/20 mb-2">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">
+                        Octavos de Final
+                      </span>
+                    </div>
+                    {brackets.round16.map((node) => (
+                      <MatchCard key={node.id} match={node} />
+                    ))}
                   </div>
-                  {brackets.quarters.map((node) => (
-                    <MatchCard key={node.id} match={node} />
-                  ))}
-                </div>
-                <div className="flex items-center justify-center text-muted-foreground/30 shrink-0">
-                  <ChevronRight className="h-6 w-6" />
-                </div>
+                )}
+
+                {tournamentSize === 16 && (
+                  <div className="flex items-center justify-center text-muted-foreground/30 shrink-0">
+                    <ChevronRight className="h-5 w-5" />
+                  </div>
+                )}
+
+                {/* Cuartos de Final (Solo si size >= 8) */}
+                {tournamentSize >= 8 && (
+                  <div className="flex-1 space-y-6">
+                    <div className="text-center pb-1.5 border-b border-border/20 mb-2">
+                      <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">
+                        Cuartos de Final
+                      </span>
+                    </div>
+                    {brackets.quarters.map((node) => (
+                      <MatchCard key={node.id} match={node} />
+                    ))}
+                  </div>
+                )}
+
+                {tournamentSize >= 8 && (
+                  <div className="flex items-center justify-center text-muted-foreground/30 shrink-0">
+                    <ChevronRight className="h-5 w-5" />
+                  </div>
+                )}
+
                 {/* Semifinales */}
-                <div className="flex-1 space-y-16">
-                  <div className="text-center pb-2 border-b border-border/20">
-                    <span className="text-[10px] uppercase font-bold text-primary tracking-widest">
+                <div className="flex-1 space-y-12">
+                  <div className="text-center pb-1.5 border-b border-border/20 mb-2">
+                    <span className="text-[9px] uppercase font-bold text-primary tracking-widest">
                       Semifinales
                     </span>
                   </div>
@@ -640,32 +776,26 @@ export function TournamentHub() {
                     <MatchCard key={node.id} match={node} />
                   ))}
                 </div>
+
                 <div className="flex items-center justify-center text-muted-foreground/30 shrink-0">
-                  <ChevronRight className="h-6 w-6" />
+                  <ChevronRight className="h-5 w-5" />
                 </div>
+
                 {/* Gran Final y Campeón */}
-                <div className="flex-1 space-y-24">
-                  <div className="text-center pb-2 border-b border-border/20">
-                    <span className="text-[10px] uppercase font-bold text-red-500 tracking-widest">
+                <div className="flex-1 space-y-16">
+                  <div className="text-center pb-1.5 border-b border-border/20 mb-2">
+                    <span className="text-[9px] uppercase font-bold text-red-500 tracking-widest">
                       Gran Final
                     </span>
                   </div>
-                  <MatchCard match={brackets.finals[0]} />
+                  {brackets.finals[0] && <MatchCard match={brackets.finals[0]} />}
                   {champion && (
-                    <div className="mt-8 animate-scale-in flex flex-col items-center p-5 bg-primary/10 border border-primary/50 rounded-2xl shadow-glow text-center relative overflow-hidden">
-                      <div
-                        className="absolute inset-0 pointer-events-none opacity-[0.05]"
-                        style={{
-                          backgroundImage:
-                            "radial-gradient(circle, var(--color-primary) 1px, transparent 1px)",
-                          backgroundSize: "16px 16px",
-                        }}
-                      />
-                      <Trophy className="h-10 w-10 text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.7)] animate-bounce" />
-                      <span className="text-[9px] uppercase font-black text-primary tracking-widest mt-2 block">
-                        Campeón del Torneo
+                    <div className="mt-6 animate-scale-in flex flex-col items-center p-4 bg-primary/10 border border-primary/50 rounded-2xl shadow-glow text-center relative overflow-hidden">
+                      <Trophy className="h-8 w-8 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] animate-bounce" />
+                      <span className="text-[8px] uppercase font-black text-primary tracking-widest mt-1.5 block">
+                        Campeón de la Copa
                       </span>
-                      <h5 className="text-sm font-black text-white mt-1 truncate max-w-[200px]">
+                      <h5 className="text-xs font-black text-foreground mt-0.5 truncate max-w-[180px]">
                         {champion.name}
                       </h5>
                     </div>
@@ -674,110 +804,28 @@ export function TournamentHub() {
               </div>
             </div>
           </div>
-
-          {/* === PANEL DERECHO: RECLUTAMIENTO POR CHAT === */}
-          <div className="col-span-1 bg-gradient-card border border-border rounded-3xl p-4 shadow-card space-y-4">
-            <div className="pb-2 border-b border-white/5 text-left">
-              <h3 className="font-heading text-lg tracking-wide text-foreground flex items-center gap-2">
-                <UserPlus className="h-4.5 w-4.5 text-primary" /> Reclutar por Chat
-              </h3>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Invita a deportistas directamente a tu escuadra
-              </p>
-            </div>
-            {/* Campo de búsqueda */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                value={userSearchQuery}
-                onChange={(e) => setUserSearchQuery(e.target.value)}
-                placeholder="Buscar jugador..."
-                className="w-full bg-background/50 border border-border rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-primary text-foreground"
-              />
-            </div>
-            {/* Resultados de búsqueda */}
-            <div className="space-y-2.5">
-              {filteredUsers.map((u) => (
-                <div
-                  key={u.id}
-                  className="flex items-center justify-between gap-2 p-2 bg-background/40 border border-white/5 hover:border-primary/20 rounded-2xl transition-all text-left animate-scale-in"
-                >
-                  <div className="min-w-0 flex items-center gap-2">
-                    <img
-                      src={u.avatar_url}
-                      alt=""
-                      className="h-8 w-8 rounded-full bg-muted object-cover flex-shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-foreground truncate">{u.name}</div>
-                      <div className="text-[9px] text-muted-foreground font-semibold">
-                        {u.preferred_sports?.[0] || "Deporte"} · {u.level}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleAddMemberToSquad(u)}
-                      className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer border-0"
-                      title="Agregar directo"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleInviteUserByChat(u)}
-                      className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer border-0"
-                      title="Invitar por Chat"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {userSearchQuery && filteredUsers.length === 0 && (
-                <p className="text-[10px] text-muted-foreground/60 italic text-center py-4">
-                  No se encontraron jugadores.
-                </p>
-              )}
-              {!userSearchQuery && (
-                <p className="text-[10px] text-muted-foreground/60 italic text-center py-4">
-                  Escribe un nombre para buscar deportistas...
-                </p>
-              )}
-            </div>
-          </div>
         </div>
       )}
-
-      {/* === BLOQUE: MODAL DE ENFRENTAMIENTO (VS) === */}
-      <MatchupVersus
-        isOpen={isVersusOpen}
-        onClose={() => setIsVersusOpen(false)}
-        teamAName="Escuadra Edwin Flores (Local)"
-        teamBName={brackets.finals[0]?.teamB?.name || "Real Madrid SportMatch"}
-        format={squadFormat}
-      />
     </div>
   );
 }
 
-// === BLOQUE: COMPONENTE AUXILIAR DE TARJETA DE PARTIDO ===
-// Renderiza un enfrentamiento individual con dos equipos, puntajes y logos generados por DiceBear
 function MatchCard({ match }: { match: MatchNode }) {
-  const getLogoUrl = (seed: string) => `https://api.dicebear.com/7.x/identicon/svg?seed=${seed}`;
+  const getLogoUrl = (seed: string) =>
+    `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(seed)}`;
 
   return (
     <div className="bg-gradient-card border border-border/80 rounded-2xl shadow-md overflow-hidden text-left relative transition-all duration-300 hover:border-primary/30">
-      <div className="p-3 space-y-2.5">
+      <div className="p-3 space-y-2">
         {/* Equipo A */}
         <div
-          className={`flex items-center justify-between gap-3 ${match.teamA.isWinner === false ? "opacity-40" : ""}`}
+          className={`flex items-center justify-between gap-2.5 ${match.teamA.isWinner === false ? "opacity-35" : ""}`}
         >
           <div className="flex items-center gap-2 min-w-0">
             <img
               src={getLogoUrl(match.teamA.logoSeed)}
               alt=""
-              className="h-6 w-6 rounded bg-muted flex-shrink-0"
+              className="h-5 w-5 rounded bg-muted flex-shrink-0"
             />
             <span className="text-xs font-semibold truncate text-foreground">
               {match.teamA.name}
@@ -785,26 +833,24 @@ function MatchCard({ match }: { match: MatchNode }) {
           </div>
           {match.teamA.score !== undefined ? (
             <span
-              className={`text-xs font-black px-2 py-0.5 rounded-lg ${match.teamA.isWinner ? "bg-primary/15 text-primary border border-primary/25" : "bg-muted text-muted-foreground"}`}
+              className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${match.teamA.isWinner ? "bg-primary/15 text-primary border border-primary/25" : "bg-muted text-muted-foreground"}`}
             >
               {match.teamA.score}
             </span>
           ) : (
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-              —
-            </span>
+            <span className="text-[9px] font-bold text-muted-foreground tracking-wider">—</span>
           )}
         </div>
-        <div className="h-px bg-border/40" />
+        <div className="h-px bg-border/45" />
         {/* Equipo B */}
         <div
-          className={`flex items-center justify-between gap-3 ${match.teamB.isWinner === false ? "opacity-40" : ""}`}
+          className={`flex items-center justify-between gap-2.5 ${match.teamB.isWinner === false ? "opacity-35" : ""}`}
         >
           <div className="flex items-center gap-2 min-w-0">
             <img
               src={getLogoUrl(match.teamB.logoSeed)}
               alt=""
-              className="h-6 w-6 rounded bg-muted flex-shrink-0"
+              className="h-5 w-5 rounded bg-muted flex-shrink-0"
             />
             <span className="text-xs font-semibold truncate text-foreground">
               {match.teamB.name}
@@ -812,14 +858,12 @@ function MatchCard({ match }: { match: MatchNode }) {
           </div>
           {match.teamB.score !== undefined ? (
             <span
-              className={`text-xs font-black px-2 py-0.5 rounded-lg ${match.teamB.isWinner ? "bg-primary/15 text-primary border border-primary/25" : "bg-muted text-muted-foreground"}`}
+              className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${match.teamB.isWinner ? "bg-primary/15 text-primary border border-primary/25" : "bg-muted text-muted-foreground"}`}
             >
               {match.teamB.score}
             </span>
           ) : (
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-              —
-            </span>
+            <span className="text-[9px] font-bold text-muted-foreground tracking-wider">—</span>
           )}
         </div>
       </div>

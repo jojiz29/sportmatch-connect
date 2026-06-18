@@ -11,6 +11,7 @@
 
 import { supabase } from "./supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { withTimeout } from "./timeoutHelper";
 
 const DEMO_STORAGE_KEY = "sportmatch_demo_player_challenges";
 
@@ -130,20 +131,23 @@ export async function createPlayerChallenge(input: CreateChallengeInput): Promis
     return challenge;
   }
 
-  const { data, error } = await supabase
-    .from("player_challenges")
-    .insert({
-      challenger_id: input.challengerId,
-      challenged_id: input.challengedId,
-      sport: input.sport,
-      modality: input.modality || "amistoso",
-      scheduled_date: input.scheduledDate || null,
-      scheduled_time: input.scheduledTime || null,
-      location: input.location?.trim() || null,
-      message: input.message?.trim() || null,
-    })
-    .select("*")
-    .single();
+  const { data, error } = await withTimeout(
+    supabase
+      .from("player_challenges")
+      .insert({
+        challenger_id: input.challengerId,
+        challenged_id: input.challengedId,
+        sport: input.sport,
+        modality: input.modality || "amistoso",
+        scheduled_date: input.scheduledDate || null,
+        scheduled_time: input.scheduledTime || null,
+        location: input.location?.trim() || null,
+        message: input.message?.trim() || null,
+      })
+      .select("*")
+      .single(),
+    15000,
+  );
 
   if (error) {
     // PostgreSQL error 23505 = unique constraint violation (desafío duplicado)
