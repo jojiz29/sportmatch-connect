@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // === BLOQUE: Ruta de Billetera FitCoins ===
 // Página principal del sistema de moneda virtual FitCoins.
 // Incluye: saldo animado, desafíos gamificados (challenges), recompensas

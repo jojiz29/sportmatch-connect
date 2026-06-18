@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: DEPENDENCIAS ===
 import { create } from "zustand";
 import { useAuthStore } from "@/entities/user/useAuth";

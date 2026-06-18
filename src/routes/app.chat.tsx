@@ -557,7 +557,7 @@ function Chats() {
         {/* === BLOQUE: Sidebar de conversaciones === */}
         {/* Barra lateral con buscador, botones de nuevo chat y crear Squad,
             y pestañas para alternar entre Conversaciones y Conexiones. */}
-        <div className="w-full md:w-80 border-r border-border flex flex-col bg-card/50">
+        <div className="w-full md:w-80 border-r border-border flex flex-col bg-card">
           <div className="p-4 border-b border-border flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

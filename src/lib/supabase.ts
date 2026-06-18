@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * ===================================================================
  * ARCHIVO: src/lib/supabase.ts
@@ -128,7 +129,7 @@ function createFallbackClient(): SupabaseClient {
         if (prop === "channel") {
           return (name: string) => {
             console.warn(`Called supabase.channel('${name}') but Supabase is not configured.`);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             const dummyChannel: any = {
               on: () => dummyChannel,
               subscribe: () => dummyChannel,

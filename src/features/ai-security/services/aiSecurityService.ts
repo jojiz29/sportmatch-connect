@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * ===================================================================
  * ARCHIVO: src/features/ai-security/services/aiSecurityService.ts

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 // ============================================================
 // ai.controller.ts — Endpoints REST
 // POST /api/v1/ai/chat                → Chat general

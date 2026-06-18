@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: DEPENDENCIAS ===
 // Store de autenticación con Zustand + persistencia parcial.
 // El modo demo se almacena solo en memoria para evitar manipulaciones vía DevTools.

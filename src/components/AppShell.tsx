@@ -277,7 +277,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <WorldCupBackground />
       <div className="relative z-10">
         {/* Sidebar (desktop) */}
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-80 flex-col bg-background/80 backdrop-blur-xl border-r border-border/30 z-30 shadow-2xl">
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-80 flex-col bg-sidebar border-r border-sidebar-border z-30 shadow-2xl">
           <div className="px-5 py-5 flex items-center justify-between border-b border-border/10">
             <Link
               to={isBusiness ? "/app/business" : "/app"}
@@ -297,7 +297,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
             {dynamicGroups.map((group) => (
               <div key={group.titleKey} className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60 px-3 mb-2">
                   {group.title || t(group.titleKey)}
                 </div>
                 {group.items.map((item) => {
@@ -323,7 +323,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       className={`flex items-center gap-4 px-5 py-3 rounded-xl text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                          : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
                     >
                       <Icon className="h-6 w-6 shrink-0" />
@@ -339,7 +339,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {filteredAccountItems.length > 0 && (
               <div className="space-y-1 pt-4 border-t border-border/10">
-                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40 px-3 mb-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/60 px-3 mb-1.5">
                   {t("nav.groups.account")}
                 </div>
                 {filteredAccountItems.map((item) => {
@@ -353,7 +353,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       className={`flex items-center gap-4 px-5 py-3 rounded-xl text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.97] ${
                         active
                           ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                          : "text-muted-foreground/80 hover:bg-white/5 hover:text-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }`}
                     >
                       <Icon className="h-6 w-6 shrink-0" />
@@ -367,13 +367,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </nav>
-          <div className="p-3 m-3 rounded-2xl bg-gradient-card border border-border/40 shadow-card hover:border-primary/20 transition-all duration-300 group">
+          <div className="p-3 m-3 rounded-2xl bg-sidebar-accent/20 border border-sidebar-border shadow-card hover:border-primary/20 transition-all duration-300 group">
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <img
                   src={currentUser.avatar_url}
                   alt={currentUser.name}
-                  className="h-10 w-10 rounded-full bg-muted object-cover border border-border/40 group-hover:border-neon/30 transition-colors"
+                  className="h-10 w-10 rounded-full bg-muted object-cover border border-sidebar-border group-hover:border-neon/30 transition-colors"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-neon border-2 border-background" />
               </div>

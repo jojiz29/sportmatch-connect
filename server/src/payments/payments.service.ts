@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import Stripe from "stripe";

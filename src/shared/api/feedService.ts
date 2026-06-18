@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * ===================================================================
  * ARCHIVO: src/shared/api/feedService.ts

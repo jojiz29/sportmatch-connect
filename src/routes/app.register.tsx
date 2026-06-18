@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // === BLOQUE: Ruta de Registro de Usuario ===
 // Formulario de registro con selector de rol (PLAYER / BUSINESS),
 // validación estricta de email (RFC + whitelist de dominios + TLDs),

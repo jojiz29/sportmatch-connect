@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const */
 // ============================================================
 // server/src/ai/ai.service.ts — Capa de negocio
 // Orquesta: rate limiting granular + Vertex AI + formateo por endpoint

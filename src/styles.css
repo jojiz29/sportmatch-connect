@@ -276,7 +276,7 @@
 }
 
 .light {
-  --background: #f8fafc; /* Slate 50 clean backdrop */
+  --background: #f1f5f9; /* Slate 100 clean backdrop for strong contrast with white cards */
   --foreground: #0f172a; /* Deep Slate/Black text for maximum WCAG contrast */
   --card: #ffffff; /* Pure White card surface */
   --card-foreground: #0f172a;
@@ -319,7 +319,7 @@
   --chart-4: #ffea00;
   --chart-5: #ff1744;
   --sidebar: #ffffff;
-  --sidebar-foreground: #475569;
+  --sidebar-foreground: #1e293b;
   --sidebar-primary: #ff5722;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;

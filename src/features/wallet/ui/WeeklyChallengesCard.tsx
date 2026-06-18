@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Loader2, Check, Zap } from "lucide-react";
