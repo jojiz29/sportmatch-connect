@@ -91,7 +91,14 @@ describe("MatchesService", () => {
 
   describe("create", () => {
     it("debe crear el partido con creator_id y status OPEN", async () => {
-      const dto = { title: "Partido", sport: "tenis" } as any;
+      const dto = {
+        title: "Partido",
+        sport: "tenis",
+        date: "2026-06-15",
+        time: "10:00",
+        max_players: 10,
+        required_level: "Intermedio",
+      } as any;
       prismaMock.matches.create.mockResolvedValue({ id: "m1", ...dto });
 
       const res = await service.create(dto, "u1");
@@ -99,10 +106,12 @@ describe("MatchesService", () => {
         data: {
           title: "Partido",
           sport: "tenis",
+          date: "2026-06-15",
+          time: "10:00",
+          max_players: 10,
+          required_level: "Intermedio",
           creator_id: "u1",
           status: "OPEN",
-          date: expect.any(Date),
-          time: expect.any(Date),
         },
       });
       expect(res).toEqual({ id: "m1", ...dto });

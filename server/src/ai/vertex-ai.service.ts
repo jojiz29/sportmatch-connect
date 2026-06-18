@@ -43,6 +43,8 @@ export interface VertexAiOptions {
   temperature?: number;
   history?: ChatMessageDto[];
   userContext?: UserPersonalizedContext;
+  systemInstruction?: string;
+  responseMimeType?: "application/json" | "text/plain";
 }
 
 export interface VertexAiMediaPart {
@@ -185,7 +187,8 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
     const language = options.language ?? "es";
     const temperature = options.temperature ?? this.config.temperature;
-    const systemInstruction = this.buildSystemInstruction(language, options.history);
+    const systemInstruction =
+      options.systemInstruction ?? this.buildSystemInstruction(language, options.history);
     const contents = [
       {
         role: "user",
@@ -207,6 +210,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
             temperature,
             topP: 0.9,
             systemInstruction,
+            ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
           },
         });
 

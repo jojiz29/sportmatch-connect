@@ -72,6 +72,7 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
   };
 
   const canVerify = selfieFile && dniFile && !verifying;
+  const isUnverified = result ? !result.match && result.confidence < 0.4 : false;
 
   return (
     <div className={`space-y-5 ${className}`}>
@@ -189,21 +190,29 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
             className={`flex items-center gap-4 p-4 rounded-xl border ${
               result.match
                 ? "bg-success/10 border-success/30"
-                : "bg-destructive/10 border-destructive/30"
+                : isUnverified
+                  ? "bg-warning/10 border-warning/30"
+                  : "bg-destructive/10 border-destructive/30"
             }`}
           >
             {result.match ? (
               <CheckCircle2 className="h-10 w-10 text-success shrink-0" />
+            ) : isUnverified ? (
+              <AlertTriangle className="h-10 w-10 text-warning shrink-0" />
             ) : (
               <XCircle className="h-10 w-10 text-destructive shrink-0" />
             )}
             <div>
               <p
                 className={`text-base font-bold ${
-                  result.match ? "text-success" : "text-destructive"
+                  result.match ? "text-success" : isUnverified ? "text-warning" : "text-destructive"
                 }`}
               >
-                {result.match ? "Identidad verificada" : "No coincide"}
+                {result.match
+                  ? "Identidad verificada"
+                  : isUnverified
+                    ? "No verificable"
+                    : "No coincide"}
               </p>
               <p className="text-sm text-foreground/80 mt-0.5">{result.message}</p>
             </div>
