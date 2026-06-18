@@ -70,6 +70,7 @@ describe("AiService", () => {
       expect(vertexAiServiceMock.generateContent).toHaveBeenCalledWith("hola", {
         history: [],
         language: "es",
+        userContext: expect.any(Object),
       });
       expect(result.reply).toBe('{"suggestions": ["S1", "S2"]}');
       expect(result.suggestions).toEqual(["S1", "S2"]);

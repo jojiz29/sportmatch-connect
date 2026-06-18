@@ -16,10 +16,20 @@ export interface VertexAiGenerationResult {
   latencyMs: number;
 }
 
+export interface UserPersonalizedContext {
+  name?: string;
+  city?: string;
+  preferredSports: { sport: string; level: string }[];
+  mutualMatches: { name: string; sport: string; targetId: string }[];
+  recommendedCourts: { name: string; sport: string; price: number; rating: number; district: string }[];
+  activeMatches: { title: string; sport: string; date: string; time: string; requiredLevel: string; courtName: string }[];
+}
+
 export interface VertexAiOptions {
   language?: "es" | "en" | "pt";
   temperature?: number;
   history?: ChatMessageDto[];
+  userContext?: UserPersonalizedContext;
 }
 
 @Injectable()
@@ -67,7 +77,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
     const startTime = Date.now();
     const language = options.language ?? "es";
     const temperature = options.temperature ?? this.config.temperature;
-    const systemInstruction = this.buildSystemInstruction(language, options.history);
+    const systemInstruction = this.buildSystemInstruction(language, options.history, options.userContext);
 
     const maxRetries = 3;
     const baseDelayMs = 500;
@@ -145,6 +155,49 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Genera contenido con archivos de medios (imágenes, video, etc.) usando el SDK.
+   */
+  async generateContentWithMedia(
+    userMessage: string,
+    options: {
+      language?: "es" | "en" | "pt";
+      mediaParts: Array<{ inlineData: { mimeType: string; data: string } }>;
+    },
+  ): Promise<VertexAiGenerationResult> {
+    const startTime = Date.now();
+    const language = options.language ?? "es";
+    const systemInstruction = this.buildSystemInstruction(language);
+
+    try {
+      const response = await this.genAi.models.generateContent({
+        model: this.config.modelId,
+        contents: [userMessage, ...options.mediaParts],
+        config: {
+          maxOutputTokens: this.config.maxTokens,
+          temperature: this.config.temperature,
+          systemInstruction,
+        },
+      });
+
+      const text = response.text ?? "";
+      const usage = (response as { usageMetadata?: { totalTokenCount?: number } }).usageMetadata;
+      const tokens = usage?.totalTokenCount ?? 0;
+      const latencyMs = Date.now() - startTime;
+
+      return {
+        text,
+        tokens,
+        model: this.config.modelId,
+        latencyMs,
+      };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Gen AI media generation failed: ${errorMsg}`);
+      throw err;
+    }
+  }
+
+  /**
    * Construye el system prompt según idioma + slang regional.
    *
    * El prompt está diseñado para que Sporty suene como un AMIGO
@@ -156,7 +209,11 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
    *  - Personalidad propia: curiosa, motivadora, con humor ligero
    *  - Si no sabe, lo dice natural en vez de "sugiero contactar al soporte"
    */
-  private buildSystemInstruction(language: "es" | "en" | "pt", history?: ChatMessageDto[]): string {
+  private buildSystemInstruction(
+    language: "es" | "en" | "pt",
+    history?: ChatMessageDto[],
+    userContext?: UserPersonalizedContext,
+  ): string {
     const baseByLanguage: Record<"es" | "en" | "pt", string> = {
       es: `Eres Sporty, el asistente deportivo de SportMatch Connect. Pero más que un asistente, eres un buen amigo que sabe mucho de deporte.
 
@@ -266,12 +323,46 @@ LIMITE: máximo 150 palavras por resposta. Info longa e estruturada só quando p
     };
 
     const base = baseByLanguage[language];
+
+    let personalizedSection = "";
+    if (userContext) {
+      personalizedSection = `\n\n=== CONTEXTO DEL USUARIO EN SESIÓN (¡IMPORTANTÍSIMO PARA PERSONALIZACIÓN!) ===
+- Nombre del usuario: ${userContext.name || "Atleta"}
+- Ciudad/Ubicación: ${userContext.city || "No especificada"}
+- Deportes que practica y nivel:
+${userContext.preferredSports && userContext.preferredSports.length > 0 
+  ? userContext.preferredSports.map(s => `  * ${s.sport} (Nivel: ${s.level})`).join("\n")
+  : "  * No ha especificado deportes aún."}
+
+- Gente con la que ha hecho MATCH (Mutual Likes en la app) - Sugiere hablarles si es oportuno:
+${userContext.mutualMatches && userContext.mutualMatches.length > 0
+  ? userContext.mutualMatches.map(m => `  * ${m.name} (Hicieron match en el deporte: ${m.sport}). Sugiere iniciar un chat o invitarle a jugar.`).join("\n")
+  : "  * No tiene matches mutuos todavía."}
+
+- Canchas deportivas recomendadas para sus deportes preferidos:
+${userContext.recommendedCourts && userContext.recommendedCourts.length > 0
+  ? userContext.recommendedCourts.map(c => `  * ${c.name} en ${c.district || "zona cercana"} (${c.sport}) - Calificación: ${c.rating}⭐, Precio/hr: $${c.price}`).join("\n")
+  : "  * No hay canchas registradas para sus deportes preferidos."}
+
+- Partidos públicos/abiertos disponibles (¡Pichangas abiertas!) - Ofrece recomendarlos para hoy:
+${userContext.activeMatches && userContext.activeMatches.length > 0
+  ? userContext.activeMatches.map(m => `  * "${m.title}" (${m.sport}) el ${m.date} a las ${m.time}. Nivel requerido: ${m.requiredLevel}. Ubicación: ${m.courtName}.`).join("\n")
+  : "  * No hay partidos abiertos programados hoy."}
+
+REGLAS DE PERSONALIZACIÓN CASUAL:
+1. Llámale por su nombre (${userContext.name || "Atleta"}) de forma natural y amigable (ej: "¡Hola ${userContext.name || "Atleta"}! ¿Cómo va todo?", "Qué tal, ${userContext.name || "Atleta"}...").
+2. Si te pregunta qué canchas recomiendas o qué jugar, usa DIRECTAMENTE la información de las canchas y partidos recomendados que tienes arriba en lugar de inventar nombres de canchas.
+3. Si pregunta con quién puede jugar o con quién hablar, menciona a las personas con las que hizo MATCH listadas arriba.
+4. No recites toda la información junta como un reporte. Usa esta información de forma sutil y fluida a lo largo de la conversación cuando tenga sentido.
+`;
+    }
+
     const memoryNote =
       history && history.length > 0
         ? `\n\nContinuación de la conversación. Mantén el hilo, no repitas el saludo. Habla como si estuvieran en medio de un chat, no retomando desde cero.`
         : "";
 
-    return base + memoryNote;
+    return base + personalizedSection + memoryNote;
   }
 
   /**

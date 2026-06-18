@@ -10,7 +10,7 @@ import {
   HttpException,
   HttpStatus,
 } from "@nestjs/common";
-import { VertexAiService, VertexAiGenerationResult } from "./vertex-ai.service";
+import { VertexAiService, VertexAiGenerationResult, UserPersonalizedContext } from "./vertex-ai.service";
 import { ChatResponseDto } from "./dto/chat.dto";
 import { ChatMessageDto, ModerationResultDto, CoachRecommendationDto, ModerateAdvancedResultDto } from "./dto/ai.dto";
 import { PrismaService } from "../prisma/prisma.service";
@@ -40,6 +40,159 @@ export class AiService {
     private readonly prisma: PrismaService,
   ) {}
 
+  async getUserPersonalizedContext(userId: string): Promise<UserPersonalizedContext> {
+    const defaultContext: UserPersonalizedContext = {
+      name: "",
+      city: "",
+      preferredSports: [],
+      mutualMatches: [],
+      recommendedCourts: [],
+      activeMatches: [],
+    };
+
+    let isDbHealthy = this.prisma.isHealthy();
+    if (!isDbHealthy) {
+      this.logger.warn("Database connection is down, trying manual reconnect in getUserPersonalizedContext...");
+      isDbHealthy = await this.prisma.tryReconnect();
+    }
+
+    if (!isDbHealthy) {
+      return defaultContext;
+    }
+
+    try {
+      // 1. Obtener perfil
+      const profile = await this.prisma.profiles.findUnique({
+        where: { id: userId },
+        select: {
+          name: true,
+          city: true,
+          preferred_sports: true,
+          user_sports: true,
+        },
+      });
+
+      if (!profile) {
+        return defaultContext;
+      }
+
+      // Procesar deportes preferidos y niveles
+      const preferredSports: { sport: string; level: string }[] = [];
+      const sportsList: string[] = [];
+
+      if (profile.user_sports && Array.isArray(profile.user_sports)) {
+        const userSportsArr = profile.user_sports as any[];
+        for (const item of userSportsArr) {
+          const sportName = item.sport_id || item.sport;
+          if (sportName) {
+            const levelNum = item.level;
+            const levelLabel = levelNum === 3 ? "Avanzado" : levelNum === 2 ? "Intermedio" : "Principiante";
+            preferredSports.push({ sport: sportName, level: levelLabel });
+            sportsList.push(sportName);
+          }
+        }
+      }
+
+      // Fallback a preferred_sports si user_sports está vacío
+      if (preferredSports.length === 0 && profile.preferred_sports && profile.preferred_sports.length > 0) {
+        for (const s of profile.preferred_sports) {
+          preferredSports.push({ sport: s, level: "No especificado" });
+          sportsList.push(s);
+        }
+      }
+
+      // 2. Obtener matches mutuos (likes recíprocos en public.swipes)
+      let mutualMatches: { name: string; sport: string; targetId: string }[] = [];
+      try {
+        const rawMatches = await this.prisma.$queryRawUnsafe<any[]>(
+          `SELECT DISTINCT p.id as target_id, p.name, s1.sport
+           FROM public.swipes s1
+           JOIN public.swipes s2 ON s1.actor_id = s2.target_id AND s1.target_id = s2.actor_id
+           JOIN public.profiles p ON p.id = s1.target_id
+           WHERE s1.actor_id = $1::uuid
+             AND s1.action = 'LIKE'
+             AND s2.action = 'LIKE'
+           LIMIT 5`,
+          userId,
+        );
+
+        if (Array.isArray(rawMatches)) {
+          mutualMatches = rawMatches.map(m => ({
+            name: m.name || "Otro jugador",
+            sport: m.sport || "Deporte general",
+            targetId: m.target_id || "",
+          }));
+        }
+      } catch (err) {
+        this.logger.warn(`Failed to fetch mutual matches for context: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      const searchSports = sportsList.length > 0 ? sportsList : ["Fútbol", "Pádel", "Tenis"];
+
+      // 3. Obtener canchas recomendadas para sus deportes preferidos
+      let recommendedCourts: { name: string; sport: string; price: number; rating: number; district: string }[] = [];
+      try {
+        const courts = await this.prisma.courts.findMany({
+          where: {
+            sport: { in: searchSports },
+            is_available: true,
+          },
+          orderBy: { rating: "desc" },
+          take: 5,
+        });
+
+        recommendedCourts = courts.map(c => ({
+          name: c.name,
+          sport: c.sport,
+          price: c.price_per_hour,
+          rating: c.rating,
+          district: c.district || "zona cercana",
+        }));
+      } catch (err) {
+        this.logger.warn(`Failed to fetch recommended courts for context: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      // 4. Obtener pichangas/partidos abiertos programados
+      let activeMatches: { title: string; sport: string; date: string; time: string; requiredLevel: string; courtName: string }[] = [];
+      try {
+        const matches = await this.prisma.matches.findMany({
+          where: {
+            sport: { in: searchSports },
+            status: "OPEN",
+          },
+          include: {
+            court: true,
+          },
+          orderBy: { date: "asc" },
+          take: 3,
+        });
+
+        activeMatches = matches.map(m => ({
+          title: m.title,
+          sport: m.sport,
+          date: m.date,
+          time: m.time,
+          requiredLevel: m.required_level || "Todos los niveles",
+          courtName: m.court?.name || "Cancha externa",
+        }));
+      } catch (err) {
+        this.logger.warn(`Failed to fetch active matches for context: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      return {
+        name: profile.name || "",
+        city: profile.city || "",
+        preferredSports,
+        mutualMatches,
+        recommendedCourts,
+        activeMatches,
+      };
+    } catch (err) {
+      this.logger.error(`Error building personalized context for user ${userId}: ${err instanceof Error ? err.message : String(err)}`);
+      return defaultContext;
+    }
+  }
+
   async chat(
     userId: string,
     message: string,
@@ -48,11 +201,14 @@ export class AiService {
   ): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
+    const context = await this.getUserPersonalizedContext(userId);
+
     let result: VertexAiGenerationResult;
     try {
       result = await this.vertexAiService.generateContent(message, {
         history,
         language: language ?? "es",
+        userContext: context,
       });
     } catch (err) {
       const rawError = err instanceof Error ? err.message : String(err);
@@ -80,20 +236,33 @@ export class AiService {
   async welcome(userId: string, language: "es" | "en" | "pt"): Promise<ChatResponseDto> {
     this.checkRateLimit(userId, "chat");
 
-    // Prompt que induce al LLM a generar un saludo natural, corto
-    // y con la personalidad de Sporty (amigable, cercano, no formal).
-    const welcomePrompt =
-      language === "en"
-        ? "You are Sporty, greeting a user who just opened the chat for the first time. Keep it super short (1-2 sentences, max 40 words). Sound like a friend texting, not a corporate bot. Mention ONE thing you can help with (e.g. finding a match, checking their streak). Don't list everything. Don't start with 'Hi!'. Respond in English only."
-        : language === "pt"
-          ? "Você é o Sporty, dando oi pra um usuário que acabou de abrir o chat pela primeira vez. Seja bem curto (1-2 frases, máx 40 palavras). Fale como um amigo mandando zap, não como bot corporativo. Mencione UMA coisa que você pode ajudar (tipo achar uma partida, ver a sequência). Não liste tudo. Não comece com 'Olá!'. Responda só em português."
-          : "Eres Sporty, saludando a un usuario que acaba de abrir el chat por primera vez. Sé bien corto (1-2 frases, máx 40 palabras). Habla como amigo mandando WhatsApp, no como bot corporativo. Menciona UNA sola cosa en la que puedes ayudar (ej. encontrar un partido, ver su racha). No listes todo. No arranques con '¡Hola!'. Responde solo en español.";
+    const context = await this.getUserPersonalizedContext(userId);
+    const name = context.name || (language === "en" ? "Athlete" : language === "pt" ? "Atleta" : "Atleta");
+    const sportsText = context.preferredSports.length > 0
+      ? context.preferredSports.map(s => s.sport).join(", ")
+      : "";
+
+    let welcomePrompt = "";
+    if (language === "en") {
+      welcomePrompt = `You are Sporty, greeting the user ${name} who just opened the chat for the first time. Keep it super short (1-2 sentences, max 40 words). Sound like a friend texting, not a corporate bot.
+User plays: ${sportsText || "sports"}.
+Mention ONE highly personalized thing you can help with, using their name ${name} naturally. For example, if they play soccer, ask if they want to find a match or recommend a nearby court. Don't start with 'Hi!'. Respond in English only.`;
+    } else if (language === "pt") {
+      welcomePrompt = `Você é o Sporty, dando oi para o usuário ${name} que acabou de abrir o chat pela primeira vez. Seja bem curto (1-2 frases, máx 40 palavras). Fale como um amigo mandando zap, não como bot corporativo.
+O usuário joga: ${sportsText || "esportes"}.
+Mencione UMA coisa bem personalizada em que você pode ajudar usando o nome ${name} naturalmente. Ex: se ele joga futebol, pergunte se quer achar uma pelada hoje ou recomenda uma quadra. Não comece com 'Olá!'. Responda só em português.`;
+    } else {
+      welcomePrompt = `Eres Sporty, saludando al usuario ${name} que acaba de abrir el chat por primera vez. Sé bien corto (1-2 frases, máx 40 palabras). Habla como amigo mandando WhatsApp, no como bot corporativo.
+El usuario juega: ${sportsText || "deportes"}.
+Menciona UNA sola cosa súper personalizada en la que puedes ayudar usando el nombre ${name} de forma natural (ej. encontrar una pichanga de ${context.preferredSports[0]?.sport || "su deporte preferido"} para hoy o recomendarle una de las canchas disponibles). No listes todo. No arranques con '¡Hola!'. Responde solo en español.`;
+    }
 
     let result: VertexAiGenerationResult;
     try {
       result = await this.vertexAiService.generateContent(welcomePrompt, {
         language,
         temperature: 0.8,
+        userContext: context,
       });
     } catch (err) {
       const rawError = err instanceof Error ? err.message : String(err);

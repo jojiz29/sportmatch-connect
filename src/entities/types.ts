@@ -350,3 +350,179 @@ export interface Ad {
   is_premium: boolean; // placeholder for monetization
   created_at: string;
 }
+
+// === BLOQUE: MATCHMAKING (V2.3) ===
+export type QueueStatus = "WAITING" | "FOUND" | "CANCELLED";
+export type SwipeAction = "LIKE" | "PASS";
+
+export interface PlayerRating {
+  user_id: string;
+  sport: string;
+  elo_rating: number;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  last_match_at: string | null;
+}
+
+export interface QueueEntry {
+  user_id: string;
+  sport: string;
+  status: QueueStatus;
+  lat: number;
+  lng: number;
+  radius_km: number;
+  matched_with: string | null;
+  matched_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SwipeResult {
+  mutual_like: boolean;
+  action?: SwipeAction;
+  conversation_id?: string | null;
+}
+
+// ============================================================
+// BLOQUE: B2B-AI — Tipos para inteligencia de negocios
+// Feature #9 (Dynamic Pricing), #21 (Ads Optimizer), #23 (Churn Predictor)
+// Espejo de los DTOs del backend NestJS (server/src/ai/b2b/dto/).
+// ============================================================
+
+/**
+ * Contribución marginal SHAP-style de una feature a una predicción.
+ * No es la librería SHAP oficial — es explicabilidad simulada
+ * calculada en el backend como (value - baseline) * weight * scale.
+ */
+export interface ShapFeature {
+  /** Nombre legible de la feature (en español) */
+  feature: string;
+  /** Contribución marginal al output. Positivo = subió la predicción, negativo = bajó. */
+  contribution: number;
+  /** Valor crudo observado para esta feature */
+  value: number;
+  /** Peso relativo usado en el modelo (0-1) */
+  weight?: number;
+}
+
+/**
+ * Metadata de la llamada al LLM (Vertex AI).
+ * Devuelta por todos los endpoints B2B-AI.
+ */
+export interface AiMetadata {
+  tokens: number;
+  model: string;
+  latencyMs: number;
+}
+
+/**
+ * Feature #9 — Recomendación de precio dinámico para una cancha/fecha/hora.
+ */
+export interface PricingRecommendation {
+  /** Precio recomendado en PEN para el slot */
+  recommendedPrice: number;
+  /** Precio base (precio_per_hour de la cancha) */
+  baseline: number;
+  /** Cambio porcentual respecto al baseline (-0.3 a +0.3) */
+  deltaPct: number;
+  /** Tasa de ocupación esperada (0-1) */
+  occupancyRate: number;
+  /** Nivel de confianza del modelo (0-1) */
+  confidence: number;
+  /** Cantidad de reservas históricas usadas */
+  sampleSize: number;
+  /** Mejor hora del día (si el request no especificó hour) */
+  bestHour?: number;
+  /** Drivers SHAP-style que explican la predicción */
+  drivers: ShapFeature[];
+  /** Narrative ejecutivo en lenguaje natural generado por Vertex AI */
+  narrative: string;
+  /** Metadata de la llamada LLM */
+  metadata: AiMetadata;
+}
+
+/**
+ * Feature #21 — Variante de anuncio generada o evaluada.
+ */
+export interface AdVariant {
+  variantId: "A" | "B" | "C" | "D";
+  title: string;
+  description: string;
+  style: "original" | "emocional" | "racional" | "urgencia";
+  /** Score UCB1 (meanReward + explorationBonus) */
+  score: number;
+  /** CTR predicho (0-1) */
+  predictedCtr: number;
+}
+
+/**
+ * Feature #21 — Resultado de optimización de un anuncio.
+ */
+export interface AdsOptimization {
+  variants: AdVariant[];
+  /** variantId de la variante recomendada (la de mayor score) */
+  recommendation: string;
+  /** Lift esperado en puntos porcentuales de CTR al cambiar a la recomendada */
+  expectedLift: number;
+  /** CTR actual del anuncio (baseline) */
+  currentCtr: number;
+  /** Total de vistas acumuladas */
+  sampleSize: number;
+  drivers: ShapFeature[];
+  narrative: string;
+  metadata: AiMetadata;
+}
+
+/**
+ * Feature #23 — Factor explicativo de churn.
+ */
+export interface ChurnFactor {
+  name: string;
+  description: string;
+  /** Severidad 0-1, 1 = máxima contribución al churn */
+  severity: number;
+  suggestedAction: string;
+}
+
+/**
+ * Feature #23 — Predicción de churn de un negocio.
+ */
+export interface ChurnPrediction {
+  /** Score 0-1, 1 = máximo riesgo */
+  churnScore: number;
+  riskLevel: "low" | "medium" | "high";
+  /** Factores ordenados por severity descendente */
+  factors: ChurnFactor[];
+  daysSinceLastInteraction: number;
+  activeAdsCount: number;
+  totalRevenue: number;
+  totalEngagement: number;
+  drivers: ShapFeature[];
+  narrative: string;
+  metadata: AiMetadata;
+}
+
+/**
+ * Tipos de métricas de uso capturadas para alimentar los modelos B2B-AI.
+ * Espejo del enum `b2b_metric_type` en la migración 20260616.
+ */
+export type UsageMetricType =
+  | "profile_view"
+  | "ad_view"
+  | "ad_click"
+  | "ad_contact"
+  | "map_pin_click"
+  | "venue_booking";
+
+/**
+ * Evento de uso individual. En Supabase vive en la tabla `usage_metrics`;
+ * en demo mode se persiste en localStorage.
+ */
+export interface UsageMetric {
+  id: string;
+  business_id: string;
+  metric_type: UsageMetricType;
+  value: number;
+  recorded_at: string;
+}
