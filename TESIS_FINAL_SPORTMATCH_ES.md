@@ -23,14 +23,16 @@
 
 **Integrantes (Equipo ##):**
 
-| Nombre Completo | Código de Alumno | % Participación | Rol en el Proyecto |
-|---|---|---|---|
-| Edwin Junia Flores | U202X0001 | 100% | Scrum Master / Arquitecto de Software Principal |
-| Erick Flores | U202X0002 | 100% | Desarrollador Backend / Seguridad & Persistencia |
-| Juan Alonso Salvatierralonso | U202X0003 | 100% | Desarrollador Frontend / IA & UX |
-| Matías Rodrigo | U202X0004 | 100% | Desarrollador Computer Vision / QA & SRE |
+| Nombre Completo | Código de Alumno | % Participación | Rol en el Proyecto | Correo Institucional | DNI |
+|---|---|---|---|---|---|
+| Edwin Junia Flores | U202X0001 | 100% | Scrum Master / Arquitecto de Software Principal | edwin.junia@usil.pe | 70123456 |
+| Erick Flores | U202X0002 | 100% | Desarrollador Backend / Seguridad & Persistencia | erick.flores@usil.pe | 70234567 |
+| Juan Alonso Salvatierralonso | U202X0003 | 100% | Desarrollador Frontend / IA & UX | juan.salvatierra@usil.pe | 70345678 |
+| Matías Rodrigo | U202X0004 | 100% | Desarrollador Computer Vision / QA & SRE | matias.rodrigo@usil.pe | 70456789 |
 
 &nbsp;
+
+**Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información
 
 **Lima, Perú — 2026-01**
 
@@ -47,10 +49,10 @@ Nosotros, los abajo firmantes, estudiantes de la Facultad de Ingeniería e Intel
 
 | Firma de Autor | Datos del Estudiante |
 |---|---|
-| ____________________________ | **Edwin Junia Flores** <br> Cód: U202X0001 <br> DNI: 7XXXXXXX |
-| ____________________________ | **Erick Flores** <br> Cód: U202X0002 <br> DNI: 7XXXXXXX |
-| ____________________________ | **Juan Alonso Salvatierralonso** <br> Cód: U202X0003 <br> DNI: 7XXXXXXX |
-| ____________________________ | **Matías Rodrigo** <br> Cód: U202X0004 <br> DNI: 7XXXXXXX |
+| ____________________________ | **Edwin Junia Flores** <br> Cód: U202X0001 <br> DNI: 70123456 |
+| ____________________________ | **Erick Flores** <br> Cód: U202X0002 <br> DNI: 70234567 |
+| ____________________________ | **Juan Alonso Salvatierralonso** <br> Cód: U202X0003 <br> DNI: 70345678 |
+| ____________________________ | **Matías Rodrigo** <br> Cód: U202X0004 <br> DNI: 70456789 |
 
 ---
 
@@ -108,7 +110,7 @@ En la sociedad contemporánea, la actividad física y la práctica deportiva rec
 
 Frente a esta problemática, el presente proyecto de investigación e ingeniería documenta el diseño, construcción, validación y despliegue de **SportMatch Connect**, un ecosistema digital de arquitectura distribuida que integra matchmaking predictivo mediante algoritmos multivariables, una red social deportiva geolocalizada, un motor de reservas sobre 433 complejos deportivos mapeados con tecnología GIS, una economía gamificada sustentada en la moneda virtual FitCoins con pasarela de pagos real en Stripe, y un asistente conversacional inteligente impulsado por Google Vertex AI (Gemini 2.5 Flash) con procesamiento de voz bidireccional.
 
-El informe se encuentra estructurado en estricto cumplimiento con la **Guía de Trabajo Final 2026** de la Facultad de Ingeniería e Inteligencia Artificial de la Universidad San Ignacio de Loyola (USIL) para el curso Proyecto Final de Carrera III...
+El informe se encuentra estructurado en estricto cumplimiento con la **Guía de Trabajo Final 2026** y el **Instrumento de Evaluación** de la Facultad de Ingeniería e Inteligencia Artificial de la Universidad San Ignacio de Loyola (USIL) para el curso Proyecto Final de Carrera III...
 
 ---
 
@@ -406,6 +408,96 @@ Nota: Elaboración propia.
 - Supabase. (2024). *PostgreSQL Row Level Security (RLS) deep dive*.
 - World Health Organization. (2020). *WHO guidelines on physical activity*. WHO.
 
+# ADMINISTRACIÓN DE LA INVESTIGACIÓN
+
+## Recursos
+
+### Capital humano
+Listar el personal que participa realizando la solución.
+
+Tabla 01. Capital Humano del Proyecto
+| N° | Apellidos y Nombres | Rol | Descripción |
+|---|---|---|---|
+| 1 | Edwin Junia Flores | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
+| 2 | Erick Flores | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
+| 3 | Juan Alonso Salvatierralonso | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
+| 4 | Matías Rodrigo | QA & SRE Engineer | Pruebas Playwright, Vitest y SonarQube |
+
+### Material(es)
+Listar los recursos materiales que utilizarán en la investigación.
+- Kit de oficina y útiles de escritorio.
+- Licencias de software y componentes.
+
+### Equipo(s)
+Listar los recursos de equipamiento que se utilizarán en la investigación.
+- Laptops de desarrollo: CPU Intel Core i7 12th Gen, 32GB RAM DDR5, GPU Nvidia RTX 3060.
+- Servidores cloud de prueba y desarrollo.
+
+### Servicio(s)
+Listar los servicios que se requerirán en la investigación.
+- Telefonía e Internet de alta velocidad.
+- Suscripción a repositorios y servicios nube (Vercel, Render, Supabase).
+- Licencias Microsoft Office 365 e IDEs de desarrollo.
+
+## Presupuesto
+El presupuesto muestra el costo total detallado por honorarios, materiales, equipos depreciados y servicios (Bernal Torres, 2010).
+
+Tabla 02. Presupuesto de Capital Humano
+| N° | Apellidos y Nombres | Costo Unitario (S/.) | Costo Total (S/.) |
+|---|---|---|---|
+| 1 | Edwin Junia Flores | 14,400.00 | 14,400.00 |
+| 2 | Erick Flores | 12,800.00 | 12,800.00 |
+| 3 | Juan Alonso Salvatierralonso | 12,800.00 | 12,800.00 |
+| 4 | Matías Rodrigo | 11,200.00 | 11,200.00 |
+| **Total** | | | **51,200.00** |
+
+Tabla 03. Presupuesto de Materiales
+| N° | Descripción | Unid. | Cant. | Costo Unit. (S/.) | Costo Total (S/.) |
+|---|---|---|---|---|---|
+| 1 | Kit de oficina | Unid. | 1 | 100.00 | 100.00 |
+| **Total** | | | | | **100.00** |
+
+Tabla 04. Presupuesto de Equipos
+| N° | Descripción | Costo del Equipo (S/.) | Tiempo Vida útil (Mes) | Costo Unitario Depreciado (S/.) |
+|---|---|---|---|---|
+| 1 | Laptop Lider Dev | 4,500.00 | 36 | 500.00 |
+| 2 | Laptop Backend Dev | 4,000.00 | 36 | 444.44 |
+| 3 | Laptop Frontend Dev | 4,000.00 | 36 | 444.44 |
+| 4 | Laptop QA Dev | 3,500.00 | 36 | 388.88 |
+| **Total** | | | | **1,777.76** |
+
+Tabla 05. Presupuesto de Servicios
+| N° | Descripción | Tiempo (Meses) | Costo Unitario (S/.) | Costo Total (S/.) |
+|---|---|---|---|---|
+| 1 | Telefonía – Internet | 4 | 150.00 | 600.00 |
+| 2 | Suscripción a Nube Render | 4 | 26.00 | 104.00 |
+| 3 | Ms Office 365 | 4 | 30.00 | 120.00 |
+| 4 | Electricidad | 4 | 100.00 | 400.00 |
+| 5 | APIs Vertex AI IA | 4 | 20.00 | 80.00 |
+| **Total** | | | | **1,304.00** |
+
+Tabla 06. Costos Directos
+| N° | Descripción | Costo Total (S/.) |
+|---|---|---|
+| 1 | Capital Humano | 51,200.00 |
+| 2 | Materiales | 100.00 |
+| 3 | Equipos (Depreciación) | 1,777.76 |
+| 4 | Servicios | 1,304.00 |
+| **Subtotal - Costos Directos** | | **54,381.76** |
+| **Imprevistos (10%)** | | **5,438.18** |
+| **Costo Total = Costos directos + Imprevistos** | | **59,819.94** |
+
+## Financiamiento
+Señalar las fuentes de financiamiento (Bernal Torres, 2010).
+
+Tabla 07. Financiamiento
+| N° | Fuente | Aporte (%) | Aporte (S/.) |
+|---|---|---|---|
+| 1 | Tesistas | 100% | 59,819.94 |
+| 2 | USIL | 0% | 0.00 |
+| 3 | Docente | 0% | 0.00 |
+| **Total** | | **100%** | **59,819.94** |
+
 # 6. ANEXOS DEL INFORME
 
 Documentación complementaria y evidencias de artefactos generados durante el desarrollo del proyecto.
@@ -415,16 +507,38 @@ Documentación complementaria y evidencias de artefactos generados durante el de
 ## a. Informe de patente de software
 Informe formal de soberanía tecnológica e invención en el borde para registro ante Indecopi.
 
+### FICHA DE EVALUACIÓN PARA PROPUESTAS DE SOFTWARE (Según plantilla USIL Ficha de Evaluación Soft. 2025-02.docx)
+
+- **Objetivo de la ficha:** [X] Evaluación de la propuesta
+
+- **Equipo de investigación:** Edwin Junia Flores (Líder Arquitecto, DNI 70123456, edwin.junia@usil.pe), Erick Flores (Backend Dev, DNI 70234567), Juan Alonso Salvatierra (Frontend Dev, DNI 70345678), Matías Rodrigo (QA Dev, DNI 70456789).
+
+- **Dependencia que coordina:** Facultad de Ingeniería e Inteligencia Artificial / Carrera de Ingeniería de Sistemas de Información / Ingeniería de Software.
+
+- **Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información.
+
+- **Título de la propuesta:** SPORTMATCH CONNECT: Plataforma Integral de Matchmaking Deportivo y Red Social con IA.
+
+- **Descripción del problema técnico:** Fragmentación logística y falta de herramientas integradas en tiempo real para la nivelación de habilidades y reserva transparente de canchas sintéticas en Lima.
+
+- **Descripción de antecedentes:** Sistemas de reserva aislados sin capa social ni recomendación algorítmica predictiva.
+
+- **Descripción detallada de la propuesta (Mínimo 250 palabras):** SportMatch Connect es una solución fullstack distribuida que integra React 19 con Feature-Sliced Design (FSD), NestJS 11 modular monolith y Supabase PostgreSQL 15 con PostGIS y RLS. Provee matchmaking predictivo multivariable, red social geolocalizada, economía gamificada FitCoins integrando Stripe y un asistente conversacional Sporty con Google Vertex AI...
+
+- **Origen del código fuente:** Basado parcialmente en librerías de código abierto bajo licencia MIT (React, NestJS, Prisma).
+
+- **Descripción de las divulgaciones:** Publicación en repositorio público de GitHub (`jojiz29/sportmatch-connect`).
+
 ## b. Reporte de patente de software
 Reporte consolidado con arquitectura inventiva y reivindicaciones de software.
 
 ## c. Informe en formato de Paper
-Paper científico formativo en formato IEEE: *“SPORTMATCH CONNECT: A DECOUPLED FULL-STACK ARCHITECTURE FOR PREDICTIVE SPORTS MATCHMAKING AND GAMIFIED ECONOMIES”*.
+Paper científico formativo en formato IEEE (según plantilla (10-26-2) 3 Modelo de Paper.pdf): *“SPORTMATCH CONNECT: A DECOUPLED FULL-STACK ARCHITECTURE FOR PREDICTIVE SPORTS MATCHMAKING AND GAMIFIED ECONOMIES”*.
 
 # 8. ANEXOS DE MEDICIÓN DE ATRIBUTO DE GRADUADO
 
 ## a. AG-C05: Gestión de Proyectos
-Evidencia de uso de Jira Cloud con sprints, backlog y reflexión individual sobre el atributo de gestión en entornos multidisciplinarios.
+Evidencia de uso de Jira Cloud con sprints, backlog y reflexión individual sobre el atributo de gestión en entornos multidisciplinarios (según modelo AG-C05_Gestión_de_Proyectos_Vera_de_la_Cruz_Nilton_Alonso.pdf).
 
 ## b. AG-C08: Análisis de Problemas
 Reflexión individual explicando cómo se conecta la problemática y solución a los Objetivos de Desarrollo Sostenible (ODS 3, ODS 9, ODS 11).

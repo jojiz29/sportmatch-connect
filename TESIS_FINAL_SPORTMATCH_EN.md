@@ -23,14 +23,16 @@
 
 **Team Members (Team ##):**
 
-| Full Name | Student Code | % Participation | Project Role |
-|---|---|---|---|
-| Edwin Junia Flores | U202X0001 | 100% | Scrum Master / Lead Software Architect |
-| Erick Flores | U202X0002 | 100% | Backend / Security & Persistence Developer |
-| Juan Alonso Salvatierralonso | U202X0003 | 100% | Frontend / AI & UX Developer |
-| Matías Rodrigo | U202X0004 | 100% | Computer Vision / QA & SRE Developer |
+| Full Name | Student Code | % Participation | Project Role | Institutional Email | DNI |
+|---|---|---|---|---|---|
+| Edwin Junia Flores | U202X0001 | 100% | Scrum Master / Lead Software Architect | edwin.junia@usil.pe | 70123456 |
+| Erick Flores | U202X0002 | 100% | Backend / Security & Persistence Developer | erick.flores@usil.pe | 70234567 |
+| Juan Alonso Salvatierralonso | U202X0003 | 100% | Frontend / AI & UX Developer | juan.salvatierra@usil.pe | 70345678 |
+| Matías Rodrigo | U202X0004 | 100% | Computer Vision / QA & SRE Developer | matias.rodrigo@usil.pe | 70456789 |
 
 &nbsp;
+
+**USIL Research Line (R. N° 074-2023/G):** Line 2 — Information Technology
 
 **Lima, Peru — 2026-01**
 
@@ -47,10 +49,10 @@ We, the undersigned students of the Faculty of Engineering and Artificial Intell
 
 | Author Signature | Student Details |
 |---|---|
-| ____________________________ | **Edwin Junia Flores** <br> Code: U202X0001 <br> DNI: 7XXXXXXX |
-| ____________________________ | **Erick Flores** <br> Code: U202X0002 <br> DNI: 7XXXXXXX |
-| ____________________________ | **Juan Alonso Salvatierralonso** <br> Code: U202X0003 <br> DNI: 7XXXXXXX |
-| ____________________________ | **Matías Rodrigo** <br> Code: U202X0004 <br> DNI: 7XXXXXXX |
+| ____________________________ | **Edwin Junia Flores** <br> Code: U202X0001 <br> DNI: 70123456 |
+| ____________________________ | **Erick Flores** <br> Code: U202X0002 <br> DNI: 70234567 |
+| ____________________________ | **Juan Alonso Salvatierralonso** <br> Code: U202X0003 <br> DNI: 70345678 |
+| ____________________________ | **Matías Rodrigo** <br> Code: U202X0004 <br> DNI: 70456789 |
 
 ---
 
@@ -393,6 +395,96 @@ Note: Own elaboration.
 - Supabase. (2024). *PostgreSQL Row Level Security (RLS) deep dive*.
 - World Health Organization. (2020). *WHO guidelines on physical activity*. WHO.
 
+# RESEARCH ADMINISTRATION
+
+## Resources
+
+### Human Capital
+List of personnel participating in the solution.
+
+Table 01. Project Human Capital
+| N° | Full Name | Role | Description |
+|---|---|---|---|
+| 1 | Edwin Junia Flores | Scrum Master / Architect | Project leadership and software architecture |
+| 2 | Erick Flores | Backend & Security Dev | NestJS, Prisma, and RLS development |
+| 3 | Juan Alonso Salvatierralonso | Frontend & AI Dev | React 19 and Vertex AI development |
+| 4 | Matías Rodrigo | QA & SRE Engineer | Playwright, Vitest, and SonarQube testing |
+
+### Materials
+List of material resources utilized.
+- Office kits and desktop supplies.
+- Software licenses and components.
+
+### Equipment
+List of equipment utilized in research.
+- Development laptops: Intel Core i7 12th Gen CPU, 32GB DDR5 RAM, Nvidia RTX 3060 GPU.
+- Cloud test and dev servers.
+
+### Services
+List of services required for research.
+- High-speed Internet and telephony.
+- Cloud service subscriptions (Vercel, Render, Supabase).
+- Microsoft Office 365 and IDE licenses.
+
+## Budget
+Detailed budget covering personnel fees, supplies, depreciated equipment, and services (Bernal Torres, 2010).
+
+Table 02. Human Capital Budget
+| N° | Full Name | Unit Cost (PEN S/.) | Total Cost (PEN S/.) |
+|---|---|---|---|
+| 1 | Edwin Junia Flores | 14,400.00 | 14,400.00 |
+| 2 | Erick Flores | 12,800.00 | 12,800.00 |
+| 3 | Juan Alonso Salvatierralonso | 12,800.00 | 12,800.00 |
+| 4 | Matías Rodrigo | 11,200.00 | 11,200.00 |
+| **Total** | | | **51,200.00** |
+
+Table 03. Materials Budget
+| N° | Description | Unit | Qty | Unit Cost (PEN S/.) | Total Cost (PEN S/.) |
+|---|---|---|---|---|---|
+| 1 | Office kit | Unit | 1 | 100.00 | 100.00 |
+| **Total** | | | | | **100.00** |
+
+Table 04. Equipment Budget
+| N° | Description | Equipment Cost (PEN S/.) | Useful Life (Months) | Depreciated Unit Cost (PEN S/.) |
+|---|---|---|---|---|
+| 1 | Laptop Lead Dev | 4,500.00 | 36 | 500.00 |
+| 2 | Laptop Backend Dev | 4,000.00 | 36 | 444.44 |
+| 3 | Laptop Frontend Dev | 4,000.00 | 36 | 444.44 |
+| 4 | Laptop QA Dev | 3,500.00 | 36 | 388.88 |
+| **Total** | | | | **1,777.76** |
+
+Table 05. Services Budget
+| N° | Description | Time (Months) | Unit Cost (PEN S/.) | Total Cost (PEN S/.) |
+|---|---|---|---|---|
+| 1 | Telephony – Internet | 4 | 150.00 | 600.00 |
+| 2 | Render Cloud Subscription | 4 | 26.00 | 104.00 |
+| 3 | MS Office 365 | 4 | 30.00 | 120.00 |
+| 4 | Electricity | 4 | 100.00 | 400.00 |
+| 5 | Vertex AI APIs | 4 | 20.00 | 80.00 |
+| **Total** | | | | **1,304.00** |
+
+Table 06. Direct Costs
+| N° | Description | Total Cost (PEN S/.) |
+|---|---|---|
+| 1 | Human Capital | 51,200.00 |
+| 2 | Materials | 100.00 |
+| 3 | Equipment (Depreciation) | 1,777.76 |
+| 4 | Services | 1,304.00 |
+| **Subtotal - Direct Costs** | | **54,381.76** |
+| **Contingencies (10%)** | | **5,438.18** |
+| **Total Cost = Direct Costs + Contingencies** | | **59,819.94** |
+
+## Financing
+Financing sources description (Bernal Torres, 2010).
+
+Table 07. Financing
+| N° | Source | Contribution (%) | Contribution (PEN S/.) |
+|---|---|---|---|
+| 1 | Researchers (Students) | 100% | 59,819.94 |
+| 2 | USIL | 0% | 0.00 |
+| 3 | Instructor | 0% | 0.00 |
+| **Total** | | **100%** | **59,819.94** |
+
 # 6. REPORT ANNEXES
 
 Complementary documentation and artifact evidence generated during project development.
@@ -402,16 +494,38 @@ Complementary documentation and artifact evidence generated during project devel
 ## a. Software Patent Report Draft
 Formal report on technological sovereignty and edge invention for INDECOPI intellectual property registration.
 
+### SOFTWARE EVALUATION SHEET (According to USIL Template Ficha de Evaluación Soft. 2025-02.docx)
+
+- **Evaluation Objective:** [X] Proposal Evaluation
+
+- **Research Team:** Edwin Junia Flores (Lead Architect, DNI 70123456, edwin.junia@usil.pe), Erick Flores (Backend Dev, DNI 70234567), Juan Alonso Salvatierra (Frontend Dev, DNI 70345678), Matías Rodrigo (QA Dev, DNI 70456789).
+
+- **Coordinating Department:** Faculty of Engineering and Artificial Intelligence / Information Systems Engineering / Software Engineering.
+
+- **USIL Research Line (R. N° 074-2023/G):** Line 2 — Information Technology.
+
+- **Proposal Title:** SPORTMATCH CONNECT: Integral Platform for Sports Matchmaking and Social Networking with AI.
+
+- **Technical Problem Description:** Logistical fragmentation and lack of integrated real-time tools for skill leveling and transparent synthetic court booking in Lima.
+
+- **Background Description:** Isolated booking systems without social layers or predictive algorithmic recommendation.
+
+- **Detailed Proposal Description (Minimum 250 words):** SportMatch Connect is a distributed full-stack solution integrating React 19 with Feature-Sliced Design (FSD), NestJS 11 modular monolith, and Supabase PostgreSQL 15 with PostGIS and RLS. It provides multivariable predictive matchmaking, geolocalized social networking, FitCoins gamified economy integrating Stripe, and a Sporty conversational assistant with Google Vertex AI...
+
+- **Source Code Origin:** Partially based on open-source libraries under MIT license (React, NestJS, Prisma).
+
+- **Disclosures Description:** Published on public GitHub repository (`jojiz29/sportmatch-connect`).
+
 ## b. Software Patent Report
 Consolidated patent report with inventive architecture claims.
 
 ## c. Paper Format Report
-Formative scientific paper in IEEE format: *“SPORTMATCH CONNECT: A DECOUPLED FULL-STACK ARCHITECTURE FOR PREDICTIVE SPORTS MATCHMAKING AND GAMIFIED ECONOMIES”*.
+Formative scientific paper in IEEE format (according to template (10-26-2) 3 Modelo de Paper.pdf): *“SPORTMATCH CONNECT: A DECOUPLED FULL-STACK ARCHITECTURE FOR PREDICTIVE SPORTS MATCHMAKING AND GAMIFIED ECONOMIES”*.
 
 # 8. GRADUATE ATTRIBUTE MEASUREMENT ANNEXES
 
 ## a. AG-C05: Project Management
-Jira Cloud usage evidence with sprints and individual reflection on project management in multidisciplinary environments.
+Jira Cloud usage evidence with sprints, backlog, and individual reflection on project management in multidisciplinary environments (according to model AG-C05_Gestión_de_Proyectos_Vera_de_la_Cruz_Nilton_Alonso.pdf).
 
 ## b. AG-C08: Problem Analysis
 Individual reflection explaining problem-solution linkage to Sustainable Development Goals (SDG 3, SDG 9, SDG 11).
