@@ -7,87 +7,89 @@ function append(text) {
   fs.appendFileSync(outputFile, text + '\n', 'utf8');
 }
 
-console.log("Adding English Chapters II & III to TESIS_FINAL_SPORTMATCH_EN.md...");
+console.log("Adding English Sections e, f, g (i-viii) to TESIS_FINAL_SPORTMATCH_EN.md...");
 
-// CHAPTER II
-append("# CHAPTER II: THEORETICAL FRAMEWORK\n");
-append("## 2.1 Background Research\n");
-append("### 2.1.1 International Background");
-append("1. **González & Martínez (2023) — Spain:** *“Distributed architecture analysis in B2C sports booking platforms: Playtomic case study”*. Analyzed REST API scalability in padel venue booking. Contribution to SPORTMATCH: Established the necessity of decoupling transactional booking engines from social layers through immutable caches.");
-append("2. **Smith & Davis (2024) — USA (Stanford University):** *“Predictive Matchmaking Algorithms in Amateur Sports Communities using Weighted Multivariable Equations”*. Evaluation of player matching satisfaction combining geolocation and skill rating. Contribution to SPORTMATCH: Provided mathematical weighting framework assigning 35% weight to Haversine distance calculations.");
-append("3. **Johnson et al. (2022) — UK (Imperial College London):** *“Edge AI Moderation for User-Generated Content in Niche Social Networks”*. Examined lightweight convolutional neural networks in web browsers. Contribution to SPORTMATCH: Demonstrated client-side TensorFlow.js and NSFWJS feasibility to filter images without server overhead.\n");
+// SECTION E: PROBLEM STATEMENT
+append("# e) PROBLEM STATEMENT\n");
+append("## Research\n");
+append("### Macro Context (Global)");
+append("Globally, physical inactivity represents one of the major silent pandemics of the modern era. According to the World Health Organization (WHO, 2020), over 28% of the global adult population fails to meet the recommended minimum of 150 minutes of weekly moderate physical activity.\n");
 
-append("### 2.1.2 National Background");
-append("1. **Flores & Sánchez (2024) — Peru (PUCP):** *“Georeferenced web platform for synthetic sports field booking in Metropolitan Lima”*. Thesis on venue digitization in North Lima. Contribution to SPORTMATCH: Highlighted integrated payment tool scarcity and venue preference for fixed booking commission rates.");
-append("2. **Ramírez & Torres (2023) — Peru (UNI):** *“PostGIS spatial function applications in PostgreSQL for proximity route optimization”*. Spatial indexing research. Contribution to SPORTMATCH: Provided optimized SQL query scripts executing radial proximity searches via `ST_DWithin` functions.");
-append("3. **Castro & Vargas (2025) — Peru (UPC):** *“Gamification and virtual currencies as retention mechanisms in fitness mobile applications”*. Retention study. Contribution to SPORTMATCH: Served as base for structuring FitCoins economy and establishing 1 FC = S/ 0.10 transactional equivalence.\n");
+append("### Meso Context (Regional - Latin America)");
+append("In Latin America, public sports infrastructure deficits and informal club disorganization exacerbate urban sedentary lifestyles in cities like Bogotá, Santiago, Mexico City, and Lima.\n");
 
-append("## 2.2 Theoretical Foundations\n");
-append("### 2.2.1 Software Architecture: Decoupled Modular Monolith vs. Microservices");
-append("Based on Martin Fowler's principles (2019), for a 4-engineer team developing an MVP, microservice orchestration introduces unnecessary operational overhead. Instead, a **Decoupled Modular Monolith in NestJS 11** was selected, encapsulating domains into independent modules with strict dependency injection.\n");
+append("### Micro Context (Local - Metropolitan Lima)");
+append("In Metropolitan Lima, MINSA (2024) indicates that 72% of adults engage in insufficient physical activity. Match coordination occurs through chaotic WhatsApp groups without skill level balancing.\n");
 
-append("### 2.2.2 Feature-Sliced Design (FSD)");
-append("FSD is a frontend architecture methodology organizing code into 6 hierarchical layers with strict unidirectional upward imports: app -> routes -> widgets -> features -> entities -> shared.\n");
+append("### Main Research Question");
+append("How can the design and implementation of a distributed digital platform integrating multivariable predictive matchmaking, geolocalized social networking, PostGIS GIS booking engines, and AI-assisted gamified economies optimize coordination, skill balancing, and continuity for amateur athletes in Metropolitan Lima?\n");
 
-append("### 2.2.3 Haversine Formula & Predictive Matchmaking Algorithm");
-append("To compute spherical distance d between GPS coordinates, the system executes the Haversine formula:");
-append("```text\na = sin²(Δφ/2) + cos(φ1) · cos(φ2) · sin²(Δλ/2)\nc = 2 · atan2(√a, √(1-a))\nd = R · c\n```");
-append("Where R = 6371 km. The final compatibility score S_match combines 5 weighted factors:\n");
-append("```text\nS_match = 0.35 · S_proximity + 0.30 · S_sport + 0.20 · S_skill + 0.10 · S_availability + 0.05 · S_trust\n```\n");
+append("## Problem Tree\n");
+append("Figure 03");
+append("*Problem Tree Diagram for amateur sports ecosystem*");
+append("```mermaid\ngraph TD\n    EF1[Final Effect: High sedentary lifestyle and sports abandonment in Lima]\n    EF2[Effect 2: Unbalanced matches and player frustration]\n    EF3[Effect 3: Unpaid financial debt in booking reservations]\n    EF4[Effect 4: Underutilization of local sports complexes]\n    \n    PC[CENTRAL PROBLEM: Fragmentation and inefficiency in amateur sports coordination, booking, and community]\n    \n    C1[Cause 1: Informal WhatsApp groups without skill filtering]\n    C2[Cause 2: Dispersed booking tools without social connectivity]\n    C3[Cause 3: Lack of objective sports skill metrics]\n    C4[Cause 4: Manual informal payments and debt collection]\n    \n    EF1 --- EF2\n    EF1 --- EF3\n    EF1 --- EF4\n    EF2 --- PC\n    EF3 --- PC\n    EF4 --- PC\n    PC --- C1\n    PC --- C2\n    PC --- C3\n    PC --- C4\n```");
+append("Note: Own elaboration.\n");
 
-append("## 2.3 Definition of Basic Terms\n");
-append("- **ACID:** Atomicity, Consistency, Isolation, Durability properties in relational databases.");
-append("- **FSD:** Feature-Sliced Design frontend architectural layer methodology.");
-append("- **GiST:** Generalized Search Tree spatial index in PostgreSQL/PostGIS.");
-append("- **RLS:** Row Level Security declarative policies in PostgreSQL database engine.");
-append("- **STT/TTS:** Speech-to-Text and Text-to-Speech audio processing technologies.\n");
-append("---\n");
+// SECTION F: OBJECTIVES
+append("# f) OBJECTIVES\n");
+append("## Objective Tree\n");
+append("Figure 04");
+append("*Objective Tree Diagram and system solution*");
+append("```mermaid\ngraph BT\n    FIN1[Final Goal: Increased physical activity and wellness in Lima]\n    FIN2[Goal 2: Balanced and competitive sports matches]\n    FIN3[Goal 3: Transparent transactions and zero booking debt]\n    FIN4[Goal 4: Maximized sports complex occupancy rates]\n    \n    OBJ[GENERAL OBJECTIVE: Develop and deploy SportMatch Connect platform]\n    \n    M1[Means 1: Social network & realtime chat with AI moderation]\n    M2[Means 2: Interactive map booking engine with PostGIS]\n    M3[Means 3: Predictive matchmaking algorithm with Elo score]\n    M4[Means 4: Stripe payment gateway & FitCoins integration]\n    \n    M1 --> OBJ\n    M2 --> OBJ\n    M3 --> OBJ\n    M4 --> OBJ\n    OBJ --> FIN1\n    OBJ --> FIN2\n    OBJ --> FIN3\n    OBJ --> FIN4\n```");
+append("Note: Own elaboration.\n");
 
-// CHAPTER III
-append("# CHAPTER III: TECHNICAL AND BUSINESS METHODOLOGY\n");
-append("## 3.1 Design Thinking Framework (5 Phases)\n");
-append("### 3.1.1 Phase 1: Empathize");
-append("25 in-depth interviews were conducted with amateur athletes in Lima and 10 with sports venue managers. The Athlete Empathy Map was constructed (Figure 07).\n");
+append("## General Objective and Specific Objectives\n");
+append("### General Objective");
+append("To design, develop, test, and deploy in production the SportMatch Connect distributed digital platform, integrating multivariable predictive matchmaking, sports social networking, PostGIS GIS booking, FitCoins gamified economy with Stripe payments, and interactive Google Vertex AI assistants under Scrum agile framework and industrial quality standards during term 2026-I.\n");
 
+append("### Specific Objectives");
+append("- **OE-01:** Build a decoupled full-stack React 19 FSD / NestJS 11 modular monolith architecture with Prisma ORM.");
+append("- **OE-02:** Develop a predictive matchmaking engine driven by a weighted multivariable algorithm.");
+append("- **OE-03:** Implement sports social feeds, comments, reactions, Squads, and WebSocket messaging.");
+append("- **OE-04:** Integrate Sporty AI conversational assistant with Google Vertex AI (Gemini 2.5 Flash) and STT/TTS.");
+append("- **OE-05:** Apply a Defense in Depth security model with 78 PostgreSQL RLS policies.");
+append("- **OE-06:** Certify quality reaching 78 Vitest unit tests (100% PASS), Playwright E2E, and SonarQube Quality Gate PASSED.");
+append("- **OE-07:** Formulate and validate hybrid B2C/B2B business models and 3-year financial feasibility.\n");
+
+// SECTION G: DEVELOPMENT
+append("# g) DEVELOPMENT\n");
+append("## i. Methodology (Hybrid)\n");
+append("The project adopts a hybrid methodology combining **Design Thinking** for problem discovery, **Lean Startup** for MVP validation, and **Scrum/Kanban** agile management for software engineering sprints.\n");
+
+append("## ii. Empathize\n");
+append("25 interviews were conducted with athletes and 10 with venue managers. The Empathy Map was constructed (Figure 07).\n");
 append("Figure 07");
 append("*Amateur Athlete Empathy Map (Design Thinking)*");
-append("```mermaid\ngraph LR\n    subgraph Empathy Map\n        C1[What do they think & feel? <br>- Frustration over unbalanced matches <br>- Desire for regular sports play]\n        C2[What do they hear? <br>- Complaints about unreliable players <br>- Chaotic WhatsApp chat noise]\n        C3[What do they see? <br>- Empty courts off-peak <br>- Cold booking engines without community]\n        C4[What do they say & do? <br>- Attempt weekly match organization <br>- Assume single organizer court debt]\n    end\n```");
+append("```mermaid\ngraph LR\n    subgraph Empathy Map\n        C1[What do they think & feel? <br>- Frustration over unbalanced matches]\n        C2[What do they hear? <br>- Complaints and WhatsApp informal noise]\n        C3[What do they see? <br>- Empty courts and chaotic bookings]\n        C4[What do they say & do? <br>- Assume court rental debts]\n    end\n```");
 append("Note: Own elaboration.\n");
 
-append("### 3.1.2 Phase 2: Define");
-append("User Journey Mapping identified friction points during player discovery and payments. How Might We (HMW) statements were formulated.\n");
+append("## iii. Define\n");
+append("User Journey Mapping identified friction points during player discovery and payments.\n");
 
-append("### 3.1.3 Phase 3: Ideate");
-append("Brainstorming sessions and Impact vs. Effort matrices prioritized 4 core solution pillars.\n");
+append("## iv. Ideate\n");
+append("Brainstorming sessions prioritized 4 core solution pillars: Matchmaking, Social Network, Bookings, Gamified Economy.\n");
 
-append("### 3.1.4 Phase 4: Prototype");
-append("The React 19 visual Design System was built using Dark HSL tokens (background `hsl(222,47%,11%)`, emerald neon `hsl(142,76%,45%)`, and electric violet `hsl(263,70%,50%)`).\n");
+append("## v. Prototype\n");
+append("The React 19 visual Design System was built using Dark HSL tokens (background `hsl(222,47%,11%)`, emerald neon `hsl(142,76%,45%)`, electric violet `hsl(263,70%,50%)`).\n");
 
-append("### 3.1.5 Phase 5: Test");
-append("Usability tests with 30 users evaluating System Usability Scale (SUS) yielded an average score of 88.5/100 (Excellent).\n");
+append("## vi. Test\n");
+append("Usability tests with 30 users evaluating System Usability Scale (SUS) yielded 88.5/100.\n");
 
-append("## 3.2 Lean Startup Methodology & MVP Construction\n");
-append("The Build-Measure-Learn feedback loop was implemented. The Minimum Viable Product (MVP) was scoped to include authentication, map bookings, matchmaking queues, and Sporty AI chat.\n");
+append("## vii. Lean Startup\n");
+append("The Build-Measure-Learn feedback loop was implemented. The Minimum Viable Product (MVP) was scoped.\n");
 
-append("## 3.3 Business Model Canvas (BMC)\n");
+append("## viii. Business Model (BMC & Financial Feasibility)\n");
 append("Figure 09");
 append("*Business Model Canvas (BMC)*");
-append("```mermaid\ngraph TD\n    subgraph Business Model Canvas — SPORTMATCH CONNECT\n        KP[Key Partners <br>- Sports clubs <br>- Stripe <br>- Google Cloud <br>- Supabase]\n        KA[Key Activities <br>- Software Dev <br>- Matchmaking Algorithm <br>- AI Moderation]\n        VP[Value Propositions <br>- Predictive matchmaking <br>- Booking + Payments <br>- FitCoins economy]\n        CR[Customer Relationships <br>- Self-service <br>- Sporty AI assistant <br>- Gamification]\n        CS[Customer Segments <br>- Amateur athletes <br>- B2B sports complexes]\n        KR[Key Resources <br>- React/NestJS platform <br>- 433 venue database <br>- AI algorithms]\n        CH[Channels <br>- Web App / PWA <br>- Social media <br>- Venue marketing]\n        CSst[Cost Structure <br>- Cloud infra Render/Vercel <br>- Vertex AI APIs <br>- Dev & Maintenance]\n        RS[Revenue Streams <br>- Premium sub PEN 50 <br>- 10% venue Take Rate <br>- B2B SaaS PEN 150]\n    end\n```");
+append("```mermaid\ngraph TD\n    subgraph Business Model Canvas — SPORTMATCH CONNECT\n        KP[Key Partners <br>- Clubs, Stripe, Google, Supabase]\n        KA[Key Activities <br>- Software Dev, Matchmaking, AI]\n        VP[Value Propositions <br>- Matchmaking, Booking+Payments, FitCoins]\n        CR[Customer Relationships <br>- Self-service, Sporty AI]\n        CS[Customer Segments <br>- Athletes & B2B Clubs]\n        KR[Key Resources <br>- React/NestJS platform, 433 venues]\n        CH[Channels <br>- Web App / PWA]\n        CSst[Cost Structure <br>- Cloud Render/Vercel, Vertex AI]\n        RS[Revenue Streams <br>- Premium sub PEN 50, 10% Take Rate, SaaS PEN 150]\n    end\n```");
 append("Note: Own elaboration.\n");
 
-append("## 3.4 Financial Feasibility & Monetization B2B/B2C\n");
-append("### 3.4.1 Revenue Streams");
-append("- **B2C Premium:** Monthly subscription of S/ 50.00 PEN (Sporty Coach AI, zero booking fees, advanced filters).");
-append("- **B2B Take Rate:** 10% commission on completed bookings at affiliated sports complexes.");
-append("- **B2B SaaS:** Management software license \"SportMatch Business\" at S/ 150.00 PEN/month per venue.");
-append("- **B2B Sponsored Venues:** S/ 80.00 PEN weekly fee to highlight neon markers on the interactive map.\n");
-
-append("### 3.4.2 3-Year Financial Projection & Break-Even Analysis");
+append("### Financial Feasibility");
 append("Figure 10");
 append("*3-Year Cash Flow Projection and Break-Even Analysis*");
 append("```mermaid\nxychart-beta\n    title \"3-Year Financial Projection (In PEN Soles)\"\n    x-axis [\"Year 1\", \"Year 2\", \"Year 3\"]\n    y-axis \"Amount in PEN (S/)\" 0 --> 250000\n    bar [45000, 120000, 240000]\n    line [32000, 65000, 110000]\n```");
 append("Note: Own elaboration.\n");
-append("**Financial Metrics:** Net Present Value (NPV) of S/ 84,250.00 PEN (12% discount rate), Internal Rate of Return (IRR) of 38.4%, and Break-Even point at 200 active Premium subscribers.\n");
+append("NPV of S/ 84,250.00 PEN (12% discount rate), IRR of 38.4%, and Break-Even at 200 active Premium subscribers.\n");
 append("---\n");
 
-console.log("English Chapters II & III completed.");
+console.log("English Sections e, f, g (i-viii) completed.");
