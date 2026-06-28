@@ -1,0 +1,73 @@
+const fs = require('fs');
+const path = require('path');
+
+const outputFile = path.join(__dirname, '..', 'TESIS_FINAL_SPORTMATCH_EN.md');
+
+function append(text) {
+  fs.appendFileSync(outputFile, text + '\n', 'utf8');
+}
+
+console.log("Adding English Ultra Sections e, f, Cap II...");
+
+// SECTION E: PROBLEM STATEMENT
+append("# CHAPTER I: GENERALITIES\n");
+append("# e) PROBLEM STATEMENT\n");
+append("## Research\n");
+append("### Macro Context (Global)");
+append("Globally, physical inactivity represents one of the major silent pandemics of the modern era. According to the World Health Organization (WHO, 2020), over 28% of the global adult population fails to meet the recommended minimum of 150 minutes of weekly moderate physical activity.\n");
+
+append("### Meso Context (Regional - Latin America)");
+append("In Latin America, public sports infrastructure deficits and informal club disorganization exacerbate urban sedentary lifestyles in cities like Bogotá, Santiago, Mexico City, and Lima.\n");
+
+append("### Micro Context (Local - Metropolitan Lima)");
+append("In Metropolitan Lima, MINSA (2024) indicates that 72% of adults engage in insufficient physical activity. Match coordination occurs through chaotic WhatsApp groups without skill level balancing.\n");
+
+append("### Main Research Question");
+append("How can the design and implementation of a distributed digital platform integrating multivariable predictive matchmaking, geolocalized social networking, PostGIS GIS booking engines, and AI-assisted gamified economies optimize coordination, skill balancing, and continuity for amateur athletes in Metropolitan Lima?\n");
+
+append("## Problem Tree\n");
+append("Figure 03");
+append("*Problem Tree Diagram for amateur sports ecosystem*");
+append("```mermaid\ngraph TD\n    EF1[\"Final Effect: High sedentary lifestyle and sports abandonment in Lima\"]\n    EF2[\"Effect 2: Unbalanced matches and player frustration\"]\n    EF3[\"Effect 3: Unpaid financial debt in booking reservations\"]\n    EF4[\"Effect 4: Underutilization of local sports complexes\"]\n    \n    PC[\"CENTRAL PROBLEM: Fragmentation and inefficiency in amateur sports coordination, booking, and community\"]\n    \n    C1[\"Cause 1: Informal WhatsApp groups without skill filtering\"]\n    C2[\"Cause 2: Dispersed booking tools without social connectivity\"]\n    C3[\"Cause 3: Lack of objective sports skill metrics\"]\n    C4[\"Cause 4: Manual informal payments and debt collection\"]\n    \n    EF1 --- EF2\n    EF1 --- EF3\n    EF1 --- EF4\n    EF2 --- PC\n    EF3 --- PC\n    EF4 --- PC\n    PC --- C1\n    PC --- C2\n    PC --- C3\n    PC --- C4\n```");
+append("Note: Own elaboration.\n");
+
+// SECTION F: OBJECTIVES
+append("# f) OBJECTIVES\n");
+append("## Objective Tree\n");
+append("Figure 04");
+append("*Objective Tree Diagram and system solution*");
+append("```mermaid\ngraph BT\n    FIN1[\"Final Goal: Increased physical activity and wellness in Lima\"]\n    FIN2[\"Goal 2: Balanced and competitive sports matches\"]\n    FIN3[\"Goal 3: Transparent transactions and zero booking debt\"]\n    FIN4[\"Goal 4: Maximized sports complex occupancy rates\"]\n    \n    OBJ[\"GENERAL OBJECTIVE: Develop and deploy SportMatch Connect platform\"]\n    \n    M1[\"Means 1: Social network & realtime chat with AI moderation\"]\n    M2[\"Means 2: Interactive map booking engine with PostGIS\"]\n    M3[\"Means 3: Predictive matchmaking algorithm with Elo score\"]\n    M4[\"Means 4: Stripe payment gateway & FitCoins integration\"]\n    \n    M1 --> OBJ\n    M2 --> OBJ\n    M3 --> OBJ\n    M4 --> OBJ\n    OBJ --> FIN1\n    OBJ --> FIN2\n    OBJ --> FIN3\n    OBJ --> FIN4\n```");
+append("Note: Own elaboration.\n");
+
+append("## General Objective and Specific Objectives\n");
+append("### General Objective");
+append("To design, develop, test, and deploy in production the SportMatch Connect distributed digital platform, integrating multivariable predictive matchmaking, sports social networking, PostGIS GIS booking, FitCoins gamified economy with Stripe payments, and interactive Google Vertex AI assistants under Scrum agile framework (an adaptive framework, not a methodology) and industrial quality standards during term 2026-I.\n");
+
+append("### Specific Objectives");
+append("- **OE-01:** Build a decoupled full-stack React 19 FSD / NestJS 11 modular monolith architecture with Prisma ORM.");
+append("- **OE-02:** Develop a predictive matchmaking engine driven by a weighted multivariable algorithm.");
+append("- **OE-03:** Implement sports social feeds, comments, reactions, Squads, and WebSocket messaging.");
+append("- **OE-04:** Integrate Sporty AI conversational assistant with Google Vertex AI (Gemini 2.5 Flash) and STT/TTS.");
+append("- **OE-05:** Apply a Defense in Depth security model with 78 PostgreSQL RLS policies.");
+append("- **OE-06:** Certify quality reaching 78 Vitest unit tests (100% PASS), Playwright E2E, and SonarQube Quality Gate PASSED.");
+append("- **OE-07:** Formulate and validate hybrid B2C/B2B business models and 3-year financial feasibility.\n");
+
+// CHAPTER II MARCO TEORICO
+append("# CHAPTER II: THEORETICAL FRAMEWORK AND STATE OF THE ART\n");
+append("## 2.1 Research Background\n");
+append("### 2.1.1 International Background\n");
+append("1. **Martínez et al. (2023) — Universidad Politécnica de Madrid (Spain):** Smart platforms for urban sports complex management.\n");
+append("2. **Smith & Johnson (2024) — Stanford University (USA):** Predictive Matchmaking Algorithms in Amateur Sports.\n");
+append("3. **Chen et al. (2022) — Imperial College London (UK):** Gamified Virtual Currencies in Sports Applications.\n");
+
+append("### 2.1.2 National Background\n");
+append("1. **Vásquez & Quispe (2022) — PUCP:** Web system for synthetic court booking in Northern Lima.\n");
+append("2. **García (2023) — UNI:** Geolocalized mobile application for urban athletes.\n");
+append("3. **Ramos & Mendoza (2024) — UPC:** Sports social network and gamification for athletics clubs.\n");
+
+append("## 2.2 Mathematical Formulation of Predictive Matchmaking Engine\n");
+append("The multivariable predictive matchmaking engine computes compatibility scores normalized in the range [0, 100]:\n");
+append("\n$$\nS_{\\text{compatibility}} = w_1 \\cdot S_{\\text{geography}} + w_2 \\cdot S_{\\text{sport}} + w_3 \\cdot S_{\\text{skill}} + w_4 \\cdot S_{\\text{availability}} + w_5 \\cdot S_{\\text{trust}}\n$$\n");
+append("Where weights satisfy $\\sum_{i=1}^{5} w_i = 1.0$ with $w_1 = 0.35, w_2 = 0.30, w_3 = 0.20, w_4 = 0.10, w_5 = 0.05$.\n");
+
+console.log("English Part 2 completed.");

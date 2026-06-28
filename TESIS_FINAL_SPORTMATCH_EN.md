@@ -222,17 +222,20 @@ To design, develop, test, and deploy in production the SportMatch Connect distri
 
 The multivariable predictive matchmaking engine computes compatibility scores normalized in the range [0, 100]:
 
-\[ S_{\text{compatibility}} = w_1 S_{\text{geography}} + w_2 S_{\text{sport}} + w_3 S_{\text{skill}} + w_4 S_{\text{availability}} + w_5 S_{\text{trust}} \]
 
-Where weights satisfy \(\sum_{i=1}^{5} w_i = 1.0\) with \(w_1 = 0.35, w_2 = 0.30, w_3 = 0.20, w_4 = 0.10, w_5 = 0.05\).
+$$
+S_{\text{compatibility}} = w_1 \cdot S_{\text{geography}} + w_2 \cdot S_{\text{sport}} + w_3 \cdot S_{\text{skill}} + w_4 \cdot S_{\text{availability}} + w_5 \cdot S_{\text{trust}}
+$$
+
+Where weights satisfy $\sum_{i=1}^{5} w_i = 1.0$ with $w_1 = 0.35, w_2 = 0.30, w_3 = 0.20, w_4 = 0.10, w_5 = 0.05$.
 
 # CHAPTER III: TECHNICAL AND BUSINESS METHODOLOGY
 
 ## i. Methodology (Hybrid Framework)
 
-The project adopts a structured hybrid methodology combining **Design Thinking** for human-centered problem discovery, **Lean Startup** for MVP validation and Build-Measure-Learn feedback loops, and the **Scrum** framework (complemented by Kanban) for software engineering sprints.
+The project adopts a structured hybrid methodology combining **Design Thinking** for human-centered problem discovery, **Lean Startup** for MVP validation, and the **Scrum** framework (complemented by Kanban) for software engineering sprints.
 
-It is academically vital to clarify that **Scrum IS NOT a methodology**, but an adaptive and lightweight framework based on empiricism and Lean thinking (Schwaber & Sutherland, 2020).
+Scrum IS NOT a methodology, but an adaptive lightweight framework based on empiricism and Lean thinking (Schwaber & Sutherland, 2020).
 
 ## ii. Empathize
 
@@ -243,7 +246,6 @@ It is academically vital to clarify that **Scrum IS NOT a methodology**, but an 
 Table 08. User Journey Map Matrix — Traditional Process vs. SportMatch Connect
 
 | Journey Stage | User Actions | Pains in Traditional Channel | SportMatch Connect Solution Opportunity | Emotional State |
-
 |---|---|---|---|---|
 | **1. Discovery** | Tries to coordinate a weekend match. | Chaotic WhatsApp groups, ignored messages, lack of quorum. | Geolocalized social feed and public match creation. | 😟 Frustrated |
 | **2. Matchmaking** | Searches for rivals of similar skill level. | Unknown players with unequal skill levels, boring matches. | Predictive matchmaking engine with Elo compatibility score. | 😐 Neutral |
@@ -325,7 +327,6 @@ Scrum framework (an adaptive framework, not a methodology) and Kanban execution 
 Table 10. Prioritized User Story Catalog Sample in Jira Cloud
 
 | Ticket ID | Epic | User Story | Story Points | Acceptance Criteria (Gherkin Format) |
-
 |---|---|---|---|---|
 | **SCRUM-12** | E-02 Matchmaking | As an athlete, I want to swipe nearby player cards to find rivals. | 8 SP | **Given** user is authenticated with active GPS, **When** accessing Matchmaking tab, **Then** a candidate queue computed by multivariable algorithm is displayed. |
 
@@ -425,7 +426,7 @@ TTFB 142ms, REST API latency 185ms, Lighthouse 98/100, Uptime 99.95%.
 
 ## 5.2 Hypothesis Testing
 
-Paired t-test results (t=4.82, p=0.00012 < 0.05) rejected null hypothesis H0 and confirmed H1.
+Paired t-test results ($t=4.82, p=0.00012 < 0.05$) rejected null hypothesis $H_0$ and confirmed $H_1$.
 
 # CHAPTER VI: DISCUSSION OF RESULTS
 
@@ -461,6 +462,7 @@ Academic contrast of SportMatch results against international literature.
 ### Human Capital
 
 Table 01. Project Human Capital
+
 | N° | Code | Full Name | Program | Role | Description |
 |---|---|---|---|---|---|
 | 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Architect | Project leadership and software architecture |
@@ -472,6 +474,7 @@ Table 01. Project Human Capital
 ## Budget
 
 Table 02. Human Capital Budget
+
 | N° | Full Name | Unit Cost (PEN S/.) | Total Cost (PEN S/.) |
 |---|---|---|---|
 | 1 | FLORES SANCHEZ, EDWIN JUNIOR | 14,400.00 | 14,400.00 |
@@ -482,12 +485,14 @@ Table 02. Human Capital Budget
 | **Total** | | | **64,000.00** |
 
 Table 03. Materials Budget
+
 | N° | Description | Unit | Qty | Unit Cost (PEN S/.) | Total Cost (PEN S/.) |
 |---|---|---|---|---|---|
 | 1 | Office kit | Unit | 1 | 100.00 | 100.00 |
 | **Total** | | | | | **100.00** |
 
 Table 04. Equipment Budget
+
 | N° | Description | Equipment Cost (PEN S/.) | Useful Life (Months) | Depreciated Unit Cost (PEN S/.) |
 |---|---|---|---|---|
 | 1 | Laptop Lead Dev | 4,500.00 | 36 | 500.00 |
@@ -498,6 +503,7 @@ Table 04. Equipment Budget
 | **Total** | | | | **2,222.20** |
 
 Table 05. Services Budget
+
 | N° | Description | Time (Months) | Unit Cost (PEN S/.) | Total Cost (PEN S/.) |
 |---|---|---|---|---|
 | 1 | Telephony – Internet | 4 | 150.00 | 600.00 |
@@ -508,6 +514,7 @@ Table 05. Services Budget
 | **Total** | | | | **1,304.00** |
 
 Table 06. Direct Costs
+
 | N° | Description | Total Cost (PEN S/.) |
 |---|---|---|
 | 1 | Human Capital | 64,000.00 |
@@ -521,6 +528,7 @@ Table 06. Direct Costs
 ## Financing
 
 Table 07. Financing
+
 | N° | Source | Contribution (%) | Contribution (PEN S/.) |
 |---|---|---|---|
 | 1 | Researchers (Students) | 100% | 74,388.82 |

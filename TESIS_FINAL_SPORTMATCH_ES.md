@@ -237,35 +237,50 @@ Diseñar, desarrollar, evaluar y desplegar en producción la plataforma digital 
 
 ## 2.2 Formulación Matemática del Algoritmo de Matchmaking Predictivo
 
-El motor de matchmaking predictivo implementa una función de compatibilidad multivariable ponderada en el rango [0, 100]:
+El motor de matchmaking predictivo implementa una función de compatibilidad multivariable ponderada en el rango [0, 100], disenada para maximizar la probabilidad de satisfaccion mutua entre rivales o companeros de equipo:
 
-\[ S_{\text{compatibilidad}} = w_1 S_{\text{cercanía}} + w_2 S_{\text{deporte}} + w_3 S_{\text{nivel}} + w_4 S_{\text{disponibilidad}} + w_5 S_{\text{trust}} \]
 
-Donde las ponderaciones satisfacen la restricción de normalización \(\sum_{i=1}^{5} w_i = 1.0\):
+$$
+S_{\text{compatibilidad}} = w_1 \cdot S_{\text{cercanía}} + w_2 \cdot S_{\text{deporte}} + w_3 \cdot S_{\text{nivel}} + w_4 \cdot S_{\text{disponibilidad}} + w_5 \cdot S_{\text{trust}}
+$$
 
-- \(w_1 = 0.35\) (Cercanía geográfica mediante fórmula de Haversine)
+Donde las ponderaciones satisfacen estrictamente la restriccion de normalizacion algebraico dada por $\sum_{i=1}^{5} w_i = 1.0$:
 
-- \(w_2 = 0.30\) (Coincidencia de deporte preferido — filtro binario)
+- $w_1 = 0.35$ (Cercania geografica mediante la formula ortodromica de Haversine).
 
-- \(w_3 = 0.20\) (Similitud de nivel de destreza Elo)
+- $w_2 = 0.30$ (Coincidencia exacta de deporte preferido — filtro binario estricto).
 
-- \(w_4 = 0.10\) (Solapamiento de franjas horarias de disponibilidad)
+- $w_3 = 0.20$ (Similitud de nivel de destreza basado en el algoritmo de rating Elo).
 
-- \(w_5 = 0.05\) (Trust Score del perfil de usuario)
+- $w_4 = 0.10$ (Solapamiento de franjas horarias de disponibilidad semanal).
+
+- $w_5 = 0.05$ (Trust Score o reputacion auditada del perfil de usuario).
 
 ### Fórmula de Distancia Ortodrómica (Haversine)
 
-Para calcular la distancia en kilómetros entre el usuario \(A(\phi_1, \lambda_1)\) y la cancha o rival \(B(\phi_2, \lambda_2)\):
+Para calcular la distancia exacta sobre la superficie terrestre en kilometros entre la posicion del usuario $A(\phi_1, \lambda_1)$ y la cancha o rival candidato $B(\phi_2, \lambda_2)$:
 
-\[ a = \sin^2\left(\frac{\Delta\phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta\lambda}{2}\right) \]
 
-\[ c = 2 \cdot \operatorname{atan2}\left(\sqrt{a}, \sqrt{1-a}\right) \]
+$$
+a = \sin^2\left(\frac{\Delta\phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta\lambda}{2}\right)
+$$
 
-\[ d = R \cdot c \]
 
-Donde \(R = 6371\text{ km}\) es el radio medio terrestre. El score de cercanía se calcula como:
+$$
+c = 2 \cdot \operatorname{atan2}\left(\sqrt{a}, \sqrt{1-a}\right)
+$$
 
-\[ S_{\text{cercanía}} = 100 \times \max\left(0, 1 - \frac{d}{d_{\max}}\right) \quad \text{con } d_{\max} = 50\text{ km} \]
+
+$$
+d = R \cdot c
+$$
+
+Donde $R = 6371\text{ km}$ representa el radio medio terrestre. Posteriormente, el score de cercania espacial se normaliza exponencialmente mediante la siguiente funcion:
+
+
+$$
+S_{\text{cercanía}} = 100 \times \max\left(0, 1 - \frac{d}{d_{\max}}\right) \quad \text{donde } d_{\max} = 50\text{ km}
+$$
 
 # CAPÍTULO III: METODOLOGÍA TÉCNICA Y DE NEGOCIO
 
@@ -282,7 +297,6 @@ Para comprender de manera integral las vivencias, motivaciones y fricciones de l
 ### Matriz de Hallazgos de Investigación Cualitativa
 
 | Criterio Evaluado | Deportistas Amateurs (N=25) | Administradores de Canchas (N=10) | Impacto Sistémico en SportMatch |
-
 |---|---|---|---|
 | **Fricción Principal** | Dificultad extrema para completar equipos a última hora (88%). | Canchas vacías en horarios de baja demanda (14:00 - 17:00h) (90%). | Algoritmo de matchmaking predictivo en tiempo real y precios dinámicos. |
 | **Nivelación** | Partidos desequilibrados por jugadores que mienten sobre su nivel (76%). | Conflictos y discusiones entre clientes por partidos desiguales (60%). | Sistema de rating Elo automático alimentado por valoraciones post-partido. |
@@ -312,16 +326,15 @@ En la fase de Definición, el equipo sintetizó los hallazgos cualitativos para 
 Tabla 08. Matriz de User Journey Map — Proceso Tradicional vs. SportMatch Connect
 
 | Etapa del Viaje | Acciones del Usuario | Puntos de Dolor (Pains) en Vía Tradicional | Oportunidad de Solución en SportMatch Connect | Estado Emocional |
-
 |---|---|---|---|---|
 | **1. Descubrimiento** | Intenta coordinar un partido para el fin de semana. | Grupos de WhatsApp caóticos, mensajes ignorados, falta de quórum. | Feed social geolocalizado y creación de retas abiertas a la comunidad. | 😟 Frustrado |
 | **2. Matchmaking** | Busca rivales o compañeros del mismo nivel. | Jugadores desconocidos con nivel de destreza dispar, partidos aburridos. | Motor de emparejamiento predictivo con cálculo de compatibilidad Elo. | 😐 Neutral |
 | **3. Reserva de Cancha** | Llama por teléfono o envía mensajes a complejos deportivos. | Canchas ocupadas, falta de transparencia en precios y horarios disponibles. | Mapa interactivo Leaflet con 433 canchas mapeadas y reserva instantánea. | 😣 Estresado |
 | **4. Gestión de Pago** | Recolecta el dinero mediante transferencias Yape/Plin. | Amigos morosos que no pagan su cuota, el organizador pierde dinero. | Split de pago automatizado con Stripe y billetera virtual FitCoins. | 😤 Molesto |
 | **5. Experiencia de Juego** | Asiste a la cancha y juega el partido. | Desorganización de camisetas, falta de arbitraje o métricas. | Registro de estadísticas en vivo y asistente Sporty IA para soporte. | 😊 Satisfecho |
-| **6. Post-Partido** | Intenta dar seguimiento a los rivales para futuros encuentros. | Pérdida de contacto con los jugadores, sin registro de progreso deportivo. | Red social con Squads, valoraciones mutuamente auditadas y ranking local. | 😄 Entusiasmado |
+| **6. Post-Partido** | Intenta dar seguimiento a los rivales para futuros encuentros. | Pérdida de contacto con los jugadores, sin registro de progreso deportivo. | Red social con Squads, valoraciones mutuamente auditadas y ranking local. | 😄 Entusiasmo |
 
-### Preguntas How Might We (HMW — ¿Cómo podrías mos...?)
+### Preguntas How Might We (HMW — ¿Cómo podríamos...?)
 
 - **HMW-01:** ¿Cómo podríamos garantizar que un deportista amateur encuentre compañeros de su mismo nivel en menos de 5 minutos?
 
@@ -336,7 +349,6 @@ Durante la fase de Ideación, se realizaron sesiones de lluvia de ideas (Brainst
 ### Matriz de Priorización de Funcionalidades (Impacto vs. Esfuerzo)
 
 | Cuadrante | Descripción de Estrategia | Funcionalidades Priorizadas en SportMatch Connect |
-
 |---|---|---|
 | **Cuadrante 1: Victorias Rápidas (Alto Impacto / Bajo Esfuerzo)** | Implementación inmediata en el MVP inicial. | - Mapa interactivo Leaflet con geolocalización de canchas.<br>- Sistema de perfiles deportivos con deportes preferidos.<br>- Feed social de publicaciones con fotos y comentarios. |
 | **Cuadrante 2: Proyectos Clave (Alto Impacto / Alto Esfuerzo)** | Núcleo diferenciador de la plataforma a desarrollar en Sprints principales. | - Algoritmo de matchmaking predictivo con score multivariable.<br>- Pasarela de pagos Stripe con split automático de tarifa.<br>- Asistente conversacional Sporty IA impulsado por Gemini 2.5 Flash. |
@@ -443,7 +455,6 @@ El desarrollo del software SportMatch Connect se ejecutó durante 16 semanas de 
 Tabla 10. Catálogo Muestra de Historias de Usuario Priorizadas en Jira Cloud
 
 | Ticket ID | Épica | Historia de Usuario | Story Points | Criterios de Aceptación (Formato Gherkin) |
-
 |---|---|---|---|---|
 | **SCRUM-12** | E-02 Matchmaking | Como deportista, quiero deslizar tarjetas de jugadores cercanos para encontrar rivales. | 8 SP | **Dado** que el usuario está autenticado y tiene GPS activo, **Cuando** accede a la pestaña Matchmaking, **Entonces** se muestra una cola de candidatos ponderada por el algoritmo multivariable. |
 | **SCRUM-45** | E-04 Reservas | Como usuario, quiero reservar una cancha sintética pagando con tarjeta de crédito/débito. | 13 SP | **Dado** que la cancha está disponible en la franja horaria seleccionada, **Cuando** el usuario confirma el checkout con Stripe, **Entonces** el backend valida el pago, registra la reserva y descuenta la comisión. |
@@ -541,10 +552,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js 22
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "24.x"
       - name: Install dependencies
         run: npm ci
       - name: Run ESLint & Prettier
@@ -596,13 +607,13 @@ Se evaluaron las métricas de rendimiento y observabilidad en producción median
 
 ## 5.2 Prueba de Hipótesis de Adopción y Frecuencia Deportiva
 
-Se formuló la hipótesis nula (H0) y alternativa (H1) para evaluar si el uso de SportMatch Connect incrementa la frecuencia semanal de actividad física en deportistas amateurs:
+Se formuló la hipótesis nula ($H_0$) y alternativa ($H_1$) para evaluar si el uso de SportMatch Connect incrementa la frecuencia semanal de actividad física en deportistas amateurs:
 
-- **H0:** El uso de SportMatch Connect no genera un incremento estadísticamente significativo en la frecuencia semanal de actividad física de los usuarios (\(\mu_{\text{post}} \le \mu_{\text{pre}}\)).
+- **$H_0$:** El uso de SportMatch Connect no genera un incremento estadísticamente significativo en la frecuencia semanal de actividad física de los usuarios ($\mu_{\text{post}} \le \mu_{\text{pre}}$).
 
-- **H1:** El uso de SportMatch Connect genera un incremento estadísticamente significativo en la frecuencia semanal de actividad física de los usuarios (\(\mu_{\text{post}} > \mu_{\text{pre}}\)).
+- **$H_1$:** El uso de SportMatch Connect genera un incremento estadísticamente significativo en la frecuencia semanal de actividad física de los usuarios ($\mu_{\text{post}} > \mu_{\text{pre}}$).
 
-Mediante una prueba \(t\) de Student para muestras pareadas con \(N=30\) usuarios y un nivel de significancia \(\alpha = 0.05\), se obtuvo un valor \(t = 4.82\) y un \(p\)-valor de \(0.00012 < 0.05\). Por consiguiente, **se rechaza la hipótesis nula H0 y se acepta H1**, demostrando que la plataforma incrementa la práctica deportiva de 1.2 a 2.8 partidos semanales en promedio.
+Mediante una prueba $t$ de Student para muestras pareadas con $N=30$ usuarios y un nivel de significancia $\alpha = 0.05$, se obtuvo un valor $t = 4.82$ y un $p$-valor de $0.00012 < 0.05$. Por consiguiente, **se rechaza la hipótesis nula $H_0$ y se acepta $H_1$**, demostrando que la plataforma incrementa la práctica deportiva de 1.2 a 2.8 partidos semanales en promedio.
 
 # CAPÍTULO VI: DISCUSIÓN DE RESULTADOS
 
@@ -686,6 +697,7 @@ Los resultados obtenidos en el presente proyecto contrastan favorablemente con l
 Listar el personal que participa realizando la solución.
 
 Tabla 01. Capital Humano del Proyecto
+
 | N° | Código | Apellidos y Nombres | Carrera | Rol | Descripción |
 |---|---|---|---|---|---|
 | 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
@@ -714,6 +726,7 @@ Listar los servicios que se requerirán en la investigación.
 El presupuesto muestra el costo total detallado por honorarios, materiales, equipos depreciados y servicios (Bernal Torres, 2010).
 
 Tabla 02. Presupuesto de Capital Humano
+
 | N° | Apellidos y Nombres | Costo Unitario (S/.) | Costo Total (S/.) |
 |---|---|---|---|
 | 1 | FLORES SANCHEZ, EDWIN JUNIOR | 14,400.00 | 14,400.00 |
@@ -724,12 +737,14 @@ Tabla 02. Presupuesto de Capital Humano
 | **Total** | | | **64,000.00** |
 
 Tabla 03. Presupuesto de Materiales
+
 | N° | Descripción | Unid. | Cant. | Costo Unit. (S/.) | Costo Total (S/.) |
 |---|---|---|---|---|---|
 | 1 | Kit de oficina | Unid. | 1 | 100.00 | 100.00 |
 | **Total** | | | | | **100.00** |
 
 Tabla 04. Presupuesto de Equipos
+
 | N° | Descripción | Costo del Equipo (S/.) | Tiempo Vida útil (Mes) | Costo Unitario Depreciado (S/.) |
 |---|---|---|---|---|
 | 1 | Laptop Lider Dev | 4,500.00 | 36 | 500.00 |
@@ -740,6 +755,7 @@ Tabla 04. Presupuesto de Equipos
 | **Total** | | | | **2,222.20** |
 
 Tabla 05. Presupuesto de Servicios
+
 | N° | Descripción | Tiempo (Meses) | Costo Unitario (S/.) | Costo Total (S/.) |
 |---|---|---|---|---|
 | 1 | Telefonía – Internet | 4 | 150.00 | 600.00 |
@@ -750,6 +766,7 @@ Tabla 05. Presupuesto de Servicios
 | **Total** | | | | **1,304.00** |
 
 Tabla 06. Costos Directos
+
 | N° | Descripción | Costo Total (S/.) |
 |---|---|---|
 | 1 | Capital Humano | 64,000.00 |
@@ -764,6 +781,7 @@ Tabla 06. Costos Directos
 Señalar las fuentes de financiamiento (Bernal Torres, 2010).
 
 Tabla 07. Financiamiento
+
 | N° | Fuente | Aporte (%) | Aporte (S/.) |
 |---|---|---|---|
 | 1 | Tesistas | 100% | 74,388.82 |
