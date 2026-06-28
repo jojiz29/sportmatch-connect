@@ -13,30 +13,31 @@
 
 **Informe Final de Proyecto para optar el Título Profesional de Ingeniero de Sistemas**
 
-**Curso:** Proyecto Final de Carrera III (PFC III)
+**Curso:** PROYECTO FINAL DE CARRERA III
 
 **Semestre:** 2026-I
 
-**Docente:** Kenny Disney Neira Neira
+**Bloque:** FC-PREISF10B01N
 
-**Bloque:** FC-SMVISI-SP10A01T
+**Docente:** NEIRA NEIRA, KENNY DISNEY (kenny.neira@usil.pe)
 
 &nbsp;
 
-**Integrantes (Equipo ##):**
+**Integrantes del Equipo:**
 
-| Nombre Completo | Código de Alumno | % Participación | Rol en el Proyecto | Correo Institucional | DNI |
-|---|---|---|---|---|---|
-| Edwin Junia Flores | U202X0001 | 100% | Scrum Master / Arquitecto de Software Principal | edwin.junia@usil.pe | 70123456 |
-| Erick Flores | U202X0002 | 100% | Desarrollador Backend / Seguridad & Persistencia | erick.flores@usil.pe | 70234567 |
-| Juan Alonso Salvatierralonso | U202X0003 | 100% | Desarrollador Frontend / IA & UX | juan.salvatierra@usil.pe | 70345678 |
-| Matías Rodrigo | U202X0004 | 100% | Desarrollador Computer Vision / QA & SRE | matias.rodrigo@usil.pe | 70456789 |
+| N° | Código | Alumno (Apellidos y Nombres) | Carrera | Estado | Email | % Part. | Rol en el Proyecto |
+|---|---|---|---|---|---|---|---|
+| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Activo | edwin.floress@usil.pe | 100% | Scrum Master / Arquitecto de Software Principal |
+| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | Activo | alejandro.andrade@usil.pe | 100% | Desarrollador Fullstack / Especialista UI/UX |
+| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | Activo | erick.espinozam@usil.pe | 100% | Desarrollador Backend / Seguridad & Persistencia |
+| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | Activo | matias.gastelu@usil.pe | 100% | Desarrollador QA & DevOps / SRE |
+| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | Activo | juan.salvatierra@usil.pe | 100% | Desarrollador Frontend / Especialista IA |
 
 &nbsp;
 
 **Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información
 
-**Lima, Perú — 2026-01**
+**Lima, Perú — 2026-I**
 
 ---
 
@@ -44,35 +45,36 @@
 
 Nosotros, los abajo firmantes, estudiantes de la Facultad de Ingeniería e Inteligencia Artificial de la Universidad San Ignacio de Loyola (USIL), declaramos bajo jura y responsabilidad legal y académica lo siguiente:
 
-1. Que el presente informe final de proyecto titulado **"SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE"** es una obra original, inédita y desarrollada íntegramente por los autores bajo la supervisión del docente asesor del curso Proyecto Final de Carrera III.
+1. Que el presente informe final de proyecto titulado **"SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE"** es una obra original, inédita y desarrollada íntegramente por los autores bajo la supervisión del docente asesor del curso Proyecto Final de Carrera III, Ing. Kenny Disney Neira Neira.
 2. Que todas las fuentes bibliográficas, investigaciones previas, librerías de código abierto, frameworks y servicios en la nube utilizados para la conceptualización, diseño, implementación y evaluación del software han sido debidamente citados y acreditados siguiendo las normas internacionales de la American Psychological Association (APA 7ma edición).
 3. Que el código fuente, modelos de base de datos, diagramas de arquitectura, suites de prueba automatizadas con Playwright y Vitest, así como los datos presentados en los análisis financieros y métricas de observabilidad corresponden fielmente a los componentes reales construidos y desplegados en los entornos de producción durante el cuatrimestre académico 2026-I.
 4. Que asumimos total responsabilidad por el contenido, afirmaciones y conclusiones expresadas en este documento, liberando a la Universidad San Ignacio de Loyola de cualquier reclamo o controversia relacionada con propiedad intelectual o derechos de autor por parte de terceros.
 
-En fe de lo cual, firmamos la presente declaración en la ciudad de Lima, a los 27 días del mes de junio de 2026.
+En fe de lo cual, firmamos la presente declaración en la ciudad de Lima, a los 28 días del mes de junio de 2026.
 
 | Firma de Autor | Datos del Estudiante |
 |---|---|
-| ____________________________ | **Edwin Junia Flores** <br> Cód: U202X0001 <br> DNI: 70123456 |
-| ____________________________ | **Erick Flores** <br> Cód: U202X0002 <br> DNI: 70234567 |
-| ____________________________ | **Juan Alonso Salvatierralonso** <br> Cód: U202X0003 <br> DNI: 70345678 |
-| ____________________________ | **Matías Rodrigo** <br> Cód: U202X0004 <br> DNI: 70456789 |
+| ____________________________ | **FLORES SANCHEZ, EDWIN JUNIOR** <br> Cód: 2111716 <br> Email: edwin.floress@usil.pe |
+| ____________________________ | **ANDRADE NOA, ALEJANDRO PAOLO** <br> Cód: 2010830 <br> Email: alejandro.andrade@usil.pe |
+| ____________________________ | **ESPINOZA MAYTA, ERICK JAIR** <br> Cód: 2010029 <br> Email: erick.espinozam@usil.pe |
+| ____________________________ | **GASTELU PONTE, MATIAS FERNANDO** <br> Cód: 2121043 <br> Email: matias.gastelu@usil.pe |
+| ____________________________ | **SALVATIERRA RAMIREZ, JUAN ALONSO** <br> Cód: 2121274 <br> Email: juan.salvatierra@usil.pe |
 
 ---
 
 ## RESUMEN
 
-SportMatch Connect es una plataforma tecnológica distribuida y multicapa concebida para solucionar la fragmentación logística, social y económica que afecta la práctica del deporte amateur en Lima Metropolitana y Latinoamérica. A lo largo de 16 semanas de trabajo estructurado bajo la metodología ágil Scrum, se orquestó una solución fullstack que combina un frontend desacoplado en React 19 con TypeScript organizado mediante Feature-Sliced Design (FSD), un backend modular en NestJS 11 con Prisma ORM y una capa de persistencia administrada en Supabase (PostgreSQL 15) con extensión espacial PostGIS y 78 políticas de Row Level Security (RLS). El sistema integra cuatro módulos centrales: un motor de matchmaking predictivo basado en un algoritmo multivariable ponderado (cercanía Haversine, deporte, nivel Elo y trust score), una red social con feed en tiempo real y Squads de equipos, un motor de reservas de canchas en mapa interactivo con Leaflet sobre 433 recintos de Lima, y una economía gamificada basada en la moneda virtual FitCoins con pasarela de pagos real en Stripe (soles PEN). Asimismo, se integró el asistente de inteligencia artificial conversacional "Sporty" con Google Vertex AI (Gemini 2.5 Flash), procesamiento de voz bidireccional (STT/TTS) y moderación híbrida (NSFWJS Edge AI y Ensemble Model). La calidad se certificó con 78 pruebas unitarias Vitest (100%PASS), pruebas E2E con Playwright y reporte de SonarQube Quality Gate PASSED con 0 vulnerabilidades.
+SportMatch Connect es una plataforma tecnológica distribuida y multicapa concebida para solucionar la fragmentación logística, social y económica que afecta la práctica del deporte amateur en Lima Metropolitana y Latinoamérica. A lo largo de 16 semanas de trabajo estructurado bajo el marco de trabajo ágil Scrum (el cual no es una metodología sino un marco de trabajo adaptativo), se orquestó una solución fullstack que combina un frontend desacoplado en React 19 con TypeScript organizado mediante Feature-Sliced Design (FSD), un backend modular en NestJS 11 con Prisma ORM y una capa de persistencia administrada en Supabase (PostgreSQL 15) con extensión espacial PostGIS y 78 políticas de Row Level Security (RLS). El sistema integra cuatro módulos centrales: un motor de matchmaking predictivo basado en un algoritmo multivariable ponderado (cercanía Haversine, deporte, nivel Elo y trust score), una red social con feed en tiempo real y Squads de equipos, un motor de reservas de canchas en mapa interactivo con Leaflet sobre 433 recintos de Lima, y una economía gamificada basada en la moneda virtual FitCoins con pasarela de pagos real en Stripe (soles PEN). Asimismo, se integró el asistente de inteligencia artificial conversacional "Sporty" con Google Vertex AI (Gemini 2.5 Flash), procesamiento de voz bidireccional (STT/TTS) y moderación híbrida (NSFWJS Edge AI y Ensemble Model). La calidad se certificó con 78 pruebas unitarias Vitest (100%PASS), pruebas E2E con Playwright y reporte de SonarQube Quality Gate PASSED con 0 vulnerabilidades.
 
-**Palabras clave:** Matchmaking deportivo, Feature-Sliced Design, NestJS 11, React 19, Supabase, PostGIS, Vertex AI, Stripe, Playwright, Scrum.
+**Palabras clave:** Matchmaking deportivo, Feature-Sliced Design, NestJS 11, React 19, Supabase, PostGIS, Vertex AI, Stripe, Playwright, Scrum framework.
 
 ---
 
 ## ABSTRACT
 
-SportMatch Connect is a distributed, multi-tier technology platform designed to resolve the logistical, social, and economic fragmentation surrounding amateur sports in Metropolitan Lima and Latin America. Developed across 16 weeks under the Scrum agile framework, the full-stack solution integrates a decoupled React 19 + TypeScript frontend structured with Feature-Sliced Design (FSD), a modular NestJS 11 backend with Prisma ORM, and a managed Supabase (PostgreSQL 15) data layer enforcing PostGIS spatial indexing and 78 Row Level Security (RLS) policies. The ecosystem comprises four core engines: a predictive matchmaking system driven by a weighted multivariable algorithm (Haversine distance, shared sport, Elo skill rating, and trust score), a sports social network featuring real-time feeds and team Squads, an interactive Leaflet map booking engine covering 433 venues in Lima, and a gamified economy based on FitCoins virtual currency integrated with Stripe payment processing (PEN). Furthermore, the system incorporates "Sporty", an AI conversational assistant powered by Google Vertex AI (Gemini 2.5 Flash), offering bidirectional voice processing (STT/TTS) and hybrid moderation (NSFWJS Edge AI and server Ensemble Model). Software quality was validated with 78 Vitest unit tests (100% pass rate), Playwright E2E suites, and a SonarQube Quality Gate PASSED report with zero critical vulnerabilities.
+SportMatch Connect is a distributed, multi-tier technology platform designed to resolve the logistical, social, and economic fragmentation surrounding amateur sports in Metropolitan Lima and Latin America. Developed across 16 weeks under the Scrum agile framework (which is an adaptive framework, not a methodology), the full-stack solution integrates a decoupled React 19 + TypeScript frontend structured with Feature-Sliced Design (FSD), a modular NestJS 11 backend with Prisma ORM, and a managed Supabase (PostgreSQL 15) data layer enforcing PostGIS spatial indexing and 78 Row Level Security (RLS) policies. The ecosystem comprises four core engines: a predictive matchmaking system driven by a weighted multivariable algorithm (Haversine distance, shared sport, Elo skill rating, and trust score), a sports social network featuring real-time feeds and team Squads, an interactive Leaflet map booking engine covering 433 venues in Lima, and a gamified economy based on FitCoins virtual currency integrated with Stripe payment processing (PEN). Furthermore, the system incorporates "Sporty", an AI conversational assistant powered by Google Vertex AI (Gemini 2.5 Flash), offering bidirectional voice processing (STT/TTS) and hybrid moderation (NSFWJS Edge AI and server Ensemble Model). Software quality was validated with 78 Vitest unit tests (100% pass rate), Playwright E2E suites, and a SonarQube Quality Gate PASSED report with zero critical vulnerabilities.
 
-**Keywords:** Sports matchmaking, Feature-Sliced Design, NestJS 11, React 19, Supabase, PostGIS, Vertex AI, Stripe, Playwright, Scrum.
+**Keywords:** Sports matchmaking, Feature-Sliced Design, NestJS 11, React 19, Supabase, PostGIS, Vertex AI, Stripe, Playwright, Scrum framework.
 
 ---
 
@@ -97,7 +99,7 @@ SportMatch Connect is a distributed, multi-tier technology platform designed to 
   - vi. Testear
   - vii. Lean Startup
   - viii. Modelo de Negocio (BMC y Viabilidad Financiera)
-  - ix. Monitoreo y Control (Scrum y Kanban)
+  - ix. Monitoreo y Control (Scrum Marco de Trabajo y Kanban)
   - x. Análisis de Hardware (Arquitectura)
   - xi. Desarrollo de Software (Fases, Implementación GitHub y Funcionalidad Nube)
 - h) Conclusiones y Recomendaciones
@@ -114,7 +116,7 @@ En la sociedad contemporánea, la actividad física y la práctica deportiva rec
 
 Frente a esta problemática, el presente proyecto de investigación e ingeniería documenta el diseño, construcción, validación y despliegue de **SportMatch Connect**, un ecosistema digital de arquitectura distribuida que integra matchmaking predictivo mediante algoritmos multivariables, una red social deportiva geolocalizada, un motor de reservas sobre 433 complejos deportivos mapeados con tecnología GIS, una economía gamificada sustentada en la moneda virtual FitCoins con pasarela de pagos real en Stripe, y un asistente conversacional inteligente impulsado por Google Vertex AI (Gemini 2.5 Flash) con procesamiento de voz bidireccional.
 
-El informe se encuentra estructurado en estricto cumplimiento con la **Guía de Trabajo Final 2026** y el **Instrumento de Evaluación** de la Facultad de Ingeniería e Inteligencia Artificial de la Universidad San Ignacio de Loyola (USIL) para el curso Proyecto Final de Carrera III...
+El informe se encuentra estructurado en estricto cumplimiento con la **Guía de Trabajo Final 2026** de la Facultad de Ingeniería e Inteligencia Artificial de la Universidad San Ignacio de Loyola (USIL) para el curso **PROYECTO FINAL DE CARRERA III** (Bloque: FC-PREISF10B01N), bajo la conducción del docente Ing. Kenny Disney Neira Neira...
 
 ---
 
@@ -141,17 +143,17 @@ Figura 03
 *Árbol de Problemas del ecosistema deportivo amateur*
 ```mermaid
 graph TD
-    EF1[Efecto Final: Alto sedentarismo y desercion deportiva en Lima]
-    EF2[Efecto 2: Partidos desequilibrados y frustracion de jugadores]
-    EF3[Efecto 3: Deudas financieras impagas y morosidad en reservas]
-    EF4[Efecto 4: Subutilizacion de instalaciones deportivas locales]
+    EF1["Efecto Final: Alto sedentarismo y desercion deportiva en Lima"]
+    EF2["Efecto 2: Partidos desequilibrados y frustracion de jugadores"]
+    EF3["Efecto 3: Deudas financieras impagas y morosidad en reservas"]
+    EF4["Efecto 4: Subutilizacion de instalaciones deportivas locales"]
     
-    PC[PROBLEMA CENTRAL: Fragmentacion e ineficiencia en la coordinacion, reserva y comunidad del deporte amateur]
+    PC["PROBLEMA CENTRAL: Fragmentacion e ineficiencia en la coordinacion, reserva y comunidad del deporte amateur"]
     
-    C1[Causa 1: Uso informal de grupos de WhatsApp sin filtros de nivel]
-    C2[Causa 2: Dispersion de sistemas de reserva sin conexion social]
-    C3[Causa 3: Ausencia de metricas objetivas de habilidad deportivo]
-    C4[Causa 4: Gestion manual e informal de pagos y cobranzas]
+    C1["Causa 1: Uso informal de grupos de WhatsApp sin filtros de nivel"]
+    C2["Causa 2: Dispersion de sistemas de reserva sin conexion social"]
+    C3["Causa 3: Ausencia de metricas objetivas de habilidad deportivo"]
+    C4["Causa 4: Gestion manual e informal de pagos y cobranzas"]
     
     EF1 --- EF2
     EF1 --- EF3
@@ -174,17 +176,17 @@ Figura 04
 *Árbol de Objetivos y solución sistémica*
 ```mermaid
 graph BT
-    FIN1[Fin Ultimo: Incremento de la actividad fisica y bienestar en Lima]
-    FIN2[Fin 2: Encuentros deportivos equilibrados y altamente competitivos]
-    FIN3[Fin 3: Transacciones transparentes y cero deudas en reservas]
-    FIN4[Fin 4: Maximizacion de la ocupacion de canchas deportivas]
+    FIN1["Fin Ultimo: Incremento de la actividad fisica y bienestar en Lima"]
+    FIN2["Fin 2: Encuentros deportivos equilibrados y altamente competitivos"]
+    FIN3["Fin 3: Transacciones transparentes y cero deudas en reservas"]
+    FIN4["Fin 4: Maximizacion de la ocupacion de canchas deportivas"]
     
-    OBJ[OBJETIVO GENERAL: Desarrollar e implementar la plataforma SportMatch Connect para unificar el ecosistema deportivo]
+    OBJ["OBJETIVO GENERAL: Desarrollar e implementar la plataforma SportMatch Connect para unificar el ecosistema deportivo"]
     
-    M1[Medio 1: Red social y chat en tiempo real con moderacion IA]
-    M2[Medio 2: Motor de reservas en mapa interactivo con PostGIS]
-    M3[Medio 3: Algoritmo de matchmaking predictivo con score Elo]
-    M4[Medio 4: Pasarela Stripe e integracion de moneda FitCoins]
+    M1["Medio 1: Red social y chat en tiempo real con moderacion IA"]
+    M2["Medio 2: Motor de reservas en mapa interactivo con PostGIS"]
+    M3["Medio 3: Algoritmo de matchmaking predictivo con score Elo"]
+    M4["Medio 4: Pasarela Stripe e integracion de moneda FitCoins"]
     
     M1 --> OBJ
     M2 --> OBJ
@@ -200,7 +202,7 @@ Nota: Elaboración propia.
 ## Objetivo General y Objetivos Específicos
 
 ### Objetivo General
-Diseñar, desarrollar, evaluar y desplegar en producción la plataforma digital distribuida SportMatch Connect, integrando matchmaking predictivo multivariable, red social deportiva, gestión de reservas geolocalizadas con PostGIS, economía gamificada en FitCoins con pasarela Stripe y asistente interactivo con Google Vertex AI, bajo la metodología ágil Scrum y estándares de calidad industrial durante el periodo 2026-I.
+Diseñar, desarrollar, evaluar y desplegar en producción la plataforma digital distribuida SportMatch Connect, integrando matchmaking predictivo multivariable, red social deportiva, gestión de reservas geolocalizadas con PostGIS, economía gamificada en FitCoins con pasarela Stripe y asistente interactivo con Google Vertex AI, bajo el marco de trabajo ágil Scrum y estándares de calidad industrial durante el periodo 2026-I.
 
 ### Objetivos Específicos
 - **OE-01:** Construir una arquitectura desacoplada fullstack compuesta por un frontend React 19 en Feature-Sliced Design (FSD) y un backend NestJS 11 modular con Prisma ORM.
@@ -215,7 +217,7 @@ Diseñar, desarrollar, evaluar y desplegar en producción la plataforma digital 
 
 ## i. Metodología (Híbrida)
 
-El proyecto adopta una metodología híbrida que combina el marco cualitativo y centrado en el usuario de **Design Thinking** para el descubrimiento de problemas, la metodología **Lean Startup** para la validación del MVP y la gestión ágil **Scrum/Kanban** para la ingeniería de desarrollo de software en sprints bi-semanales.
+El proyecto adopta una metodología híbrida que combina el marco cualitativo y centrado en el usuario de **Design Thinking** para el descubrimiento de problemas, la metodología **Lean Startup** para la validación del MVP y el marco de trabajo ágil **Scrum** (complementado con Kanban) para la ingeniería de software en sprints bi-semanales.
 
 ## ii. Empatizar
 
@@ -225,11 +227,11 @@ Figura 07
 *Mapa de Empatía del Deportista Amateur (Design Thinking)*
 ```mermaid
 graph LR
-    subgraph Mapa de Empatia
-        C1[¿Que piensa y siente? <br>- Frustracion por partidos desbalanceados]
-        C2[¿Que oye? <br>- Quejas de amigos e informalidad en WhatsApp]
-        C3[¿Que ve? <br>- Canchas vacias y reservas caoticas]
-        C4[¿Que dice y hace? <br>- Asume deudas de alquileres]
+    subgraph "Mapa de Empatia"
+        C1["¿Que piensa y siente? - Frustracion por partidos desbalanceados"]
+        C2["¿Que oye? - Quejas de amigos e informalidad en WhatsApp"]
+        C3["¿Que ve? - Canchas vacias y reservas caoticas"]
+        C4["¿Que dice y hace? - Asume deudas de alquileres"]
     end
 ```
 Nota: Elaboración propia.
@@ -260,16 +262,16 @@ Figura 09
 *Lienzo del Modelo de Negocio (Business Model Canvas - BMC)*
 ```mermaid
 graph TD
-    subgraph Business Model Canvas — SPORTMATCH CONNECT
-        KP[Socios Clave <br>- Clubes, Stripe, Google, Supabase]
-        KA[Actividades Clave <br>- Dev Software, Matchmaking, IA]
-        VP[Propuestas de Valor <br>- Matchmaking, Reserva+Pago, FitCoins]
-        CR[Relacion Clientes <br>- Self-service, Sporty IA]
-        CS[Segmentos Clientes <br>- Deportistas y Clubes B2B]
-        KR[Recursos Clave <br>- Plataforma React/NestJS, 433 canchas]
-        CH[Canales <br>- App Web / PWA]
-        CSst[Estructura Costos <br>- Cloud Render/Vercel, Vertex AI]
-        RS[Fuentes Ingresos <br>- Premium S/50, Take Rate 10%, SaaS S/150]
+    subgraph "Business Model Canvas - SPORTMATCH CONNECT"
+        KP["Socios Clave: Clubes, Stripe, Google, Supabase"]
+        KA["Actividades Clave: Dev Software, Matchmaking, IA"]
+        VP["Propuestas de Valor: Matchmaking, Reserva+Pago, FitCoins"]
+        CR["Relacion Clientes: Self-service, Sporty IA"]
+        CS["Segmentos Clientes: Deportistas y Clubes B2B"]
+        KR["Recursos Clave: Plataforma React/NestJS, 433 canchas"]
+        CH["Canales: App Web / PWA"]
+        CSst["Estructura Costos: Cloud Render/Vercel, Vertex AI"]
+        RS["Fuentes Ingresos: Premium S/50, Take Rate 10%, SaaS S/150"]
     end
 ```
 Nota: Elaboración propia.
@@ -293,7 +295,7 @@ VAN de S/ 84,250.00 PEN, TIR de 38.4% y Punto de Equilibrio en 200 usuarios Prem
 
 ## ix. Monitoreo y Control
 
-Se aplicó el uso de Scrum y Kanban a lo largo de 4 meses (16 semanas) gestionado a través de Jira Cloud (`edwinfloress.atlassian.net/jira`).
+Se aplicó el marco de trabajo ágil **Scrum** (el cual es un marco de trabajo adaptativo y no una metodología) complementado con la técnica Kanban a lo largo de 4 meses (16 semanas) gestionado a través de Jira Cloud (`edwinfloress.atlassian.net/jira`).
 
 Figura 12
 *Gráfico Burndown histórico y evolución de velocidad del equipo*
@@ -315,11 +317,11 @@ Figura 14
 *Diagrama C4 — Nivel 1: Contexto del Sistema*
 ```mermaid
 graph TB
-    U[Deportista Amateur] -->|Usa PWA| SM[SportMatch Connect System]
-    A[Administrador B2B] -->|Gestiona canchas| SM
-    SM -->|Pagos| STR[Stripe Payments API]
-    SM -->|IA & Voz| GCP[Google Cloud Vertex AI]
-    SM -->|Persistencia| SUP[Supabase PostgreSQL 15]
+    U["Deportista Amateur"] -->|Usa PWA| SM["SportMatch Connect System"]
+    A["Administrador B2B"] -->|Gestiona canchas| SM
+    SM -->|Pagos| STR["Stripe Payments API"]
+    SM -->|IA & Voz| GCP["Google Cloud Vertex AI"]
+    SM -->|Persistencia| SUP["Supabase PostgreSQL 15"]
 ```
 Nota: Elaboración propia.
 
@@ -327,15 +329,15 @@ Figura 15
 *Diagrama C4 — Nivel 2: Contenedores de la Solución*
 ```mermaid
 graph TB
-    subgraph Cliente Browser / PWA
-        SPA[React 19 SPA - FSD Architecture]
+    subgraph "Cliente Browser / PWA"
+        SPA["React 19 SPA - FSD Architecture"]
     end
-    subgraph Infraestructura Cloud Render
-        API[NestJS 11 REST API Gateway]
+    subgraph "Infraestructura Cloud Render"
+        API["NestJS 11 REST API Gateway"]
     end
-    subgraph Supabase Cloud
-        DB[(PostgreSQL 15 + PostGIS Engine)]
-        AUTH[Supabase Auth Engine JWT]
+    subgraph "Supabase Cloud"
+        DB[("PostgreSQL 15 + PostGIS Engine")]
+        AUTH["Supabase Auth Engine JWT"]
     end
     SPA -->|HTTPS REST| API
     SPA -->|WebSockets| DB
@@ -388,13 +390,13 @@ Nota: Elaboración propia.
 # h) CONCLUSIONES Y RECOMENDACIONES
 
 ## Conclusiones
-1. Las conclusiones están strictly alineadas a los objetivos de la investigación (`OE-01` a `OE-07`).
+1. Las conclusiones están estrictamente alineadas a los objetivos de la investigación (`OE-01` a `OE-07`).
 2. Se logró una arquitectura desacoplada fullstack React 19 / NestJS 11 con latencias < 200ms.
 3. El algoritmo de matchmaking predictivo alcanzó un 92% de precisión de recomendación.
 4. La viabilidad financiera se demostró con un VAN de S/ 84,250.00 PEN y TIR de 38.4%.
 
 ## Recomendaciones
-1. Las recomendaciones están strictly alineadas a las conclusiones obtenidas.
+1. Las recomendaciones están estrictamente alineadas a las conclusiones obtenidas.
 2. Implementar caché distribuida Redis/Upstash para consultas PostGIS.
 3. Migrar servicios de voz a Supabase Edge Functions.
 4. Integrar sistema dinámico de Elo Glicko-2.
@@ -420,12 +422,13 @@ Nota: Elaboración propia.
 Listar el personal que participa realizando la solución.
 
 Tabla 01. Capital Humano del Proyecto
-| N° | Apellidos y Nombres | Rol | Descripción |
-|---|---|---|---|
-| 1 | Edwin Junia Flores | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
-| 2 | Erick Flores | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
-| 3 | Juan Alonso Salvatierralonso | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
-| 4 | Matías Rodrigo | QA & SRE Engineer | Pruebas Playwright, Vitest y SonarQube |
+| N° | Código | Apellidos y Nombres | Carrera | Rol | Descripción |
+|---|---|---|---|---|---|
+| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
+| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | Fullstack Dev / UI Specialist | Desarrollo de interfaz y experiencia de usuario |
+| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
+| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | QA & DevOps / SRE | Pruebas Playwright, Vitest y CI/CD |
+| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
 
 ### Material(es)
 Listar los recursos materiales que utilizarán en la investigación.
@@ -449,11 +452,12 @@ El presupuesto muestra el costo total detallado por honorarios, materiales, equi
 Tabla 02. Presupuesto de Capital Humano
 | N° | Apellidos y Nombres | Costo Unitario (S/.) | Costo Total (S/.) |
 |---|---|---|---|
-| 1 | Edwin Junia Flores | 14,400.00 | 14,400.00 |
-| 2 | Erick Flores | 12,800.00 | 12,800.00 |
-| 3 | Juan Alonso Salvatierralonso | 12,800.00 | 12,800.00 |
-| 4 | Matías Rodrigo | 11,200.00 | 11,200.00 |
-| **Total** | | | **51,200.00** |
+| 1 | FLORES SANCHEZ, EDWIN JUNIOR | 14,400.00 | 14,400.00 |
+| 2 | ANDRADE NOA, ALEJANDRO PAOLO | 12,800.00 | 12,800.00 |
+| 3 | ESPINOZA MAYTA, ERICK JAIR | 12,800.00 | 12,800.00 |
+| 4 | GASTELU PONTE, MATIAS FERNANDO | 11,200.00 | 11,200.00 |
+| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | 12,800.00 | 12,800.00 |
+| **Total** | | | **64,000.00** |
 
 Tabla 03. Presupuesto de Materiales
 | N° | Descripción | Unid. | Cant. | Costo Unit. (S/.) | Costo Total (S/.) |
@@ -465,10 +469,11 @@ Tabla 04. Presupuesto de Equipos
 | N° | Descripción | Costo del Equipo (S/.) | Tiempo Vida útil (Mes) | Costo Unitario Depreciado (S/.) |
 |---|---|---|---|---|
 | 1 | Laptop Lider Dev | 4,500.00 | 36 | 500.00 |
-| 2 | Laptop Backend Dev | 4,000.00 | 36 | 444.44 |
-| 3 | Laptop Frontend Dev | 4,000.00 | 36 | 444.44 |
+| 2 | Laptop Fullstack Dev | 4,000.00 | 36 | 444.44 |
+| 3 | Laptop Backend Dev | 4,000.00 | 36 | 444.44 |
 | 4 | Laptop QA Dev | 3,500.00 | 36 | 388.88 |
-| **Total** | | | | **1,777.76** |
+| 5 | Laptop Frontend Dev | 4,000.00 | 36 | 444.44 |
+| **Total** | | | | **2,222.20** |
 
 Tabla 05. Presupuesto de Servicios
 | N° | Descripción | Tiempo (Meses) | Costo Unitario (S/.) | Costo Total (S/.) |
@@ -483,13 +488,13 @@ Tabla 05. Presupuesto de Servicios
 Tabla 06. Costos Directos
 | N° | Descripción | Costo Total (S/.) |
 |---|---|---|
-| 1 | Capital Humano | 51,200.00 |
+| 1 | Capital Humano | 64,000.00 |
 | 2 | Materiales | 100.00 |
-| 3 | Equipos (Depreciación) | 1,777.76 |
+| 3 | Equipos (Depreciación) | 2,222.20 |
 | 4 | Servicios | 1,304.00 |
-| **Subtotal - Costos Directos** | | **54,381.76** |
-| **Imprevistos (10%)** | | **5,438.18** |
-| **Costo Total = Costos directos + Imprevistos** | | **59,819.94** |
+| **Subtotal - Costos Directos** | | **67,626.20** |
+| **Imprevistos (10%)** | | **6,762.62** |
+| **Costo Total = Costos directos + Imprevistos** | | **74,388.82** |
 
 ## Financiamiento
 Señalar las fuentes de financiamiento (Bernal Torres, 2010).
@@ -497,10 +502,10 @@ Señalar las fuentes de financiamiento (Bernal Torres, 2010).
 Tabla 07. Financiamiento
 | N° | Fuente | Aporte (%) | Aporte (S/.) |
 |---|---|---|---|
-| 1 | Tesistas | 100% | 59,819.94 |
+| 1 | Tesistas | 100% | 74,388.82 |
 | 2 | USIL | 0% | 0.00 |
 | 3 | Docente | 0% | 0.00 |
-| **Total** | | **100%** | **59,819.94** |
+| **Total** | | **100%** | **74,388.82** |
 
 # 6. ANEXOS DEL INFORME
 
@@ -515,7 +520,7 @@ Informe formal de soberanía tecnológica e invención en el borde para registro
 
 - **Objetivo de la ficha:** [X] Evaluación de la propuesta
 
-- **Equipo de investigación:** Edwin Junia Flores (Líder Arquitecto, DNI 70123456, edwin.junia@usil.pe), Erick Flores (Backend Dev, DNI 70234567), Juan Alonso Salvatierra (Frontend Dev, DNI 70345678), Matías Rodrigo (QA Dev, DNI 70456789).
+- **Equipo de investigación:** FLORES SANCHEZ, EDWIN JUNIOR (Cód 2111716), ANDRADE NOA, ALEJANDRO PAOLO (Cód 2010830), ESPINOZA MAYTA, ERICK JAIR (Cód 2010029), GASTELU PONTE, MATIAS FERNANDO (Cód 2121043), SALVATIERRA RAMIREZ, JUAN ALONSO (Cód 2121274).
 
 - **Dependencia que coordina:** Facultad de Ingeniería e Inteligencia Artificial / Carrera de Ingeniería de Sistemas de Información / Ingeniería de Software.
 
