@@ -6,10 +6,12 @@
 
 &nbsp;
 
-# TRABAJO FINAL - TESIS DE INGENIERÍA
+# TRABAJO FINAL - TESIS DE INGENIERÍA DE SISTEMAS
 ## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE**
 
 &nbsp;
+
+**Informe Final de Proyecto para optar el Título Profesional de Ingeniero de Sistemas**
 
 **Curso:** Proyecto Final de Carrera III (PFC III)
 
@@ -43,9 +45,11 @@
 Nosotros, los abajo firmantes, estudiantes de la Facultad de Ingeniería e Inteligencia Artificial de la Universidad San Ignacio de Loyola (USIL), declaramos bajo jura y responsabilidad legal y académica lo siguiente:
 
 1. Que el presente informe final de proyecto titulado **"SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE"** es una obra original, inédita y desarrollada íntegramente por los autores bajo la supervisión del docente asesor del curso Proyecto Final de Carrera III.
-2. Que todas las fuentes bibliográficas, investigaciones previas, librerías de código abierto, frameworks y servicios en la nube utilizados para la conceptualización, diseño, implementación y evaluación del software han sido debidamente citados y acreditados siguiendo las normas internacionales APA 7ma edición.
+2. Que todas las fuentes bibliográficas, investigaciones previas, librerías de código abierto, frameworks y servicios en la nube utilizados para la conceptualización, diseño, implementación y evaluación del software han sido debidamente citados y acreditados siguiendo las normas internacionales de la American Psychological Association (APA 7ma edición).
 3. Que el código fuente, modelos de base de datos, diagramas de arquitectura, suites de prueba automatizadas con Playwright y Vitest, así como los datos presentados en los análisis financieros y métricas de observabilidad corresponden fielmente a los componentes reales construidos y desplegados en los entornos de producción durante el cuatrimestre académico 2026-I.
-4. Que asumimos total responsabilidad por el contenido, liberando a la Universidad San Ignacio de Loyola de cualquier reclamo de terceros.
+4. Que asumimos total responsabilidad por el contenido, afirmaciones y conclusiones expresadas en este documento, liberando a la Universidad San Ignacio de Loyola de cualquier reclamo o controversia relacionada con propiedad intelectual o derechos de autor por parte de terceros.
+
+En fe de lo cual, firmamos la presente declaración en la ciudad de Lima, a los 27 días del mes de junio de 2026.
 
 | Firma de Autor | Datos del Estudiante |
 |---|---|
@@ -384,13 +388,13 @@ Nota: Elaboración propia.
 # h) CONCLUSIONES Y RECOMENDACIONES
 
 ## Conclusiones
-1. Las conclusiones están estrictamente alineadas a los objetivos de la investigación (`OE-01` a `OE-07`).
+1. Las conclusiones están strictly alineadas a los objetivos de la investigación (`OE-01` a `OE-07`).
 2. Se logró una arquitectura desacoplada fullstack React 19 / NestJS 11 con latencias < 200ms.
 3. El algoritmo de matchmaking predictivo alcanzó un 92% de precisión de recomendación.
 4. La viabilidad financiera se demostró con un VAN de S/ 84,250.00 PEN y TIR de 38.4%.
 
 ## Recomendaciones
-1. Las recomendaciones están estrictamente alineadas a las conclusiones obtenidas.
+1. Las recomendaciones están strictly alineadas a las conclusiones obtenidas.
 2. Implementar caché distribuida Redis/Upstash para consultas PostGIS.
 3. Migrar servicios de voz a Supabase Edge Functions.
 4. Integrar sistema dinámico de Elo Glicko-2.
