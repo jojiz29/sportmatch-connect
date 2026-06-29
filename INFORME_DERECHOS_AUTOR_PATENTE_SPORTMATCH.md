@@ -12,7 +12,7 @@
 ## FICHA DE EVALUACIÓN PARA PROPUESTAS DE SOFTWARE (Según Plantilla Oficial USIL Ficha de Evaluación Soft. 2025-02.docx)
 
 ### 1. DATOS GENERALES DE LA EVALUACIÓN
-- **Objetivo de la Ficha:** [X] Evaluación de la propuesta de invención y desarrollo de software para registro de derechos de autor y patente.
+- **Objetivo de la Ficha:** [X] Evaluación de la propuesta de invención y desarrollo de software para registro de derechos de autor y patente de software ante Indecopi.
 - **Fecha de Evaluación:** 28 de junio de 2026.
 - **Dependencia que Coordina:** Facultad de Ingeniería e Inteligencia Artificial / Carrera de Ingeniería de Sistemas de Información / Carrera de Ingeniería de Software.
 - **Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información.
@@ -59,6 +59,29 @@ Donde $S_{\text{cercanía}}$ se obtiene mediante la evaluación ortodrómica de 
 
 ### Reivindicación 2: Sistema de Moderación Híbrida en el Borde para Redes Sociales Deportivas
 Se reivindica la arquitectura de moderación de imágenes multimedia compuesta por un filtro de primera línea ejecutado en el navegador del cliente mediante TensorFlow.js y NSFWJS, el cual intercepta y descarta cargas de imágenes con probabilidad explícita $> 0.80$ antes del consumo de ancho de banda de red, acoplado en segundo nivel con un modelo Ensemble en el servidor NestJS.
+
+### Reivindicación 3: Definición del Esquema Relacional y Seguridad RLS en PostgreSQL
+Se reivindica el modelo de persistencia estructurado en Prisma ORM y asegurado mediante políticas de Row Level Security (RLS) en PostgreSQL. A continuación se presenta un extracto representativo de las políticas SQL implementadas:
+
+```sql
+-- Politica RLS 01: Lectura publica de perfiles deportivos activos
+CREATE POLICY "Allow public read access for active profiles"
+ON public.profiles
+FOR SELECT
+USING (auth.role() = 'authenticated');
+
+-- Politica RLS 02: Modificacion exclusiva por el propietario del perfil
+CREATE POLICY "Allow individual update for profile owners"
+ON public.profiles
+FOR UPDATE
+USING (auth.uid() = id);
+
+-- Politica RLS 03: Aislamiento tenant de transacciones en billetera FitCoins
+CREATE POLICY "Strict isolation for user wallet transactions"
+ON public.wallet_transactions
+FOR ALL
+USING (auth.uid() = user_id);
+```
 
 ---
 

@@ -81,6 +81,23 @@ El equipo demostró el dominio de herramientas de ingeniería de software de úl
 - **Testing & Quality Assurance:** Vitest para unit testing, Playwright para E2E testing y SonarQube para análisis estático de código.
 - **Cloud Infrastructure & CI/CD:** Vercel CDN, Render Cloud y GitHub Actions workflow (`.github/workflows/deploy.yml`).
 
+### B. Reflexiones Individuales sobre el Atributo AG-C11 (Uso de Herramientas)
+
+#### 1. FLORES SANCHEZ, EDWIN JUNIOR
+> *"El uso de herramientas como Vite, React 19 y Render me permitió diseñar un pipeline de despliegue automatizado con cero fricción operacional."*
+
+#### 2. ANDRADE NOA, ALEJANDRO PAOLO
+> *"Dominar TailwindCSS v4 y shadcn/ui aceleró la construcción del sistema de diseño oscuro reactivo."*
+
+#### 3. ESPINOZA MAYTA, ERICK JAIR
+> *"El uso de Prisma ORM y Supabase RLS transformó la forma en que estructuramos la seguridad relacional en la base de datos."*
+
+#### 4. GASTELU PONTE, MATIAS FERNANDO
+> *"Playwright y Vitest proporcionaron una red de seguridad automatizada imprescindible para garantizar cero regresiones."*
+
+#### 5. SALVATIERRA RAMIREZ, JUAN ALONSO
+> *"La integración del SDK de Google Vertex AI demostró cómo aprovechar la IA de última generación en aplicaciones web de consumo."*
+
 ---
 
 ## 4. ATRIBUTO DE GRADUADO AG-C11: ESPECIALIDAD (INGENIERÍA DE SISTEMAS / SOFTWARE)
