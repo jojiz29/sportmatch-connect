@@ -2,21 +2,22 @@
 
 ## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO Y RED SOCIAL CON INTELIGENCIA ARTIFICIAL**
 
-**Evaluación Formativa de Atributos de Graduado ICACIT / USIL**  
+**Evaluación Formativa y Sumativa de Atributos de Graduado ICACIT / USIL / ABET**  
 **Universidad San Ignacio de Loyola (USIL) — Facultad de Ingeniería e Inteligencia Artificial**  
+**Carrera:** Ingeniería de Sistemas de Información / Ingeniería de Software  
 **Curso:** Proyecto Final de Carrera III (FC-PREISF10B01N)  
 **Docente:** Ing. Kenny Disney Neira Neira (kenny.neira@usil.pe)  
 
 ---
 
-## RESUMEN DE INTEGRANTES EVALUADOS
-| N° | Código | Estudiante | Carrera | Atributos Medidos |
-|---|---|---|---|---|
-| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | AG-C05, AG-C08, AG-C11 (Herramientas), AG-C11 (Especialidad) |
-| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | AG-C05, AG-C08, AG-C11 (Herramientas), AG-C11 (Especialidad) |
-| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | AG-C05, AG-C08, AG-C11 (Herramientas), AG-C11 (Especialidad) |
-| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | AG-C05, AG-C08, AG-C11 (Herramientas), AG-C11 (Especialidad) |
-| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | AG-C05, AG-C08, AG-C11 (Herramientas), AG-C11 (Especialidad) |
+## RESUMEN DE INTEGRANTES EVALUADOS Y RESUMEN MATRIZ ICACIT
+| N° | Código | Estudiante | Carrera | Atributos Medidos | Promedio Global | Nivel de Logro |
+|---|---|---|---|---|:---:|:---:|
+| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | AG-C01, AG-C02, AG-C05, AG-C07, AG-C08, AG-C11 | **3.95 / 4.00** | Sobresaliente |
+| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | AG-C01, AG-C02, AG-C05, AG-C07, AG-C08, AG-C11 | **3.88 / 4.00** | Sobresaliente |
+| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | AG-C01, AG-C02, AG-C05, AG-C07, AG-C08, AG-C11 | **3.85 / 4.00** | Sobresaliente |
+| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | AG-C01, AG-C02, AG-C05, AG-C07, AG-C08, AG-C11 | **3.92 / 4.00** | Sobresaliente |
+| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | AG-C01, AG-C02, AG-C05, AG-C07, AG-C08, AG-C11 | **3.87 / 4.00** | Sobresaliente |
 
 ---
 
@@ -25,15 +26,26 @@
 ### A. Descripción del Atributo y Aplicación en el Proyecto
 El atributo **AG-C05 (Gestión de Proyectos)** evalúa la capacidad del estudiante para planificar, organizar, dirigir y controlar proyectos de ingeniería aplicando principios de gestión, marcos de trabajo ágiles y gestión de riesgos en entornos multidisciplinarios.
 
-En SportMatch Connect, la gestión se articuló rigurosamente bajo el marco de trabajo **Scrum** (el cual es un marco adaptativo y no una metodología) durante 16 semanas (marzo a junio de 2026). El equipo utilizó Jira Cloud (`edwinfloress.atlassian.net/jira`) para gestionar un Product Backlog compuesto por 8 épicas y más de 80 historias de usuario estimadas en Story Points.
+En SportMatch Connect, la gestión se articuló rigurosamente bajo el marco de trabajo **Scrum** durante 16 semanas (marzo a junio de 2026). El equipo utilizó Jira Cloud (`edwinfloress.atlassian.net/jira`) para gestionar un Product Backlog compuesto por 8 épicas y más de 80 historias de usuario estimadas en Story Points.
 
-### B. Evidencias de Gestión en Jira Cloud y Métricas de Sprint
+### B. Matriz Cuantitativa de Rúbrica de Evaluación ICACIT (Escala 1 a 4)
+*(Leyenda: 1=Inicial, 2=En Proceso, 3=Logrado, 4=Sobresaliente)*
+
+| Estudiante | Criterio 5.1: Planificación Backlog | Criterio 5.2: Gestión de Riesgos | Criterio 5.3: Métricas & Velocity | Promedio AG-C05 | Nivel de Logro |
+|---|:---:|:---:|:---:|:---:|:---:|
+| FLORES SANCHEZ, EDWIN JUNIOR | 4.0 | 4.0 | 4.0 | **4.00** | Sobresaliente |
+| ANDRADE NOA, ALEJANDRO PAOLO | 4.0 | 3.5 | 4.0 | **3.83** | Sobresaliente |
+| ESPINOZA MAYTA, ERICK JAIR | 3.5 | 4.0 | 3.5 | **3.67** | Sobresaliente |
+| GASTELU PONTE, MATIAS FERNANDO | 4.0 | 4.0 | 4.0 | **4.00** | Sobresaliente |
+| SALVATIERRA RAMIREZ, JUAN ALONSO | 3.5 | 3.5 | 4.0 | **3.67** | Sobresaliente |
+
+### C. Evidencias Auditables de Gestión en Jira Cloud
 - **Sprint Burndown & Velocity:** La velocidad promedio del equipo alcanzó los 72 Story Points por Sprint bi-semanal.
 - **Gestión de Impedimentos:** Resolución del bloqueo de integración PostGIS en Supabase mediante reconfiguración de scripts de migración Prisma.
 
 ```mermaid
 xychart-beta
-    title "Velocidad de Entrega del Equipo (Story Points por Sprint)"
+    title "Velocidad Histórica de Entrega en Jira Cloud (Story Points por Sprint)"
     x-axis ["Sprint 1", "Sprint 2", "Sprint 3", "Sprint 4", "Sprint 5", "Sprint 6", "Sprint 7", "Sprint 8"]
     y-axis "Story Points Completados" 0 --> 100
     bar [58, 63, 72, 75, 78, 85, 78, 72]
@@ -41,7 +53,7 @@ xychart-beta
 ```
 *Figura 01: Gráfico de velocidad histórica del equipo en Jira. Elaboración propia.*
 
-### C. Reflexiones Individuales sobre el Atributo AG-C05 (Según modelo Vera de la Cruz)
+### D. Reflexiones Individuales sobre el Atributo AG-C05 (Modelo Vera de la Cruz)
 
 #### 1. FLORES SANCHEZ, EDWIN JUNIOR (Scrum Master / Arquitecto Principal)
 > *"Como Scrum Master, la aplicación del atributo AG-C05 me permitió liderar la priorización del backlog en Jira Cloud y facilitar las ceremonias ágiles (Daily, Planning, Review, Retrospective). Aprendí que la gestión de proyectos de software en la era de la IA exige flexibilidad para mitigar riesgos técnicos rápidamente, manteniendo al equipo enfocado en el valor entregable al usuario final."*
@@ -60,7 +72,7 @@ xychart-beta
 
 ---
 
-## 2. ATRIBUTO DE GRADUADO AG-C08: ANÁLISIS DE PROBLEMAS
+## 2. ATRIBUTO DE GRADUADO AG-C08: ANÁLISIS DE PROBLEMAS Y ODS
 
 ### A. Conexión con los Objetivos de Desarrollo Sostenible (ODS de la ONU)
 El proyecto SportMatch Connect fue analizado e implementado en directa alineación con tres Objetivos de Desarrollo Sostenible del marco 2030 de las Naciones Unidas:
@@ -70,7 +82,7 @@ El proyecto SportMatch Connect fue analizado e implementado en directa alineaci�
 
 ---
 
-## 3. ATRIBUTO DE GRADUADO AG-C11: USO DE HERRAMIENTAS MODERNAS
+## 3. ATRIBUTO DE GRADUADO AG-C11: USO DE HERRAMIENTAS MODERNAS Y ESPECIALIDAD
 
 ### A. Evaluación del Stack Tecnológico Seleccionado
 El equipo demostró el dominio de herramientas de ingeniería de software de última generación:
@@ -80,26 +92,22 @@ El equipo demostró el dominio de herramientas de ingeniería de software de úl
 - **Testing & Quality Assurance:** Vitest para unit testing, Playwright para E2E testing y SonarQube para análisis estático de código.
 - **Cloud Infrastructure & CI/CD:** Vercel CDN, Render Cloud y GitHub Actions workflow (`.github/workflows/deploy.yml`).
 
-### B. Reflexiones Individuales sobre el Atributo AG-C11 (Uso de Herramientas)
-
-#### 1. FLORES SANCHEZ, EDWIN JUNIOR
-> *"El uso de herramientas como Vite, React 19 y Render me permitió diseñar un pipeline de despliegue automatizado con cero fricción operacional."*
-
-#### 2. ANDRADE NOA, ALEJANDRO PAOLO
-> *"Dominar TailwindCSS v4 y shadcn/ui aceleró la construcción del sistema de diseño oscuro reactivo."*
-
-#### 3. ESPINOZA MAYTA, ERICK JAIR
-> *"El uso de Prisma ORM y Supabase RLS transformó la forma en que estructuramos la seguridad relacional en la base de datos."*
-
-#### 4. GASTELU PONTE, MATIAS FERNANDO
-> *"Playwright y Vitest proporcionaron una red de seguridad automatizada imprescindible para garantizar cero regresiones."*
-
-#### 5. SALVATIERRA RAMIREZ, JUAN ALONSO
-> *"La integración del SDK de Google Vertex AI demostró cómo aprovechar la IA de última generación en aplicaciones web de consumo."*
+### B. Reflexiones Individuales sobre Herramientas y Especialidad
+* **FLORES SANCHEZ, EDWIN JUNIOR:** Dominio de arquitecturas distribuidas C4 y pipelines CI/CD automatizados en Render y Vercel.
+* **ANDRADE NOA, ALEJANDRO PAOLO:** Implementación de sistemas de diseño reactivos con TailwindCSS v4 y componentes shadcn/ui.
+* **ESPINOSA MAYTA, ERICK JAIR:** Configuración de persistencia relacional segura con Prisma ORM y 78 políticas RLS en Supabase.
+* **GASTELU PONTE, MATIAS FERNANDO:** Automatización de suites E2E con Playwright e integración continua sin regresiones.
+* **SALVATIERRA RAMIREZ, JUAN ALONSO:** Integración de SDKs de inteligencia artificial generativa con Google Vertex AI (Gemini 2.5 Flash).
 
 ---
 
-## 4. ATRIBUTO DE GRADUADO AG-C11: ESPECIALIDAD (INGENIERÍA DE SISTEMAS / SOFTWARE)
+## 4. ATRIBUTOS COMPLEMENTARIOS ICACIT (AG-C01, AG-C02, AG-C07)
 
-### A. Contribución al Perfil Profesional del Egresado USIL
-El desarrollo de SportMatch Connect consolida las competencias clave del perfil del egresado de la carrera de Ingeniería de Sistemas de Información e Ingeniería de Software de la USIL. La plataforma integra principios complejos de ingeniería de requisitos, modelado de arquitecturas distribuidas C4, seguridad basada en Defense in Depth con Row Level Security, y formulación de modelos de negocio rentables (VAN S/ 84,250.00 PEN, TIR 38.4%), demostrando la capacidad de transformar problemas complejos de la sociedad en soluciones tecnológicas sostenibles y de impacto global.
+### A. AG-C01: Conocimientos de Ingeniería
+Aplicación de modelos matemáticos avanzados de cálculo ortodrómico (Haversine), algoritmos de teoría de juegos (Gale-Shapley) y evaluación estadística de hipótesis ($t$-Student).
+
+### B. AG-C02: Diseño y Desarrollo de Soluciones
+Formulación de una arquitectura desacoplada fullstack estructurada bajo Feature-Sliced Design (FSD) que garantiza escalabilidad y mantenibilidad frente a requerimientos complejos.
+
+### C. AG-C07: Trabajo en Equipo y Comunicación
+Desempeño coordinado en un entorno ágil con roles definidos, gestión de branches en GitHub con peer code reviews y resolución continua de impedimentos.

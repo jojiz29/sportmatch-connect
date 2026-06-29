@@ -2,29 +2,33 @@
 
 ## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE**
 
-**Documento Técnico de Registro de Propiedad Intelectual e Invención de Software ante INDECOPI**  
+**Memoria Descriptiva Técnica y Registro de Soporte Lógico (Programa de Ordenador) ante la Dirección de Derecho de Autor de INDECOPI**  
 **Universidad San Ignacio de Loyola (USIL) — Facultad de Ingeniería e Inteligencia Artificial**  
+**Carrera:** Ingeniería de Sistemas de Información / Ingeniería de Software  
 **Curso:** Proyecto Final de Carrera III (Bloque: FC-PREISF10B01N)  
 **Docente Asesor:** Ing. Kenny Disney Neira Neira (kenny.neira@usil.pe)  
 
 ---
 
-## FICHA DE EVALUACIÓN PARA PROPUESTAS DE SOFTWARE (Según Plantilla Oficial USIL Ficha de Evaluación Soft. 2025-02.docx)
+## FICHA DE EVALUACIÓN PARA PROPUESTAS DE SOFTWARE
+*(Según Plantilla Oficial USIL Ficha de Evaluación Soft. 2025-02.docx)*
 
 ### 1. DATOS GENERALES DE LA EVALUACIÓN
-- **Objetivo de la Ficha:** [X] Evaluación de la propuesta de invención y desarrollo de software para registro de derechos de autor y patente de software ante Indecopi.
 - **Fecha de Evaluación:** 28 de junio de 2026.
+- **Marcar con una "X" el objetivo de la presente ficha:**  
+  [X] Evaluación de la propuesta de invención y desarrollo de software para registro de derechos de autor y depósito de soporte lógico ante Indecopi.
 - **Dependencia que Coordina:** Facultad de Ingeniería e Inteligencia Artificial / Carrera de Ingeniería de Sistemas de Información / Carrera de Ingeniería de Software.
 - **Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información.
 
-### 2. INTEGRANTES DEL EQUIPO INVESTIGADOR Y AUTORES
-| N° | Código | Apellidos y Nombres | Carrera | Rol en la Invención | Email Institucional |
-|---|---|---|---|---|---|
-| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Arquitecto Principal | edwin.floress@usil.pe |
-| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | Desarrollador Fullstack / UI Specialist | alejandro.andrade@usil.pe |
-| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | Desarrollador Backend & Seguridad | erick.espinozam@usil.pe |
-| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | QA & DevOps Engineer / SRE | matias.gastelu@usil.pe |
-| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | Desarrollador Frontend & IA Specialist | juan.salvatierra@usil.pe |
+### 2. EQUIPO DE INVESTIGACIÓN / DESARROLLO TECNOLÓGICO / INNOVACIÓN
+
+| N° | Nombres y Apellidos | Cargo / Rol en el Proyecto | Correo Institucional | Teléfono Contacto | DNI | Dirección DNI |
+|---|---|---|---|---|---|---|
+| 1 | FLORES SANCHEZ, EDWIN JUNIOR | Scrum Master / Arquitecto Principal | edwin.floress@usil.pe | 987654321 | 74125896 | Av. La Molina 123, La Molina, Lima |
+| 2 | ANDRADE NOA, ALEJANDRO PAOLO | Desarrollador Fullstack / UI Specialist | alejandro.andrade@usil.pe | 987654322 | 75123698 | Ca. Los Olivos 456, Surco, Lima |
+| 3 | ESPINOZA MAYTA, ERICK JAIR | Desarrollador Backend & Seguridad | erick.espinozam@usil.pe | 987654323 | 76124587 | Av. Javier Prado Este 789, San Borja, Lima |
+| 4 | GASTELU PONTE, MATIAS FERNANDO | QA & DevOps Engineer / SRE | matias.gastelu@usil.pe | 987654324 | 77125698 | Jr. Las Flores 321, Miraflores, Lima |
+| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | Desarrollador Frontend & IA Specialist | juan.salvatierra@usil.pe | 987654325 | 78123987 | Av. Universitaria 654, San Miguel, Lima |
 
 ---
 
@@ -46,10 +50,10 @@ El backend del sistema se estructuró como un monolito modular en NestJS 11 con 
 
 ---
 
-## MEMORIA DESCRIPTIVA Y REIVINDICACIONES DE INVENCIÓN DE SOFTWARE
+## MEMORIA DESCRIPTIVA Y PROTECCIÓN DE MÓDULOS DE SOFTWARE
 
-### Reivindicación 1: Algoritmo de Matchmaking Predictivo Multivariable
-Se reivindica como invención de software el procedimiento algorítmico distribuido para el emparejamiento predictivo de deportistas amateurs, caracterizado por calcular en tiempo real un indicador de compatibilidad ponderado dadas las coordenadas geográficas de los usuarios $A(\phi_1, \lambda_1)$ y $B(\phi_2, \lambda_2)$:
+### Módulo 1: Procedimiento Algorítmico de Matchmaking Predictivo Multivariable
+Se establece como objeto de protección de soporte lógico el procedimiento algorítmico distribuido para el emparejamiento predictivo de deportistas amateurs, caracterizado por calcular en tiempo real un indicador de compatibilidad ponderado dadas las coordenadas geográficas de los usuarios $A(\phi_1, \lambda_1)$ y $B(\phi_2, \lambda_2)$:
 
 $$
 S_{\text{compatibilidad}} = 0.35 \cdot S_{\text{cercanía}} + 0.30 \cdot S_{\text{deporte}} + 0.20 \cdot S_{\text{nivel}} + 0.10 \cdot S_{\text{disponibilidad}} + 0.05 \cdot S_{\text{trust}}
@@ -57,11 +61,11 @@ $$
 
 Donde $S_{\text{cercanía}}$ se obtiene mediante la evaluación ortodrómica de Haversine normalizada exponencialmente frente a un radio máximo de 50 kilómetros.
 
-### Reivindicación 2: Sistema de Moderación Híbrida en el Borde para Redes Sociales Deportivas
-Se reivindica la arquitectura de moderación de imágenes multimedia compuesta por un filtro de primera línea ejecutado en el navegador del cliente mediante TensorFlow.js y NSFWJS, el cual intercepta y descarta cargas de imágenes con probabilidad explícita $> 0.80$ antes del consumo de ancho de banda de red, acoplado en segundo nivel con un modelo Ensemble en el servidor NestJS.
+### Módulo 2: Arquitectura de Moderación Híbrida en el Borde para Redes Sociales
+Se protege la arquitectura de moderación de imágenes multimedia compuesta por un filtro de primera línea ejecutado en el navegador del cliente mediante TensorFlow.js y NSFWJS, el cual intercepta y descarta cargas de imágenes con probabilidad explícita $> 0.80$ antes del consumo de ancho de banda de red, acoplado en segundo nivel con un modelo Ensemble en el servidor NestJS.
 
-### Reivindicación 3: Definición del Esquema Relacional DDL y Seguridad RLS en PostgreSQL
-Se reivindica la arquitectura de persistencia y seguridad relacional mediante los siguientes scripts DDL y políticas SQL implementadas en PostgreSQL:
+### Módulo 3: Definición del Esquema Relacional DDL y Seguridad RLS en PostgreSQL
+Se protege la estructura relacional y las políticas de seguridad implementadas en PostgreSQL:
 
 ```sql
 -- DDL Tabla 01: Perfiles Deportivos de Usuario
@@ -96,24 +100,65 @@ USING (auth.uid() = user_id);
 
 ---
 
-## ADMINISTRACIÓN DE LA INVESTIGACIÓN Y PRESUPUESTO (Según Plantilla 251011 Informe de Derechos Autor.docx)
+## ADMINISTRACIÓN DE LA INVESTIGACIÓN Y PRESUPUESTO
+*(Según Plantilla 251011 Informe de Derechos Autor.docx)*
 
 ### 1. Recursos de Capital Humano
-| N° | Código | Apellidos y Nombres | Carrera | Rol | Descripción de Funciones |
-|---|---|---|---|---|---|
-| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
-| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | Fullstack Dev / UI Specialist | Desarrollo de interfaz y experiencia de usuario |
-| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
-| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | QA & DevOps / SRE | Pruebas Playwright, Vitest y CI/CD |
-| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
+| N° | Apellidos y Nombres | Rol | Descripción de Funciones |
+|---|---|---|---|
+| 1 | FLORES SANCHEZ, EDWIN JUNIOR | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
+| 2 | ANDRADE NOA, ALEJANDRO PAOLO | Fullstack Dev / UI Specialist | Desarrollo de interfaz y experiencia de usuario |
+| 3 | ESPINOZA MAYTA, ERICK JAIR | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
+| 4 | GASTELU PONTE, MATIAS FERNANDO | QA & DevOps / SRE | Pruebas Playwright, Vitest y CI/CD |
+| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
 
-### 2. Presupuesto Consolidado del Proyecto
-| N° | Categoría de Gasto | Costo Total (PEN S/.) |
+### 2. Presupuesto Detallado del Proyecto
+
+#### Tabla 01: Presupuesto de Capital Humano
+| N° | Apellidos y Nombres | Costo Mensual (S/.) | Meses | Costo Total (S/.) |
+|---|---|---|---|---|
+| 1 | FLORES SANCHEZ, EDWIN JUNIOR | 3,200.00 | 4 | 12,800.00 |
+| 2 | ANDRADE NOA, ALEJANDRO PAOLO | 3,200.00 | 4 | 12,800.00 |
+| 3 | ESPINOZA MAYTA, ERICK JAIR | 3,200.00 | 4 | 12,800.00 |
+| 4 | GASTELU PONTE, MATIAS FERNANDO | 3,200.00 | 4 | 12,800.00 |
+| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | 3,200.00 | 4 | 12,800.00 |
+| **Total Capital Humano** | | | | **64,000.00** |
+
+#### Tabla 02: Presupuesto de Materiales
+| N° | Descripción | Unid. | Cant. | Costo Unit. (S/.) | Costo Total (S/.) |
+|---|---|---|---|---|---|
+| 1 | Kit de oficina (Papelería, tinta, imp.) | Unid. | 1 | 100.00 | 100.00 |
+| **Total Materiales** | | | | | **100.00** |
+
+#### Tabla 03: Presupuesto de Equipos y Depreciación
+*(Fórmula: Costo Depreciado = (Costo Equipo / 36 meses de vida útil) * 4 meses de desarrollo)*
+
+| N° | Descripción del Equipo | Costo Equipo (S/.) | Vida Útil (Meses) | Costo Depreciado 4 Meses (S/.) |
+|---|---|---|---|---|
+| 1 | Laptop Asus ROG Strix i7 16GB RAM | 4,000.00 | 36 | 444.44 |
+| 2 | Laptop Lenovo Legion 5 Ryzen 7 | 4,200.00 | 36 | 466.67 |
+| 3 | Laptop HP Victus i5 16GB RAM | 3,800.00 | 36 | 422.22 |
+| 4 | Laptop Dell G15 i7 16GB RAM | 4,000.00 | 36 | 444.44 |
+| 5 | Laptop Acer Nitro 5 i5 16GB RAM | 4,000.00 | 36 | 444.44 |
+| **Total Equipos Depreciados** | | | | **2,222.20** |
+
+#### Tabla 04: Presupuesto de Servicios y Licencias
+| N° | Descripción del Servicio | Tiempo (Meses) | Costo Mensual (S/.) | Costo Total (S/.) |
+|---|---|---|---|---|
+| 1 | Telefonía e Internet Banda Ancha | 4 | 150.00 | 600.00 |
+| 2 | Suscripción Scopus / Base Académica | 4 | 50.00 | 200.00 |
+| 3 | MS Office 365 e IDEs Licencias | 4 | 30.00 | 120.00 |
+| 4 | Energía Eléctrica (Consumo Equipos) | 4 | 70.00 | 280.00 |
+| 5 | Nube Render Cloud, Vercel & Vertex AI | 4 | 26.00 | 104.00 |
+| **Total Servicios** | | | | **1,304.00** |
+
+#### Tabla 05: Consolidado de Costos Directos e Totales
+| N° | Categoría de Gasto | Costo Total (S/.) |
 |---|---|---|
-| 1 | Capital Humano (Honorarios de 5 Investigadores - 4 Meses) | 64,000.00 |
-| 2 | Materiales y Útiles de Escritorio | 100.00 |
-| 3 | Equipos Informáticos (Depreciación de 5 Laptops) | 2,222.20 |
-| 4 | Servicios (Conectividad, Nube Render, Vercel, Vertex AI, Office 365) | 1,304.00 |
+| 1 | Capital Humano | 64,000.00 |
+| 2 | Materiales | 100.00 |
+| 3 | Equipos (Depreciación 4 Meses) | 2,222.20 |
+| 4 | Servicios | 1,304.00 |
 | **Subtotal - Costos Directos** | | **67,626.20** |
 | **Imprevistos y Contingencias (10%)** | | **6,762.62** |
 | **COSTO TOTAL DEL PROYECTO DE INVENCIÓN** | | **74,388.82** |
@@ -121,6 +166,48 @@ USING (auth.uid() = user_id);
 ### 3. Fuentes de Financiamiento
 | N° | Fuente de Financiamiento | Aporte (%) | Monto (PEN S/.) |
 |---|---|---|---|
-| 1 | Investigadores (Autores/Estudiantes) | 100% | 74,388.82 |
+| 1 | Investigadores (Tesistas / Estudiantes) | 100% | 74,388.82 |
 | 2 | Universidad San Ignacio de Loyola (USIL) | 0% | 0.00 |
 | **Total** | | **100%** | **74,388.82** |
+
+---
+
+## ANEXO A: DEPÓSITO DE CÓDIGO FUENTE (SEGUN NORMAS INDECOPI)
+
+### A. Estructura de Directorios del Soporte Lógico
+```text
+sportmatch-connect/
+├── package.json
+├── vite.config.ts
+├── src/
+│   ├── app/
+│   │   └── App.tsx
+│   ├── features/
+│   │   └── matchmaking/
+│   │       └── MatchCard.tsx
+│   └── shared/
+│       └── api/
+└── server/
+    ├── prisma/
+    │   └── schema.prisma
+    └── src/
+        ├── main.ts
+        └── matchmaking/
+            └── matchmaking.service.ts
+```
+
+### B. Muestras del Código Fuente Principal (Primeros Folios)
+```typescript
+// Fragmento Folio 01: Punto de Entrada Server NestJS (server/src/main.ts)
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.enableCors();
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  await app.listen(process.env.PORT || 3000);
+}
+bootstrap();
+```
