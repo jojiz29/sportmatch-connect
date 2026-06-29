@@ -60,7 +60,21 @@ Donde $S_{\text{cercanía}}$ se obtiene mediante la evaluación ortodrómica de 
 ### Reivindicación 2: Sistema de Moderación Híbrida en el Borde para Redes Sociales Deportivas
 Se reivindica la arquitectura de moderación de imágenes multimedia compuesta por un filtro de primera línea ejecutado en el navegador del cliente mediante TensorFlow.js y NSFWJS, el cual intercepta y descarta cargas de imágenes con probabilidad explícita $> 0.80$ antes del consumo de ancho de banda de red, acoplado en segundo nivel con un modelo Ensemble en el servidor NestJS.
 
+### Reivindicación 3: Definición del Esquema Relacional DDL y Seguridad RLS en PostgreSQL
+Se reivindica la arquitectura de persistencia y seguridad relacional mediante los siguientes scripts DDL y políticas SQL implementadas en PostgreSQL:
+
 ```sql
+-- DDL Tabla 01: Perfiles Deportivos de Usuario
+CREATE TABLE public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name VARCHAR(255) NOT NULL,
+    favorite_sport VARCHAR(50) NOT NULL,
+    elo_rating INT DEFAULT 1200 NOT NULL,
+    trust_score DECIMAL(5,2) DEFAULT 100.00 NOT NULL,
+    location GEOGRAPHY(POINT, 4326),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
 -- Politica RLS 01: Lectura publica de perfiles deportivos activos
 CREATE POLICY "Allow public read access for active profiles"
 ON public.profiles
@@ -72,6 +86,12 @@ CREATE POLICY "Allow individual update for profile owners"
 ON public.profiles
 FOR UPDATE
 USING (auth.uid() = id);
+
+-- Politica RLS 03: Aislamiento tenant de transacciones en billetera FitCoins
+CREATE POLICY "Strict isolation for user wallet transactions"
+ON public.wallet_transactions
+FOR ALL
+USING (auth.uid() = user_id);
 ```
 
 ---

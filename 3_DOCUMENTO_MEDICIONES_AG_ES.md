@@ -44,7 +44,7 @@ xychart-beta
 ### C. Reflexiones Individuales sobre el Atributo AG-C05 (Según modelo Vera de la Cruz)
 
 #### 1. FLORES SANCHEZ, EDWIN JUNIOR (Scrum Master / Arquitecto Principal)
-> *"Como Scrum Master, la aplicación del atributo AG-C05 me permitió liderar la priorización del backlog en Jira y facilitar las ceremonias ágiles (Daily, Planning, Review, Retrospective). Aprendí que la gestión de proyectos de software en la era de la IA exige flexibilidad para mitigar riesgos técnicos rápidamente, manteniendo al equipo enfocado en el valor entregable al usuario final."*
+> *"Como Scrum Master, la aplicación del atributo AG-C05 me permitió liderar la priorización del backlog en Jira Cloud y facilitar las ceremonias ágiles (Daily, Planning, Review, Retrospective). Aprendí que la gestión de proyectos de software en la era de la IA exige flexibilidad para mitigar riesgos técnicos rápidamente, manteniendo al equipo enfocado en el valor entregable al usuario final."*
 
 #### 2. ANDRADE NOA, ALEJANDRO PAOLO (Desarrollador Fullstack / UI Specialist)
 > *"Mi participación bajo el atributo AG-C05 se centró en la estimación precisa de Story Points para las historias de usuario de la interfaz React 19. Comprendí la importancia de descomponer épicas complejas en tareas atómicas para evitar cuellos de botella durante los sprints de desarrollo."*
@@ -64,7 +64,6 @@ xychart-beta
 
 ### A. Conexión con los Objetivos de Desarrollo Sostenible (ODS de la ONU)
 El proyecto SportMatch Connect fue analizado e implementado en directa alineación con tres Objetivos de Desarrollo Sostenible del marco 2030 de las Naciones Unidas:
-
 1. **ODS 3 — Salud y Bienestar:** La plataforma ataca directamente el sedentarismo urbano en Lima Metropolitana (donde el 72% de adultos realiza actividad física insuficiente según MINSA), facilitando el matchmaking predictivo para incrementar la frecuencia de partidos semanales de 1.2 a 2.8 por usuario.
 2. **ODS 9 — Industria, Innovación e Infraestructura:** Fomenta la innovación tecnológica mediante la integración de inteligencia artificial conversacional en el borde (Edge AI) y optimiza el uso de la infraestructura deportiva local existente.
 3. **ODS 11 — Ciudades y Comunidades Sostenibles:** Promueve la apropiación saludable de espacios públicos y complejos deportivos comunitarios, fortaleciendo el tejido social a través de los equipos Squads.
