@@ -82,7 +82,7 @@ test.describe("B2B Portal and Marketplace E2E Flow", () => {
 
     // Verify Map has the business marker loaded
     await page.click("aside >> text=Mapa");
-    await page.waitForTimeout(1000); // Allow Leaflet to load
+    await expect(page.locator(".leaflet-container")).toBeVisible({ timeout: 15000 });
 
     // Verify "SportStore Surco" exists on map or side list (it displays on map markers)
     // We can also buy the product from the wallet page

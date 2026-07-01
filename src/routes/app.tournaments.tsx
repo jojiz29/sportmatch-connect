@@ -19,5 +19,3 @@ function TournamentsPage() {
     </div>
   );
 }
-
-export default TournamentsPage;

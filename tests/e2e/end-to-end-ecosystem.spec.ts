@@ -49,7 +49,6 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
 
     // Navigate to Mi Negocio
     await page.click("#sidebar-nav-business");
-    await page.waitForTimeout(500);
     await expect(page).toHaveURL(new RegExp(`${targetURL}/app/business`));
 
     // Verify metrics are visible
@@ -59,7 +58,6 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
 
     // Switch to Business Intelligence tab
     await page.click("#business-tab-analytics");
-    await page.waitForTimeout(500);
 
     // Verify BI section is visible with charts
     await expect(page.locator("#bi-analytics-section")).toBeVisible();
@@ -73,7 +71,6 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
 
     // Go to Feed page
     await page.goto(`${targetURL}/app/feed`);
-    await page.waitForTimeout(300);
 
     // Create a new post as Puka Power
     const postInput = page.locator("#feed-post-textarea");
@@ -83,7 +80,6 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
     );
     const publishBtn = page.locator("#feed-post-submit");
     await publishBtn.click();
-    await page.waitForTimeout(500);
 
     // Logout Puka Power
     await page.evaluate(() => localStorage.removeItem("sportmatch-auth"));
@@ -111,7 +107,6 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
 
     // Click the notification bell to open the panel
     await bellBtn.click();
-    await page.waitForTimeout(300);
 
     // Verify notification panel is open
     await expect(page.locator("h3:has-text('Notificaciones')")).toBeVisible();
@@ -146,7 +141,6 @@ test.describe("End-to-End Ecosystem Test (Notifications, BI Dashboard, Purchase 
 
     // Open notification bell again
     await page.locator("#notification-bell-btn").first().click();
-    await page.waitForTimeout(300);
 
     // Verify notification panel shows a TRANSACTION_SUCCESS notification
     await expect(page.locator("#notification-panel")).toBeVisible();

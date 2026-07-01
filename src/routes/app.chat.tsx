@@ -1127,5 +1127,3 @@ function Chats() {
     </div>
   );
 }
-
-export default Chats;

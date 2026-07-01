@@ -38,6 +38,7 @@ async function loginAndOpenChat(page: Page) {
   await page.waitForSelector(CHAT_DIALOG, { state: "visible", timeout: 5000 });
 }
 
+test.describe.configure({ mode: "parallel" });
 test.describe("Sporty AI Chat — anti-colgada (15-jun-2026)", () => {
   test("carga el welcome del LLM en menos de 5s cuando el backend responde OK", async ({
     page,
