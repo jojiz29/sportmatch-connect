@@ -184,7 +184,9 @@ test.describe("Sporty AI Chat — anti-colgada (15-jun-2026)", () => {
     await page.locator(CHAT_DIALOG).locator('button[aria-label*="enviar" i]').click();
 
     // El mensaje del usuario debe aparecer
-    await expect(page.locator(CHAT_DIALOG).getByText("Busco cancha de fútbol 7", { exact: true })).toBeVisible({
+    await expect(
+      page.locator(CHAT_DIALOG).getByText("Busco cancha de fútbol 7", { exact: true }),
+    ).toBeVisible({
       timeout: 3000,
     });
 
