@@ -107,6 +107,19 @@ function getApiBaseUrl(): string {
  * contextual (hora del día, idioma, racha deportiva). No se cachea en
  * el cliente — el LLM decide el saludo apropiado cada vez.
  */
+async function getAuthToken(): Promise<string> {
+  const isMock = import.meta.env.VITE_USE_MOCKS === "true";
+  if (isMock) return "mock-access-token";
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+  }
+  return session.access_token;
+}
+
 export async function fetchWelcomeMessage(
   options: { language?: "es" | "en" | "pt" } = {},
 ): Promise<AiChatResponse> {
@@ -117,12 +130,7 @@ export async function fetchWelcomeMessage(
     );
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
-  }
+  const token = await getAuthToken();
 
   const body: Record<string, unknown> = {};
   if (options.language) body.language = options.language;
@@ -133,7 +141,7 @@ export async function fetchWelcomeMessage(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
     },
@@ -210,11 +218,7 @@ export async function fetchCoachRecommendations(prefs: CoachPreferences): Promis
     throw new Error("Configuración inválida: VITE_API_URL no apunta a un backend válido.");
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
+  const token = await getAuthToken();
 
   const response = await fetchWithTimeout(
     `${apiBaseUrl}/api/v1/ai/coach/recommend`,
@@ -257,15 +261,7 @@ export async function sendMessageToAI(
 
   const chatEndpoint = `${apiBaseUrl}/api/v1/ai/chat`;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-
-  if (!token) {
-    throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
-  }
-
+  const token = await getAuthToken();
   const body: Record<string, unknown> = { message: trimmed };
   if (options.language) body.language = options.language;
   if (options.history && options.history.length > 0) body.history = options.history;

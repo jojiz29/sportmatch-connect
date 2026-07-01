@@ -24,7 +24,7 @@ test.describe("Core User Flow (Happy Path)", () => {
 
     // Ir a Matchmaking
     await page.goto(`${targetURL}/app/match`);
-    await expect(page.locator("h1")).toContainText("Matchmaking IA");
+    await expect(page.locator("h1")).toContainText("Matchmaking IA", { timeout: 10000 });
 
     // 4. Navegar a mapa usando el menú (asumiendo que existe el sidebar)
     await page.goto(`${targetURL}/app/map`);

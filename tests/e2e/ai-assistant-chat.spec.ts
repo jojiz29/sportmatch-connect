@@ -29,8 +29,8 @@ const ANALYZING_TEXT = "Analizando";
 async function loginAndOpenChat(page: Page) {
   // Login con usuario demo
   await page.goto(`${targetURL}/login`);
-  await page.fill('input[type="email"]', "demo@sportmatch.com");
-  await page.fill('input[type="password"]', "demo123");
+  await page.fill('input[type="email"]', "ejuniorfloress@gmail.com");
+  await page.fill('input[type="password"]', "EdwinFlores123?");
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/app\/?/, { timeout: 15000 });
   // Abrir el chat
@@ -38,7 +38,6 @@ async function loginAndOpenChat(page: Page) {
   await page.waitForSelector(CHAT_DIALOG, { state: "visible", timeout: 5000 });
 }
 
-test.describe.configure({ mode: "parallel" });
 test.describe("Sporty AI Chat — anti-colgada (15-jun-2026)", () => {
   test("carga el welcome del LLM en menos de 5s cuando el backend responde OK", async ({
     page,
@@ -185,7 +184,7 @@ test.describe("Sporty AI Chat — anti-colgada (15-jun-2026)", () => {
     await page.locator(CHAT_DIALOG).locator('button[aria-label*="enviar" i]').click();
 
     // El mensaje del usuario debe aparecer
-    await expect(page.locator(CHAT_DIALOG).getByText("Busco cancha de fútbol 7")).toBeVisible({
+    await expect(page.locator(CHAT_DIALOG).getByText("Busco cancha de fútbol 7", { exact: true })).toBeVisible({
       timeout: 3000,
     });
 

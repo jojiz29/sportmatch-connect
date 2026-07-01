@@ -28,9 +28,9 @@ test.describe("Edwin Flores E2E Flow", () => {
       statsContainer.locator("div.glass", { hasText: "Partidos" }).locator(".text-xl"),
     ).toContainText("15");
 
-    const sidebarName = page.locator("aside .bg-gradient-card .text-sm.font-semibold");
-    await expect(sidebarName).toContainText("Edwin Flores");
-    const sidebarBalance = page.locator("aside .bg-gradient-card a[href='/app/wallet']");
+    const sidebarName = page.locator("aside").getByText("Edwin Flores").first();
+    await expect(sidebarName).toBeVisible({ timeout: 5000 });
+    const sidebarBalance = page.locator("aside a[href='/app/wallet']").first();
     await expect(sidebarBalance).toContainText("3500 FC");
   });
 

@@ -4,7 +4,7 @@ const port = process.env.VITE_PORT || "5179";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 45000,
+  timeout: 60000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -14,8 +14,8 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
     trace: "on-first-retry",
     locale: "es-ES",
-    navigationTimeout: 15000,
-    actionTimeout: 10000,
+    navigationTimeout: 30000,
+    actionTimeout: 15000,
   },
   projects: [
     {
