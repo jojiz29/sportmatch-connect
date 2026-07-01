@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsEnum,
   IsArray,
+  ArrayMinSize,
   IsNumber,
   Min,
   Max,
@@ -281,6 +282,7 @@ export class Nutrition360ResponseDto {
 
 export class MealPlanDto {
   @IsArray()
+  @ArrayMinSize(1)
   @IsString({ each: true })
   @ApiProperty({
     description: "Preferencias alimenticias del usuario",
@@ -300,6 +302,7 @@ export class MealPlanDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsEnum(["perder_peso", "ganar_musculo", "mantener", "salud_general"])
   @ApiProperty({
     description: "Objetivo del plan",
     example: "perder_peso",

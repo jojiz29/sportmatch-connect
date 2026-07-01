@@ -818,6 +818,11 @@ export class VisionService {
         if (dbErr instanceof HttpException) throw dbErr;
         this.logger.error(`Database query failed in checkProAccess: ${(dbErr as Error).message}`);
       }
+    } else {
+      throw new HttpException(
+        "Servicio temporalmente no disponible. Intenta de nuevo en unos minutos.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 
@@ -1027,6 +1032,7 @@ export class VisionService {
     const result = await this.vertexAi.generateContent(promptText, {
       language: lang as "es" | "en" | "pt",
       temperature: 0.3,
+      responseMimeType: "application/json",
     });
 
     const parsed = this.parseJsonObject(result.text);

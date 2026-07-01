@@ -133,6 +133,7 @@ export class VertexAiService implements OnModuleInit, OnModuleDestroy {
             temperature,
             topP: 0.9,
             systemInstruction,
+            ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
           },
         });
 

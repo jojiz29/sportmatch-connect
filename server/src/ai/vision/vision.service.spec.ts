@@ -16,6 +16,7 @@ describe("VisionService", () => {
     } as unknown as jest.Mocked<VertexAiService>;
 
     const prisma = {
+      isHealthy: jest.fn().mockReturnValue(true),
       nutrition_360_logs: { create: jest.fn() },
       meal_plan_logs: { create: jest.fn() },
       profiles: { findUnique: jest.fn().mockResolvedValue({ tier: "PRO" }) },
