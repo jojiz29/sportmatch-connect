@@ -70,7 +70,7 @@ describe("AI Assistant — anti-mock safeguards", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(`${BACKEND_URL}/api/v1/ai/chat`);
     expect(init.method).toBe("POST");
-    expect(init.headers.Authorization).toBe("Bearer fake-jwt-token");
+    expect(init.headers.Authorization).toBe("Bearer mock-access-token");
     expect(JSON.parse(init.body)).toEqual({ message: "Hola Sporty" });
 
     expect(response.reply).toBe("¡Hola! Soy Sporty ⚡");
@@ -78,6 +78,8 @@ describe("AI Assistant — anti-mock safeguards", () => {
   });
 
   it("sendMessageToAI() lanza error si no hay token de sesión", async () => {
+    vi.stubEnv("VITE_USE_MOCKS", "false");
+
     const { supabase } = await import("@/shared/api/supabase");
     vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
       data: { session: null },
