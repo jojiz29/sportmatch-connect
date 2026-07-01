@@ -88,6 +88,14 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
         <div className="relative flex justify-center py-6">
           <div
             onClick={handleCardClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCardClick();
+              }
+            }}
+            role="button"
+            tabIndex={0}
             className={`w-64 p-5 border rounded-3xl cursor-pointer select-none bg-gradient-to-br from-emerald-800 via-emerald-950 to-green-950 transition-all duration-300 relative ${getCardBorderClass()}`}
           >
             {/* Fondo decorativo con patrón de cuadrícula */}

@@ -173,6 +173,14 @@ export function Nutrition360({ language, className = "" }: Nutrition360Props) {
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="relative flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-border/60 hover:border-emerald-500/50 hover:bg-emerald-500/5 rounded-2xl cursor-pointer transition-all duration-200 group"
         >
           <div className="h-14 w-14 rounded-full bg-emerald-500/10 grid place-items-center group-hover:bg-emerald-500/20 transition-colors">

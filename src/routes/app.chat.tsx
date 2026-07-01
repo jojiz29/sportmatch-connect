@@ -914,6 +914,9 @@ function Chats() {
           <div
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setIsNewChatModalOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setIsNewChatModalOpen(false);
+            }}
           />
           <div className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card overflow-hidden flex flex-col max-h-[80vh] z-10 animate-fade-in">
             <div className="flex justify-between items-center mb-4">
@@ -1013,6 +1016,9 @@ function Chats() {
           <div
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setIsCreateSquadModalOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setIsCreateSquadModalOpen(false);
+            }}
           />
           <div className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card overflow-hidden flex flex-col max-h-[80vh] z-10 animate-fade-in">
             <div className="flex justify-between items-center mb-4">

@@ -176,6 +176,9 @@ export function CreateMatchModal({ open, onClose }: CreateMatchModalProps) {
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={handleClose}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") handleClose();
+            }}
           />
 
           {/* Panel del modal */}

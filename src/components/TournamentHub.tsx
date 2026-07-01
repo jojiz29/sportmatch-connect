@@ -881,6 +881,14 @@ export function TournamentHub() {
                   <div
                     key={t.code}
                     onClick={() => setActiveTournamentCode(t.code)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setActiveTournamentCode(t.code);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={`p-3 rounded-xl border flex justify-between items-center gap-2 cursor-pointer transition-all ${
                       activeTournamentCode === t.code
                         ? "bg-primary/10 border-primary shadow-glow text-white"
@@ -1356,6 +1364,18 @@ function MatchCard({ match, onClick }: { match: MatchNode; onClick?: () => void 
   return (
     <div
       onClick={isPlayable && onClick ? onClick : undefined}
+      onKeyDown={
+        isPlayable && onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={isPlayable && onClick ? "button" : undefined}
+      tabIndex={isPlayable && onClick ? 0 : undefined}
       className={`bg-gradient-card border border-border/80 rounded-2xl shadow-md overflow-hidden text-left relative transition-all duration-300 ${
         isPlayable && onClick
           ? "hover:border-primary/50 cursor-pointer hover:shadow-glow hover:scale-[1.02]"

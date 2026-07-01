@@ -185,6 +185,14 @@ function BusinessListCard({
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       className={`flex gap-3 items-center p-3 rounded-2xl cursor-pointer transition-all hover:bg-accent/40 bg-card border ${
         business.is_sponsored ? "border-amber-500/50 shadow-neon-gold" : "border-border/50"
       }`}

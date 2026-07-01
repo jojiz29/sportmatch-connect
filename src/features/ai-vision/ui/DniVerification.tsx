@@ -97,6 +97,14 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
           {!selfiePreview ? (
             <div
               onClick={() => selfieInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  selfieInputRef.current?.click();
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-primary/5 rounded-xl cursor-pointer transition-all h-44"
             >
               <Camera className="h-6 w-6 text-primary" />
@@ -128,6 +136,14 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
           {!dniPreview ? (
             <div
               onClick={() => dniInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  dniInputRef.current?.click();
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-primary/5 rounded-xl cursor-pointer transition-all h-44"
             >
               <IdCard className="h-6 w-6 text-primary" />

@@ -46,6 +46,9 @@ export function MatchResultModal({ opponentId, sport, onClose }: MatchResultModa
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-background/80 backdrop-blur-sm"
           onClick={onClose}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onClose();
+          }}
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}

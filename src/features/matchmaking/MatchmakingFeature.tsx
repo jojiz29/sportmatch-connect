@@ -765,6 +765,9 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-background/90 backdrop-blur-md"
               onClick={() => setChallengeTarget(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setChallengeTarget(null);
+              }}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 24 }}
@@ -860,6 +863,9 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-background/90 backdrop-blur-md"
               onClick={() => setMatchedUser(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setMatchedUser(null);
+              }}
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 50 }}
@@ -986,6 +992,9 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-background/90 backdrop-blur-md"
               onClick={() => setInspectedUser(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setInspectedUser(null);
+              }}
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 50 }}

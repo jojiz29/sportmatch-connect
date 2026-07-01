@@ -76,6 +76,9 @@ export function LevelUpModal() {
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={handleDismiss}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") handleDismiss();
+            }}
             aria-hidden="true"
           />
           <motion.div

@@ -95,6 +95,14 @@ export function FakeProfileDetector({
       {!preview && (
         <div
           onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-border/60 hover:border-primary/50 hover:bg-primary/5 rounded-2xl cursor-pointer transition-all"
         >
           <div className="h-12 w-12 rounded-full bg-primary/10 grid place-items-center">

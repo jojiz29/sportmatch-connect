@@ -1026,6 +1026,9 @@ export function SquadExplorer() {
             <div
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setIsInviteModalOpen(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setIsInviteModalOpen(false);
+              }}
             />
             <div className="relative w-full max-w-md bg-gradient-card border border-border rounded-3xl p-6 shadow-card overflow-hidden flex flex-col max-h-[80vh] z-10 animate-scale-up">
               <div className="flex justify-between items-center mb-4">
@@ -1199,6 +1202,14 @@ export function SquadExplorer() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setSelectedSquad(squad)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedSquad(squad);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className="bg-gradient-card border border-border rounded-3xl p-5 shadow-card hover:ring-glow transition-all flex flex-col justify-between cursor-pointer group"
                 >
                   <div>

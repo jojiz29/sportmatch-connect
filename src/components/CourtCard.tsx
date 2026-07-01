@@ -27,6 +27,14 @@ export function CourtCard({
     return (
       <div
         onClick={onClick}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && onClick) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        role="button"
+        tabIndex={onClick ? 0 : undefined}
         className={`flex gap-3 items-center p-2 rounded-2xl hover:bg-accent/40 cursor-pointer transition-colors ${
           isSelected ? "bg-accent/60 ring-1 ring-primary" : "bg-card border border-border/50"
         }`}

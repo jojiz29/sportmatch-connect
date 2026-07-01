@@ -491,6 +491,14 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
       <div
         key={sport.id}
         onClick={() => handleToggleSport(sport.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleToggleSport(sport.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
         className={`p-4 border rounded-2xl cursor-pointer select-none transition-all duration-150 group relative ${sport.styleClass} ${
           isSelected
             ? "border-primary scale-105 shadow-glow"
@@ -552,6 +560,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
           <div
             className="mt-4 pt-3 border-t border-white/10 flex flex-col gap-2 relative z-20"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="text-[10px] text-white/50 uppercase tracking-wider font-extrabold">
               {t("onboarding.select_level", "Nivel:")}

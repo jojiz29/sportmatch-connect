@@ -279,6 +279,14 @@ export function IdentityStep({
       <div className="flex flex-col items-center gap-3">
         <div
           onClick={() => !isUploading && !isAnalyzingImage && fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if ((e.key === "Enter" || e.key === " ") && !isUploading && !isAnalyzingImage) {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className={`h-32 w-32 rounded-full border-4 cursor-pointer relative overflow-hidden bg-background/30 flex items-center justify-center transition-all duration-300 ${getGenderGlowClass()}`}
         >
           {isAnalyzingImage ? (

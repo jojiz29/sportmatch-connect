@@ -459,6 +459,9 @@ function Wallet() {
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setSelectedReward(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSelectedReward(null);
+              }}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -514,6 +517,9 @@ function Wallet() {
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setSelectedItem(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSelectedItem(null);
+              }}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}

@@ -137,6 +137,14 @@ function AiVisionOverview() {
         {/* Card 1: Form Analyzer */}
         <div
           onClick={() => handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer");
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
         >
           <div className="absolute right-6 top-6 flex items-center gap-1.5">
@@ -178,6 +186,14 @@ function AiVisionOverview() {
         {/* Card 2: AR Court Preview */}
         <div
           onClick={() => handleCardClick("ar_preview", "/app/map")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCardClick("ar_preview", "/app/map");
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
         >
           <div className="absolute right-6 top-6 flex items-center gap-1.5">
@@ -219,6 +235,14 @@ function AiVisionOverview() {
         {/* Card 3: Nutrición 360 */}
         <div
           onClick={() => handleCardClick("nutrition_360", "/app/ai-vision/nutrition-360")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCardClick("nutrition_360", "/app/ai-vision/nutrition-360");
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
         >
           <div className="absolute right-6 top-6 flex items-center gap-1.5">
@@ -260,6 +284,14 @@ function AiVisionOverview() {
         {/* Card 4: Plan Alimenticio */}
         <div
           onClick={() => handleCardClick("meal_planner", "/app/ai-vision/meal-planner")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCardClick("meal_planner", "/app/ai-vision/meal-planner");
+            }
+          }}
+          role="button"
+          tabIndex={0}
           className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
         >
           <div className="absolute right-6 top-6 flex items-center gap-1.5">

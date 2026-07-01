@@ -87,6 +87,14 @@ export function SportSelectionGrid({ sportsMatrix, onSportChange }: SportSelecti
       <div
         key={sport.id}
         onClick={() => handleCardClick(sport.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleCardClick(sport.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
         className={`p-4 border rounded-2xl cursor-pointer select-none transition-all duration-150 group relative ${sport.styleClass} ${getCardBorderClass(
           level,
         )}`}
