@@ -1,6 +1,16 @@
 /* eslint-disable no-control-regex */
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsArray, IsNumber, Min, Max, MaxLength } from "class-validator";
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  IsNumber,
+  Min,
+  Max,
+  MaxLength,
+} from "class-validator";
 import { Transform, TransformFnParams } from "class-transformer";
 
 function sanitizeVisionText({ value }: TransformFnParams): string {
@@ -223,7 +233,10 @@ export class MicronutrientDto {
 }
 
 export class Nutrition360ResponseDto {
-  @ApiProperty({ description: "Nombre del plato detectado", example: "Pollo a la plancha con ensalada" })
+  @ApiProperty({
+    description: "Nombre del plato detectado",
+    example: "Pollo a la plancha con ensalada",
+  })
   mealName!: string;
 
   @ApiProperty({ description: "Calorías totales estimadas", example: 450 })
@@ -238,7 +251,11 @@ export class Nutrition360ResponseDto {
   @ApiProperty({ description: "Puntuación de salud 0-100", example: 78 })
   healthScore!: number;
 
-  @ApiProperty({ description: "Micronutrientes detectados", required: false, type: [MicronutrientDto] })
+  @ApiProperty({
+    description: "Micronutrientes detectados",
+    required: false,
+    type: [MicronutrientDto],
+  })
   micronutrients?: MicronutrientDto[];
 
   @ApiProperty({
@@ -265,18 +282,29 @@ export class Nutrition360ResponseDto {
 export class MealPlanDto {
   @IsArray()
   @IsString({ each: true })
-  @ApiProperty({ description: "Preferencias alimenticias del usuario", example: ["pollo", "arroz", "ensalada"] })
+  @ApiProperty({
+    description: "Preferencias alimenticias del usuario",
+    example: ["pollo", "arroz", "ensalada"],
+  })
   preferences!: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @ApiProperty({ description: "Restricciones alimentarias", required: false, example: ["sin gluten"] })
+  @ApiProperty({
+    description: "Restricciones alimentarias",
+    required: false,
+    example: ["sin gluten"],
+  })
   restrictions?: string[];
 
   @IsString()
   @IsNotEmpty()
-  @ApiProperty({ description: "Objetivo del plan", example: "perder_peso", enum: ["perder_peso", "ganar_musculo", "mantener", "salud_general"] })
+  @ApiProperty({
+    description: "Objetivo del plan",
+    example: "perder_peso",
+    enum: ["perder_peso", "ganar_musculo", "mantener", "salud_general"],
+  })
   goal!: string;
 
   @IsNumber()
@@ -301,7 +329,11 @@ export class MealItemDto {
   @ApiProperty({ description: "Nombre de la comida", example: "Pollo salteado con verduras" })
   name!: string;
 
-  @ApiProperty({ description: "Tipo de comida", example: "almuerzo", enum: ["desayuno", "almuerzo", "cena", "snack", "post-entreno"] })
+  @ApiProperty({
+    description: "Tipo de comida",
+    example: "almuerzo",
+    enum: ["desayuno", "almuerzo", "cena", "snack", "post-entreno"],
+  })
   type!: string;
 
   @ApiProperty({ description: "Calorías", example: 450 })
@@ -319,7 +351,10 @@ export class MealItemDto {
   @ApiProperty({ description: "Ingredientes", example: ["pollo", "brócoli", "arroz integral"] })
   ingredients!: string[];
 
-  @ApiProperty({ description: "Instrucciones de preparación", example: "Saltea el pollo con las verduras..." })
+  @ApiProperty({
+    description: "Instrucciones de preparación",
+    example: "Saltea el pollo con las verduras...",
+  })
   preparation!: string;
 }
 
@@ -350,10 +385,16 @@ export class MealPlanResponseDto {
   @ApiProperty({ description: "Resumen del plan", example: "Plan balanceado..." })
   summary!: string;
 
-  @ApiProperty({ description: "Consejos para mantener el hábito", example: ["Prepara tus comidas con anticipación"] })
+  @ApiProperty({
+    description: "Consejos para mantener el hábito",
+    example: ["Prepara tus comidas con anticipación"],
+  })
   tips!: string[];
 
-  @ApiProperty({ description: "Notas sobre sostenibilidad del plan", example: "Este plan prioriza..." })
+  @ApiProperty({
+    description: "Notas sobre sostenibilidad del plan",
+    example: "Este plan prioriza...",
+  })
   sustainabilityNotes!: string;
 
   @ApiProperty() latencyMs!: number;
