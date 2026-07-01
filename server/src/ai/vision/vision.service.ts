@@ -905,10 +905,28 @@ export class VisionService {
 
     const rawMacros = parsed.macros;
     const macros: MacrosDto = {
-      protein: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).protein : 0, 0),
-      carbs: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).carbs : 0, 0),
-      fat: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).fat : 0, 0),
-      fiber: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).fiber : 0, 0),
+      protein: this.asNumber(
+        rawMacros && typeof rawMacros === "object"
+          ? (rawMacros as Record<string, unknown>).protein
+          : 0,
+        0,
+      ),
+      carbs: this.asNumber(
+        rawMacros && typeof rawMacros === "object"
+          ? (rawMacros as Record<string, unknown>).carbs
+          : 0,
+        0,
+      ),
+      fat: this.asNumber(
+        rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).fat : 0,
+        0,
+      ),
+      fiber: this.asNumber(
+        rawMacros && typeof rawMacros === "object"
+          ? (rawMacros as Record<string, unknown>).fiber
+          : 0,
+        0,
+      ),
     };
 
     const rawMicros = parsed.micronutrients;
@@ -1027,8 +1045,7 @@ export class VisionService {
 
     const mealPlan: DayPlanDto[] = (parsed.mealPlan as Record<string, unknown>[]).map((dayRaw) => {
       const meals: MealItemDto[] = (Array.isArray(dayRaw.meals) ? dayRaw.meals : [])
-        .filter((m: unknown): m is Record<string, unknown> =>
-          typeof m === "object" && m !== null)
+        .filter((m: unknown): m is Record<string, unknown> => typeof m === "object" && m !== null)
         .map((m: Record<string, unknown>) => ({
           name: this.asString(m.name) || "Comida",
           type: this.asString(m.type) || "snack",
@@ -1053,8 +1070,7 @@ export class VisionService {
     const response: MealPlanResponseDto = {
       mealPlan,
       summary:
-        this.asString(parsed.summary) ||
-        `Plan de ${dto.durationDays} días generado exitosamente.`,
+        this.asString(parsed.summary) || `Plan de ${dto.durationDays} días generado exitosamente.`,
       tips: this.asStringArray(parsed.tips),
       sustainabilityNotes: this.asString(parsed.sustainabilityNotes),
       latencyMs: result.latencyMs,
