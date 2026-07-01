@@ -45,28 +45,29 @@ export class VisionService {
     return instructions[language];
   }
 
-  private parseJsonObject(text: string): Record<string, unknown> | null {
-    const cleaned = text
-      .replace(/```json/gi, "")
-      .replace(/```/g, "")
-      .trim();
+  private stripCodeFences(text: string): string {
+    return text.replace(/```json/gi, "").replaceAll("```", "").trim();
+  }
 
+  private tryParseJson(text: string): Record<string, unknown> | null {
     try {
-      const parsed = JSON.parse(cleaned);
+      const parsed = JSON.parse(text);
       return this.isRecord(parsed) ? parsed : null;
     } catch {
-      // Continue with balanced object extraction.
+      return null;
     }
+  }
 
-    const start = cleaned.indexOf("{");
-    if (start < 0) return null;
-
+  private extractBalancedObject(
+    text: string,
+    start: number,
+  ): Record<string, unknown> | null {
     let depth = 0;
     let inString = false;
     let escaped = false;
 
-    for (let index = start; index < cleaned.length; index += 1) {
-      const char = cleaned[index];
+    for (let index = start; index < text.length; index += 1) {
+      const char = text[index];
 
       if (inString) {
         if (escaped) {
@@ -86,18 +87,24 @@ export class VisionService {
       } else if (char === "}") {
         depth -= 1;
         if (depth === 0) {
-          const candidate = cleaned.slice(start, index + 1);
-          try {
-            const parsed = JSON.parse(candidate);
-            return this.isRecord(parsed) ? parsed : null;
-          } catch {
-            return null;
-          }
+          return this.tryParseJson(text.slice(start, index + 1));
         }
       }
     }
 
     return null;
+  }
+
+  private parseJsonObject(text: string): Record<string, unknown> | null {
+    const cleaned = this.stripCodeFences(text);
+
+    const direct = this.tryParseJson(cleaned);
+    if (direct) return direct;
+
+    const start = cleaned.indexOf("{");
+    if (start < 0) return null;
+
+    return this.extractBalancedObject(cleaned, start);
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {
@@ -131,6 +138,12 @@ export class VisionService {
     const raw = this.asNumber(value, fallback);
     const normalized = raw > 1 && raw <= 100 ? raw / 100 : raw;
     return this.clamp(normalized, 0, 1);
+  }
+
+  private extractMacroField(macros: unknown, field: string, fallback: number): number {
+    return macros && typeof macros === "object"
+      ? this.asNumber((macros as Record<string, unknown>)[field], fallback)
+      : fallback;
   }
 
   private asStringArray(value: unknown): string[] {
@@ -641,24 +654,24 @@ export class VisionService {
     const base64Data = imageBuffer.toString("base64");
 
     const result = await this.vertexAi.generateContentWithMedia(promptText, {
-      language: lang as "es" | "en" | "pt",
+      language: lang,
       temperature: 0,
       responseMimeType: "application/json",
-      systemInstruction: this.buildVisionSystemInstruction(lang as "es" | "en" | "pt"),
+      systemInstruction: this.buildVisionSystemInstruction(lang),
       mediaParts: [{ inlineData: { mimeType, data: base64Data } }],
     });
 
     const parsed = this.parseJsonObject(result.text);
     if (!parsed) return this.buildFakeProfileFallback(result);
 
-    const parsedIsFake = this.asBoolean(parsed.isFake, false);
+    const isFake = this.asBoolean(parsed.isFake, false);
     const score = Math.round(
-      this.clamp(this.asNumber(parsed.authenticityScore, parsedIsFake ? 15 : 75), 0, 100),
+      this.clamp(this.asNumber(parsed.authenticityScore, isFake ? 15 : 75), 0, 100),
     );
-    const isFake = this.asBoolean(parsed.isFake, score < 40);
+    const finalIsFake = this.asBoolean(parsed.isFake, score < 40);
 
     return {
-      isFake,
+      isFake: finalIsFake,
       authenticityScore: score,
       explanation:
         typeof parsed.explanation === "string" && parsed.explanation.trim() !== ""
@@ -760,10 +773,10 @@ export class VisionService {
     const promptText = promptByLang[lang] || promptByLang.es;
 
     const result = await this.vertexAi.generateContentWithMedia(promptText, {
-      language: lang as "es" | "en" | "pt",
+      language: lang,
       temperature: 0,
       responseMimeType: "application/json",
-      systemInstruction: this.buildVisionSystemInstruction(lang as "es" | "en" | "pt"),
+      systemInstruction: this.buildVisionSystemInstruction(lang),
       mediaParts: [
         {
           text: "IMAGEN 1 - SELFIE actual del usuario. Evalua el rostro frontal actual en esta imagen.",
@@ -795,10 +808,7 @@ export class VisionService {
   }
 
   private async checkProAccess(userId: string): Promise<void> {
-    let isDbHealthy = this.prisma.isHealthy();
-    if (!isDbHealthy) {
-      isDbHealthy = await this.prisma.tryReconnect();
-    }
+    const isDbHealthy = this.prisma.isHealthy() || (await this.prisma.tryReconnect());
 
     if (isDbHealthy) {
       try {
@@ -884,10 +894,10 @@ export class VisionService {
     const base64Data = imageBuffer.toString("base64");
 
     const result = await this.vertexAi.generateContentWithMedia(promptText, {
-      language: lang as "es" | "en" | "pt",
+      language: lang,
       temperature: 0,
       responseMimeType: "application/json",
-      systemInstruction: this.buildVisionSystemInstruction(lang as "es" | "en" | "pt"),
+      systemInstruction: this.buildVisionSystemInstruction(lang),
       mediaParts: [{ inlineData: { mimeType, data: base64Data } }],
     });
 
@@ -910,40 +920,22 @@ export class VisionService {
 
     const rawMacros = parsed.macros;
     const macros: MacrosDto = {
-      protein: this.asNumber(
-        rawMacros && typeof rawMacros === "object"
-          ? (rawMacros as Record<string, unknown>).protein
-          : 0,
-        0,
-      ),
-      carbs: this.asNumber(
-        rawMacros && typeof rawMacros === "object"
-          ? (rawMacros as Record<string, unknown>).carbs
-          : 0,
-        0,
-      ),
-      fat: this.asNumber(
-        rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).fat : 0,
-        0,
-      ),
-      fiber: this.asNumber(
-        rawMacros && typeof rawMacros === "object"
-          ? (rawMacros as Record<string, unknown>).fiber
-          : 0,
-        0,
-      ),
+      protein: this.extractMacroField(rawMacros, "protein", 0),
+      carbs: this.extractMacroField(rawMacros, "carbs", 0),
+      fat: this.extractMacroField(rawMacros, "fat", 0),
+      fiber: this.extractMacroField(rawMacros, "fiber", 0),
     };
 
     const rawMicros = parsed.micronutrients;
     let micronutrients: MicronutrientDto[] | undefined;
     if (Array.isArray(rawMicros)) {
-      micronutrients = rawMicros
-        .filter((m): m is Record<string, unknown> => typeof m === "object" && m !== null)
-        .map((m) => ({
-          name: this.asString(m.name),
-          amount: this.asString(m.amount),
-        }))
-        .filter((m) => m.name !== "");
+      micronutrients = rawMicros.flatMap((m) => {
+        if (typeof m !== "object" || m === null) return [];
+        const micro = m as Record<string, unknown>;
+        const name = this.asString(micro.name);
+        if (name === "") return [];
+        return [{ name, amount: this.asString(micro.amount) }];
+      });
     }
 
     const response: Nutrition360ResponseDto = {
@@ -1030,7 +1022,7 @@ export class VisionService {
       `Responde en ${promptLang}.`;
 
     const result = await this.vertexAi.generateContent(promptText, {
-      language: lang as "es" | "en" | "pt",
+      language: lang,
       temperature: 0.3,
       responseMimeType: "application/json",
     });
@@ -1049,19 +1041,22 @@ export class VisionService {
       };
     }
 
-    const mealPlan: DayPlanDto[] = (parsed.mealPlan as Record<string, unknown>[]).map((dayRaw) => {
+    const mealPlan: DayPlanDto[] = (parsed.mealPlan as Array<Record<string, unknown>>).map((dayRaw) => {
       const meals: MealItemDto[] = (Array.isArray(dayRaw.meals) ? dayRaw.meals : [])
-        .filter((m: unknown): m is Record<string, unknown> => typeof m === "object" && m !== null)
-        .map((m: Record<string, unknown>) => ({
-          name: this.asString(m.name) || "Comida",
-          type: this.asString(m.type) || "snack",
-          calories: Math.round(this.asNumber(m.calories, 0)),
-          protein: Math.round(this.asNumber(m.protein, 0)),
-          carbs: Math.round(this.asNumber(m.carbs, 0)),
-          fat: Math.round(this.asNumber(m.fat, 0)),
-          ingredients: this.asStringArray(m.ingredients),
-          preparation: this.asString(m.preparation) || "Sin instrucciones",
-        }));
+        .flatMap((m: unknown) => {
+          if (typeof m !== "object" || m === null) return [];
+          const meal = m as Record<string, unknown>;
+          return [{
+            name: this.asString(meal.name) || "Comida",
+            type: this.asString(meal.type) || "snack",
+            calories: Math.round(this.asNumber(meal.calories, 0)),
+            protein: Math.round(this.asNumber(meal.protein, 0)),
+            carbs: Math.round(this.asNumber(meal.carbs, 0)),
+            fat: Math.round(this.asNumber(meal.fat, 0)),
+            ingredients: this.asStringArray(meal.ingredients),
+            preparation: this.asString(meal.preparation) || "Sin instrucciones",
+          }];
+        });
 
       return {
         day: this.asNumber(dayRaw.day, 1),

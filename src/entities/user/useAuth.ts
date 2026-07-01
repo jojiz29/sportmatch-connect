@@ -250,55 +250,45 @@ export function useAuth() {
   const store = useAuthStore();
 
   // === INICIO DE SESIÓN ===
-  const signIn = async (email?: string, password?: string) => {
-    // E2E / Mock login bypass
-    const isMockAttempt = !!(email && !password);
-
-    // Si se provee contraseña y no estamos forzados a usar mocks globales, intentamos login real
+  const shouldUseMockLogin = (email?: string, password?: string): boolean => {
+    if (!email && !password) return false;
     const forceMocks = import.meta.env.VITE_USE_MOCKS === "true";
-    const isRealAttempt = !!(email && password && !forceMocks);
+    return store.isDemoMode || forceMocks || !!(email && !password);
+  };
 
-    if (!isRealAttempt && (store.isDemoMode || forceMocks || isMockAttempt)) {
-      executeMockSignIn(email, store);
-      return;
+  const performRealSignIn = async (email: string, password: string): Promise<void> => {
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      if (import.meta.env.DEV) console.error("Error en Supabase Auth signIn:", authError);
+      throw authError;
     }
 
-    // Flujo real: autenticación contra Supabase Auth
-    if (email && password) {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        if (import.meta.env.DEV) console.error("Error en Supabase Auth signIn:", authError);
-        throw authError;
-      }
-
-      if (!authData.user) {
-        throw new Error("Usuario no encontrado");
-      }
-
-      const profile = await fetchProfile(authData.user.id, authData.session?.access_token);
-
-      // Sincronizar last_login_at en la base de datos
-      try {
-        await supabase
-          .from("profiles")
-          .update({ last_login_at: new Date().toISOString() })
-          .eq("id", authData.user.id);
-      } catch (e) {
-        if (import.meta.env.DEV) console.warn("Failed to update last_login_at:", e);
-      }
-
-      store.setDemoMode(false);
-      store.login(profile);
-      return;
+    if (!authData.user) {
+      throw new Error("Usuario no encontrado");
     }
 
-    // Login como invitado: activa modo demo y omite consultas a Supabase
+    const profile = await fetchProfile(authData.user.id, authData.session?.access_token);
+
+    try {
+      await supabase
+        .from("profiles")
+        .update({ last_login_at: new Date().toISOString() })
+        .eq("id", authData.user.id);
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn("Failed to update last_login_at:", e);
+    }
+
+    store.setDemoMode(false);
+    store.login(profile);
+  };
+
+  const executeGuestSignIn = (): void => {
     store.setDemoMode(true);
-    const demoUser: User = {
+    store.login({
       id: "demo-user-id",
       created_at: new Date().toISOString(),
       name: "Edwin (Demo)",
@@ -319,8 +309,25 @@ export function useAuth() {
         { sport_id: "Pádel", level: 2 },
         { sport_id: "Tenis", level: 1 },
       ],
-    };
-    store.login(demoUser);
+    });
+  };
+
+  const signIn = async (email?: string, password?: string) => {
+    if (shouldUseMockLogin(email, password)) {
+      if (email && !password) {
+        executeMockSignIn(email, store);
+        return;
+      }
+      executeGuestSignIn();
+      return;
+    }
+
+    if (email && password) {
+      await performRealSignIn(email, password);
+      return;
+    }
+
+    executeGuestSignIn();
   };
 
   // === REGISTRO ===

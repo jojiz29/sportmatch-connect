@@ -169,90 +169,15 @@ export class PaymentsService {
     this.logger.log(`Received Stripe Webhook Event: ${event.type}`);
 
     switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as StripeCheckoutSession;
-        const userId = session.metadata?.userId;
-        const tier = session.metadata?.tier || "INICIAL";
-        const stripeCustomerId =
-          typeof session.customer === "string" ? session.customer : session.customer?.id;
-        const stripeSubscriptionId =
-          typeof session.subscription === "string"
-            ? session.subscription
-            : session.subscription?.id;
-
-        if (userId && stripeCustomerId && stripeSubscriptionId) {
-          await this.upgradeUser(userId, stripeCustomerId, stripeSubscriptionId, tier, tier);
-        }
+      case "checkout.session.completed":
+        await this.handleCheckoutCompleted(event);
         break;
-      }
-      case "customer.subscription.updated": {
-        const subscription = event.data.object as StripeSubscription;
-        const stripeSubscriptionId = subscription.id;
-
-        // Find subscription by stripe_subscription_id
-        const subRecord = await this.prisma.subscriptions.findFirst({
-          where: { stripe_subscription_id: stripeSubscriptionId },
-        });
-
-        if (subRecord) {
-          const status = subscription.status;
-          const currentPeriodEnd = subscription.current_period_end
-            ? new Date(subscription.current_period_end * 1000)
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-          const newTier =
-            status === "active" ? (subRecord.tier !== "FREE" ? subRecord.tier : "INICIAL") : "FREE";
-
-          await this.prisma.subscriptions.update({
-            where: { id: subRecord.id },
-            data: {
-              status,
-              current_period_end: currentPeriodEnd,
-              tier: newTier,
-            },
-          });
-
-          await this.prisma.profiles.update({
-            where: { id: subRecord.user_id },
-            data: {
-              tier: newTier,
-            },
-          });
-
-          this.logger.log(
-            `Subscription updated for user ${subRecord.user_id} to status ${status}, tier ${newTier}`,
-          );
-        }
+      case "customer.subscription.updated":
+        await this.handleSubscriptionUpdated(event);
         break;
-      }
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as StripeSubscription;
-        const stripeSubscriptionId = subscription.id;
-
-        const subRecord = await this.prisma.subscriptions.findFirst({
-          where: { stripe_subscription_id: stripeSubscriptionId },
-        });
-
-        if (subRecord) {
-          await this.prisma.subscriptions.update({
-            where: { id: subRecord.id },
-            data: {
-              status: "canceled",
-              tier: "FREE",
-            },
-          });
-
-          await this.prisma.profiles.update({
-            where: { id: subRecord.user_id },
-            data: {
-              tier: "FREE",
-            },
-          });
-
-          this.logger.log(`Subscription canceled for user ${subRecord.user_id}`);
-        }
+      case "customer.subscription.deleted":
+        await this.handleSubscriptionDeleted(event);
         break;
-      }
     }
 
     return { received: true };
@@ -330,5 +255,88 @@ export class PaymentsService {
     ]);
 
     this.logger.log(`User ${userId} successfully upgraded to ${tier} tier.`);
+  }
+
+  private async handleCheckoutCompleted(event: StripeWebhookEvent): Promise<void> {
+    const session = event.data.object as StripeCheckoutSession;
+    const userId = session.metadata?.userId;
+    const tier = session.metadata?.tier || "INICIAL";
+    const stripeCustomerId =
+      typeof session.customer === "string" ? session.customer : session.customer?.id;
+    const stripeSubscriptionId =
+      typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription?.id;
+
+    if (userId && stripeCustomerId && stripeSubscriptionId) {
+      await this.upgradeUser(userId, stripeCustomerId, stripeSubscriptionId, tier, tier);
+    }
+  }
+
+  private async handleSubscriptionUpdated(event: StripeWebhookEvent): Promise<void> {
+    const subscription = event.data.object as StripeSubscription;
+    const stripeSubscriptionId = subscription.id;
+
+    const subRecord = await this.prisma.subscriptions.findFirst({
+      where: { stripe_subscription_id: stripeSubscriptionId },
+    });
+
+    if (!subRecord) return;
+
+    const status = subscription.status;
+    const currentPeriodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const newTier =
+      status === "active" ? (subRecord.tier !== "FREE" ? subRecord.tier : "INICIAL") : "FREE";
+
+    await this.prisma.subscriptions.update({
+      where: { id: subRecord.id },
+      data: {
+        status,
+        current_period_end: currentPeriodEnd,
+        tier: newTier,
+      },
+    });
+
+    await this.prisma.profiles.update({
+      where: { id: subRecord.user_id },
+      data: {
+        tier: newTier,
+      },
+    });
+
+    this.logger.log(
+      `Subscription updated for user ${subRecord.user_id} to status ${status}, tier ${newTier}`,
+    );
+  }
+
+  private async handleSubscriptionDeleted(event: StripeWebhookEvent): Promise<void> {
+    const subscription = event.data.object as StripeSubscription;
+    const stripeSubscriptionId = subscription.id;
+
+    const subRecord = await this.prisma.subscriptions.findFirst({
+      where: { stripe_subscription_id: stripeSubscriptionId },
+    });
+
+    if (!subRecord) return;
+
+    await this.prisma.subscriptions.update({
+      where: { id: subRecord.id },
+      data: {
+        status: "canceled",
+        tier: "FREE",
+      },
+    });
+
+    await this.prisma.profiles.update({
+      where: { id: subRecord.user_id },
+      data: {
+        tier: "FREE",
+      },
+    });
+
+    this.logger.log(`Subscription canceled for user ${subRecord.user_id}`);
   }
 }

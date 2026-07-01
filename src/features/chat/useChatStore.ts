@@ -176,6 +176,36 @@ const updateTypingUsers = (userId: string, isTyping: boolean) => (state: any) =>
   return { typingUsers: updated };
 };
 
+const moderateMessage = async (text: string, chatId: string): Promise<boolean> => {
+  try {
+    const evaluation = await withTimeout(aiSecurityService.evaluateSecurity(text, "mensaje"), 5000);
+    if (evaluation.action_recommended === "block" || evaluation.ensemble_score >= 75) {
+      toast.error(
+        "Mensaje bloqueado: tu cuenta ha sido restringida temporalmente debido a infracciones de las normas de seguridad.",
+      );
+      chatLog("send:blocked", { chatId, reason: evaluation.reasoning || "Filtro de IA" });
+      return true;
+    }
+  } catch (error: any) {
+    console.error("[chat] Error en moderación:", error);
+    const errorMsg = error?.message || "";
+    if (
+      errorMsg.includes("restringida") ||
+      errorMsg.includes("Forbidden") ||
+      errorMsg.includes("bloqueado") ||
+      errorMsg.includes("403")
+    ) {
+      toast.error("Tu cuenta está restringida temporalmente para enviar mensajes.");
+      return true;
+    }
+    console.warn(
+      "[chat] Moderación de seguridad no disponible. Permitiendo envío por resiliencia.",
+      error,
+    );
+  }
+  return false;
+};
+
 const appendOptimisticMessage = (chatId: string, newMessage: ChatMessage) => (state: any) => {
   const updatedChats = state.chats.map((chat: any) => {
     if (chat.id === chatId) {
@@ -285,38 +315,9 @@ export const useChatStore = create<ChatState>()(
         const isDemo =
           useAuthStore.getState().isDemoMode || import.meta.env.VITE_USE_MOCKS === "true";
 
-        // Moderación inteligente con IA (Smart Block) antes del envío
         if (!isDemo && normalizedText) {
-          try {
-            const evaluation = await withTimeout(
-              aiSecurityService.evaluateSecurity(normalizedText, "mensaje"),
-              5000,
-            );
-            if (evaluation.action_recommended === "block" || evaluation.ensemble_score >= 75) {
-              toast.error(
-                "Mensaje bloqueado: tu cuenta ha sido restringida temporalmente debido a infracciones de las normas de seguridad.",
-              );
-              chatLog("send:blocked", { chatId, reason: evaluation.reasoning || "Filtro de IA" });
-              return;
-            }
-          } catch (error: any) {
-            console.error("[chat] Error en moderación:", error);
-            const errorMsg = error?.message || "";
-            if (
-              errorMsg.includes("restringida") ||
-              errorMsg.includes("Forbidden") ||
-              errorMsg.includes("bloqueado") ||
-              errorMsg.includes("403")
-            ) {
-              toast.error("Tu cuenta está restringida temporalmente para enviar mensajes.");
-              return; // Bloquea el envío si la cuenta está restringida
-            }
-            // Fallback (fail-open) para errores de red, backend offline, 500 o timeouts.
-            console.warn(
-              "[chat] Moderación de seguridad no disponible. Permitiendo envío por resiliencia.",
-              error,
-            );
-          }
+          const blocked = await moderateMessage(normalizedText, chatId);
+          if (blocked) return;
         }
 
         const user = useAuthStore.getState().user;

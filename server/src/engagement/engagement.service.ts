@@ -1968,7 +1968,7 @@ ${compactContext}`;
     context: Awaited<ReturnType<EngagementService["buildRecommendationContext"]>>,
   ): Omit<AiRecommendationResponse, "metadata"> {
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonMatch = text.match(/\{[^}]*\}/);
       if (!jsonMatch) throw new Error("Respuesta sin JSON");
       const parsed = JSON.parse(jsonMatch[0]) as Partial<
         Omit<AiRecommendationResponse, "metadata">

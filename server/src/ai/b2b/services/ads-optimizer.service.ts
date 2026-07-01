@@ -220,7 +220,7 @@ REGLAS ESTRICTAS:
   private parseVariantJson(text: string): { title?: string; description?: string } {
     try {
       const trimmed = text.trim();
-      const match = trimmed.match(/\{[\s\S]*\}/);
+      const match = trimmed.match(/\{[^}]*\}/);
       if (match) {
         return JSON.parse(match[0]) as { title?: string; description?: string };
       }

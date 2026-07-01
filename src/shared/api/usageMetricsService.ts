@@ -13,6 +13,7 @@
 
 import { supabase } from "./supabase";
 import { useAuthStore } from "@/entities/user/useAuth";
+import { cryptoSecureRandomString } from "@/shared/lib/crypto";
 import type { UsageMetric, UsageMetricType } from "@/entities/types";
 
 // ============================================================
@@ -63,7 +64,7 @@ export const usageMetricsService = {
     if (useAuthStore.getState().isDemoMode) {
       const metrics = getDemoMetrics();
       metrics.push({
-        id: `metric-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `metric-${Date.now()}-${cryptoSecureRandomString(6)}`,
         business_id: businessId,
         metric_type: metricType,
         value,
