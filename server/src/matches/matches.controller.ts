@@ -32,6 +32,20 @@ export class MatchesController {
     return this.matchesService.findAll(sport);
   }
 
+  @Get("recommended")
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get recommended matches for the current user (open, not joined, not creator)",
+  })
+  @ApiQuery({ name: "sport", required: false })
+  async findRecommended(
+    @Request() req: { user: { userId: string } },
+    @Query("sport") sport?: string,
+  ) {
+    return this.matchesService.findRecommended(req.user.userId, sport);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get match by ID" })
   async findOne(@Param("id") id: string) {

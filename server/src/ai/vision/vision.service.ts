@@ -1,18 +1,30 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { type VertexAiGenerationResult, VertexAiService } from "../vertex-ai.service";
+import { PrismaService } from "../../prisma/prisma.service";
+import { Prisma } from "@prisma/client";
 import {
   AnalyzeImageResponseDto,
   AnalyzeVideoResponseDto,
   FormAnalyzeResponseDto,
   FakeProfileResponseDto,
   DniVerifyResponseDto,
+  Nutrition360ResponseDto,
+  MacrosDto,
+  MicronutrientDto,
+  MealPlanDto,
+  MealPlanResponseDto,
+  DayPlanDto,
+  MealItemDto,
 } from "./dto/vision.dto";
 
 @Injectable()
 export class VisionService {
   private readonly logger = new Logger(VisionService.name);
 
-  constructor(private readonly vertexAi: VertexAiService) {}
+  constructor(
+    private readonly vertexAi: VertexAiService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   private buildVisionSystemInstruction(language: "es" | "en" | "pt"): string {
     const instructions: Record<"es" | "en" | "pt", string> = {
@@ -780,5 +792,298 @@ export class VisionService {
       model: result.model,
       tokens: result.tokens,
     };
+  }
+
+  private async checkProAccess(userId: string): Promise<void> {
+    let isDbHealthy = this.prisma.isHealthy();
+    if (!isDbHealthy) {
+      isDbHealthy = await this.prisma.tryReconnect();
+    }
+
+    if (isDbHealthy) {
+      try {
+        const profile = await this.prisma.profiles.findUnique({
+          where: { id: userId },
+          select: { tier: true },
+        });
+
+        const isPremium = profile?.tier !== "FREE" && profile?.tier != null;
+        if (!isPremium) {
+          throw new HttpException(
+            "Este servicio requiere una suscripción Premium activa.",
+            HttpStatus.FORBIDDEN,
+          );
+        }
+      } catch (dbErr) {
+        if (dbErr instanceof HttpException) throw dbErr;
+        this.logger.error(`Database query failed in checkProAccess: ${(dbErr as Error).message}`);
+      }
+    }
+  }
+
+  // ============================================================
+  // NUTRICIÓN 360 — Análisis nutricional de comida por foto
+  // ============================================================
+  async analyzeNutrition360(
+    userId: string,
+    imageBuffer: Buffer,
+    mimeType: string,
+    language?: "es" | "en" | "pt",
+  ): Promise<Nutrition360ResponseDto> {
+    await this.checkProAccess(userId);
+
+    const lang = language || "es";
+    const promptByLang: Record<string, string> = {
+      es:
+        "Eres un nutricionista deportivo experto. Analiza esta foto de comida y devuelve un análisis nutricional detallado. " +
+        "Responde ESTRICTAMENTE en formato JSON sin markdown ni texto adicional externo:\n" +
+        "{\n" +
+        '  "mealName": string (nombre del plato detectado),\n' +
+        '  "calories": number (calorías totales estimadas),\n' +
+        '  "macros": { "protein": number (g), "carbs": number (g), "fat": number (g), "fiber": number (g) },\n' +
+        '  "portionSize": string (tamaño estimado: pequeña/mediana/grande),\n' +
+        '  "healthScore": number (puntuación 0-100),\n' +
+        '  "micronutrients": [{ "name": string, "amount": string }] (micronutrientes detectados, máx 5),\n' +
+        '  "analysis": string (análisis detallado en 2-3 oraciones),\n' +
+        '  "recommendations": string[] (3-4 recomendaciones para mejorar alimentación)\n' +
+        "}",
+      en:
+        "You are a sports nutrition expert. Analyze this food photo and return detailed nutritional analysis. " +
+        "Respond STRICTLY in JSON format without markdown:\n" +
+        "{\n" +
+        '  "mealName": string,\n' +
+        '  "calories": number,\n' +
+        '  "macros": { "protein": number (g), "carbs": number (g), "fat": number (g), "fiber": number (g) },\n' +
+        '  "portionSize": string,\n' +
+        '  "healthScore": number 0-100,\n' +
+        '  "micronutrients": [{ "name": string, "amount": string }],\n' +
+        '  "analysis": string,\n' +
+        '  "recommendations": string[]\n' +
+        "}",
+      pt:
+        "Voce e um nutricionista esportivo expert. Analise esta foto de comida e retorne uma analise nutricional detalhada. " +
+        "Responda ESTRITAMENTE em formato JSON sem markdown:\n" +
+        "{\n" +
+        '  "mealName": string,\n' +
+        '  "calories": number,\n' +
+        '  "macros": { "protein": number (g), "carbs": number (g), "fat": number (g), "fiber": number (g) },\n' +
+        '  "portionSize": string,\n' +
+        '  "healthScore": number 0-100,\n' +
+        '  "micronutrients": [{ "name": string, "amount": string }],\n' +
+        '  "analysis": string,\n' +
+        '  "recommendations": string[]\n' +
+        "}",
+    };
+
+    const promptText = promptByLang[lang] || promptByLang.es;
+    const base64Data = imageBuffer.toString("base64");
+
+    const result = await this.vertexAi.generateContentWithMedia(promptText, {
+      language: lang as "es" | "en" | "pt",
+      temperature: 0,
+      responseMimeType: "application/json",
+      systemInstruction: this.buildVisionSystemInstruction(lang as "es" | "en" | "pt"),
+      mediaParts: [{ inlineData: { mimeType, data: base64Data } }],
+    });
+
+    const parsed = this.parseJsonObject(result.text);
+
+    if (!parsed) {
+      return {
+        mealName: "Análisis no disponible",
+        calories: 0,
+        macros: { protein: 0, carbs: 0, fat: 0, fiber: 0 },
+        portionSize: "No estimada",
+        healthScore: 50,
+        analysis: result.text,
+        recommendations: ["Intenta tomar una foto más clara del plato"],
+        latencyMs: result.latencyMs,
+        model: result.model,
+        tokens: result.tokens,
+      };
+    }
+
+    const rawMacros = parsed.macros;
+    const macros: MacrosDto = {
+      protein: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).protein : 0, 0),
+      carbs: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).carbs : 0, 0),
+      fat: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).fat : 0, 0),
+      fiber: this.asNumber(rawMacros && typeof rawMacros === "object" ? (rawMacros as Record<string, unknown>).fiber : 0, 0),
+    };
+
+    const rawMicros = parsed.micronutrients;
+    let micronutrients: MicronutrientDto[] | undefined;
+    if (Array.isArray(rawMicros)) {
+      micronutrients = rawMicros
+        .filter((m): m is Record<string, unknown> => typeof m === "object" && m !== null)
+        .map((m) => ({
+          name: this.asString(m.name),
+          amount: this.asString(m.amount),
+        }))
+        .filter((m) => m.name !== "");
+    }
+
+    const response: Nutrition360ResponseDto = {
+      mealName: this.asString(parsed.mealName) || "Plato detectado",
+      calories: Math.round(this.asNumber(parsed.calories, 0)),
+      macros,
+      portionSize: this.asString(parsed.portionSize) || "Mediana",
+      healthScore: Math.round(this.clamp(this.asNumber(parsed.healthScore, 50), 0, 100)),
+      micronutrients,
+      analysis: this.asString(parsed.analysis) || "Análisis nutricional completado.",
+      recommendations: this.asStringArray(parsed.recommendations),
+      latencyMs: result.latencyMs,
+      model: result.model,
+      tokens: result.tokens,
+    };
+
+    try {
+      await this.prisma.nutrition_360_logs.create({
+        data: {
+          user_id: userId,
+          meal_name: response.mealName,
+          calories: response.calories,
+          protein: macros.protein,
+          carbs: macros.carbs,
+          fat: macros.fat,
+          fiber: macros.fiber,
+          portion_size: response.portionSize,
+          health_score: response.healthScore,
+          analysis: response.analysis,
+          recommendations: response.recommendations,
+          model: response.model,
+          tokens: response.tokens,
+          latency_ms: response.latencyMs,
+        },
+      });
+    } catch (dbErr) {
+      this.logger.error(`Failed to save nutrition_360_logs: ${(dbErr as Error).message}`);
+    }
+
+    return response;
+  }
+
+  // ============================================================
+  // PLAN ALIMENTICIO — Meal Planner personalizado por IA
+  // ============================================================
+  async generateMealPlan(userId: string, dto: MealPlanDto): Promise<MealPlanResponseDto> {
+    await this.checkProAccess(userId);
+    const lang = dto.language || "es";
+    const promptLang = lang === "en" ? "English" : lang === "pt" ? "Portuguese" : "Spanish";
+
+    const promptText =
+      `Eres un nutricionista deportivo experto. Genera un plan de comidas personalizado de ${dto.durationDays} días ` +
+      `con ${dto.mealsPerDay} comidas por día.\n` +
+      `Preferencias del usuario: ${dto.preferences.join(", ")}.\n` +
+      `Restricciones: ${dto.restrictions?.join(", ") || "Ninguna"}.\n` +
+      `Objetivo: ${dto.goal}.\n\n` +
+      "Responde ESTRICTAMENTE en formato JSON sin markdown:\n" +
+      "{\n" +
+      '  "mealPlan": [\n' +
+      "    {\n" +
+      '      "day": number,\n' +
+      '      "meals": [\n' +
+      "        {\n" +
+      '          "name": string (nombre de la comida),\n' +
+      '          "type": "desayuno" | "almuerzo" | "cena" | "snack" | "post-entreno",\n' +
+      '          "calories": number,\n' +
+      '          "protein": number (g),\n' +
+      '          "carbs": number (g),\n' +
+      '          "fat": number (g),\n' +
+      '          "ingredients": string[],\n' +
+      '          "preparation": string (instrucciones breves)\n' +
+      "        }\n" +
+      "      ],\n" +
+      '      "totalCalories": number,\n' +
+      '      "totalProtein": number (g),\n' +
+      '      "totalCarbs": number (g),\n' +
+      '      "totalFat": number (g)\n' +
+      "    }\n" +
+      "  ],\n" +
+      '  "summary": string (resumen del plan),\n' +
+      '  "tips": string[] (3-5 consejos),\n' +
+      '  "sustainabilityNotes": string (notas sobre sostenibilidad del plan)\n' +
+      "}\n\n" +
+      `Responde en ${promptLang}.`;
+
+    const result = await this.vertexAi.generateContent(promptText, {
+      language: lang as "es" | "en" | "pt",
+      temperature: 0.3,
+    });
+
+    const parsed = this.parseJsonObject(result.text);
+
+    if (!parsed || !Array.isArray(parsed.mealPlan)) {
+      return {
+        mealPlan: [],
+        summary: result.text,
+        tips: ["Consulta con un nutricionista para un plan personalizado"],
+        sustainabilityNotes: "",
+        latencyMs: result.latencyMs,
+        model: result.model,
+        tokens: result.tokens,
+      };
+    }
+
+    const mealPlan: DayPlanDto[] = (parsed.mealPlan as Record<string, unknown>[]).map((dayRaw) => {
+      const meals: MealItemDto[] = (Array.isArray(dayRaw.meals) ? dayRaw.meals : [])
+        .filter((m: unknown): m is Record<string, unknown> =>
+          typeof m === "object" && m !== null)
+        .map((m: Record<string, unknown>) => ({
+          name: this.asString(m.name) || "Comida",
+          type: this.asString(m.type) || "snack",
+          calories: Math.round(this.asNumber(m.calories, 0)),
+          protein: Math.round(this.asNumber(m.protein, 0)),
+          carbs: Math.round(this.asNumber(m.carbs, 0)),
+          fat: Math.round(this.asNumber(m.fat, 0)),
+          ingredients: this.asStringArray(m.ingredients),
+          preparation: this.asString(m.preparation) || "Sin instrucciones",
+        }));
+
+      return {
+        day: this.asNumber(dayRaw.day, 1),
+        meals,
+        totalCalories: Math.round(this.asNumber(dayRaw.totalCalories, 0)),
+        totalProtein: Math.round(this.asNumber(dayRaw.totalProtein, 0)),
+        totalCarbs: Math.round(this.asNumber(dayRaw.totalCarbs, 0)),
+        totalFat: Math.round(this.asNumber(dayRaw.totalFat, 0)),
+      };
+    });
+
+    const response: MealPlanResponseDto = {
+      mealPlan,
+      summary:
+        this.asString(parsed.summary) ||
+        `Plan de ${dto.durationDays} días generado exitosamente.`,
+      tips: this.asStringArray(parsed.tips),
+      sustainabilityNotes: this.asString(parsed.sustainabilityNotes),
+      latencyMs: result.latencyMs,
+      model: result.model,
+      tokens: result.tokens,
+    };
+
+    try {
+      await this.prisma.meal_plan_logs.create({
+        data: {
+          user_id: userId,
+          preferences: dto.preferences,
+          restrictions: dto.restrictions || [],
+          goal: dto.goal,
+          meals_per_day: dto.mealsPerDay,
+          duration_days: dto.durationDays,
+          plan_json: mealPlan as unknown as Prisma.InputJsonValue,
+          summary: response.summary,
+          tips: response.tips,
+          sustainability_notes: response.sustainabilityNotes,
+          model: response.model,
+          tokens: response.tokens,
+          latency_ms: response.latencyMs,
+        },
+      });
+    } catch (dbErr) {
+      this.logger.error(`Failed to save meal_plan_logs: ${(dbErr as Error).message}`);
+    }
+
+    return response;
   }
 }

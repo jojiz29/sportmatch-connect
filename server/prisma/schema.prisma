@@ -70,6 +70,8 @@ model profiles {
   moderation_logs                     moderation_logs[]
   subscription                        subscriptions?
   nutrition_logs                      premium_nutrition_logs[]
+  nutrition_360_logs                  nutrition_360_logs[]
+  meal_plan_logs                      meal_plan_logs[]
   engagement_events                   engagement_events[]
   engagement_embeddings               engagement_embeddings?
   engagement_contents                 engagement_contents[]
@@ -552,4 +554,51 @@ model engagement_recommendation_snapshots {
   @@index([user_id, status])
   @@index([expires_at])
   @@map("engagement_recommendation_snapshots")
+}
+
+model nutrition_360_logs {
+  id             String   @id @default(uuid())
+  user_id        String   @map("user_id")
+  meal_name      String   @map("meal_name")
+  calories       Int
+  protein        Float
+  carbs          Float
+  fat            Float
+  fiber          Float
+  portion_size   String?  @map("portion_size")
+  health_score   Int?     @map("health_score")
+  analysis       String?
+  recommendations String[] @default([])
+  model          String?
+  tokens         Int?
+  latency_ms     Int?     @map("latency_ms")
+  created_at     DateTime @default(now()) @map("created_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@map("nutrition_360_logs")
+}
+
+model meal_plan_logs {
+  id                   String   @id @default(uuid())
+  user_id              String   @map("user_id")
+  preferences          String[]
+  restrictions         String[] @default([])
+  goal                 String
+  meals_per_day        Int      @map("meals_per_day")
+  duration_days        Int      @map("duration_days")
+  plan_json            Json     @map("plan_json")
+  summary              String?
+  tips                 String[] @default([])
+  sustainability_notes String?  @map("sustainability_notes")
+  model                String?
+  tokens               Int?
+  latency_ms           Int?     @map("latency_ms")
+  created_at           DateTime @default(now()) @map("created_at")
+
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@map("meal_plan_logs")
 }

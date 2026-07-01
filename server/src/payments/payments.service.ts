@@ -14,6 +14,7 @@ interface StripeWebhookEvent {
 interface StripeCheckoutSession {
   metadata?: {
     userId?: string;
+    tier?: string;
   } | null;
   customer?: string | { id?: string } | null;
   subscription?: string | { id?: string } | null;

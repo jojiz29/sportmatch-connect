@@ -409,7 +409,7 @@ function BusinessPage() {
           price_per_hour: priceVal,
           lat: latVal,
           lng: lngVal,
-          location: `POINT(${lngVal} ${latVal})`,
+          location: `SRID=4326;POINT(${lngVal} ${latVal})`,
           address: venueAddress,
           max_players: maxPlayersVal,
           operating_hours: hoursVal,

@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Post,
+  Request,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -22,12 +23,23 @@ import {
   FormAnalyzeResponseDto,
   FakeProfileResponseDto,
   DniVerifyResponseDto,
+  Nutrition360ResponseDto,
+  MealPlanDto,
+  MealPlanResponseDto,
 } from "./dto/vision.dto";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 30 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    sub: string;
+    email: string;
+    [key: string]: unknown;
+  };
+}
 
 @ApiTags("AI Vision")
 @Controller("ai/vision")
@@ -239,5 +251,56 @@ export class VisionController {
       dniFile.mimetype,
       lang,
     );
+  }
+
+  // ============================================================
+  // NUTRICIÓN 360 — Análisis nutricional de comida por foto
+  // ============================================================
+  @Post("nutrition-360")
+  @ApiOperation({
+    summary: "Nutrición 360 — Analiza una foto de comida y devuelve información nutricional",
+    description:
+      "PRO feature. Analiza la imagen de un plato de comida y devuelve calorías, macros, micronutrientes, health score y recomendaciones.",
+  })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        image: { type: "string", format: "binary" },
+        language: { type: "string", enum: ["es", "en", "pt"] },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor("image", { limits: { fileSize: MAX_IMAGE_SIZE } }))
+  async nutrition360(
+    @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number } | undefined,
+    @Body("language") language: string | undefined,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<Nutrition360ResponseDto> {
+    if (!file) throw new BadRequestException("No se proporcionó imagen de comida");
+    if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException("Formato de imagen no soportado. Usa JPG, PNG o WebP.");
+    }
+    const lang = (language === "pt" || language === "en" ? language : "es") as "es" | "en" | "pt";
+    const userId = req.user.sub;
+    return this.visionService.analyzeNutrition360(userId, file.buffer, file.mimetype, lang);
+  }
+
+  // ============================================================
+  // PLAN ALIMENTICIO — Meal Planner personalizado por IA
+  // ============================================================
+  @Post("meal-plan")
+  @ApiOperation({
+    summary: "Meal Planner — Genera un plan de comidas personalizado por IA",
+    description:
+      "PRO feature. Recibe preferencias alimenticias, restricciones, objetivo y duración. Devuelve un plan detallado día por día.",
+  })
+  async mealPlan(
+    @Body() dto: MealPlanDto,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<MealPlanResponseDto> {
+    const userId = req.user.sub;
+    return this.visionService.generateMealPlan(userId, dto);
   }
 }

@@ -7,6 +7,9 @@ import type {
   FormAnalysisResult,
   FakeProfileResult,
   DniVerificationResult,
+  Nutrition360Result,
+  MealPlanRequest,
+  MealPlanResult,
   SupportedLanguage,
 } from "../model/types";
 
@@ -51,6 +54,28 @@ async function getAuthToken(): Promise<string> {
   const token = session?.access_token;
   if (!token) throw new Error("Sesión expirada. Por favor, inicia sesión de nuevo.");
   return token;
+}
+
+async function postJson<T>(endpoint: string, body: unknown): Promise<T> {
+  validateApiHost();
+  const token = await getAuthToken();
+  const response = await fetch(`${VISION_BASE}${endpoint}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("No autorizado. Inicia sesión de nuevo.");
+    if (response.status === 403)
+      throw new Error("Este servicio requiere una suscripción Premium activa.");
+    if (response.status === 429) throw new Error("Demasiadas solicitudes. Espera un momento.");
+    const err = await response.json().catch(() => ({ message: `HTTP ${response.status}` }));
+    throw new Error(err.message || `Error (HTTP ${response.status})`);
+  }
+  return response.json() as Promise<T>;
 }
 
 async function postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
@@ -139,4 +164,24 @@ export async function verifyDniWithSelfie(
   formData.append("dni", dniImage, "dni.jpg");
   if (language) formData.append("language", language);
   return postFormData<DniVerificationResult>("/dni-verify", formData);
+}
+
+// ==============================================================
+// NUTRICIÓN 360 — Analiza comida por foto
+// ==============================================================
+export async function analyzeNutrition360(
+  image: Blob,
+  language?: SupportedLanguage,
+): Promise<Nutrition360Result> {
+  const formData = new FormData();
+  formData.append("image", image, "food.jpg");
+  if (language) formData.append("language", language);
+  return postFormData<Nutrition360Result>("/nutrition-360", formData);
+}
+
+// ==============================================================
+// PLAN ALIMENTICIO — Genera plan personalizado por IA
+// ==============================================================
+export async function generateMealPlan(request: MealPlanRequest): Promise<MealPlanResult> {
+  return postJson<MealPlanResult>("/meal-plan", request);
 }

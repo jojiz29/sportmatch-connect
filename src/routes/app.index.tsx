@@ -55,7 +55,15 @@ export const Route = createFileRoute("/app/")({
         apiClient.courts.getAll().catch(() => []),
         apiClient.sports.getAll().catch(() => []),
       ]);
-      return { matches, users, courts, sports };
+      const recommended: Match[] = matches.filter(
+        (m: Match) =>
+          m.status !== "Full" &&
+          m.status !== "Finished" &&
+          m.status !== "Cancelled" &&
+          m.creator_id !== useAuthStore.getState().user?.id &&
+          !m.current_players?.some((p) => p.id === useAuthStore.getState().user?.id),
+      );
+      return { matches, recommended, users, courts, sports };
     }
 
     const timeout = (ms: number) =>
@@ -71,16 +79,22 @@ export const Route = createFileRoute("/app/")({
       }
     };
 
-    const [backendMatches, backendCourts, backendUsers, backendSports] = await Promise.all([
-      fetchWithTimeout(() => backendApi.matches.getAll(), 4000),
-      fetchWithTimeout(() => backendApi.courts.getAll(), 4000),
-      fetchWithTimeout(() => backendApi.users.getAll(), 4000),
-      fetchWithTimeout(() => backendApi.sports.getAll(), 4000),
-    ]);
+    const [backendMatches, backendRecommended, backendCourts, backendUsers, backendSports] =
+      await Promise.all([
+        fetchWithTimeout(() => backendApi.matches.getAll(), 4000),
+        fetchWithTimeout(() => backendApi.matches.getRecommended(), 4000),
+        fetchWithTimeout(() => backendApi.courts.getAll(), 4000),
+        fetchWithTimeout(() => backendApi.users.getAll(), 4000),
+        fetchWithTimeout(() => backendApi.sports.getAll(), 4000),
+      ]);
 
     const matches =
       backendMatches && typeof backendMatches === "object" && "data" in backendMatches
         ? (backendMatches as { data: Match[] }).data
+        : [];
+    const recommended =
+      backendRecommended && typeof backendRecommended === "object" && "data" in backendRecommended
+        ? (backendRecommended as { data: Match[] }).data
         : [];
     const users =
       backendUsers && typeof backendUsers === "object" && "data" in backendUsers
@@ -95,7 +109,7 @@ export const Route = createFileRoute("/app/")({
         ? (backendSports as { data: SportCatalog[] }).data
         : [];
 
-    return { matches, users, courts, sports };
+    return { matches, recommended, users, courts, sports };
   },
   component: Dashboard,
 });
@@ -279,8 +293,9 @@ function Dashboard() {
   }, [userCoords, user]);
 
   // === BLOQUE: Datos del loader ===
-  const { matches, users, courts, sports } = Route.useLoaderData() as {
+  const { matches, recommended, users, courts, sports } = Route.useLoaderData() as {
     matches: Match[];
+    recommended: Match[];
     users: User[];
     courts: Court[];
     sports: SportCatalog[];
@@ -456,8 +471,8 @@ function Dashboard() {
 
   // Filtra partidos por deporte seleccionado.
   const filteredMatches = selectedSport
-    ? liveMatches.filter((m) => m.sport === selectedSport)
-    : liveMatches;
+    ? recommended.filter((m) => m.sport === selectedSport)
+    : recommended;
 
   // Canchas más cercanas según ubicación base.
   const closestCourts = useMemo(() => {
@@ -783,11 +798,19 @@ function Dashboard() {
                 <div className="col-span-2 p-10 text-center text-muted-foreground/60 glass rounded-2xl border border-border/40">
                   <Sparkles className="h-8 w-8 mx-auto mb-3 text-muted-foreground/30" />
                   <p className="text-sm font-medium">
-                    No hay partidos recomendados para este deporte.
+                    {selectedSport
+                      ? "No hay partidos disponibles para este deporte."
+                      : "No hay partidos disponibles"}
                   </p>
                   <p className="text-xs text-muted-foreground/40 mt-1">
-                    Prueba con otro deporte o crea uno nuevo.
+                    Sé el primero en crear un partido y convoca jugadores.
                   </p>
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-neon text-neon-foreground font-semibold text-xs shadow-neon hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Crear Partido
+                  </button>
                 </div>
               )}
             </div>
@@ -1257,56 +1280,65 @@ function MatchCard({ match }: { match: Match }) {
   const [checkedIn, setCheckedIn] = useState(match.status === "IN_PROGRESS");
 
   // === BLOQUE: handleJoin — Unirse a un partido ===
-  const handleJoin = () => {
-    if (user && courtFee > user.fitcoins_balance) {
+  const handleJoin = async () => {
+    if (!user) {
+      toast.error("Debes iniciar sesión para unirte a un partido.");
+      return;
+    }
+
+    if (isFull) {
+      toast.error("El partido está completo. No puedes unirte.");
+      return;
+    }
+
+    if (hasUserJoined) {
+      toast.info("Ya estás inscrito en este partido.");
+      return;
+    }
+
+    if (courtFee > user.fitcoins_balance) {
       setIsBalanceModalOpen(true);
       return;
     }
+
     setIsJoining(true);
-    setTimeout(async () => {
-      try {
-        if (!useAuthStore.getState().isDemoMode) {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const token = sessionData.session?.access_token;
-          if (!token) throw new Error("No active session found.");
+    try {
+      if (!useAuthStore.getState().isDemoMode) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) throw new Error("No active session found.");
 
-          const res = await backendApi.matches.join(token, match.id);
-          if (res.error) throw new Error(res.error);
-        }
-        if (user) {
-          // Sincronización inmediata en memoria para consistencia y respuesta instantánea (alta disponibilidad)
-          const { MOCK_MATCHES } = await import("@/shared/api/apiClient");
-          const mockMatch = MOCK_MATCHES.find((m) => m.id === match.id);
-          if (mockMatch) {
-            if (!mockMatch.current_players) mockMatch.current_players = [];
-            if (!mockMatch.current_players.some((p) => p.id === user.id)) {
-              mockMatch.current_players.push(user);
-            }
-          }
-
-          if (!match.current_players) match.current_players = [];
-          if (!match.current_players.some((p) => p.id === user.id)) {
-            match.current_players.push(user);
+        const res = await backendApi.matches.join(token, match.id);
+        if (res.error) throw new Error(res.error);
+      } else {
+        const { MOCK_MATCHES } = await import("@/shared/api/apiClient");
+        const mockMatch = MOCK_MATCHES.find((m) => m.id === match.id);
+        if (mockMatch) {
+          if (!mockMatch.current_players) mockMatch.current_players = [];
+          if (!mockMatch.current_players.some((p) => p.id === user.id)) {
+            mockMatch.current_players.push(user);
           }
         }
 
-        setIsJoining(false);
-        setJoined(true);
-        toast.success("¡Te uniste al partido!", {
-          description: "Revisa tu calendario para más detalles.",
-        });
-        useChatStore.getState().createMatchGroupChat(match);
-        await router.invalidate();
-      } catch (err) {
-        console.error("Error joining match in Supabase:", err);
-        setIsJoining(false);
-        const { handleWalletError } = await import("@/services/walletService");
-        const handled = handleWalletError(err);
-        if (!handled) {
-          toast.error("Error al unirse al partido. Por favor intenta de nuevo.");
+        if (!match.current_players) match.current_players = [];
+        if (!match.current_players.some((p) => p.id === user.id)) {
+          match.current_players.push(user);
         }
       }
-    }, 600);
+
+      setJoined(true);
+      toast.success("¡Te uniste al partido!", {
+        description: "Revisa tu calendario para más detalles.",
+      });
+      useChatStore.getState().createMatchGroupChat(match);
+      await router.invalidate();
+    } catch (err) {
+      console.error("Error joining match:", err);
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(message || "Error al unirse al partido. Por favor intenta de nuevo.");
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   // === BLOQUE: handleCheckIn — Check-in geolocalizado en la cancha ===

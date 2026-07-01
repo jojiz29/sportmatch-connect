@@ -41,6 +41,8 @@ import { Route as AppProfileUserIdRouteImport } from './routes/app.profile.$user
 import { Route as AppMatchUserIdRouteImport } from './routes/app.match.$userId'
 import { Route as AppCourtsCourtIdRouteImport } from './routes/app.courts.$courtId'
 import { Route as AppArPreviewCourtIdRouteImport } from './routes/app.ar-preview.$courtId'
+import { Route as AppAiVisionNutrition360RouteImport } from './routes/app.ai-vision.nutrition-360'
+import { Route as AppAiVisionMealPlannerRouteImport } from './routes/app.ai-vision.meal-planner'
 import { Route as AppAiVisionFormAnalyzerRouteImport } from './routes/app.ai-vision.form-analyzer'
 import { Route as AppAiVisionFakeProfileRouteImport } from './routes/app.ai-vision.fake-profile'
 import { Route as AppAiVisionDniVerifyRouteImport } from './routes/app.ai-vision.dni-verify'
@@ -205,6 +207,16 @@ const AppArPreviewCourtIdRoute = AppArPreviewCourtIdRouteImport.update({
   path: '/ar-preview/$courtId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAiVisionNutrition360Route = AppAiVisionNutrition360RouteImport.update({
+  id: '/nutrition-360',
+  path: '/nutrition-360',
+  getParentRoute: () => AppAiVisionRoute,
+} as any)
+const AppAiVisionMealPlannerRoute = AppAiVisionMealPlannerRouteImport.update({
+  id: '/meal-planner',
+  path: '/meal-planner',
+  getParentRoute: () => AppAiVisionRoute,
+} as any)
 const AppAiVisionFormAnalyzerRoute = AppAiVisionFormAnalyzerRouteImport.update({
   id: '/form-analyzer',
   path: '/form-analyzer',
@@ -248,6 +260,8 @@ export interface FileRoutesByFullPath {
   '/app/ai-vision/dni-verify': typeof AppAiVisionDniVerifyRoute
   '/app/ai-vision/fake-profile': typeof AppAiVisionFakeProfileRoute
   '/app/ai-vision/form-analyzer': typeof AppAiVisionFormAnalyzerRoute
+  '/app/ai-vision/meal-planner': typeof AppAiVisionMealPlannerRoute
+  '/app/ai-vision/nutrition-360': typeof AppAiVisionNutrition360Route
   '/app/ar-preview/$courtId': typeof AppArPreviewCourtIdRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
@@ -281,6 +295,8 @@ export interface FileRoutesByTo {
   '/app/ai-vision/dni-verify': typeof AppAiVisionDniVerifyRoute
   '/app/ai-vision/fake-profile': typeof AppAiVisionFakeProfileRoute
   '/app/ai-vision/form-analyzer': typeof AppAiVisionFormAnalyzerRoute
+  '/app/ai-vision/meal-planner': typeof AppAiVisionMealPlannerRoute
+  '/app/ai-vision/nutrition-360': typeof AppAiVisionNutrition360Route
   '/app/ar-preview/$courtId': typeof AppArPreviewCourtIdRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
@@ -319,6 +335,8 @@ export interface FileRoutesById {
   '/app/ai-vision/dni-verify': typeof AppAiVisionDniVerifyRoute
   '/app/ai-vision/fake-profile': typeof AppAiVisionFakeProfileRoute
   '/app/ai-vision/form-analyzer': typeof AppAiVisionFormAnalyzerRoute
+  '/app/ai-vision/meal-planner': typeof AppAiVisionMealPlannerRoute
+  '/app/ai-vision/nutrition-360': typeof AppAiVisionNutrition360Route
   '/app/ar-preview/$courtId': typeof AppArPreviewCourtIdRoute
   '/app/courts/$courtId': typeof AppCourtsCourtIdRoute
   '/app/match/$userId': typeof AppMatchUserIdRoute
@@ -358,6 +376,8 @@ export interface FileRouteTypes {
     | '/app/ai-vision/dni-verify'
     | '/app/ai-vision/fake-profile'
     | '/app/ai-vision/form-analyzer'
+    | '/app/ai-vision/meal-planner'
+    | '/app/ai-vision/nutrition-360'
     | '/app/ar-preview/$courtId'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
@@ -391,6 +411,8 @@ export interface FileRouteTypes {
     | '/app/ai-vision/dni-verify'
     | '/app/ai-vision/fake-profile'
     | '/app/ai-vision/form-analyzer'
+    | '/app/ai-vision/meal-planner'
+    | '/app/ai-vision/nutrition-360'
     | '/app/ar-preview/$courtId'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
@@ -428,6 +450,8 @@ export interface FileRouteTypes {
     | '/app/ai-vision/dni-verify'
     | '/app/ai-vision/fake-profile'
     | '/app/ai-vision/form-analyzer'
+    | '/app/ai-vision/meal-planner'
+    | '/app/ai-vision/nutrition-360'
     | '/app/ar-preview/$courtId'
     | '/app/courts/$courtId'
     | '/app/match/$userId'
@@ -674,6 +698,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppArPreviewCourtIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ai-vision/nutrition-360': {
+      id: '/app/ai-vision/nutrition-360'
+      path: '/nutrition-360'
+      fullPath: '/app/ai-vision/nutrition-360'
+      preLoaderRoute: typeof AppAiVisionNutrition360RouteImport
+      parentRoute: typeof AppAiVisionRoute
+    }
+    '/app/ai-vision/meal-planner': {
+      id: '/app/ai-vision/meal-planner'
+      path: '/meal-planner'
+      fullPath: '/app/ai-vision/meal-planner'
+      preLoaderRoute: typeof AppAiVisionMealPlannerRouteImport
+      parentRoute: typeof AppAiVisionRoute
+    }
     '/app/ai-vision/form-analyzer': {
       id: '/app/ai-vision/form-analyzer'
       path: '/form-analyzer'
@@ -702,6 +740,8 @@ interface AppAiVisionRouteChildren {
   AppAiVisionDniVerifyRoute: typeof AppAiVisionDniVerifyRoute
   AppAiVisionFakeProfileRoute: typeof AppAiVisionFakeProfileRoute
   AppAiVisionFormAnalyzerRoute: typeof AppAiVisionFormAnalyzerRoute
+  AppAiVisionMealPlannerRoute: typeof AppAiVisionMealPlannerRoute
+  AppAiVisionNutrition360Route: typeof AppAiVisionNutrition360Route
   AppAiVisionIndexRoute: typeof AppAiVisionIndexRoute
 }
 
@@ -709,6 +749,8 @@ const AppAiVisionRouteChildren: AppAiVisionRouteChildren = {
   AppAiVisionDniVerifyRoute: AppAiVisionDniVerifyRoute,
   AppAiVisionFakeProfileRoute: AppAiVisionFakeProfileRoute,
   AppAiVisionFormAnalyzerRoute: AppAiVisionFormAnalyzerRoute,
+  AppAiVisionMealPlannerRoute: AppAiVisionMealPlannerRoute,
+  AppAiVisionNutrition360Route: AppAiVisionNutrition360Route,
   AppAiVisionIndexRoute: AppAiVisionIndexRoute,
 }
 

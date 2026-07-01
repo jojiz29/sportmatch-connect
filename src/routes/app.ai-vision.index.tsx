@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Video, Box, Crown, ArrowRight, Sparkles } from "lucide-react";
+import { Video, Box, Apple, ChefHat, Crown, ArrowRight, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/entities/user/useAuth";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ function AiVisionOverview() {
   const [trials, setTrials] = useState({
     form_analyzer: 0,
     ar_preview: 0,
+    nutrition_360: 0,
+    meal_planner: 0,
   });
 
   // Cargar trials del localStorage
@@ -27,36 +29,41 @@ function AiVisionOverview() {
         setTrials({
           form_analyzer: parsed.form_analyzer || 0,
           ar_preview: parsed.ar_preview || 0,
+          nutrition_360: parsed.nutrition_360 || 0,
+          meal_planner: parsed.meal_planner || 0,
         });
       } else {
-        const initial = { form_analyzer: 0, ar_preview: 0 };
+        const initial = { form_analyzer: 0, ar_preview: 0, nutrition_360: 0, meal_planner: 0 };
         localStorage.setItem(key, JSON.stringify(initial));
         setTrials(initial);
       }
     }
   }, [user]);
 
-  const handleCardClick = (toolKey: "form_analyzer" | "ar_preview", targetRoute: string) => {
+  const toolLabels: Record<string, string> = {
+    form_analyzer: "Form Analyzer",
+    ar_preview: "AR Court Preview",
+    nutrition_360: "Nutrición 360",
+    meal_planner: "Plan Alimenticio",
+  };
+
+  const handleCardClick = (toolKey: string, targetRoute: string) => {
     if (!user) return;
 
     const hasPaidPlan = user.tier !== "FREE" && user.tier != null;
-    const usedCount = trials[toolKey] || 0;
+    const usedCount = trials[toolKey as keyof typeof trials] || 0;
 
     if (hasPaidPlan) {
       navigate({ to: targetRoute });
     } else {
       if (usedCount < 1) {
-        // Usar prueba gratuita única
         const key = `sportmatch_trials_${user.id}`;
         const updated = { ...trials, [toolKey]: usedCount + 1 };
         localStorage.setItem(key, JSON.stringify(updated));
         setTrials(updated);
-        toast.info(
-          `⚡ Iniciando tu única prueba gratuita de ${toolKey === "form_analyzer" ? "Form Analyzer" : "AR Court Preview"}...`,
-        );
+        toast.info(`⚡ Iniciando tu única prueba gratuita de ${toolLabels[toolKey] || toolKey}...`);
         navigate({ to: targetRoute });
       } else {
-        // Excedió límite, abrir paywall redireccionando a Coach Pro
         toast.error(
           "Límite de prueba gratuita excedido. Suscríbete a nuestros planes para continuar.",
         );
@@ -117,16 +124,16 @@ function AiVisionOverview() {
               ¡Tienes 1 prueba gratis de cada herramienta de visión!
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Disfruta de una prueba única sin costo para Form Analyzer y AR Court Preview. Para
-              continuar usándolas de forma ilimitada, suscríbete a nuestros planes de SportMatch Pro
-              en la sección correspondiente.
+              Disfruta de una prueba única sin costo para cada herramienta de Visión, Nutrición 360
+              y Plan Alimenticio. Para continuar usándolas de forma ilimitada, suscríbete a nuestros
+              planes de SportMatch Pro en la sección correspondiente.
             </p>
           </div>
         </div>
       )}
 
       {/* Premium Tools Cards Grid */}
-      <div className="grid md:grid-cols-2 gap-6 pt-2">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
         {/* Card 1: Form Analyzer */}
         <div
           onClick={() => handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer")}
@@ -139,7 +146,7 @@ function AiVisionOverview() {
               </span>
             ) : (
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
-                Prueba: {trials.form_analyzer}/1 Usada
+                Prueba: {trials.form_analyzer}/1
               </span>
             )}
           </div>
@@ -158,8 +165,8 @@ function AiVisionOverview() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Analiza tu técnica deportiva mediante video. Sube un clip de hasta 30s de tu tiro,
-                swing o zancada y obtén retroalimentación biométrica por IA con Gemini.
+                Analiza tu técnica deportiva mediante video. Sube un clip de hasta 30s y obtén
+                retroalimentación biométrica por IA con Gemini.
               </p>
               <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
                 Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
@@ -180,7 +187,7 @@ function AiVisionOverview() {
               </span>
             ) : (
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
-                Prueba: {trials.ar_preview}/1 Usada
+                Prueba: {trials.ar_preview}/1
               </span>
             )}
           </div>
@@ -204,6 +211,88 @@ function AiVisionOverview() {
               </p>
               <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
                 Abrir Mapa <ArrowRight className="h-3.5 w-3.5" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Nutrición 360 */}
+        <div
+          onClick={() => handleCardClick("nutrition_360", "/app/ai-vision/nutrition-360")}
+          className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+        >
+          <div className="absolute right-6 top-6 flex items-center gap-1.5">
+            {userTier !== "FREE" ? (
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
+                ILIMITADO
+              </span>
+            ) : (
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
+                Prueba: {trials.nutrition_360}/1
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-start gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+              <Apple className="h-7 w-7 text-white" />
+            </div>
+            <div className="flex-1 min-w-0 pr-16 text-left">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                  Nutrición 360
+                </h3>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
+                  PRO
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                Toma una foto a tu comida y descubre calorías, macros, health score y consejos
+                nutricionales personalizados con Vertex AI Gemini.
+              </p>
+              <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Plan Alimenticio */}
+        <div
+          onClick={() => handleCardClick("meal_planner", "/app/ai-vision/meal-planner")}
+          className="group block bg-gradient-card border border-border/50 rounded-3xl p-6 hover:border-amber-500/40 hover:shadow-glow transition-all duration-300 cursor-pointer relative"
+        >
+          <div className="absolute right-6 top-6 flex items-center gap-1.5">
+            {userTier !== "FREE" ? (
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/20">
+                ILIMITADO
+              </span>
+            ) : (
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 font-bold border border-amber-500/20 uppercase tracking-widest">
+                Prueba: {trials.meal_planner}/1
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-start gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+              <ChefHat className="h-7 w-7 text-white" />
+            </div>
+            <div className="flex-1 min-w-0 pr-16 text-left">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                  Plan Alimenticio
+                </h3>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-black tracking-widest uppercase">
+                  PRO
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                Recibe un plan de comidas personalizado diseñado por IA según tus gustos, objetivo y
+                restricciones. Saludable y sostenible en el largo plazo.
+              </p>
+              <div className="flex items-center gap-1 mt-4 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                Abrir herramienta <ArrowRight className="h-3.5 w-3.5" />
               </div>
             </div>
           </div>

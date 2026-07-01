@@ -130,6 +130,13 @@ export const backendApi = {
       return fetchApi(endpoint);
     },
 
+    async getRecommended(sport?: string) {
+      const endpoint = sport
+        ? `/matches/recommended?sport=${encodeURIComponent(sport)}`
+        : "/matches/recommended";
+      return fetchApi(endpoint);
+    },
+
     async getById(id: string) {
       return fetchApi(`/matches/${id}`);
     },

@@ -1,5 +1,6 @@
 import { VisionService } from "./vision.service";
 import { VertexAiService, VertexAiGenerationResult } from "../vertex-ai.service";
+import { PrismaService } from "../../prisma/prisma.service";
 
 describe("VisionService", () => {
   const buildResult = (text: string): VertexAiGenerationResult => ({
@@ -14,8 +15,14 @@ describe("VisionService", () => {
       generateContentWithMedia: jest.fn().mockResolvedValue(buildResult(text)),
     } as unknown as jest.Mocked<VertexAiService>;
 
+    const prisma = {
+      nutrition_360_logs: { create: jest.fn() },
+      meal_plan_logs: { create: jest.fn() },
+      profiles: { findUnique: jest.fn().mockResolvedValue({ tier: "PRO" }) },
+    } as unknown as jest.Mocked<PrismaService>;
+
     return {
-      service: new VisionService(vertexAi),
+      service: new VisionService(vertexAi, prisma),
       vertexAi,
     };
   };

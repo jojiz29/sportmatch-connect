@@ -39,6 +39,15 @@ export function useBackendMatches() {
     },
   });
 
+  const recommendedQuery = useQuery({
+    queryKey: ["backendRecommendedMatches"],
+    queryFn: async () => {
+      const { data, error } = await backendApi.matches.getRecommended();
+      if (error) throw new Error(error);
+      return data as Match[];
+    },
+  });
+
   const createMatchMutation = useMutation({
     mutationFn: async (match: {
       title: string;
@@ -56,6 +65,7 @@ export function useBackendMatches() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backendMatches"] });
+      queryClient.invalidateQueries({ queryKey: ["backendRecommendedMatches"] });
       toast.success("Partido creado", { description: "Tu partido está disponible." });
     },
     onError: (err: Error) => {
@@ -72,6 +82,7 @@ export function useBackendMatches() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backendMatches"] });
+      queryClient.invalidateQueries({ queryKey: ["backendRecommendedMatches"] });
       toast.success("Te uniste al partido", { description: "¡Nos vemos en la cancha!" });
     },
     onError: (err: Error) => {
@@ -88,6 +99,7 @@ export function useBackendMatches() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backendMatches"] });
+      queryClient.invalidateQueries({ queryKey: ["backendRecommendedMatches"] });
       toast.info("Abandonaste el partido");
     },
     onError: (err: Error) => {
@@ -97,7 +109,9 @@ export function useBackendMatches() {
 
   return {
     matches: matchesQuery.data ?? [],
+    recommended: recommendedQuery.data ?? [],
     isLoading: matchesQuery.isLoading,
+    recommendedLoading: recommendedQuery.isLoading,
     error: matchesQuery.error,
     createMatch: createMatchMutation.mutate,
     joinMatch: joinMatchMutation.mutate,

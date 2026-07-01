@@ -81,6 +81,84 @@ export interface DniVerificationResult {
 }
 
 // ==============================================================
+// NUTRICIÓN 360 — Análisis nutricional de comidas por foto
+// ==============================================================
+export interface Nutrition360Request {
+  image: Blob;
+  language?: SupportedLanguage;
+}
+
+export interface Macros {
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+}
+
+export interface Micronutrient {
+  name: string;
+  amount: string;
+}
+
+export interface Nutrition360Result {
+  mealName: string;
+  calories: number;
+  macros: Macros;
+  portionSize: string;
+  healthScore: number;
+  micronutrients?: Micronutrient[];
+  analysis: string;
+  recommendations: string[];
+  latencyMs: number;
+  model: string;
+  tokens: number;
+}
+
+// ==============================================================
+// PLAN ALIMENTICIO — Meal Planner personalizado por IA
+// ==============================================================
+export type MealGoal = "perder_peso" | "ganar_musculo" | "mantener" | "salud_general";
+
+export interface MealPlanRequest {
+  preferences: string[];
+  restrictions?: string[];
+  goal: MealGoal;
+  mealsPerDay: number;
+  durationDays: number;
+  language?: SupportedLanguage;
+}
+
+export interface MealItem {
+  name: string;
+  type: "desayuno" | "almuerzo" | "cena" | "snack" | "post-entreno";
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  ingredients: string[];
+  preparation: string;
+}
+
+export interface DayPlan {
+  day: number;
+  meals: MealItem[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+}
+
+export interface MealPlanResult {
+  mealPlan: DayPlan[];
+  summary: string;
+  tips: string[];
+  sustainabilityNotes: string;
+  latencyMs: number;
+  model: string;
+  tokens: number;
+}
+
+// ==============================================================
 // STATE TYPES
 // ==============================================================
 export interface VisionAnalysisState {
