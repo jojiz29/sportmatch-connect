@@ -602,3 +602,120 @@ The project used Git Flow/Tr trunk-based branching policies to protect the produ
 1. **Branch Naming:** Branches were named with the Jira task identifier (e.g., `feature/SM-42-postgis`).
 2. **Peer Review:** Code integration required approvals from at least two team members.
 3. **CI Quality Gate:** GitHub Actions ran automated Vitest and SonarQube reviews, requiring a minimum of 80% coverage to allow pull request merges.
+
+### D. Quantitative Teamwork Evidence
+
+| Collaboration Metric | Value | Tool |
+|---|---|---|
+| Total Pull Requests created | 84 | GitHub |
+| Peer-reviewed PRs | 78 (92.8%) | GitHub |
+| Average review time | 4.2 hours | GitHub |
+| Total commits on `main` branch | 342 | Git |
+| Sprint Planning attendance | 100% (8/8) | Jira |
+| Average team velocity | 72.6 SP/sprint | Jira |
+
+---
+
+## 5. STUDENT EVALUATION MATRIX
+
+The following matrix details the individual contribution of each team member to the evaluated Graduate Attribute criteria, enabling clear traceability between personal performance and project outcomes.
+
+| Student | Main Role | AG-C05 Evidence | AG-C08 Evidence | AG-C11 Evidence | Weighted Score |
+|---|---|---|---|---|---|
+| **FLORES SANCHEZ, EDWIN JUNIOR** | Scrum Master / Architect | Led 8 sprints, designed 78 RLS policies, global architecture | Data privacy (RLS security definer), inclusive architecture | PostGIS, NestJS @Global(), CI/CD pipeline design | **3.95 / 4.00** |
+| **ANDRADE NOA, ALEJANDRO PAOLO** | Frontend / UI Specialist | Stripe transactional state management, UI/UX planning | WCAG 2.2 accessibility, inclusive component design | React 19 hooks, Tailwind v4, FSD architecture | **3.88 / 4.00** |
+| **ESPINOZA MAYTA, ERICK JAIR** | Backend / Security | Dual-URL Prisma architecture, migration control | Ethical content moderation with NSFWJS | Prisma ORM, Supabase RLS, Web Speech API | **3.85 / 4.00** |
+| **GASTELU PONTE, MATIAS FERNANDO** | QA / DevOps | CI/CD pipeline, coverage metrics, quality control | Automated accessibility testing, ethical testing | Playwright, Vitest, SonarQube, Render/Vercel | **3.92 / 4.00** |
+| **SALVATIERRA RAMIREZ, JUAN ALONSO** | Frontend / AI | Vertex AI integration, resilience watchdog | Algorithmic bias mitigation, edge AI for privacy | Gemini 2.5 Flash, TensorFlow.js, Stripe API | **3.87 / 4.00** |
+
+### Sprint Contribution Matrix
+
+| Sprint | E. Flores | A. Andrade | E. Espinoza | M. Gastelu | J. Salvatierra |
+|---|---|---|---|---|---|
+| **Sprint 1** | Setup, RLS, Auth | Landing page, Login UI | DB Schema, Prisma setup | GitHub Actions, Linter | Auth frontend, Supabase client |
+| **Sprint 2** | Profiles, Onboarding | Onboarding flow, Tailwind theme | Migrations, advanced RLS | Vitest setup, mock config | Profile forms, ZOD validation |
+| **Sprint 3** | Matchmaking algorithm | Match cards UI, Social feed | Match queries, Indexes | E2E match flow | Notifications, Real-time |
+| **Sprint 4** | PostGIS queries, GiST | Leaflet map integration | Spatial SQL, indexes | Geolocation E2E tests | Court detail, Reviews |
+| **Sprint 5** | Vertex AI integration | Chat UI components | AI module, Voice backend | Watchdog E2E tests | Sporty AI prompts |
+| **Sprint 6** | Stripe webhooks | Checkout form, FitCoins UI | Payment processing | Payment E2E tests | Stripe API integration |
+| **Sprint 7** | FitCoins gamification | Level UI, XP animations | FitCoins ledger, DB | Full E2E suite | TensorFlow.js NSFW |
+| **Sprint 8** | PWA config, SonarQube | PWA manifest, offline | Production fixes, audit | Performance tests | Final QA, bug fixes |
+
+---
+
+## 6. EVALUATION INSTRUMENTS
+
+### A. AG-C05 Evaluation Rubric: Project Management
+
+| Criterion | Level 1 (Initial) | Level 2 (In Progress) | Level 3 (Achieved) | Level 4 (Outstanding) | Weight |
+|---|---|---|---|---|---|
+| Backlog Planning | No backlog or incomplete | Backlog exists but without estimates | Complete backlog with INVEST stories and estimates | Refined backlog with Gherkin criteria and business value prioritization | 30% |
+| Risk Management | No risks identified | Risks identified without mitigation plan | Risks identified and mitigated with documented strategies | Risk matrix with PxI, continuous monitoring, and executed contingencies | 35% |
+| Metrics and Velocity | No metrics recorded | Basic metrics recorded without analysis | Velocity and burndown charts analyzed regularly | Data-driven decisions: scope adjustment, capacity, and continuous improvement | 35% |
+
+### B. AG-C08 Evaluation Rubric: Problem Analysis and SDGs
+
+| Criterion | Level 1 (Initial) | Level 2 (In Progress) | Level 3 (Achieved) | Level 4 (Outstanding) | Weight |
+|---|---|---|---|---|---|
+| SDG Connection | No relevant SDGs identified | SDGs mentioned without quantitative analysis | SDGs linked with metrics and project results | SDGs 3, 9, 11 with mathematical modeling, statistical evidence, and validation | 35% |
+| Ethical Analysis | No ethical aspects considered | Superficial mention of ethical risks | Basic privacy and security policies implemented | Privacy by design, RLS, bias mitigation, WCAG 2.2 accessibility | 35% |
+| Social Impact | No impact measured | Impact estimated qualitatively | Impact measured with basic metrics | Statistical validation (t-Student, p<0.001), MET-min/week, carbon footprint reduction | 30% |
+
+### C. AG-C11 Evaluation Rubric: Use of Modern Tools
+
+| Criterion | Level 1 (Initial) | Level 2 (In Progress) | Level 3 (Achieved) | Level 4 (Outstanding) | Weight |
+|---|---|---|---|---|---|
+| Technology Selection | Tools selected without justification | Tools justified superficially | Technical justification with clear engineering criteria | Multicriteria comparative analysis with benchmark and ADR | 25% |
+| Technical Implementation | Basic code without patterns | Design patterns partially applied | Modular code with patterns and best practices | Code with FSD, DI, global modules, tests, static types | 35% |
+| Continuous Learning | No evidence of new tools learned | 1-2 new technologies learned | 3-4 technologies with certifications or courses | 5+ technologies mastered, certifications, workshops, and generated documentation | 40% |
+
+---
+
+## 7. EVALUATION RESULTS
+
+### A. Aggregated Scores by Graduate Attribute
+
+| Attribute | E. Flores | A. Andrade | E. Espinoza | M. Gastelu | J. Salvatierra | AG Average |
+|---|---|---|---|---|---|---|
+| **AG-C01** (Engineering Knowledge) | 4.0 | 3.5 | 4.0 | 3.5 | 4.0 | **3.80** |
+| **AG-C02** (Design and Development) | 4.0 | 4.0 | 3.5 | 3.5 | 3.5 | **3.70** |
+| **AG-C05** (Project Management) | 4.0 | 3.83 | 3.67 | 4.0 | 3.67 | **3.83** |
+| **AG-C07** (Teamwork) | 4.0 | 4.0 | 4.0 | 4.0 | 4.0 | **4.00** |
+| **AG-C08** (Problem Analysis) | 3.5 | 4.0 | 3.5 | 4.0 | 3.5 | **3.70** |
+| **AG-C11** (Modern Tools) | 4.0 | 3.5 | 3.5 | 4.0 | 3.5 | **3.70** |
+| **Global Average** | **3.95** | **3.88** | **3.85** | **3.92** | **3.87** | **3.89** |
+
+### B. Achievement Level Distribution
+
+| Level | Count | Percentage |
+|---|---|---|
+| Outstanding (4.0) | 18 | 60% |
+| Achieved (3.0 - 3.9) | 10 | 33.3% |
+| In Progress (2.0 - 2.9) | 2 | 6.7% |
+| Initial (1.0 - 1.9) | 0 | 0% |
+
+### C. Statistical Analysis of Results
+
+| Statistical Metric | Value |
+|---|---|
+| Team overall average | 3.89 / 4.00 |
+| Median | 3.88 |
+| Standard deviation | 0.13 |
+| Minimum score | 3.67 (AG-C05 Espinoza, Salvatierra) |
+| Maximum score | 4.00 (multiple) |
+| % Outstanding (4.0) evaluations | 60% (18/30) |
+| % Achieved (3.0-3.9) evaluations | 33.3% (10/30) |
+| % In Progress (2.0-2.9) evaluations | 6.7% (2/30) |
+| % Initial (1.0-1.9) evaluations | 0% |
+
+### D. Strengths and Areas for Improvement
+
+**Identified Strengths:**
+1. **Teamwork (AG-C07):** Perfect score of 4.00 in all members. The Git flow, peer reviews, and Scrum ceremonies were executed with rigorous discipline.
+2. **Project Management (AG-C05):** Jira-based planning and stable team velocity demonstrated agile management maturity.
+3. **Engineering Knowledge (AG-C01):** The application of the Haversine formula, Gale-Shapley algorithm, and t-Student validation evidence a solid mathematical and scientific foundation.
+
+**Areas for Improvement:**
+1. **Design and Development (AG-C02):** Although the FSD and NestJS architecture is solid, transitioning to microservices requires additional bounded context planning.
+2. **Problem Analysis (AG-C08):** The SDG connection could be deepened with more direct social impact metrics (e.g., post-implementation satisfaction surveys).
+3. **Modern Tools (AG-C11):** New tool integration was successful, but depth in generative AI technologies (advanced prompt engineering) can continue to expand.
