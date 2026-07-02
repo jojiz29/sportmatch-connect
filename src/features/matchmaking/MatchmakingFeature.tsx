@@ -766,6 +766,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               className="absolute inset-0 bg-background/90 backdrop-blur-md"
               onClick={() => setChallengeTarget(null)}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Escape") setChallengeTarget(null);
               }}
             />
@@ -864,6 +865,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               className="absolute inset-0 bg-background/90 backdrop-blur-md"
               onClick={() => setMatchedUser(null)}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Escape") setMatchedUser(null);
               }}
             />
@@ -993,6 +995,7 @@ export function MatchmakingFeature({ initialStack }: MatchmakingFeatureProps) {
               className="absolute inset-0 bg-background/90 backdrop-blur-md"
               onClick={() => setInspectedUser(null)}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Escape") setInspectedUser(null);
               }}
             />

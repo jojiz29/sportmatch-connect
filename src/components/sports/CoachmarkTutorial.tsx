@@ -89,6 +89,7 @@ export function CoachmarkTutorial({ onDismiss }: CoachmarkTutorialProps) {
           <div
             onClick={handleCardClick}
             onKeyDown={(e) => {
+              // S1082
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 handleCardClick();

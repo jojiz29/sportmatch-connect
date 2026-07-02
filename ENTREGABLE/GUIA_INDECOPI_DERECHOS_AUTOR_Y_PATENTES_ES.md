@@ -47,8 +47,8 @@ El expediente debe iniciarse con la presentación del formulario **F-DDA-02 (Reg
 
 ### 💰 2.2. Tasas y Códigos de Pago
 El trámite ante INDECOPI requiere el pago previo de la tasa administrativa correspondiente. Los canales de pago habilitados son el Banco de la Nación o la plataforma virtual **Pagalo.pe**:
-*   **Código de Tasa:** `02047` (Registro de obras y software ante la Dirección de Derecho de Autor).
-*   **Monto de la Tasa:** **S/. 390.50 PEN** (Trescientos noventa con 50/100 Soles).
+*   **Código de Tasa:** `203000707` (Registro de obras y software ante la Dirección de Derecho de Autor).
+*   **Monto de la Tasa:** **S/. 357.70 PEN** (Trescientos cincuenta y siete con 70/100 Soles).
 *   **Forma de Pago:** Tarjeta de crédito/débito o cuenta bancaria, adjuntando el voucher de pago PDF al expediente de solicitud virtual (Mesa de Partes Virtual de INDECOPI).
 
 ### 📄 2.3. Estructura de la Memoria Descriptiva Técnica
@@ -81,9 +81,14 @@ Para obtener una patente de invención, SportMatch Connect debe pasar un examen 
 Según las directrices de examen de la DIN de INDECOPI, un programa de ordenador por sí mismo no es patentable. No obstante, cuando el software forma parte de un **método o sistema que se integra con hardware para realizar transformaciones técnicas o interactuar con variables físicas**, califica como una IIO.
 *   *Efecto Técnico en SportMatch Connect:* La invención reivindica la interacción física del dispositivo del usuario (coordenadas GPS de latitud y longitud procesadas mediante algoritmos de Haversine y Elo) integrada con un sistema de transacciones seguras de Stripe y pre-moderación visual en el borde con TensorFlow.js. Esto optimiza el consumo de recursos de computación y reduce la latición en las redes físicas de telecomunicaciones.
 
-### 📝 3.3. Estructura del Expediente de Patente
+### 📝 3.3. Estructura del Expediente y Tasas de Patente
 El expediente de patente debe redactarse con rigor científico y legal extremo, estructurándose en:
 1.  **Memoria Descriptiva (Descripción Técnica):** Descripción detallada del estado del arte, deficiencias de los sistemas actuales, descripción detallada del invento y referencia a figuras.
-2.  **Pliego de Reivindicaciones:** Las cláusulas legales que definen el límite de lo que el inventor se apropia. Deben redactarse como "sistema", "método" o "medio de almacenamiento informático" (no como "código").
+2.  **Pliego de Reivindicaciones:** Las cláusulas legales que definen el límite de lo que el inventor se apropia.
 3.  **Resumen de la Invención:** Síntesis técnica de máximo 150 palabras.
 4.  **Figuras/Dibujos:** Planos C4 Container, flujogramas de secuencia y esquemas de base de datos indexados espacialmente.
+5.  **Tasas de Presentación y Examen de Fondo (DIN):**
+    *   *Tasa de Presentación de Solicitud:* Código **202000627** (Monto: **S/. 396.00 PEN**).
+    *   *Tasa de Examen de Fondo de Patente:* Código **202000628** (Monto: **S/. 324.00 PEN**).
+    *   *Forma de Pago:* A través de la plataforma virtual **Pagalo.pe** o ventanilla física del Banco de la Nación.
+

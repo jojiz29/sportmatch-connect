@@ -492,6 +492,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
         key={sport.id}
         onClick={() => handleToggleSport(sport.id)}
         onKeyDown={(e) => {
+          // S1082
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             handleToggleSport(sport.id);
@@ -560,7 +561,7 @@ export function OnboardingWizard({ onComplete, onBack }: OnboardingWizardProps) 
           <div
             className="mt-4 pt-3 border-t border-white/10 flex flex-col gap-2 relative z-20"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()} // S1082
           >
             <div className="text-[10px] text-white/50 uppercase tracking-wider font-extrabold">
               {t("onboarding.select_level", "Nivel:")}

@@ -175,6 +175,7 @@ export function TransferFitCoinsModal({ open, onClose }: TransferFitCoinsModalPr
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={onClose}
             onKeyDown={(e) => {
+              // S1082
               if (e.key === "Escape") onClose();
             }}
           />

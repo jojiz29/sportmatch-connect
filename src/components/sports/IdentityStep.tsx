@@ -280,6 +280,7 @@ export function IdentityStep({
         <div
           onClick={() => !isUploading && !isAnalyzingImage && fileInputRef.current?.click()}
           onKeyDown={(e) => {
+            // S1082
             if ((e.key === "Enter" || e.key === " ") && !isUploading && !isAnalyzingImage) {
               e.preventDefault();
               fileInputRef.current?.click();

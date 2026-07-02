@@ -1027,6 +1027,7 @@ export function SquadExplorer() {
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setIsInviteModalOpen(false)}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Escape") setIsInviteModalOpen(false);
               }}
             />
@@ -1203,6 +1204,7 @@ export function SquadExplorer() {
                   exit={{ opacity: 0 }}
                   onClick={() => setSelectedSquad(squad)}
                   onKeyDown={(e) => {
+                    // S1082
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       setSelectedSquad(squad);

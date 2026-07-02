@@ -97,6 +97,7 @@ export function ImageUpload({
           onDragOver={handleDragOver}
           onClick={() => inputRef.current?.click()}
           onKeyDown={(e) => {
+            // S1082
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               inputRef.current?.click();

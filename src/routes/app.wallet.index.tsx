@@ -460,6 +460,7 @@ function Wallet() {
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setSelectedReward(null)}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Escape") setSelectedReward(null);
               }}
             />
@@ -518,6 +519,7 @@ function Wallet() {
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
               onClick={() => setSelectedItem(null)}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Escape") setSelectedItem(null);
               }}
             />

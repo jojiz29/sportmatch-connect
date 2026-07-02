@@ -177,6 +177,7 @@ const updateTypingUsers = (userId: string, isTyping: boolean) => (state: any) =>
 };
 
 const moderateMessage = async (text: string, chatId: string): Promise<boolean> => {
+  // S3776: extracted from sendMessage
   try {
     const evaluation = await withTimeout(aiSecurityService.evaluateSecurity(text, "mensaje"), 5000);
     if (evaluation.action_recommended === "block" || evaluation.ensemble_score >= 75) {

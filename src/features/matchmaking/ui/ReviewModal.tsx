@@ -109,6 +109,7 @@ export function ReviewModal({
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={handleClose}
             onKeyDown={(e) => {
+              // S1082
               if (e.key === "Escape") handleClose();
             }}
           />

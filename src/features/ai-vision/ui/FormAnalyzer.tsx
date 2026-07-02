@@ -128,6 +128,7 @@ export function FormAnalyzer({ language, className = "" }: FormAnalyzerProps) {
         <div
           onClick={() => fileInputRef.current?.click()}
           onKeyDown={(e) => {
+            // S1082
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               fileInputRef.current?.click();

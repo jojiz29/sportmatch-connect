@@ -882,6 +882,7 @@ export function TournamentHub() {
                     key={t.code}
                     onClick={() => setActiveTournamentCode(t.code)}
                     onKeyDown={(e) => {
+                      // S1082
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         setActiveTournamentCode(t.code);
@@ -1365,6 +1366,7 @@ function MatchCard({ match, onClick }: { match: MatchNode; onClick?: () => void 
     <div
       onClick={isPlayable && onClick ? onClick : undefined}
       onKeyDown={
+        // S1082
         isPlayable && onClick
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {

@@ -121,6 +121,7 @@ const saveDemoUsers = (users: User[]) => {
 
 // Helper: Realiza la búsqueda de usuario mock para login
 const findMockUser = (email: string, users: User[]): User => {
+  // S3776: extracted to reduce cognitive complexity
   const emailLower = email.toLowerCase();
   const found = users.find((u) => u.email?.toLowerCase() === emailLower || u.id === email);
   if (found) return found;
@@ -138,6 +139,7 @@ const findMockUser = (email: string, users: User[]): User => {
 
 // Helper: Ejecuta el login mock
 const executeMockSignIn = (email: string | undefined, store: any) => {
+  // S3776: extracted to reduce cognitive complexity
   store.setDemoMode(true);
   const users = getDemoUsers();
   let mockUser: User = email ? findMockUser(email, users) : users[0];
@@ -154,6 +156,7 @@ const executeMockSignIn = (email: string | undefined, store: any) => {
 
 // Helper: Carga perfil desde NestJS o Supabase
 const fetchProfile = async (userId: string, token?: string): Promise<User> => {
+  // S3776: extracted to reduce cognitive complexity
   let profile: User | null = null;
   if (token && import.meta.env.VITE_API_URL) {
     try {
@@ -185,6 +188,7 @@ const fetchProfile = async (userId: string, token?: string): Promise<User> => {
 
 // Helper: Inserta o actualiza perfil en Supabase
 const upsertProfileInSupabase = async (newUser: User, authUserId: string): Promise<User> => {
+  // S3776: extracted to reduce cognitive complexity
   let profile: User | null = null;
   for (let i = 0; i < 5; i++) {
     const { data } = await supabase.from("profiles").select("*").eq("id", authUserId).single();
@@ -251,12 +255,14 @@ export function useAuth() {
 
   // === INICIO DE SESIÓN ===
   const shouldUseMockLogin = (email?: string, password?: string): boolean => {
+    // S3776: extracted to reduce cognitive complexity
     if (!email && !password) return false;
     const forceMocks = import.meta.env.VITE_USE_MOCKS === "true";
     return store.isDemoMode || forceMocks || !!(email && !password);
   };
 
   const performRealSignIn = async (email: string, password: string): Promise<void> => {
+    // S3776: extracted to reduce cognitive complexity
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -287,6 +293,7 @@ export function useAuth() {
   };
 
   const executeGuestSignIn = (): void => {
+    // S3776: extracted to reduce cognitive complexity
     store.setDemoMode(true);
     store.login({
       id: "demo-user-id",

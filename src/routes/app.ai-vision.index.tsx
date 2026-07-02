@@ -138,6 +138,7 @@ function AiVisionOverview() {
         <div
           onClick={() => handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer")}
           onKeyDown={(e) => {
+            // S1082
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               handleCardClick("form_analyzer", "/app/ai-vision/form-analyzer");
@@ -187,6 +188,7 @@ function AiVisionOverview() {
         <div
           onClick={() => handleCardClick("ar_preview", "/app/map")}
           onKeyDown={(e) => {
+            // S1082
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               handleCardClick("ar_preview", "/app/map");
@@ -236,6 +238,7 @@ function AiVisionOverview() {
         <div
           onClick={() => handleCardClick("nutrition_360", "/app/ai-vision/nutrition-360")}
           onKeyDown={(e) => {
+            // S1082
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               handleCardClick("nutrition_360", "/app/ai-vision/nutrition-360");
@@ -285,6 +288,7 @@ function AiVisionOverview() {
         <div
           onClick={() => handleCardClick("meal_planner", "/app/ai-vision/meal-planner")}
           onKeyDown={(e) => {
+            // S1082
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               handleCardClick("meal_planner", "/app/ai-vision/meal-planner");

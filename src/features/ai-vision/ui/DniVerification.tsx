@@ -98,6 +98,7 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
             <div
               onClick={() => selfieInputRef.current?.click()}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   selfieInputRef.current?.click();
@@ -137,6 +138,7 @@ export function DniVerification({ language, className = "", onSuccess }: DniVeri
             <div
               onClick={() => dniInputRef.current?.click()}
               onKeyDown={(e) => {
+                // S1082
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   dniInputRef.current?.click();

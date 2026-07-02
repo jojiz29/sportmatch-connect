@@ -28,6 +28,7 @@ export function CourtCard({
       <div
         onClick={onClick}
         onKeyDown={(e) => {
+          // S1082
           if ((e.key === "Enter" || e.key === " ") && onClick) {
             e.preventDefault();
             onClick();

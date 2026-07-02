@@ -47,8 +47,8 @@ The file must be initiated with the submission of form **F-DDA-02 (Logical Suppo
 
 ### 💰 2.2. Fees and Payment Codes
 The process before INDECOPI requires prior payment of the corresponding administrative fee. The enabled payment channels are the Banco de la Nación or the virtual platform **Pagalo.pe**:
-*   **Fee Code:** `02047` (Registration of works and software before the Copyright Directorate).
-*   **Fee Amount:** **S/. 390.50 PEN** (Three hundred ninety and 50/100 Soles).
+*   **Fee Code:** `203000707` (Registration of works and software before the Copyright Directorate).
+*   **Fee Amount:** **S/. 357.70 PEN** (Three hundred fifty-seven and 70/100 Soles).
 *   **Payment Method:** Credit/debit card or bank transfer, attaching the PDF payment voucher to the virtual application file (Virtual Filing Office of INDECOPI).
 
 ### 📄 2.3. Structure of the Technical Descriptive Memory
@@ -81,9 +81,13 @@ To obtain an invention patent, SportMatch Connect must pass a substantive examin
 According to the DIN guidelines of INDECOPI, a computer program by itself is not patentable. However, when the software is part of a **method or system that integrates with hardware to perform technical transformations or interact with physical variables**, it qualifies as a CII.
 *   *Technical Effect in SportMatch Connect:* The invention claims the physical interaction of the user's device (GPS coordinates of latitude and longitude processed by Haversine and Elo algorithms) integrated with a secure transaction system from Stripe and edge image pre-moderation with TensorFlow.js. This optimizes compute resource usage and reduces latency in physical telecommunication networks.
 
-### 📝 3.3. Structure of the Patent File
+### 📝 3.3. File Structure and Patent Fees
 The patent file must be written with extreme scientific and legal rigor, structured into:
 1.  **Descriptive Memory (Technical Description):** Detailed description of the state of the art, deficiencies of current systems, detailed description of the invention, and reference to figures.
 2.  **Claims Set:** The legal clauses defining the boundary of what the inventor claims. They must be drafted as "system", "method", or "computer storage medium" (not as "code").
 3.  **Invention Abstract:** Technical synthesis of maximum 150 words.
 4.  **Figures/Drawings:** C4 Container layouts, sequence flowcharts, and database schemas indexed spatially.
+5.  **Filing and Examination Fees (DIN):**
+    *   *Application Filing Fee:* Code **202000627** (Amount: **S/. 396.00 PEN**).
+    *   *Substantive Patent Examination Fee:* Code **202000628** (Amount: **S/. 324.00 PEN**).
+    *   *Payment Method:* Via the **Pagalo.pe** virtual platform or at any Banco de la Nación branch.

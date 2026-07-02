@@ -915,6 +915,7 @@ function Chats() {
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setIsNewChatModalOpen(false)}
             onKeyDown={(e) => {
+              // S1082
               if (e.key === "Escape") setIsNewChatModalOpen(false);
             }}
           />
@@ -1017,6 +1018,7 @@ function Chats() {
             className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={() => setIsCreateSquadModalOpen(false)}
             onKeyDown={(e) => {
+              // S1082
               if (e.key === "Escape") setIsCreateSquadModalOpen(false);
             }}
           />
