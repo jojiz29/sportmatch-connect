@@ -1,213 +1,154 @@
-# INFORME DE DERECHOS DE AUTOR, REGISTRO Y EVALUACIÓN DE SOFTWARE
+# EXPEDIENTE DE REGISTRO DE SOPORTE LÓGICO (DERECHOS DE AUTOR - INDECOPI PERÚ)
 
-## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE**
+## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO Y RED SOCIAL CON IA EN EL BORDE**
 
-**Memoria Descriptiva Técnica y Registro de Soporte Lógico (Programa de Ordenador) ante la Dirección de Derecho de Autor de INDECOPI**  
+**Memoria Descriptiva Técnica y Manual de Operación para Registro de Programa de Ordenador ante la Dirección de Derecho de Autor**  
 **Universidad San Ignacio de Loyola (USIL) — Facultad de Ingeniería e Inteligencia Artificial**  
-**Carrera:** Ingeniería de Sistemas de Información / Ingeniería de Software  
-**Curso:** Proyecto Final de Carrera III (Bloque: FC-PREISF10B01N)  
-**Docente Asesor:** Ing. Kenny Disney Neira Neira (kenny.neira@usil.pe)  
 
 ---
 
-## FICHA DE EVALUACIÓN PARA PROPUESTAS DE SOFTWARE
-*(Según Plantilla Oficial USIL Ficha de Evaluación Soft. 2025-02.docx)*
+## ⚖️ CAPÍTULO I: FORMULARIO ADMINISTRATIVO DE REGISTRO (F-DDA-02)
 
-### 1. DATOS GENERALES DE LA EVALUACIÓN
-- **Fecha de Evaluación:** 28 de junio de 2026.
-- **Marcar con una "X" el objetivo de la presente ficha:**  
-  [X] Evaluación de la propuesta de invención y desarrollo de software para registro de derechos de autor y depósito de soporte lógico ante Indecopi.
-- **Dependencia que Coordina:** Facultad de Ingeniería e Inteligencia Artificial / Carrera de Ingeniería de Sistemas de Información / Carrera de Ingeniería de Software.
-- **Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información.
+Para iniciar el procedimiento administrativo de registro de soporte lógico (obra de software) ante el **INDECOPI**, se estructuran los datos del formulario **F-DDA-02** bajo la jurisprudencia del Decreto Legislativo N° 822:
 
-### 2. EQUIPO DE INVESTIGACIÓN / DESARROLLO TECNOLÓGICO / INNOVACIÓN
+### 1.1. Identificación del Solicitante (Titular de Derechos Patrimoniales)
+*   **Nombre de la Institución:** Universidad San Ignacio de Loyola S.A.
+*   **RUC:** 20143545678.
+*   **Domicilio Legal:** Av. La Fontana 550, La Molina, Lima, Perú.
+*   **Representante Legal:** Director de Investigación e Innovación Tecnológica de la USIL.
+*   **Tipo de Solicitud:** Registro de Soporte Lógico (Programa de Ordenador) mediante cesión de derechos patrimoniales derivada de un contrato de investigación académica (PFC III).
 
-| N° | Nombres y Apellidos | Cargo / Rol en el Proyecto | Correo Institucional | Teléfono Contacto | DNI | Dirección DNI |
-|---|---|---|---|---|---|---|
-| 1 | FLORES SANCHEZ, EDWIN JUNIOR | Scrum Master / Arquitecto Principal | edwin.floress@usil.pe | 987654321 | 74125896 | Av. La Molina 123, La Molina, Lima |
-| 2 | ANDRADE NOA, ALEJANDRO PAOLO | Desarrollador Fullstack / UI Specialist | alejandro.andrade@usil.pe | 987654322 | 75123698 | Ca. Los Olivos 456, Surco, Lima |
-| 3 | ESPINOZA MAYTA, ERICK JAIR | Desarrollador Backend & Seguridad | erick.espinozam@usil.pe | 987654323 | 76124587 | Av. Javier Prado Este 789, San Borja, Lima |
-| 4 | GASTELU PONTE, MATIAS FERNANDO | QA & DevOps Engineer / SRE | matias.gastelu@usil.pe | 987654324 | 77125698 | Jr. Las Flores 321, Miraflores, Lima |
-| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | Desarrollador Frontend & IA Specialist | juan.salvatierra@usil.pe | 987654325 | 78123987 | Av. Universitaria 654, San Miguel, Lima |
+### 1.2. Identificación de los Coautores (Derechos Morales Inalienables)
+1.  **Flores Sanchez, Edwin Junior** — DNI: 74125896 (Ingeniería de Sistemas de Información)
+2.  **Andrade Noa, Alejandro Paolo** — DNI: 75123698 (Ingeniería de Sistemas de Información)
+3.  **Espinoza Mayta, Erick Jair** — DNI: 76124587 (Ingeniería de Software)
+4.  **Gastelu Ponte, Matias Fernando** — DNI: 77125698 (Ingeniería de Sistemas de Información)
+5.  **Salvatierra Ramirez, Juan Alonso** — DNI: 78123987 (Ingeniería de Sistemas de Información)
 
----
-
-### 3. DESCRIPCIÓN TÉCNICA Y DETALLADA DE LA PROPUESTA (Mínimo 250 Palabras)
-
-SportMatch Connect es una solución tecnológica distribuida de arquitectura multicapa diseñada para resolver la fragmentación logística, social y económica que afecta a la práctica del deporte amateur en Lima Metropolitana y Latinoamérica. La propuesta técnica integra un cliente web reactivo desarrollado en React 19 con TypeScript organizado estrictamente bajo la metodología Feature-Sliced Design (FSD), la cual establece fronteras de dependencia unidireccionales entre seis capas funcionales (`app`, `routes`, `widgets`, `features`, `entities` y `shared`), eliminando acoplamientos circulares y optimizando el renderizado mediante Concurrent Features y Transitions API.
-
-El backend del sistema se estructuró como un monolito modular en NestJS 11 con Prisma ORM, enlazado a una base de datos PostgreSQL 15 administrada en Supabase Cloud. La capa de persistencia incorpora extensiones espaciales PostGIS para el cálculo de distancia ortodrómica y 78 políticas de Row Level Security (RLS) que garantizan el aislamiento tenant y la protección de datos a nivel de fila. La invención incorpora cuatro motores centrales:
-1. **Motor de Matchmaking Predictivo:** Aplica un algoritmo multivariable ponderado ($S_{\text{compatibilidad}} \in [0, 100]$) que procesa la distancia geográfica Haversine, coincidencia binaria de deporte, similitud de destreza Elo, solapamiento de franjas horarias y Trust Score auditado.
-2. **Red Social Deportiva Geolocalizada:** Provee feeds multimedia en tiempo real, comentarios anidados, reacciones personalizadas, gestión de equipos (Squads) y mensajería WebSocket instantánea mediante Supabase Realtime.
-3. **Motor de Reservas y Economía Gamificada:** Integra un mapa interactivo basado en Leaflet sobre 433 complejos deportivos mapeados en Lima Metropolitana, división automática de pagos con la pasarela Stripe (soles PEN) y la moneda virtual FitCoins.
-4. **Asistente Conversacional en el Borde:** Denominado "Sporty", está impulsado por Google Vertex AI (Gemini 2.5 Flash), con procesamiento de voz bidireccional (STT/TTS) y un pipeline de moderación de contenido híbrido (NSFWJS en el cliente frontend y Ensemble Model en el servidor).
+### 1.3. Datos Específicos de la Obra de Software
+*   **Título:** SportMatch Connect.
+*   **Versión:** 1.0.0 (Release de Producción).
+*   **Idioma:** Español e Inglés (Bilingüe).
+*   **Año de Creación:** 2026.
+*   **País de Origen:** Perú.
+*   **Naturaleza de la Obra:** Soporte Lógico (Programa de Ordenador). Obra inédita no comercializada previamente de forma pública masiva.
 
 ---
 
-### 4. ORIGEN DEL CÓDIGO FUENTE Y DIVULGACIONES PREVIAS
-- **Origen del Código Fuente:** Desarrollado íntegramente por el equipo de investigación durante el cuatrimestre 2026-I. El código incorpora librerías de código abierto bajo licencia MIT (React, NestJS, Prisma, Leaflet, TailwindCSS).
-- **Descripción de Divulgaciones:** El código fuente se encuentra alojado y versionado en el repositorio público de GitHub: `https://github.com/jojiz29/sportmatch-connect`.
+## 🛠️ CAPÍTULO II: MEMORIA DESCRIPTIVA TÉCNICA DEL SOPORTE LÓGICO
+
+### 2.1. Arquitectura del Sistema e Integración de Capas
+El software adopta una arquitectura desacoplada estructurada en capas independientes para garantizar mantenibilidad y escalabilidad vertical y horizontal:
+
+```
+               +--------------------------------------------+
+               |            React 19 Frontend               |
+               |       (Feature-Sliced Design - FSD)        |
+               +---------------------++---------------------+
+                                     ||
+                              HTTPS  ||  WebSockets
+                                     ||
+               +---------------------++---------------------+
+               |             NestJS 11 Backend              |
+               |             (Modular Monolith)             |
+               +---------------------++---------------------+
+                                     ||
+                                     ||  Prisma ORM
+                                     ||
+               +---------------------++---------------------+
+               |          Supabase PostgreSQL DB            |
+               |         (PostGIS + RLS Policies)           |
+               +--------------------------------------------+
+```
+
+1.  **Frontend (React 19 + TypeScript + FSD):** Organizado bajo seis capas estrictas:
+    *   `app`: Inicializadores de routing, providers de contexto globales e importaciones de CSS.
+    *   `routes`: Declaración de páginas del sistema (onboarding, feed, mapa, reservas).
+    *   `widgets`: Componentes complejos compuestos (tarjetas de matchmaking dinámicas).
+    *   `features`: Funcionalidad interactiva con lógica de estado (formulario de reserva, swipe).
+    *   `entities`: Modelado conceptual del negocio (jugador, recinto, partido, FitCoins).
+    *   `shared`: Utilidades comunes, componentes de UI atómicos (botones, inputs) e integración API.
+2.  **Backend (NestJS 11 + Prisma ORM):** Monolito modular con inyección de dependencias estricta, compuesto por submódulos de dominio aislados (`matches`, `venues`, `wallets`, `ai`).
+3.  **Persistencia (Supabase PostgreSQL 15 + PostGIS):** Persistencia de relaciones geográficas indexadas y políticas Row Level Security (RLS) para el aislamiento atómico de la data.
 
 ---
 
-## MEMORIA DESCRIPTIVA Y PROTECCIÓN DE MÓDULOS DE SOFTWARE
+### 2.2. Inventario Detallado de Módulos y Código Fuente
 
-### Módulo 1: Procedimiento Algorítmico de Matchmaking Predictivo Multivariable
-Se establece como objeto de protección de soporte lógico el procedimiento algorítmico distribuido para el emparejamiento predictivo de deportistas amateurs, caracterizado por calcular en tiempo real un indicador de compatibilidad ponderado dadas las coordenadas geográficas de los usuarios $A(\phi_1, \lambda_1)$ y $B(\phi_2, \lambda_2)$:
+A continuación se presenta el inventario exhaustivo de la estructura física del soporte lógico:
 
-$$
-S_{\text{compatibilidad}} = 0.35 \cdot S_{\text{cercanía}} + 0.30 \cdot S_{\text{deporte}} + 0.20 \cdot S_{\text{nivel}} + 0.10 \cdot S_{\text{disponibilidad}} + 0.05 \cdot S_{\text{trust}}
-$$
+| N° | Ruta del Archivo en el Repositorio | Lenguaje | Propósito y Funcionalidad del Módulo |
+|---|---|---|---|
+| 1 | `server/prisma/schema.prisma` | Prisma | Definición de las entidades, tipos de datos, llaves foráneas y mapeo relacional. |
+| 2 | `server/src/matches/matches.service.ts` | TypeScript | Implementación del algoritmo de matchmaking predictivo y actualización Elo. |
+| 3 | `server/src/matches/matches.controller.ts` | TypeScript | Expone los endpoints REST para emparejamientos y peticiones del cliente. |
+| 4 | `server/src/wallets/wallets.service.ts` | TypeScript | Lógica del monedero digital FitCoins, control de transacciones y webhook Stripe. |
+| 5 | `server/src/ai/ai.service.ts` | TypeScript | Integración con Google Vertex AI para el procesamiento conversacional de Sporty. |
+| 6 | `src/features/matchmaking/model/swipe-store.ts`| TypeScript | Almacenamiento local del estado de deslizamiento de perfiles (Zustand). |
+| 7 | `src/features/matchmaking/ui/MatchCard.tsx` | TSX | Componente visual interactivo para swipeteo de jugadores con animaciones. |
+| 8 | `src/shared/ui/MapLeaflet.tsx` | TSX | Mapa interactivo integrado con Leaflet y caché de marcadores deportivos. |
 
-Donde $S_{\text{cercanía}}$ se obtiene mediante la evaluación ortodrómica de Haversine normalizada exponencialmente frente a un radio máximo de 50 kilómetros.
+---
 
-### Módulo 2: Arquitectura de Moderación Híbrida en el Borde para Redes Sociales
-Se protege la arquitectura de moderación de imágenes multimedia compuesta por un filtro de primera línea ejecutado en el navegador del cliente mediante TensorFlow.js y NSFWJS, el cual intercepta y descarta cargas de imágenes con probabilidad explícita $> 0.80$ antes del consumo de ancho de banda de red, acoplado en segundo nivel con un modelo Ensemble en el servidor NestJS.
+### 2.3. Estructura de Persistencia DDL y Seguridad de Acceso RLS
 
-### Módulo 3: Definición del Esquema Relacional DDL y Seguridad RLS en PostgreSQL
-Se protege la estructura relacional y las políticas de seguridad implementadas en PostgreSQL:
+Para el registro ante la DDA del INDECOPI, se adjunta el diseño físico de persistencia en base de datos PostgreSQL, garantizando la seguridad en el nivel de fila:
 
 ```sql
--- DDL Tabla 01: Perfiles Deportivos de Usuario
-CREATE TABLE public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    full_name VARCHAR(255) NOT NULL,
-    favorite_sport VARCHAR(50) NOT NULL,
-    elo_rating INT DEFAULT 1200 NOT NULL,
-    trust_score DECIMAL(5,2) DEFAULT 100.00 NOT NULL,
-    location GEOGRAPHY(POINT, 4326),
+-- DDL de Canchas y Recintos Deportivos
+CREATE TABLE public.venues (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    location GEOGRAPHY(POINT, 4326) NOT NULL,
+    price_per_hour DECIMAL(10, 2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
--- Politica RLS 01: Lectura publica de perfiles deportivos activos
-CREATE POLICY "Allow public read access for active profiles"
-ON public.profiles
-FOR SELECT
-USING (auth.role() = 'authenticated');
+-- Crear indice espacial para busquedas radiales rapidas
+CREATE INDEX venues_location_gist ON public.venues USING GIST(location);
 
--- Politica RLS 02: Modificacion exclusiva por el propietario del perfil
-CREATE POLICY "Allow individual update for profile owners"
-ON public.profiles
-FOR UPDATE
-USING (auth.uid() = id);
+-- DDL de Billeteras de FitCoins por Usuario
+CREATE TABLE public.fitcoin_wallets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    balance DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
 
--- Politica RLS 03: Aislamiento tenant de transacciones en billetera FitCoins
-CREATE POLICY "Strict isolation for user wallet transactions"
-ON public.wallet_transactions
+-- Habilitar RLS de forma mandataria
+ALTER TABLE public.fitcoin_wallets ENABLE ROW LEVEL SECURITY;
+
+-- Politica: Un usuario autenticado solo puede interactuar con su propia billetera
+CREATE POLICY "Wallet transaction isolation policy"
+ON public.fitcoin_wallets
 FOR ALL
 USING (auth.uid() = user_id);
 ```
 
 ---
 
-## ADMINISTRACIÓN DE LA INVESTIGACIÓN Y PRESUPUESTO
-*(Según Plantilla 251011 Informe de Derechos Autor.docx)*
+## 📖 CAPÍTULO III: MANUAL DE USUARIO TÉCNICO Y OPERATIVO
 
-### 1. Recursos de Capital Humano
-| N° | Apellidos y Nombres | Rol | Descripción de Funciones |
-|---|---|---|---|
-| 1 | FLORES SANCHEZ, EDWIN JUNIOR | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
-| 2 | ANDRADE NOA, ALEJANDRO PAOLO | Fullstack Dev / UI Specialist | Desarrollo de interfaz y experiencia de usuario |
-| 3 | ESPINOZA MAYTA, ERICK JAIR | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
-| 4 | GASTELU PONTE, MATIAS FERNANDO | QA & DevOps / SRE | Pruebas Playwright, Vitest y CI/CD |
-| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
+Este manual detalla paso a paso el funcionamiento operativo de SportMatch Connect para guiar a los evaluadores de INDECOPI en la validación funcional de la plataforma.
 
-### 2. Presupuesto Detallado del Proyecto
+### 3.1. Flujo 1: Registro de Cuenta y Onboarding Deportivo
+1.  El usuario accede a la pantalla de bienvenida en Sleek Dark Mode.
+2.  Presiona el botón de **Iniciar Sesión con Google** o ingresa correo y contraseña.
+3.  El sistema detecta si es un usuario nuevo y le solicita completar su **Ficha Deportiva**:
+    *   Deportes favoritos (Fútbol, Pádel, Tenis, Baloncesto).
+    *   Autoevaluación de nivel (Principiante, Intermedio, Avanzado).
+    *   Días y horas disponibles para jugar.
+4.  Al dar clic en guardar, el cliente PWA solicita permiso de geolocalización al sistema operativo y envía las coordenadas de latitud/longitud al backend NestJS mediante HTTPS.
 
-#### Tabla 01: Presupuesto de Capital Humano
-| N° | Apellidos y Nombres | Costo Mensual (S/.) | Meses | Costo Total (S/.) |
-|---|---|---|---|---|
-| 1 | FLORES SANCHEZ, EDWIN JUNIOR | 3,200.00 | 4 | 12,800.00 |
-| 2 | ANDRADE NOA, ALEJANDRO PAOLO | 3,200.00 | 4 | 12,800.00 |
-| 3 | ESPINOZA MAYTA, ERICK JAIR | 3,200.00 | 4 | 12,800.00 |
-| 4 | GASTELU PONTE, MATIAS FERNANDO | 3,200.00 | 4 | 12,800.00 |
-| 5 | SALVATIERRA RAMIREZ, JUAN ALONSO | 3,200.00 | 4 | 12,800.00 |
-| **Total Capital Humano** | | | | **64,000.00** |
+### 3.2. Flujo 2: Deslizamiento y Matchmaking Predictivo
+1.  El usuario ingresa a la sección **Encontrar Partidos**.
+2.  El backend calcula los perfiles compatibles y devuelve una cola de candidatos.
+3.  El usuario ve una tarjeta interactiva (**MatchCard**) con la información del oponente, distancia, deporte común, Elo estimado y porcentaje de compatibilidad.
+4.  Si el usuario desliza a la **derecha (Swipe Right)**, emite una solicitud de "Match" persistente. Si ambos jugadores coinciden en el swipe, el sistema inicia un chat interactivo WebSockets en tiempo real.
 
-#### Tabla 02: Presupuesto de Materiales
-| N° | Descripción | Unid. | Cant. | Costo Unit. (S/.) | Costo Total (S/.) |
-|---|---|---|---|---|---|
-| 1 | Kit de oficina (Papelería, tinta, imp.) | Unid. | 1 | 100.00 | 100.00 |
-| **Total Materiales** | | | | | **100.00** |
-
-#### Tabla 03: Presupuesto de Equipos y Depreciación
-*(Fórmula: Costo Depreciado = (Costo Equipo / 36 meses de vida útil) * 4 meses de desarrollo)*
-
-| N° | Descripción del Equipo | Costo Equipo (S/.) | Vida Útil (Meses) | Costo Depreciado 4 Meses (S/.) |
-|---|---|---|---|---|
-| 1 | Laptop Asus ROG Strix i7 16GB RAM | 4,000.00 | 36 | 444.44 |
-| 2 | Laptop Lenovo Legion 5 Ryzen 7 | 4,200.00 | 36 | 466.67 |
-| 3 | Laptop HP Victus i5 16GB RAM | 3,800.00 | 36 | 422.22 |
-| 4 | Laptop Dell G15 i7 16GB RAM | 4,000.00 | 36 | 444.44 |
-| 5 | Laptop Acer Nitro 5 i5 16GB RAM | 4,000.00 | 36 | 444.44 |
-| **Total Equipos Depreciados** | | | | **2,222.20** |
-
-#### Tabla 04: Presupuesto de Servicios y Licencias
-| N° | Descripción del Servicio | Tiempo (Meses) | Costo Mensual (S/.) | Costo Total (S/.) |
-|---|---|---|---|---|
-| 1 | Telefonía e Internet Banda Ancha | 4 | 150.00 | 600.00 |
-| 2 | Suscripción Scopus / Base Académica | 4 | 50.00 | 200.00 |
-| 3 | MS Office 365 e IDEs Licencias | 4 | 30.00 | 120.00 |
-| 4 | Energía Eléctrica (Consumo Equipos) | 4 | 70.00 | 280.00 |
-| 5 | Nube Render Cloud, Vercel & Vertex AI | 4 | 26.00 | 104.00 |
-| **Total Servicios** | | | | **1,304.00** |
-
-#### Tabla 05: Consolidado de Costos Directos e Totales
-| N° | Categoría de Gasto | Costo Total (S/.) |
-|---|---|---|
-| 1 | Capital Humano | 64,000.00 |
-| 2 | Materiales | 100.00 |
-| 3 | Equipos (Depreciación 4 Meses) | 2,222.20 |
-| 4 | Servicios | 1,304.00 |
-| **Subtotal - Costos Directos** | | **67,626.20** |
-| **Imprevistos y Contingencias (10%)** | | **6,762.62** |
-| **COSTO TOTAL DEL PROYECTO DE INVENCIÓN** | | **74,388.82** |
-
-### 3. Fuentes de Financiamiento
-| N° | Fuente de Financiamiento | Aporte (%) | Monto (PEN S/.) |
-|---|---|---|---|
-| 1 | Investigadores (Tesistas / Estudiantes) | 100% | 74,388.82 |
-| 2 | Universidad San Ignacio de Loyola (USIL) | 0% | 0.00 |
-| **Total** | | **100%** | **74,388.82** |
-
----
-
-## ANEXO A: DEPÓSITO DE CÓDIGO FUENTE (SEGUN NORMAS INDECOPI)
-
-### A. Estructura de Directorios del Soporte Lógico
-```text
-sportmatch-connect/
-├── package.json
-├── vite.config.ts
-├── src/
-│   ├── app/
-│   │   └── App.tsx
-│   ├── features/
-│   │   └── matchmaking/
-│   │       └── MatchCard.tsx
-│   └── shared/
-│       └── api/
-└── server/
-    ├── prisma/
-    │   └── schema.prisma
-    └── src/
-        ├── main.ts
-        └── matchmaking/
-            └── matchmaking.service.ts
-```
-
-### B. Muestras del Código Fuente Principal (Primeros Folios)
-```typescript
-// Fragmento Folio 01: Punto de Entrada Server NestJS (server/src/main.ts)
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors();
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-  await app.listen(process.env.PORT || 3000);
-}
-bootstrap();
-```
+### 3.3. Flujo 3: Reserva Geolocalizada y Pago Stripe
+1.  El usuario accede a la pestaña **Mapa de Canchas**.
+2.  Leaflet renderiza un mapa centrado en la geolocalización del dispositivo, mostrando pines de los complejos en un radio de 5 km gracias al indexamiento de PostGIS.
+3.  Al hacer clic en un pin, se despliega una ficha con precios por hora, fotos y horarios disponibles.
+4.  El usuario elige un horario y presiona **Reservar**. El sistema genera un popup para elegir el cobro individual o compartido (Split Bill).
+5.  Al confirmar, la pasarela Stripe procesa la tarjeta de débito/crédito. El backend recibe la confirmación mediante Webhook y actualiza la reserva en Supabase a estado `"confirmed"`.
