@@ -276,7 +276,7 @@ export class AiService {
 
     const context = await this.getUserPersonalizedContext(userId);
     const name =
-      context.name || (language === "en" ? "Athlete" : language === "pt" ? "Atleta" : "Atleta");
+      context.name || (language === "en" ? "Athlete" : "Atleta"); // S3923: simplified redundant ternary
     const sportsText =
       context.preferredSports.length > 0
         ? context.preferredSports.map((s) => s.sport).join(", ")

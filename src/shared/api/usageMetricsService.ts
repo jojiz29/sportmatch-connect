@@ -64,7 +64,7 @@ export const usageMetricsService = {
     if (useAuthStore.getState().isDemoMode) {
       const metrics = getDemoMetrics();
       metrics.push({
-        id: `metric-${Date.now()}-${cryptoSecureRandomString(6)}`,
+        id: `metric-${Date.now()}-${cryptoSecureRandomString(6)}`, // S2245: cryptoSecureRandomString replaces Math.random()
         business_id: businessId,
         metric_type: metricType,
         value,

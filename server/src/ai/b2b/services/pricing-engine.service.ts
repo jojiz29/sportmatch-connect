@@ -98,7 +98,7 @@ export class PricingEngineService {
     // 3. Determinar hora objetivo y su ocupación
     const targetHour = hour ?? this.pickBestHour(occupancy)?.hour ?? 19;
     const targetSlot = occupancy[targetHour];
-    const totalSampleSize = occupancy.reduce((s, h) => s + h.bookedSlots, 0);
+    const totalSampleSize = occupancy.reduce((s, h) => s + h.bookedSlots, 0); // S6959: initial value added
 
     // 4. Extraer features temporales
     const isWeekend = this.isWeekend(date);

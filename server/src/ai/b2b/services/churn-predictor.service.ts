@@ -154,7 +154,7 @@ export class ChurnPredictorService {
     const lastDates = adMetrics.perAd
       .map((a) => a.lastInteractionAt)
       .filter((d): d is string => d !== null)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // S2871: explicit comparator for localeCompare
     if (lastDates.length === 0) return Infinity;
 
     const lastDate = new Date(lastDates[0]);
