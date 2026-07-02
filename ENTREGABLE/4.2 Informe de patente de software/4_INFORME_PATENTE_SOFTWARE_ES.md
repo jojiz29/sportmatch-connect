@@ -1,115 +1,81 @@
-# INFORME DE DERECHOS DE AUTOR, PATENTE Y EVALUACIÓN DE SOFTWARE
+# INFORME TÉCNICO DE DESCRIPCIÓN DE PATENTE DE SOFTWARE (IIO)
 
-## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO, RED SOCIAL, GESTIÓN DE TORNEOS Y MONETIZACIÓN B2B/B2C CON INTELIGENCIA ARTIFICIAL EN EL BORDE**
+## **SPORTMATCH CONNECT: PLATAFORMA INTEGRAL DE MATCHMAKING DEPORTIVO Y RED SOCIAL CON IA EN EL BORDE**
 
-**Documento Técnico de Registro de Propiedad Intelectual e Invención de Software ante INDECOPI**  
-**Universidad San Ignacio de Loyola (USIL) — Facultad de Ingeniería e Inteligencia Artificial**  
-**Curso:** Proyecto Final de Carrera III (Bloque: FC-PREISF10B01N)  
-**Docente Asesor:** Ing. Kenny Disney Neira Neira (kenny.neira@usil.pe)  
+**Memoria Descriptiva Técnica de Invención bajo Directrices de la Dirección de Invenciones y Nuevas Tecnologías de INDECOPI**  
+**Universidad San Ignacio de Loyola (USIL) — Facultad de Ingeniería**  
 
 ---
 
-## FICHA DE EVALUACIÓN PARA PROPUESTAS DE SOFTWARE (Según Plantilla Oficial USIL Ficha de Evaluación Soft. 2025-02.docx)
+## 🔬 1. SECTOR TECNOLÓGICO DE LA INVENCIÓN
 
-### 1. DATOS GENERALES DE LA EVALUACIÓN
-- **Objetivo de la Ficha:** [X] Evaluación de la propuesta de invención y desarrollo de software para registro de derechos de autor y patente de software ante Indecopi.
-- **Fecha de Evaluación:** 28 de junio de 2026.
-- **Dependencia que Coordina:** Facultad de Ingeniería e Inteligencia Artificial / Carrera de Ingeniería de Sistemas de Información / Carrera de Ingeniería de Software.
-- **Línea de Investigación USIL (R. N° 074-2023/G):** Línea 2 — Tecnología de la información.
-
-### 2. INTEGRANTES DEL EQUIPO INVESTIGADOR Y AUTORES
-| N° | Código | Apellidos y Nombres | Carrera | Rol en la Invención | Email Institucional |
-|---|---|---|---|---|---|
-| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Arquitecto Principal | edwin.floress@usil.pe |
-| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | Desarrollador Fullstack / UI Specialist | alejandro.andrade@usil.pe |
-| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | Desarrollador Backend & Seguridad | erick.espinozam@usil.pe |
-| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | QA & DevOps Engineer / SRE | matias.gastelu@usil.pe |
-| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | Desarrollador Frontend & IA Specialist | juan.salvatierra@usil.pe |
+La presente invención se enmarca en la intersección de los **sistemas de bases de datos relacionales distribuidas geoespaciales, la computación móvil inteligente en el borde (Edge AI) y los algoritmos probabilísticos de nivelación**. Específicamente, se describe un sistema cliente-servidor desacoplado que implementa algoritmos predictivos de emparejamiento deportivo recreativo, reserva compartida geolocalizada e interacción por voz optimizada.
 
 ---
 
-### 3. DESCRIPCIÓN TÉCNICA Y DETALLADA DE LA PROPUESTA (Mínimo 250 Palabras)
+## ⚠️ 2. DESCRIPCIÓN DEL PROBLEMA TÉCNICO Y LIMITACIONES
 
-SportMatch Connect es una solución tecnológica distribuida de arquitectura multicapa diseñada para resolver la fragmentación logística, social y económica que afecta a la práctica del deporte amateur en Lima Metropolitana y Latinoamérica. La propuesta técnica integra un cliente web reactivo desarrollado en React 19 con TypeScript organizado estrictamente bajo la metodología Feature-Sliced Design (FSD), la cual establece fronteras de dependencia unidireccionales entre seis capas funcionales (`app`, `routes`, `widgets`, `features`, `entities` y `shared`), eliminando acoplamientos circulares y optimizando el renderizado mediante Concurrent Features y Transitions API.
-
-El backend del sistema se estructuró como un monolito modular en NestJS 11 con Prisma ORM, enlazado a una base de datos PostgreSQL 15 administrada en Supabase Cloud. La capa de persistencia incorpora extensiones espaciales PostGIS para el cálculo de distancia ortodrómica y 78 políticas de Row Level Security (RLS) que garantizan el aislamiento tenant y la protección de datos a nivel de fila. La invención incorpora cuatro motores centrales:
-1. **Motor de Matchmaking Predictivo:** Aplica un algoritmo multivariable ponderado ($S_{\text{compatibilidad}} \in [0, 100]$) que procesa la distancia geográfica Haversine, coincidencia binaria de deporte, similitud de destreza Elo, solapamiento de franjas horarias y Trust Score auditado.
-2. **Red Social Deportiva Geolocalizada:** Provee feeds multimedia en tiempo real, comentarios anidados, reacciones personalizadas, gestión de equipos (Squads) y mensajería WebSocket instantánea mediante Supabase Realtime.
-3. **Motor de Reservas y Economía Gamificada:** Integra un mapa interactivo basado en Leaflet sobre 433 complejos deportivos mapeados en Lima Metropolitana, división automática de pagos con la pasarela Stripe (soles PEN) y la moneda virtual FitCoins.
-4. **Asistente Conversacional en el Borde:** Denominado "Sporty", está impulsado por Google Vertex AI (Gemini 2.5 Flash), con procesamiento de voz bidireccional (STT/TTS) y un pipeline de moderación de contenido híbrido (NSFWJS en el cliente frontend y Ensemble Model en el servidor).
+Los sistemas actuales de coordinación deportiva amateur presentan severas limitaciones de latencia, precisión y consistencia transaccional:
+1.  **Falta de Nivelación Dinámica (Elo):** Las plataformas tradicionales (como Playtomic o CourtSide) no realizan un cálculo predictivo en tiempo real del nivel de destreza de los jugadores, lo que genera partidos desequilibrados y deserción.
+2.  **Saturación de Servidores por Carga Multimedia:** La moderación de imágenes en redes sociales deportivas se realiza en el servidor central o mediante peticiones API costosas (Cloud Vision), saturando el ancho de banda y degradando el tiempo de respuesta.
+3.  **Fricciones en Reservas y Morosidad Colectiva:** Los métodos basados en transferencias manuales (Yape/Plin) e hilos de conversación en WhatsApp obligan al organizador a financiar el costo de alquiler de forma directa, sin garantías de cobro prorrateado en tiempo real.
+4.  **Ineficiencia Espacial GIS:** Las consultas de geolocalización de canchas sobre millones de coordenadas satelitales saturan la CPU de las bases de datos relacionales tradicionales al no contar con un motor de indexación radial optimizado.
 
 ---
 
-### 4. ORIGEN DEL CÓDIGO FUENTE Y DIVULGACIONES PREVIAS
-- **Origen del Código Fuente:** Desarrollado íntegramente por el equipo de investigación durante el cuatrimestre 2026-I. El código incorpora librerías de código abierto bajo licencia MIT (React, NestJS, Prisma, Leaflet, TailwindCSS).
-- **Descripción de Divulgaciones:** El código fuente se encuentra alojado y versionado en el repositorio público de GitHub: `https://github.com/jojiz29/sportmatch-connect`.
+## 💡 3. DESCRIPCIÓN DETALLADA DE LA INVENCIÓN Y SOLUCIÓN TÉCNICA
 
----
+SportMatch Connect soluciona estas limitaciones mediante la integración de cuatro motores de software patentables (Invención Implementada por Ordenador - IIO):
 
-## MEMORIA DESCRIPTIVA Y REIVINDICACIONES DE INVENCIÓN DE SOFTWARE
-
-### Reivindicación 1: Algoritmo de Matchmaking Predictivo Multivariable
-Se reivindica como invención de software el procedimiento algorítmico distribuido para el emparejamiento predictivo de deportistas amateurs, caracterizado por calcular en tiempo real un indicador de compatibilidad ponderado dadas las coordenadas geográficas de los usuarios $A(\phi_1, \lambda_1)$ y $B(\phi_2, \lambda_2)$:
+### 3.1. Motor de Matchmaking Predictivo Multivariable
+El sistema calcula en tiempo real un score de compatibilidad esférico-probabilístico ($S_{\text{compatibilidad}} \in [0, 100]$) entre dos usuarios $A$ y $B$, mediante la siguiente ecuación ponderada:
 
 $$
-S_{\text{compatibilidad}} = 0.35 \cdot S_{\text{cercanía}} + 0.30 \cdot S_{\text{deporte}} + 0.20 \cdot S_{\text{nivel}} + 0.10 \cdot S_{\text{disponibilidad}} + 0.05 \cdot S_{\text{trust}}
+S_{\text{compatibilidad}} = 0.35 \cdot S_{\text{distancia}}(A, B) + 0.30 \cdot S_{\text{habilidad}}(A, B) + 0.20 \cdot S_{\text{horario}}(A, B) + 0.10 \cdot S_{\text{deporte}}(A, B) + 0.05 \cdot S_{\text{trust}}(A)
 $$
 
-Donde $S_{\text{cercanía}}$ se obtiene mediante la evaluación ortodrómica de Haversine normalizada exponencialmente frente a un radio máximo de 50 kilómetros.
+1.  **Componente de Cercanía ($S_{\text{distancia}}$):** Utiliza las coordenadas GPS de los usuarios $A(\phi_1, \lambda_1)$ y $B(\phi_2, \lambda_2)$ aplicando la ecuación de Haversine para determinar la distancia ortodrómica $d$ en un espacio bidimensional no euclidiano:
+    
+    $$
+    d = 2R \cdot \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta \lambda}{2}\right)}\right)
+    $$
+    
+    Donde $R = 6371$ km. El score se normaliza exponencialmente para priorizar radios menores a 10 km.
+2.  **Componente de Habilidad ($S_{\text{habilidad}}$):** Compara el Elo histórico de ambos jugadores. El Elo se recalcula dinámicamente tras cada partido registrado mediante la fórmula:
+    
+    $$
+    R'_A = R_A + K \cdot (S_A - E_A)
+    $$
+    
+    Donde $E_A = 1 / (1 + 10^{(R_B - R_A)/400})$ es la expectativa de victoria y $K = 32$ es el factor de ajuste de sensibilidad del motor.
 
-### Reivindicación 2: Sistema de Moderación Híbrida en el Borde para Redes Sociales Deportivas
-Se reivindica la arquitectura de moderación de imágenes multimedia compuesta por un filtro de primera línea ejecutado en el navegador del cliente mediante TensorFlow.js y NSFWJS, el cual intercepta y descarta cargas de imágenes con probabilidad explícita $> 0.80$ antes del consumo de ancho de banda de red, acoplado en segundo nivel con un modelo Ensemble en el servidor NestJS.
-
-### Reivindicación 3: Definición del Esquema Relacional y Seguridad RLS en PostgreSQL
-Se reivindica el modelo de persistencia estructurado en Prisma ORM y asegurado mediante políticas de Row Level Security (RLS) en PostgreSQL. A continuación se presenta un extracto representativo de las políticas SQL implementadas:
+### 3.2. Motor de Reservas PostGIS Geolocalizadas
+El backend en NestJS se conecta con una base de datos **Supabase PostgreSQL 15** extendida con **PostGIS**. El sistema utiliza el índice espacial **GIST** sobre columnas de tipo `Geography(Point, 4326)` para ejecutar búsquedas radiales con una complejidad computacional $O(\log N)$ en lugar de $O(N)$:
 
 ```sql
--- Politica RLS 01: Lectura publica de perfiles deportivos activos
-CREATE POLICY "Allow public read access for active profiles"
-ON public.profiles
-FOR SELECT
-USING (auth.role() = 'authenticated');
-
--- Politica RLS 02: Modificacion exclusiva por el propietario del perfil
-CREATE POLICY "Allow individual update for profile owners"
-ON public.profiles
-FOR UPDATE
-USING (auth.uid() = id);
-
--- Politica RLS 03: Aislamiento tenant de transacciones en billetera FitCoins
-CREATE POLICY "Strict isolation for user wallet transactions"
-ON public.wallet_transactions
-FOR ALL
-USING (auth.uid() = user_id);
+-- Consulta espacial indexada de canchas en un radio de 5 kilometros
+SELECT id, name, location, 
+       ST_Distance(location, ST_MakePoint(:lng, :lat)::geography) as distance
+FROM venues
+WHERE ST_DWithin(location, ST_MakePoint(:lng, :lat)::geography, 5000)
+ORDER BY distance ASC;
 ```
+
+Para optimizar el rendimiento del frontend, los iconos y marcadores Leaflet se almacenan en una caché en memoria local (`courtIconCache`), evitando instanciaciones redundantes de la clase `L.icon()` que provocan congelamiento de la interfaz debido a la ejecución masiva del Garbage Collector en dispositivos móviles.
+
+### 3.3. Economía Gamificada y Webhook de Stripe
+La reserva de canchas implementa un sistema de cobros compartidos automatizado. Al crear una reserva, la pasarela **Stripe** genera un `PaymentIntent` único en soles (PEN). El backend captura el evento mediante un Webhook seguro y firma criptográficamente la transacción, distribuyendo automáticamente el costo del alquiler entre los monederos virtuales de los participantes en forma de **FitCoins**, deduciendo los balances correspondientes mediante disparadores (*triggers*) SQL que blindan la integridad atómica financiera.
+
+### 3.4. Asistente Conversacional Sporty
+Consiste en una capa conversacional de Inteligencia Artificial que procesa audio y texto. El backend integra **Google Vertex AI (Gemini 2.5 Flash)**. Si el navegador soporta Web Speech API, realiza el procesamiento STT/TTS directamente en el dispositivo cliente. Si el navegador no cuenta con soporte nativo, ejecuta de forma asíncrona un fallback hacia la API de Google Cloud Speech-to-Text utilizando flujos de audio en codificación LINEAR16, y sintetiza voz natural Neural2 de Google Cloud Text-to-Speech (es-ES-Neural2-F), optimizando la accesibilidad manos libres.
 
 ---
 
-## ADMINISTRACIÓN DE LA INVESTIGACIÓN Y PRESUPUESTO (Según Plantilla 251011 Informe de Derechos Autor.docx)
+## 🔎 4. COMPARATIVA CON EL ESTADO DEL ARTE INTERNACIONAL
 
-### 1. Recursos de Capital Humano
-| N° | Código | Apellidos y Nombres | Carrera | Rol | Descripción de Funciones |
-|---|---|---|---|---|---|
-| 1 | 2111716 | FLORES SANCHEZ, EDWIN JUNIOR | ING SIST. INFORMACION | Scrum Master / Arquitecto | Liderazgo de proyecto y arquitectura software |
-| 2 | 2010830 | ANDRADE NOA, ALEJANDRO PAOLO | ING SIST. INFORMACION | Fullstack Dev / UI Specialist | Desarrollo de interfaz y experiencia de usuario |
-| 3 | 2010029 | ESPINOZA MAYTA, ERICK JAIR | ING. SOFTWARE | Backend & Security Dev | Desarrollo NestJS, Prisma y RLS |
-| 4 | 2121043 | GASTELU PONTE, MATIAS FERNANDO | ING SIST. INFORMACION | QA & DevOps / SRE | Pruebas Playwright, Vitest y CI/CD |
-| 5 | 2121274 | SALVATIERRA RAMIREZ, JUAN ALONSO | ING SIST. INFORMACION | Frontend & AI Dev | Desarrollo React 19 y Vertex AI |
-
-### 2. Presupuesto Consolidado del Proyecto
-| N° | Categoría de Gasto | Costo Total (PEN S/.) |
-|---|---|---|
-| 1 | Capital Humano (Honorarios de 5 Investigadores - 4 Meses) | 64,000.00 |
-| 2 | Materiales y Útiles de Escritorio | 100.00 |
-| 3 | Equipos Informáticos (Depreciación de 5 Laptops) | 2,222.20 |
-| 4 | Servicios (Conectividad, Nube Render, Vercel, Vertex AI, Office 365) | 1,304.00 |
-| **Subtotal - Costos Directos** | | **67,626.20** |
-| **Imprevistos y Contingencias (10%)** | | **6,762.62** |
-| **COSTO TOTAL DEL PROYECTO DE INVENCIÓN** | | **74,388.82** |
-
-### 3. Fuentes de Financiamiento
-| N° | Fuente de Financiamiento | Aporte (%) | Monto (PEN S/.) |
+| Característica Técnica | Playtomic (Patente US1104845B2) | CourtSide (Solicitud WO202304892A1) | SportMatch Connect (La Invención) |
 |---|---|---|---|
-| 1 | Investigadores (Autores/Estudiantes) | 100% | 74,388.82 |
-| 2 | Universidad San Ignacio de Loyola (USIL) | 0% | 0.00 |
-| **Total** | | **100%** | **74,388.82** |
+| **Cálculo de Habilidad** | Autodeclarativo por el usuario en menús. | Filtro estático inicial por cuestionario. | Puntuación probabilística Elo en tiempo real. |
+| **Búsqueda Geoespacial** | Consulta relacional estática por distrito. | Distancia radial simple por coordenadas euclidianas. | Consulta radial indexada en base de datos con PostGIS (GIST). |
+| **Moderación Multimedia** | Reporte diferido posterior al incidente. | Ninguno (plataforma cerrada). | Filtro local instantáneo pre-carga en el navegador con TensorFlow.js. |
+| **Interfaz conversacional** | Chatbots estáticos basados en menús rígidos. | Ninguno. | Procesamiento multimodal Gemini con soporte de voz. |

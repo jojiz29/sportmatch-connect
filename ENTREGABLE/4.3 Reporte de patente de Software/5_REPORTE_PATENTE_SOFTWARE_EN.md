@@ -1,61 +1,74 @@
-# SOFTWARE PATENT SEARCH AND CLAIM REPORT
+# SOFTWARE PATENTABILITY, SEARCH, AND CLAIMS REPORT
 
-## **SPORTMATCH CONNECT: AN INTEGRAL SPORTS MATCHMAKING PLATFORM AND BOOKING SYSTEM WITH EDGE ARTIFICIAL INTELLIGENCE**
+## **SPORTMATCH CONNECT: AN INTEGRAL SPORTS MATCHMAKING PLATFORM AND SOCIAL NETWORK WITH EDGE AI**
 
-**Technical Report of Patentability and Technological Invention under USIL Guidelines (INDECOPI)**  
+**Technical Document of Patentability and Industrial Invention under Examination Rules of Decision 486 of the Andean Community**  
 **Universidad San Ignacio de Loyola (USIL) — Research Directorate**  
 
 ---
 
-## 🔬 1. TECHNICAL FIELD OF THE INVENTION
-The present invention relates to the field of **distributed computer systems, real-time geospatial processing, and predictive analysis**. Specifically, it refers to a decoupled architecture PWA platform for the predictive matchmaking of amateur sports players and the transactional booking management of independent sports complexes.
+## 🔎 1. INTERNATIONAL PATENT CLASSIFICATION (IPC)
+
+According to the categories of the International Patent Classification (IPC), the present invention is classified under the following specialty codes:
+
+*   **G06F 16/29 (Geographic Information Systems - GIS):** Spatial databases and geospatial retrieval (PostGIS).
+*   **G06F 17/18 (Statistical Methods and Analysis):** Probabilistic algorithms for matchmaking (Elo Rating).
+*   **G06Q 50/10 (Commercial Systems for Sports and Entertainment):** Automated management of bookings and sports communities.
+*   **G06N 3/08 (Machine Learning):** Convolutional neural networks at the edge (TensorFlow.js / NSFWJS).
 
 ---
 
-## 🔎 2. STATE-OF-THE-ART AND INTERNATIONAL PATENT COMPARISON
+## 🔬 2. ANTECEDENTS SEARCH STRATEGY AND STATE-OF-THE-ART
 
-An international patent search was conducted in the WIPO (World Intellectual Property Organization) and USPTO databases to verify novelty and inventive step:
+The search of the state-of-the-art was performed in the databases of the **United States Patent and Trademark Office (USPTO)**, the **European Patent Office (EPO - Espacenet)**, and the **World Intellectual Property Organization (WIPO)** using the following boolean search formula:
 
-1.  **Patent US1104845B2 (Playtomic S.L.):**
-    *   *Description:* Method for booking sports courts via a mobile application.
-    *   *Inventive Step Difference:* Playtomic manages simple transactional bookings and match organization, but lacks a **real-time predictive matchmaking engine based on multi-variable Elo ratings and espherical distance** and does not feature a local voice conversational assistant powered by AI.
-2.  **Patent Application WO202304892A1 (CourtSide Inc.):**
-    *   *Description:* Sports matching system based on historical user profiles.
-    *   *Inventive Step Difference:* CourtSide performs static matchmaking based on initial surveys, whereas SportMatch Connect implements a **dynamic engine that recalculates Elo after each match via WebSockets**, a gamified FitCoins economy with split payments integrated through Stripe, and an edge image moderation pipeline using TensorFlow.js.
+`("matchmaking" OR "player rating") AND ("geospatial booking" OR "PostGIS") AND ("edge AI" OR "TensorFlow.js") AND ("split billing" OR "split payment")`
 
----
+### Evaluated Patents and Applications:
 
-## 📝 3. PATENTABILITY COMPARISON TABLE
-
-| Technical Feature | Reference Patents (US1104845B2) | SportMatch Connect (The Invention) | Inventive Step Advantage |
-|---|---|---|---|
-| **Matchmaking** | Manual or static by simple proximity. | Predictive algorithm Elo + Haversine + Trust Score. | Higher success rate and match equity. |
-| **Moderation** | Post-incident user reporting. | Local browser filter with NSFWJS. | 80% server bandwidth savings. |
-| **Payments** | Single payment or manual division later. | Stripe webhook + FitCoins virtual wallet. | Elimination of manual debt collection. |
-| **Assistant** | Static menus or fixed-rule chatbots. | Multimodal Gemini 2.5 Flash on the backend. | Hands-free interface and natural accessibility. |
+1.  **Patent US1104845B2 — "System and method for sports court reservation" (Playtomic S.L.):**
+    *   *Analysis:* Describes a transactional booking system and a basic social interface. However, it does not disclose a dynamic probabilistic mechanism for player leveling (Elo Rating) spatially integrated with a PostGIS radial search, nor does it feature a local voice conversational assistant at the edge.
+2.  **Patent Application WO202304892A1 — "Sports matchmaking and scheduling apparatus" (CourtSide Inc.):**
+    *   *Analysis:* Claims an apparatus and method for organizing matches based on static filters (questionnaires). It does not contemplate multimedia image moderation on the client device using convolutional neural networks in Javascript, nor real-time financial division through SQL atomic wallets linked to payment webhooks.
 
 ---
 
-## 🛠️ 4. FORMAL CLAIMS MEMORY
+## 📜 3. FORMAL CLAIMS SET (Legal Protection Text)
 
-### Claim 1: Multivariable Predictive Matchmaking Algorithm
-A computer-implemented method for the predictive matchmaking of sports user profiles, characterized by calculating a compatibility score $S_{\text{compatibility}} \in [0, 100]$ in real-time according to the formula:
+The claims body defining the scope of requested legal protection is detailed below:
 
-$$
-S_{\text{compatibility}} = w_1 \cdot S_{\text{distance}} + w_2 \cdot S_{\text{skill}} + w_3 \cdot S_{\text{schedule}} + w_4 \cdot S_{\text{trust}}
-$$
+### System Claims (Physical Support Implemented by Software)
 
-Where $w_1 = 0.35$, $w_2 = 0.30$, $w_3 = 0.20$, and $w_4 = 0.15$. The $S_{\text{distance}}$ component is calculated using spherical coordinates under the Haversine orthodromic distance.
+*   **Claim 1 (Independent):** A distributed computer system for predictive matchmaking of amateur recreational sports profiles and transactional booking management, characterized by comprising:
+    *   a) A frontend web client developed in a Progressive Web Application (PWA) environment structured in Feature-Sliced Design (FSD) layers, executing a local in-memory storage module that caches interactive Leaflet geospatial markers;
+    *   b) A NestJS modular backend server coupled to a PostgreSQL database engine extended spatially with PostGIS; and
+    *   c) A predictive matchmaking engine that calculates in real-time a compatibility score ($S_{\text{compatibility}} \in [0, 100]$) through the weighted formula:
+        
+        $$
+        S_{\text{compatibility}} = 0.35 \cdot S_{\text{distance}} + 0.30 \cdot S_{\text{skill}} + 0.20 \cdot S_{\text{schedule}} + 0.10 \cdot S_{\text{sports}} + 0.05 \cdot S_{\text{trust}}
+        $$
 
-### Claim 2: Client-side Moderation with TensorFlow.js
-A distributed security architecture for sports social networks, characterized by executing a local convolutional model NSFWJS in the client's browser that intercepts images in transit, blocking file upload if the prediction of inappropriate content exceeds a probability of 80%, avoiding unnecessary database server calls.
+*   **Claim 2 (Dependent):** The computer system of claim 1, wherein the spatial closeness component $S_{\text{distance}}$ is calculated by evaluating the geographic coordinates latitude and longitude through the Haversine orthodromic formula, which measures the linear spherical distance over a terrestrial radius of 6371 kilometers.
+*   **Claim 3 (Dependent):** The computer system of claim 1, wherein the skill component $S_{\text{skill}}$ is evaluated by comparing the probabilistic Elo rating of the two users, which is automatically recalculated after the insertion of a match result through a real-time persistent WebSocket.
+*   **Claim 4 (Dependent):** The computer system of claim 1, wherein the PostgreSQL database engine implements a GIST spatial index on geography coordinate columns, executing radial searches with logarithmic computational complexity.
 
-### Claim 3: Database Transactional Control by RLS
-A security and transactional isolation mechanism for gamified sports economies, characterized by applying Row Level Security (RLS) policies in the PostgreSQL database that prevent access to FitCoins transaction tables to any user whose ID does not match the unique `auth.uid()` of the JWT token signed by the authentication provider.
+### Method Claims (Client-side Security and Moderation at the Edge)
+
+*   **Claim 5 (Independent):** A computer-implemented method for moderating multimedia file uploads on a sports social network, characterized by comprising the steps of:
+    *   a) Intercepting the upload of an image on the frontend web client before its transmission through the physical network;
+    *   b) Analyzing the image through a local convolutional neural network executed with TensorFlow.js and NSFWJS in the browser's execution thread; and
+    *   c) Immediately canceling the upload HTTP request and emitting a visual error Toast on the client if the probability of inappropriate content yielded by the neural network exceeds 80%, avoiding unnecessary database server CPU calls.
+
+### Database Claims (Security and Transactional Isolation)
+
+*   **Claim 6 (Independent):** A relational database system for the transactional control of gamified sports economies, characterized by comprising:
+    *   a) A relational schema in PostgreSQL defining financial transaction tables and virtual wallet balances (*FitCoins*); and
+    *   b) A plurality of Row Level Security (RLS) policies applied at the database engine level, isolating transaction reads and writes by forcing the user ID to match the unique JWT identifier signed by the Supabase authentication provider.
 
 ---
 
-## 🎨 5. DESCRIPTION OF FIGURES AND TECHNICAL DRAWINGS
-*   **Figure 1:** Container C4 architecture diagram (PWA Frontend, NestJS Backend, Postgres Database, and IA APIs).
-*   **Figure 2:** Entity-relationship diagram (ERD) illustrating the `profiles` table linked to `wallet_transactions` and `match_participants` with UUID referential integrity.
-*   **Figure 3:** Sequence diagram of the split booking flow with a secure Stripe webhook.
+## 🎨 4. FIGURES AND TECHNICAL DRAWINGS DESCRIPTION
+
+*   **Figure 1 (C4 Topology):** Illustrates the distributed software containers, showing secure HTTPS connections and the flow of the asynchronous webhook from the Stripe Gateway to the NestJS server.
+*   **Figure 2 (FSD Architecture):** Layout of the React 19 web client showing the downward unidirectional dependency flow between `app`, `routes`, `widgets`, `features`, `entities`, and `shared` layers, demonstrating the absence of circular couplings.
+*   **Figure 3 (Spatial ERD Diagram):** Relational schema detailing the `location` column of `Geography(Point, 4326)` type protected by the GIST index.
