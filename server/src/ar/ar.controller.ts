@@ -5,7 +5,7 @@ import { ArService } from "./ar.service";
 @ApiTags("AR Court Preview")
 @Controller("ar")
 export class ArController {
-  constructor(private arService: ArService) {}
+  constructor(private readonly arService: ArService) {} // S2933: readonly
 
   @Get("court/:courtId/model-data")
   @ApiOperation({ summary: "Get 3D/AR model data for a court" })

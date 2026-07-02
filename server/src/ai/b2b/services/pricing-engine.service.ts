@@ -71,8 +71,8 @@ export class PricingEngineService {
   private readonly logger = new Logger(PricingEngineService.name);
 
   constructor(
-    private dataPipeline: DataPipelineService,
-    private explainer: ShapExplainerService,
+    private readonly dataPipeline: DataPipelineService, // S2933: readonly
+    private readonly explainer: ShapExplainerService, // S2933: readonly
   ) {}
 
   /**
@@ -114,7 +114,7 @@ export class PricingEngineService {
       isPeakHour,
       isLowHour,
       sampleSize: targetSlot.bookedSlots,
-      districtDemandFactor: 1.0, // placeholder; refinable con datos de district
+      districtDemandFactor: 1, // S7748: simplify number literal // placeholder; refinable con datos de district
       hoursToSlot,
     });
 
@@ -122,7 +122,7 @@ export class PricingEngineService {
 
     // 6. Confianza basada en muestra
     const confidence = Math.min(
-      1.0,
+      1, // S7748: simplify number literal
       PRICING_CONSTANTS.BASE_CONFIDENCE +
         totalSampleSize * PRICING_CONSTANTS.CONFIDENCE_PER_BOOKING,
     );
@@ -202,20 +202,20 @@ export class PricingEngineService {
     baseline: number,
     f: PricingFeatures,
   ): { recommendedPrice: number; deltaPct: number } {
-    let mult = 1.0;
+    let mult = 1; // S7748: simplify number literal
 
     // 1. Componente de ocupación (dominante)
     if (f.occupancyRate > PRICING_CONSTANTS.HIGH_OCCUPANCY_THRESHOLD) {
       // Interpolación lineal entre 1.0 (en threshold) y HIGH_OCCUPANCY_MULT (en 1.0)
       const intensity =
         (f.occupancyRate - PRICING_CONSTANTS.HIGH_OCCUPANCY_THRESHOLD) /
-        (1.0 - PRICING_CONSTANTS.HIGH_OCCUPANCY_THRESHOLD);
-      mult *= 1.0 + (PRICING_CONSTANTS.HIGH_OCCUPANCY_MULT - 1.0) * intensity;
+        (1 - PRICING_CONSTANTS.HIGH_OCCUPANCY_THRESHOLD); // S7748: simplify number literal
+      mult *= 1 + (PRICING_CONSTANTS.HIGH_OCCUPANCY_MULT - 1) * intensity; // S7748: simplify number literal
     } else if (f.occupancyRate < PRICING_CONSTANTS.LOW_OCCUPANCY_THRESHOLD) {
       const intensity =
         (PRICING_CONSTANTS.LOW_OCCUPANCY_THRESHOLD - f.occupancyRate) /
         PRICING_CONSTANTS.LOW_OCCUPANCY_THRESHOLD;
-      mult *= 1.0 - (1.0 - PRICING_CONSTANTS.LOW_OCCUPANCY_MULT) * intensity;
+      mult *= 1 - (1 - PRICING_CONSTANTS.LOW_OCCUPANCY_MULT) * intensity; // S7748: simplify number literal
     }
 
     // 2. Componentes temporales (multiplicativos)
@@ -225,8 +225,8 @@ export class PricingEngineService {
 
     // 3. Hard caps (defensivos)
     const finalMult = Math.max(
-      1.0 - PRICING_CONSTANTS.MAX_DISCOUNT,
-      Math.min(1.0 + PRICING_CONSTANTS.MAX_UPLIFT, mult),
+      1 - PRICING_CONSTANTS.MAX_DISCOUNT, // S7748: simplify number literal
+      Math.min(1 + PRICING_CONSTANTS.MAX_UPLIFT, mult), // S7748: simplify number literal
     );
 
     const recommendedPrice = baseline * finalMult;
@@ -257,8 +257,8 @@ export class PricingEngineService {
 
   private normalizeAnticipation(hoursToSlot: number): number {
     // 0-24h = 0 (last-minute, demanda alta), 7+ días = 1 (lejos, demanda baja)
-    if (hoursToSlot <= 24) return 0.0;
-    if (hoursToSlot >= 168) return 1.0;
+    if (hoursToSlot <= 24) return 0; // S7748: simplify number literal
+    if (hoursToSlot >= 168) return 1; // S7748: simplify number literal
     return (hoursToSlot - 24) / (168 - 24);
   }
 

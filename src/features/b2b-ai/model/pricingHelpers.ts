@@ -38,9 +38,9 @@ export function formatPercent(value: number, decimals = 1, withSign = true): str
 export function isValidDate(date: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) return false;
-  const year = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10);
-  const day = parseInt(match[3], 10);
+  const year = Number.parseInt(match[1], 10); // S7773: Number.* preferred
+  const month = Number.parseInt(match[2], 10); // S7773: Number.* preferred
+  const day = Number.parseInt(match[3], 10); // S7773: Number.* preferred
   if (month < 1 || month > 12) return false;
   if (day < 1 || day > 31) return false;
   // Verifica que el día sea válido para el mes (incluye bisiestos)
@@ -78,7 +78,7 @@ export function getTodayDate(): string {
 export function describeShapFeature(driver: ShapFeature): string {
   const sign = driver.contribution > 0 ? "+" : "";
   const weightStr =
-    driver.weight !== undefined ? ` (peso ${(driver.weight * 100).toFixed(0)}%)` : "";
+    driver.weight === undefined ? "" : ` (peso ${(driver.weight * 100).toFixed(0)}%)`; // S7735: avoid negated condition
   return `${driver.feature}: ${sign}${formatPEN(driver.contribution)}${weightStr}`;
 }
 

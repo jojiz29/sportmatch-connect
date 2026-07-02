@@ -41,6 +41,8 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+type UploadedFileInfo = { buffer: Buffer; mimetype: string; size: number }; // S4323: type alias
+
 @ApiTags("AI Vision")
 @Controller("ai/vision")
 @UseGuards(SupabaseAuthGuard)
@@ -66,7 +68,7 @@ export class VisionController {
   })
   @UseInterceptors(FileInterceptor("image", { limits: { fileSize: MAX_IMAGE_SIZE } }))
   async analyzeImage(
-    @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number } | undefined,
+    @UploadedFile() file: UploadedFileInfo | undefined,
     @Body() dto: AnalyzeImageDto,
   ): Promise<AnalyzeImageResponseDto> {
     if (!file) throw new BadRequestException("No se proporcionó archivo de imagen");
@@ -94,7 +96,7 @@ export class VisionController {
   })
   @UseInterceptors(FilesInterceptor("video", 1, { limits: { fileSize: MAX_VIDEO_SIZE } }))
   async analyzeVideo(
-    @UploadedFiles() files: Array<{ buffer: Buffer; mimetype: string; size: number }> | undefined,
+    @UploadedFiles() files: Array<UploadedFileInfo> | undefined,
     @Body() dto: AnalyzeVideoDto,
   ): Promise<AnalyzeVideoResponseDto> {
     const videoFile = files?.[0];
@@ -104,7 +106,7 @@ export class VisionController {
         `Tipo de video no soportado: ${videoFile.mimetype}. Permitidos: ${ALLOWED_VIDEO_TYPES.join(", ")}`,
       );
     }
-    const frameCount = Math.min(Math.max(parseInt(dto.frameCount || "5", 10) || 5, 1), 15);
+    const frameCount = Math.min(Math.max(Number.parseInt(dto.frameCount || "5", 10) || 5, 1), 15); // S7773: Number.* preferred
     const frames = await this.mediaService.extractFrames(videoFile.buffer, frameCount);
     return this.visionService.analyzeVideo(frames, "image/jpeg", dto.prompt, dto.language);
   }
@@ -136,7 +138,7 @@ export class VisionController {
   })
   @UseInterceptors(FilesInterceptor("frames", 15, { limits: { fileSize: MAX_IMAGE_SIZE } }))
   async formAnalyze(
-    @UploadedFiles() files: Array<{ buffer: Buffer; mimetype: string; size: number }> | undefined,
+    @UploadedFiles() files: Array<UploadedFileInfo> | undefined,
     @Body() dto: FormAnalyzeDto,
   ): Promise<FormAnalyzeResponseDto> {
     if (!files || files.length === 0) {
@@ -178,14 +180,14 @@ export class VisionController {
   })
   @UseInterceptors(FileInterceptor("image", { limits: { fileSize: MAX_IMAGE_SIZE } }))
   async fakeProfile(
-    @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number } | undefined,
+    @UploadedFile() file: UploadedFileInfo | undefined,
     @Body("language") language?: string,
   ): Promise<FakeProfileResponseDto> {
     if (!file) throw new BadRequestException("No se proporcionó foto de perfil");
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
       throw new BadRequestException("Formato de imagen no soportado. Usa JPG, PNG o WebP.");
     }
-    const lang = (language === "pt" || language === "en" ? language : "es") as "es" | "en" | "pt";
+    const lang = (language === "pt" || language === "en" ? language : "es"); // S4325: redundant cast
     return this.visionService.detectFakeProfile(file.buffer, file.mimetype, lang);
   }
 
@@ -226,8 +228,8 @@ export class VisionController {
     @UploadedFiles()
     files:
       | {
-          selfie?: { buffer: Buffer; mimetype: string; size: number }[];
-          dni?: { buffer: Buffer; mimetype: string; size: number }[];
+          selfie?: UploadedFileInfo[];
+          dni?: UploadedFileInfo[];
         }
       | undefined,
     @Body("language") language?: string,
@@ -243,7 +245,7 @@ export class VisionController {
     if (!ALLOWED_IMAGE_TYPES.includes(dniFile.mimetype)) {
       throw new BadRequestException("Formato de DNI no soportado. Usa JPG, PNG o WebP.");
     }
-    const lang = (language === "pt" || language === "en" ? language : "es") as "es" | "en" | "pt";
+    const lang = (language === "pt" || language === "en" ? language : "es"); // S4325: redundant cast
     return this.visionService.verifyDniWithSelfie(
       selfie.buffer,
       selfie.mimetype,
@@ -274,7 +276,7 @@ export class VisionController {
   })
   @UseInterceptors(FileInterceptor("image", { limits: { fileSize: MAX_IMAGE_SIZE } }))
   async nutrition360(
-    @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number } | undefined,
+    @UploadedFile() file: UploadedFileInfo | undefined,
     @Body("language") language: string | undefined,
     @Request() req: AuthenticatedRequest,
   ): Promise<Nutrition360ResponseDto> {
@@ -282,7 +284,7 @@ export class VisionController {
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
       throw new BadRequestException("Formato de imagen no soportado. Usa JPG, PNG o WebP.");
     }
-    const lang = (language === "pt" || language === "en" ? language : "es") as "es" | "en" | "pt";
+    const lang = (language === "pt" || language === "en" ? language : "es"); // S4325: redundant cast
     const userId = req.user.sub;
     return this.visionService.analyzeNutrition360(userId, file.buffer, file.mimetype, lang);
   }

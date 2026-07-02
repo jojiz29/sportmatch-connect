@@ -123,7 +123,7 @@ const DEFAULT_DIMENSIONS = {
 
 @Injectable()
 export class ArService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {} // S2933: readonly
 
   async getCourtModelData(courtId: string): Promise<ArCourtModelDataDto> {
     const court = await this.prisma.courts.findUnique({ where: { id: courtId } });
@@ -138,7 +138,7 @@ export class ArService {
       courtName: court.name,
       sport: court.sport,
       arModelUrl: (court as any).ar_model_url || null,
-      arScale: (court as any).ar_scale ?? 1.0,
+      arScale: (court as any).ar_scale ?? 1, // S7748: simplify number literal
       arRotation: (court as any).ar_rotation as { x: number; y: number; z: number } | null,
       courtDimensions: {
         length: dimensions.length,
@@ -154,7 +154,7 @@ export class ArService {
       goalWidth: dimensions.goalWidth,
       goalHeight: dimensions.goalHeight,
       ambientLightIntensity: 0.5,
-      directionalLightIntensity: 1.0,
+      directionalLightIntensity: 1, // S7748: simplify number literal
     };
   }
 }

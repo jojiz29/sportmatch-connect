@@ -62,9 +62,9 @@ export class AdsOptimizerService {
   private readonly logger = new Logger(AdsOptimizerService.name);
 
   constructor(
-    private vertexAi: VertexAiService,
-    private dataPipeline: DataPipelineService,
-    private explainer: ShapExplainerService,
+    private readonly vertexAi: VertexAiService, // S2933: readonly
+    private readonly dataPipeline: DataPipelineService, // S2933: readonly
+    private readonly explainer: ShapExplainerService, // S2933: readonly
   ) {}
 
   /**
@@ -220,7 +220,7 @@ REGLAS ESTRICTAS:
   private parseVariantJson(text: string): { title?: string; description?: string } {
     try {
       const trimmed = text.trim();
-      const match = trimmed.match(/\{[^}]*\}/); // S5693: ReDoS-safe regex
+      const match = /\{[^}]*\}/.exec(trimmed); // NOSONAR:S5852,S5693,S6594
       if (match) {
         return JSON.parse(match[0]) as { title?: string; description?: string };
       }
@@ -277,8 +277,8 @@ REGLAS ESTRICTAS:
       urgencia: 1.22, // urgencia tiene mayor lift inmediato pero puede quemar la marca
     };
 
-    const coefficient = STYLE_COEFFICIENTS[spec.style] ?? 1.0;
-    const predictedCtr = Math.min(1.0, businessCtr * coefficient);
+    const coefficient = STYLE_COEFFICIENTS[spec.style] ?? 1; // S7748: simplify number literal
+    const predictedCtr = Math.min(1, businessCtr * coefficient); // S7748: simplify number literal
 
     // UCB1: explorar vs explotar
     // N = total de "tiradas" del sistema (simulado: total de clics del business)
@@ -299,7 +299,10 @@ REGLAS ESTRICTAS:
   }
 
   private styleToVariantId(style: VariantSpec["style"]): "B" | "C" | "D" {
-    return style === "emocional" ? "B" : style === "racional" ? "C" : "D";
+    // S3358: extract nested ternary
+    if (style === "emocional") return "B";
+    if (style === "racional") return "C";
+    return "D";
   }
 
   // ============================================================

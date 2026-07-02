@@ -55,7 +55,7 @@ export interface UsageSummary {
 export class DataPipelineService {
   private readonly logger = new Logger(DataPipelineService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {} // S2933: readonly
 
   // ============================================================
   // CANCHAS: VALIDEZ + BASELINE
@@ -138,9 +138,9 @@ export class DataPipelineService {
    */
   private extractHourFromTimeSlot(timeSlot: string): number {
     if (!timeSlot) return -1;
-    const match = timeSlot.match(/^(\d{1,2})/);
+    const match = /^(\d{1,2})/.exec(timeSlot); // S6594: prefer exec()
     if (!match) return -1;
-    const h = parseInt(match[1], 10);
+    const h = Number.parseInt(match[1], 10); // S7773: Number.* preferred
     return h >= 0 && h < 24 ? h : -1;
   }
 

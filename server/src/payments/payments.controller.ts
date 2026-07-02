@@ -67,27 +67,28 @@ export class PaymentsController {
 
     // In Express/NestJS, if body parser is already active, req.body is parsed as object.
     // We convert it back to buffer if it's an object/string, or use it directly if it is a Buffer.
+    // S3358: extract nested ternary
+    const rawBodyStr = typeof rawBody === "object" ? JSON.stringify(rawBody) : String(rawBody);
     const webhookBody = Buffer.isBuffer(rawBody)
       ? rawBody
-      : Buffer.from(typeof rawBody === "object" ? JSON.stringify(rawBody) : String(rawBody));
+      : Buffer.from(rawBodyStr);
 
     return this.paymentsService.handleWebhook(webhookBody, signature);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Post("mock-upgrade")
-  async mockUpgrade(@Req() req: PaymentRequest, @Body("tier") tier?: string) {
+  async mockUpgrade(@Req() req: PaymentRequest, @Body("tier") tier = "INICIAL") { // S7760: default param
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
       throw new BadRequestException("Usuario no autenticado");
     }
 
-    const planTier = tier || "INICIAL";
-    await this.paymentsService.upgradeUserMock(userId, planTier);
+    await this.paymentsService.upgradeUserMock(userId, tier);
     return {
       success: true,
-      message: `Usuario ascendido a ${planTier} exitosamente (modo demo)`,
-      tier: planTier,
+      message: `Usuario ascendido a ${tier} exitosamente (modo demo)`,
+      tier,
     };
   }
 

@@ -55,9 +55,9 @@ export class ChurnPredictorService {
   private readonly logger = new Logger(ChurnPredictorService.name);
 
   constructor(
-    private dataPipeline: DataPipelineService,
-    private explainer: ShapExplainerService,
-    private vertexAi: VertexAiService,
+    private readonly dataPipeline: DataPipelineService, // S2933: readonly
+    private readonly explainer: ShapExplainerService, // S2933: readonly
+    private readonly vertexAi: VertexAiService, // S2933: readonly
   ) {}
 
   /**
@@ -93,12 +93,15 @@ export class ChurnPredictorService {
     });
 
     // 5. Risk level
-    const riskLevel: "low" | "medium" | "high" =
-      churnScore < CHURN_CONSTANTS.MEDIUM_THRESHOLD
-        ? "low"
-        : churnScore < CHURN_CONSTANTS.HIGH_THRESHOLD
-          ? "medium"
-          : "high";
+    // S3358: extract nested ternary
+    let riskLevel: "low" | "medium" | "high";
+    if (churnScore < CHURN_CONSTANTS.MEDIUM_THRESHOLD) {
+      riskLevel = "low";
+    } else if (churnScore < CHURN_CONSTANTS.HIGH_THRESHOLD) {
+      riskLevel = "medium";
+    } else {
+      riskLevel = "high";
+    }
 
     // 6. Generar factores explicativos (rule-based, ordenados por severity)
     const factors = this.buildFactors({
@@ -170,7 +173,7 @@ export class ChurnPredictorService {
   private scoreRecency(days: number, lookbackDays: number): number {
     if (days === Infinity) return 0.9; // sin datos = asumimos riesgo alto
     if (days <= 1) return 0.05;
-    if (days >= lookbackDays) return 1.0;
+    if (days >= lookbackDays) return 1; // S7748: simplify number literal
     // Interpolación logarítmica
     return Math.min(1, Math.log10(days + 1) / Math.log10(lookbackDays + 1));
   }
@@ -182,7 +185,7 @@ export class ChurnPredictorService {
   private scoreFrequency(activeAds: number, lookbackDays: number): number {
     const expectedMin = (lookbackDays / 30) * CHURN_CONSTANTS.MIN_ADS_ACTIVE;
     if (activeAds >= expectedMin) return 0.1;
-    if (activeAds === 0) return 1.0;
+    if (activeAds === 0) return 1; // S7748: simplify number literal
     return Math.max(0.1, 1 - activeAds / expectedMin);
   }
 
@@ -197,7 +200,7 @@ export class ChurnPredictorService {
     try {
       const result = await this.aggregateRevenue(businessId, lookbackDays);
       if (result >= CHURN_CONSTANTS.MIN_MONTHLY_REVENUE) return 0.1;
-      if (result === 0) return 1.0;
+      if (result === 0) return 1; // S7748: simplify number literal
       return Math.max(0.1, 1 - result / CHURN_CONSTANTS.MIN_MONTHLY_REVENUE);
     } catch (err) {
       this.logger.warn(
@@ -235,7 +238,7 @@ export class ChurnPredictorService {
     // Esperado: al menos 1 vista/día = lookbackDays vistas
     const expected = lookbackDays;
     if (total >= expected) return 0.1;
-    if (total === 0) return 1.0;
+    if (total === 0) return 1; // S7748: simplify number literal
     return Math.max(0.1, 1 - total / expected);
   }
 
@@ -318,7 +321,6 @@ export class ChurnPredictorService {
       });
     }
 
-    // Si todo OK, mensaje positivo
     if (factors.length === 0) {
       factors.push({
         name: "Engagement saludable",

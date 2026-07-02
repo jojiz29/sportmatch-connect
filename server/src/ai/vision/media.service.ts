@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
-import { promisify } from "util";
+import * as fs from "node:fs"; // S7772: node: protocol
+import * as path from "node:path"; // S7772: node: protocol
+import * as os from "node:os"; // S7772: node: protocol
+import { promisify } from "node:util"; // S7772: node: protocol
 
 const writeFile = promisify(fs.writeFile);
 const mkdtemp = promisify(fs.mkdtemp);
@@ -31,7 +31,7 @@ export class MediaService {
   private async isFfmpegAvailable(): Promise<boolean> {
     if (this.ffmpegAvailable !== null) return this.ffmpegAvailable;
     try {
-      const { execSync } = await import("child_process");
+      const { execSync } = await import("node:child_process"); // S7772: node: protocol
       execSync("ffmpeg -version", { stdio: "ignore" });
       this.ffmpegAvailable = true;
     } catch {
@@ -53,7 +53,7 @@ export class MediaService {
     try {
       await writeFile(inputPath, videoBuffer);
 
-      const { execSync } = await import("child_process");
+      const { execSync } = await import("node:child_process"); // S7772: node: protocol
       const fps = Math.max(1, Math.ceil(frameCount / 10));
       execSync(
         `ffmpeg -i "${inputPath}" -vf "fps=${fps}" -frames:v ${frameCount} -q:v 2 "${outputPattern}" -y`,

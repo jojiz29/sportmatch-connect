@@ -52,7 +52,7 @@ export class MatchmakingService {
         dto.sport,
         dto.lat,
         dto.lng,
-        dto.radius_km ?? 10.0,
+        dto.radius_km ?? 10, // S7748: simplify number literal
       );
 
       const entry = results[0];

@@ -17,6 +17,8 @@ import {
   MealItemDto,
 } from "./dto/vision.dto";
 
+type Language = "es" | "en" | "pt"; // S4323: type alias
+
 @Injectable()
 export class VisionService {
   private readonly logger = new Logger(VisionService.name);
@@ -26,8 +28,8 @@ export class VisionService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private buildVisionSystemInstruction(language: "es" | "en" | "pt"): string {
-    const instructions: Record<"es" | "en" | "pt", string> = {
+  private buildVisionSystemInstruction(language: Language): string {
+    const instructions: Record<Language, string> = {
       es:
         "Eres un analizador visual estricto para SportMatch. Responde solo con JSON valido. " +
         "No escribas markdown, no des disclaimers y no digas que no eres biometrico. " +
@@ -478,7 +480,7 @@ export class VisionService {
     imageBuffer: Buffer,
     mimeType: string,
     prompt?: string,
-    language?: "es" | "en" | "pt",
+    language?: Language,
   ): Promise<AnalyzeImageResponseDto> {
     const defaultPrompt = prompt || "Describe esta imagen en detalle.";
     const base64Data = imageBuffer.toString("base64");
@@ -500,7 +502,7 @@ export class VisionService {
     frames: Buffer[],
     mimeType: string,
     prompt?: string,
-    language?: "es" | "en" | "pt",
+    language?: Language,
   ): Promise<AnalyzeVideoResponseDto> {
     const defaultPrompt =
       prompt ||
@@ -605,9 +607,8 @@ export class VisionService {
   async detectFakeProfile(
     imageBuffer: Buffer,
     mimeType: string,
-    language?: "es" | "en" | "pt",
+    language: Language = "es", // S7760: default param
   ): Promise<FakeProfileResponseDto> {
-    const lang = language || "es";
     const promptByLang: Record<string, string> = {
       es:
         "Eres un experto en verificacion visual de perfiles. Analiza la imagen enviada y determina si muestra una persona real y verificable. " +
@@ -650,14 +651,14 @@ export class VisionService {
         "}",
     };
 
-    const promptText = promptByLang[lang] || promptByLang.es;
+    const promptText = promptByLang[language] || promptByLang.es;
     const base64Data = imageBuffer.toString("base64");
 
     const result = await this.vertexAi.generateContentWithMedia(promptText, {
-      language: lang,
+      language,
       temperature: 0,
       responseMimeType: "application/json",
-      systemInstruction: this.buildVisionSystemInstruction(lang),
+      systemInstruction: this.buildVisionSystemInstruction(language),
       mediaParts: [{ inlineData: { mimeType, data: base64Data } }],
     });
 
@@ -670,15 +671,20 @@ export class VisionService {
     );
     const finalIsFake = this.asBoolean(parsed.isFake, score < 40);
 
+    // S3358: extract nested ternary
+    let explanation: string;
+    if (typeof parsed.explanation === "string" && parsed.explanation.trim() !== "") {
+      explanation = parsed.explanation;
+    } else if (score >= 70) {
+      explanation = "La imagen muestra rasgos compatibles con una persona real verificable.";
+    } else {
+      explanation = "La imagen no alcanza suficiente veracidad de persona real.";
+    }
+
     return {
       isFake: finalIsFake,
       authenticityScore: score,
-      explanation:
-        typeof parsed.explanation === "string" && parsed.explanation.trim() !== ""
-          ? parsed.explanation
-          : score >= 70
-            ? "La imagen muestra rasgos compatibles con una persona real verificable."
-            : "La imagen no alcanza suficiente veracidad de persona real.",
+      explanation,
       confidence: this.normalizeConfidence(parsed.confidence, score >= 70 ? 0.75 : 0.65),
       signals: this.asStringArray(parsed.signals),
       latencyMs: result.latencyMs,
@@ -695,9 +701,8 @@ export class VisionService {
     selfieMimeType: string,
     dniBuffer: Buffer,
     dniMimeType: string,
-    language?: "es" | "en" | "pt",
+    language: Language = "es", // S7760: default param
   ): Promise<DniVerifyResponseDto> {
-    const lang = language || "es";
     const promptByLang: Record<string, string> = {
       es:
         "Realiza una comparacion visual asistida entre el SELFIE actual (primera imagen) y la foto del DNI (segunda imagen). " +
@@ -770,13 +775,13 @@ export class VisionService {
         "}",
     };
 
-    const promptText = promptByLang[lang] || promptByLang.es;
+    const promptText = promptByLang[language] || promptByLang.es;
 
     const result = await this.vertexAi.generateContentWithMedia(promptText, {
-      language: lang,
+      language,
       temperature: 0,
       responseMimeType: "application/json",
-      systemInstruction: this.buildVisionSystemInstruction(lang),
+      systemInstruction: this.buildVisionSystemInstruction(language),
       mediaParts: [
         {
           text: "IMAGEN 1 - SELFIE actual del usuario. Evalua el rostro frontal actual en esta imagen.",
@@ -984,7 +989,15 @@ export class VisionService {
   async generateMealPlan(userId: string, dto: MealPlanDto): Promise<MealPlanResponseDto> {
     await this.checkProAccess(userId);
     const lang = dto.language || "es";
-    const promptLang = lang === "en" ? "English" : lang === "pt" ? "Portuguese" : "Spanish";
+    // S3358: extract nested ternary
+    let promptLang: string;
+    if (lang === "en") {
+      promptLang = "English";
+    } else if (lang === "pt") {
+      promptLang = "Portuguese";
+    } else {
+      promptLang = "Spanish";
+    }
 
     const promptText =
       `Eres un nutricionista deportivo experto. Genera un plan de comidas personalizado de ${dto.durationDays} días ` +

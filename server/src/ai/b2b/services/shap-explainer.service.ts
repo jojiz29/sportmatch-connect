@@ -75,12 +75,15 @@ export class ShapExplainerService {
       return `${c.feature} tiene efecto neutro`;
     });
 
-    const directionLabel =
-      summary.direction === "up"
-        ? `sube un ${(summary.magnitude * 100).toFixed(1)}%`
-        : summary.direction === "down"
-          ? `baja un ${(summary.magnitude * 100).toFixed(1)}%`
-          : "se mantiene estable";
+    // S3358: extract nested ternary
+    let directionLabel: string;
+    if (summary.direction === "up") {
+      directionLabel = `sube un ${(summary.magnitude * 100).toFixed(1)}%`;
+    } else if (summary.direction === "down") {
+      directionLabel = `baja un ${(summary.magnitude * 100).toFixed(1)}%`;
+    } else {
+      directionLabel = "se mantiene estable";
+    }
 
     return `El precio ${directionLabel} respecto al baseline. ${signs.join(". ")}.`;
   }

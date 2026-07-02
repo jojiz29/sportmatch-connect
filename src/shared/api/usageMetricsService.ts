@@ -23,7 +23,7 @@ import type { UsageMetric, UsageMetricType } from "@/entities/types";
 const STORAGE_KEY = "sportmatch_demo_usage_metrics";
 
 function getDemoMetrics(): UsageMetric[] {
-  if (typeof window === "undefined") return [];
+  if (globalThis.window === undefined) return []; // S7741: compare with undefined directly
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) {
     const seed: UsageMetric[] = [
@@ -46,7 +46,7 @@ function getDemoMetrics(): UsageMetric[] {
 }
 
 function saveDemoMetrics(metrics: UsageMetric[]): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return; // S7741: compare with undefined directly
   localStorage.setItem(STORAGE_KEY, JSON.stringify(metrics));
 }
 

@@ -32,11 +32,11 @@ export class B2bAiService {
   private readonly b2bRateLimit = 60; // req/min para todos los endpoints B2B
 
   constructor(
-    private vertexAi: VertexAiService,
-    private pricingEngine: PricingEngineService,
-    private adsOptimizer: AdsOptimizerService,
-    private churnPredictor: ChurnPredictorService,
-    private explainer: ShapExplainerService,
+    private readonly vertexAi: VertexAiService, // S2933: readonly
+    private readonly pricingEngine: PricingEngineService, // S2933: readonly
+    private readonly adsOptimizer: AdsOptimizerService, // S2933: readonly
+    private readonly churnPredictor: ChurnPredictorService, // S2933: readonly
+    private readonly explainer: ShapExplainerService, // S2933: readonly
   ) {}
 
   // ============================================================
@@ -58,8 +58,17 @@ export class B2bAiService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.warn(`Vertex AI narrative falló, usando skeleton: ${msg}`);
+      // S3358: extract nested ternary
+      let narrativeDirection: "up" | "down" | "flat";
+      if (pricing.deltaPct > 0.02) {
+        narrativeDirection = "up";
+      } else if (pricing.deltaPct < -0.02) {
+        narrativeDirection = "down";
+      } else {
+        narrativeDirection = "flat";
+      }
       narrative = this.explainer.buildSkeletonNarrative(pricing.drivers.slice(0, 3), {
-        direction: pricing.deltaPct > 0.02 ? "up" : pricing.deltaPct < -0.02 ? "down" : "flat",
+        direction: narrativeDirection,
         magnitude: Math.abs(pricing.deltaPct),
       });
     }
@@ -209,7 +218,15 @@ Reglas:
       .map((d) => `- ${d.feature}: contribution=${d.contribution} PEN, value=${d.value}`)
       .join("\n");
 
-    const direction = pricing.deltaPct > 0 ? "sube" : pricing.deltaPct < 0 ? "baja" : "se mantiene";
+    // S3358: extract nested ternary
+    let direction: string;
+    if (pricing.deltaPct > 0) {
+      direction = "sube";
+    } else if (pricing.deltaPct < 0) {
+      direction = "baja";
+    } else {
+      direction = "se mantiene";
+    }
     const magnitudePct = (Math.abs(pricing.deltaPct) * 100).toFixed(1);
 
     const prompt = `Eres el analista B2B de SportMatch Connect. Genera UNA recomendación ejecutiva en español (máx 60 palabras) sobre pricing dinámico para el siguiente slot:

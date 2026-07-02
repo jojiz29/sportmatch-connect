@@ -127,7 +127,7 @@ export class PaymentsService {
         where: { user_id: userId },
       });
 
-      if (!subscription || !subscription.stripe_customer_id) {
+      if (!subscription?.stripe_customer_id) { // S6582: optional chaining
         throw new BadRequestException(
           "No se encontró una suscripción de Stripe activa para este usuario.",
         );
@@ -159,7 +159,7 @@ export class PaymentsService {
         rawBody,
         signature,
         this.stripeWebhookSecret,
-      ) as StripeWebhookEvent;
+      ); // S4325: redundant cast
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Webhook signature verification failed: ${errorMsg}`);
@@ -288,8 +288,13 @@ export class PaymentsService {
       ? new Date(subscription.current_period_end * 1000)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    const newTier =
-      status === "active" ? (subRecord.tier !== "FREE" ? subRecord.tier : "INICIAL") : "FREE";
+    // S3358: extract nested ternary
+    let newTier: string | null;
+    if (status === "active") {
+      newTier = subRecord.tier === "FREE" ? "INICIAL" : subRecord.tier;
+    } else {
+      newTier = "FREE";
+    } // S7735: avoid negated condition
 
     await this.prisma.subscriptions.update({
       where: { id: subRecord.id },
