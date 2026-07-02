@@ -190,7 +190,7 @@ export class MatchesService {
       }
 
       // Verificar capacidad: contar participantes actuales
-      const currentParticipants = match.match_participants.length;
+      const currentParticipants = match.match_participants?.length || 0;
       // El creador cuenta como participante aunque no esté en match_participants
       const totalPlayers = currentParticipants + 1; // +1 por el creador
       if (totalPlayers >= match.max_players) {

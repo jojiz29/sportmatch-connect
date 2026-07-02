@@ -237,16 +237,16 @@ Diseñar, desarrollar, evaluar y desplegar en producción la plataforma digital 
 
 ## 2.2 Formulación Matemática del Algoritmo de Matchmaking Predictivo
 
-El motor de matchmaking predictivo implementa una función de compatibilidad multivariable ponderada en el rango [0, 100], diseñada para maximizar la probabilidad de satisfacción mutua entre rivales o compañeros de equipo:
+El motor de matchmaking predictivo implementa una función de compatibilidad multivariable ponderada en el rango [0, 100], disenada para maximizar la probabilidad de satisfaccion mutua entre rivales o companeros de equipo:
 
 
 $$
 S_{\text{compatibilidad}} = w_1 \cdot S_{\text{cercanía}} + w_2 \cdot S_{\text{deporte}} + w_3 \cdot S_{\text{nivel}} + w_4 \cdot S_{\text{disponibilidad}} + w_5 \cdot S_{\text{trust}}
 $$
 
-Donde las ponderaciones satisfacen estrictamente la restricción de normalización algebraica dada por $\sum_{i=1}^{5} w_i = 1.0$:
+Donde las ponderaciones satisfacen estrictamente la restriccion de normalizacion algebraico dada por $\sum_{i=1}^{5} w_i = 1.0$:
 
-- $w_1 = 0.35$ (Cercanía geográfica mediante la fórmula ortodrómica de Haversine).
+- $w_1 = 0.35$ (Cercania geografica mediante la formula ortodromica de Haversine).
 
 - $w_2 = 0.30$ (Coincidencia exacta de deporte preferido — filtro binario estricto).
 
@@ -254,11 +254,11 @@ Donde las ponderaciones satisfacen estrictamente la restricción de normalizaci�
 
 - $w_4 = 0.10$ (Solapamiento de franjas horarias de disponibilidad semanal).
 
-- $w_5 = 0.05$ (Trust Score o reputación auditada del perfil de usuario).
+- $w_5 = 0.05$ (Trust Score o reputacion auditada del perfil de usuario).
 
 ### Fórmula de Distancia Ortodrómica (Haversine)
 
-Para calcular la distancia exacta sobre la superficie terrestre en kilómetros entre la posición del usuario $A(\phi_1, \lambda_1)$ y la cancha o rival candidato $B(\phi_2, \lambda_2)$:
+Para calcular la distancia exacta sobre la superficie terrestre en kilometros entre la posicion del usuario $A(\phi_1, \lambda_1)$ y la cancha o rival candidato $B(\phi_2, \lambda_2)$:
 
 
 $$
@@ -275,7 +275,7 @@ $$
 d = R \cdot c
 $$
 
-Donde $R = 6371\text{ km}$ representa el radio medio terrestre. Posteriormente, el score de cercanía espacial se normaliza exponencialmente mediante la siguiente función:
+Donde $R = 6371\text{ km}$ representa el radio medio terrestre. Posteriormente, el score de cercania espacial se normaliza exponencialmente mediante la siguiente funcion:
 
 
 $$

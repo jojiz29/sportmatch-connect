@@ -171,7 +171,7 @@ describe("MatchesService", () => {
     });
 
     it("debe agregar participante", async () => {
-      prismaMock.matches.findUnique.mockResolvedValue({ id: "m1" });
+      prismaMock.matches.findUnique.mockResolvedValue({ id: "m1", match_participants: [] });
       prismaMock.match_participants.findUnique.mockResolvedValue(null);
       prismaMock.match_participants.create.mockResolvedValue({ match_id: "m1", user_id: "u1" });
 
