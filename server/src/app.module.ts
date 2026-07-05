@@ -4,6 +4,7 @@
 // ============================================================
 
 import { Module } from "@nestjs/common";
+import { APP_INTERCEPTOR } from "@nestjs/core";
 import { HealthController } from "./health/health.controller";
 import { AuthModule } from "./auth/auth.module";
 import { ProfilesModule } from "./profiles/profiles.module";
@@ -20,6 +21,9 @@ import { SettingsModule } from "./settings/settings.module";
 import { SocialModule } from "./social/social.module";
 import { MatchmakingModule } from "./matchmaking/matchmaking.module";
 import { PaymentsModule } from "./payments/payments.module";
+import { ObservabilityModule } from "./observability/observability.module";
+import { BillingModule } from "./billing/billing.module";
+import { ObservabilityInterceptor } from "./observability/observability.service";
 
 @Module({
   imports: [
@@ -38,7 +42,15 @@ import { PaymentsModule } from "./payments/payments.module";
     SocialModule,
     MatchmakingModule,
     PaymentsModule,
+    ObservabilityModule,
+    BillingModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ObservabilityInterceptor,
+    },
+  ],
 })
 export class AppModule {}
