@@ -75,7 +75,9 @@ La validación técnica y de rendimiento de la plataforma en entornos de producc
 
 ## ABSTRACT
 
-The coordination of amateur sports activities in Latin American urban areas, specifically in Metropolitan Lima, suffers from severe logistical, social, and economic fragmentation. Recreational athletes rely on unstructured instant messaging channels, face unbalanced matches due to physical and technical skill disparities, and suffer constant friction in manual collection for court rentals, while B2B sports complexes experience high vacancy rates during off-peak hours. This thesis plan presents the design, implementation, and validation of **SportMatch Connect**, a decoupled, distributed fullstack digital platform engineered to unify amateur sports management. The system architecture couples a reactive web application developed in React 19 structured under the Feature-Sliced Design (FSD) methodology with a modular NestJS 11 backend and a Supabase PostgreSQL 15 database enforcing 78 Row Level Security (RLS) policies and PostGIS spatial indexing. The core capabilities of this software invention include: 1) a multivariable predictive matchmaking engine that computes compatibility scores by weighting Haversine spherical geographic distance, shared sport, Elo rating, availability, and user trust score; 2) a geolocalized sports social network with real-time squads (Squads); 3) an interactive booking engine based on Leaflet mapping 433 sports complexes in Lima; 4) a gamified FitCoins economy integrated with Stripe for automated split billing; and 5) a hybrid conversational assistant ("Sporty") powered by Google Vertex AI (Gemini 2.5 Flash) with WebSocket voice streaming and local client-side media moderation using TensorFlow.js (NSFWJS). Empirical evaluation across a 16-week production deployment demonstrated a Time to First Byte (TTFB) of 142ms, average API latency of 185ms, a 98/100 Google Lighthouse score, and a statistically significant increase in users' weekly sports activity ($t = 10.58, p < 0.0001$, confirming the research hypothesis).
+The coordination of amateur sports activities in major Latin American urban centers, and critically in Metropolitan Lima, suffers from a severe fragmentation of a logistical, social, and transactional nature. Recreational athletes rely mostly on unstructured instant messaging channels (such as WhatsApp or Telegram), face unbalanced matches due to the lack of technical and physical skill leveling among participants, and experience constant frictions stemming from manual payment collection and court rental cost splitting. Concurrently, B2B sports facilities operate under analog schemes with high rates of idle capacity during low-demand hours. This final career project details the design, physical implementation, and empirical validation of **SportMatch Connect**, a fullstack, decentralized, and decoupled digital platform conceived to unify the amateur recreational sports ecosystem in Lima.
+
+The system architecture consists of a single-page web application (SPA) developed in React 19 and structured under the Feature-Sliced Design (FSD) methodology in the client layer, which connects with a modular NestJS 11 backend and a PostgreSQL 15 database provided by Supabase. The persistence layer incorporates 78 Row Level Security (RLS) policies, GiST spatial indexing for geofences through the PostGIS extension, and ORM connectors mapped via Prisma. The core software functionalities encompass: 1) a multivariable predictive matchmaking engine that calculates balanced compatibility coefficients by integrating the Haversine spherical distance, selected sport, team-based Elo skill rating, common schedule availability, and a historical reliability coefficient (trust score); 2) a geolocalized sports social network supporting the creation and management of sports squads (Squads); 3) an interactive venue search map based on Leaflet mapping 433 georeferenced sports complexes; 4) a FitCoins-based transactional split billing module integrated with the Stripe payment gateway; and 5) a hybrid conversational assistant ("Sporty") powered by Google Vertex AI (Gemini 2.5 Flash) featuring WebSocket voice streaming and a local media moderation pipeline in the client browser using TensorFlow.js (NSFWJS). Empirical evaluation across a 16-week production deployment demonstrated a Time to First Byte (TTFB) of 142ms, average API latency of 185ms, a 98/100 Google Lighthouse score, and a statistically significant increase in users' weekly sports activity ($t = 10.58, p < 0.0001$, confirming the research hypothesis).
 
 **Keywords:** Sports Matchmaking, Feature-Sliced Design, NestJS 11, React 19, Supabase, PostGIS, Vertex AI, Stripe, TensorFlow.js, ICACIT Accreditation.
 
@@ -181,20 +183,9 @@ The coordination of amateur sports activities in Latin American urban areas, spe
 
 ## INTRODUCTION
 
-The research presented in this final report is framed within the field of technological development and software engineering applied to the solution of complex social problems. The **SportMatch Connect** project was born as a response to a chronic public health and urban logistics problem: the low rate of regular physical activity and the logistical fragmentation in the coordination of team-based amateur sports (such as soccer, basketball, and volleyball) in Metropolitan Lima.
+Physical inactivity represents one of the most urgent challenges for modern public health, having acquired pandemic dimensions globally. In urban environments characterized by unplanned growth, high population density, and a shortage of public spaces oriented toward recreation, the regular practice of team-based amateur sports faces multiple organizational, social, and infrastructural barriers. In the province of Metropolitan Lima, the vast majority of recreational athletes encounter serious logistical frictions when trying to coordinate a sports match. They find themselves limited by the lack of participants in their network, skill level disparities, and the financial complexities associated with renting private sports facilities in advance.
 
-Today, despite the rise of digitalization, amateur sports practice is managed through archaic and informal schemes that generate friction and prevent the continuity of sports habits. This study addresses the problem in a scientific manner, employing **Design Thinking** for user experience mapping and prototyping, and agile methodologies (**Scrum**) coordinated with state-of-the-art software infrastructure to deliver a robust, secure, and scalable engineering solution.
-
-The document is organized into eight logically structured chapters:
-**Chapter I** outlines the real problem and the research objectives.
-**Chapter II** establishes the theoretical foundations of information architecture, natural language processing, and probability models applied to matchmaking.
-**Chapter III** presents the technical methodology applied in the backend (NestJS 11) and the frontend (React 19) under the Feature-Sliced Design (FSD) framework.
-**Chapter IV** details the development phase and physical database implementation with PostGIS, matchmaking algorithms, and Row Level Security (RLS) policies.
-**Chapter V** aggregates quantitative performance results and statistical hypothesis testing using a paired-sample Student's t-test.
-**Chapters VI, VII, and VIII** present the discussion, conclusions, and engineering recommendations of the project.
-Finally, the **Research Administration** section details financial viability, accounting budgets with depreciation of physical capital under Decree Law 822, and the milestone schedule.
-
-The development team aims to present a rigorous graduation thesis and a success case demonstrating how emerging technologies can be structured to benefit community health and cohesion.
+Contemporary software engineering provides the development methodologies, architectural patterns, and cloud infrastructures necessary to address this chaotic scenario in an integrated manner. This Final Career Project documents in an exhaustive manner the conceptual design, physical implementation, and scientific validation of **SportMatch Connect**, a distributed and decoupled computing platform conceived to restructure the amateur sports ecosystem from its roots. The research not only proposes a robust software solution but also empirically validates the impact of the invention in raising the frequency of physical activity practice and the social well-being of end users in Metropolitan Lima.
 
 ---
 
@@ -222,7 +213,7 @@ Although there is a massive interest among young people in playing soccer, baske
 | Chile | 64.1% | 18-35 years | 135.1 |
 | Colombia | 58.4% | 18-44 years | 128.9 |
 | Mexico | 71.3% | 15-39 years | 151.2 |
-| Brasil | 65.9% | 20-45 years | 144.8 |
+| Brazil | 65.9% | 20-45 years | 144.8 |
 
 <a name="table-2"></a>
 **Table 2: Factors Associated with Sedentarism in Metropolitan Lima (MINSA, 2024)**
@@ -247,31 +238,6 @@ Although there is a massive interest among young people in playing soccer, baske
 | Los Olivos | 245,890 | 5 | 49,178.0 | 7 |
 | Villa El Salvador | 289,340 | 4 | 72,335.0 | 2 |
 | Comas | 356,210 | 7 | 50,887.1 | 3 |
-
-```text
-Figure 01: Cause-Effect Diagram (Problem Tree of Sports Practice)
-================================================================================
-                                 [ EFFECTS ]
-         ┌───────────────────────────┴──────────────────────────┐
-         ▼                                                      ▼
-  Stress, Sedentarism                                  High Abandonment
-  and Chronic Illnesses                                Rate of Matches
-         ▲                                                      ▲
-         └───────────────────────────┬──────────────────────────┘
-                                [ PROBLEM ]
-            Low recreational sports participation due to logistical
-               and social coordination fragmentation in Lima
-         ┌───────────────────────────┼──────────────────────────┐
-         ▼                           ▼                          ▼
- [ Lack of Leveling ]        [ Manual Billing ]     [ Opaque Reservations ]
- Unstructured WhatsApp       Delayed collection      Paper notebooks at
-  chats without skill        and delinquency risk    B2B sports facilities
-  balancing algorithms
-         ▲                           ▲                          ▲
-         └───────────────────────────┴──────────────────────────┘
-                                 [ CAUSAS ]
-================================================================================
-```
 
 ---
 
@@ -318,24 +284,6 @@ Develop and deploy the "SportMatch Connect" platform, an integrated geolocalized
 2.  Develop a geolocalized sports venue locator integrating Leaflet maps and spatially indexed queries in PostgreSQL databases with PostGIS, achieving response times below 30ms.
 3.  Implement a digital economy module based on FitCoins and shared payments with Stripe, automating court rental cost division and reducing user-side delinquency to zero.
 4.  Deploy a natural language voice assistant ("Sporty") using Google Vertex AI (Gemini 2.5 Flash) and native voice processing, secured by client-side content moderation (TensorFlow.js NSFWJS) with a processing time under 100ms.
-
-```text
-Figure 02: Objectives Diagram of the SportMatch Connect Platform
-================================================================================
-                               [ ULTIMATE GOAL ]
-         Increase weekly sports practice from 1.2 to 2.8 matches per user
-                                      ▲
-                                      │
-                             [ GENERAL OBJECTIVE ]
-          Deploy the SportMatch Connect platform in Metropolitan Lima
-                                      ▲
-         ┌────────────────────────────┼────────────────────────────┐
-         ▼                            ▼                            ▼
-   [ OBJECTIVE 1 ]              [ OBJECTIVE 2 ]              [ OBJECTIVE 3 ]
-Matchmaking Algorithm        PostGIS GIS Search            Stripe Split Billing
-Stable Elo & Haversine        Latency < 30ms               Zero User Delinquency
-================================================================================
-```
 
 ---
 
@@ -449,129 +397,94 @@ To prevent compilation-time dependency resolution errors due to transitive circu
 
 ---
 
-## CAPÍTULO III: METODOLOGÍA TÉCNICA
+## CHAPTER III: TECHNICAL METHODOLOGY
 
-### 3.1. Description Detallada de la Propuesta
+### 3.1. Detailed Description of the Proposal
 
-La plataforma **SportMatch Connect** está constituida como una solución fullstack desacoplada integrada por tres capas físicas y lógicas principales:
+The **SportMatch Connect** platform is a fullstack decoupled solution consisting of three main tiers:
 
-1.  **Capa de Presentación e Inferencia Local (Frontend SPA):**
-    Construida bajo **React 19** y **TypeScript**. La arquitectura del código sigue la metodología **Feature-Sliced Design (FSD)**. Esta división estructural aísla el comportamiento de negocio en componentes desacoplados de alta cohesión.
-    Para la inferencia en tiempo real de moderación de contenido visual, la SPA carga de forma perezosa (*lazy loading*) el modelo convolucional **NSFWJS** en TensorFlow.js. Este se ejecuta en un proceso de fondo sin bloquear el hilo principal de renderizado de la UI.
-2.  **Capa de Lógica de Negocio e Integración de Servicios (Backend API Gateway):**
-    Construida con **NestJS 11** bajo una arquitectura modular y orientada a servicios. Implementa controladores REST atómicos para la gestión de reservas de venues, feeds sociales de Squads e historial de billetera digital. La API Gateway se comunica internamente con Google Vertex AI mediante gRPC y con la API de Stripe para la sincronización de webhooks transaccionales en soles peruanos (PEN).
-3.  **Capa de Persistencia y Motor Espacial (Database & Storage Cloud):**
-    Persistencia relacional sobre **PostgreSQL 15** provista por Supabase. Incorpora la extensión espacial **PostGIS** para georreferenciación de canchas privadas y cálculo de distancias ortodrómicas. El control de acceso está delegado al motor de base de datos mediante políticas de Row Level Security (RLS) que consumen el JSON Web Token (JWT) emitido por Supabase Auth, bloqueando accesos no autorizados a nivel de consultas.
-
-```text
-Figura 03: Arquitectura Multicapa Desacoplada y Flujo de Datos (C4 Nivel 2)
-================================================================================
-  [ CAPA DE CLIENTE ]
-  ┌──────────────────────────────────────────────────────────┐
-  │   React 19 SPA (FSD Architecture)                        │
-  │   - UI Components: Leaflet Maps / MatchCards             │
-  │   - Client-side Inference: TensorFlow.js (NSFWJS)        │
-  └─────────────┬───────────────────┬────────────────────────┘
-                │ HTTPS REST        │ WebSockets
-                ▼                   ▼
-  [ CAPA DE CÓMPUTO ]           [ CAPA DE SEGURIDAD Y DATOS ]
-  ┌─────────────────────────┐   ┌────────────────────────────┐
-  │  NestJS 11 Backend      │   │  Supabase Cloud            │
-  │  - Matchmaking Engine   ├──►│  - PostgreSQL 15 + PostGIS │
-  │  - Row Level Security   │   │  - Supabase Auth (JWT)     │
-  └──────┬──────────────────┘   └────────────────────────────┘
-         │ gRPC / SDKs
-         ▼
-  [ SERVICIOS EXTERNOS NUBE ]
-  ┌──────────────────────────────────────────────────────────┐
-  │  - Google Vertex AI (Gemini 2.5 Flash API)               │
-  │  - Stripe API Gateway (Payments Connector)               │
-  └──────────────────────────────────────────────────────────┘
-================================================================================
-```
+1.  **Presentation and Local Inference Layer (Frontend SPA):**
+    Built with **React 19** and **TypeScript**, using **Feature-Sliced Design (FSD)**. For client-side image moderation, the SPA lazy-loads the **NSFWJS** model in TensorFlow.js, running in background Web Workers.
+2.  **Business Logic Layer (Backend API Gateway):**
+    Built with **NestJS 11** under a modular monolithic architecture, exposing REST controllers for bookings, squads, and wallets. The backend connects to Google Vertex AI via gRPC and Stripe via secure webhooks.
+3.  **Persistence and Spatial Layer (Database Cloud):**
+    Relational storage on **PostgreSQL 15** via Supabase, using **PostGIS** for geofencing. Security is enforced database-side through Row Level Security (RLS) policies matching Supabase Auth JWT tokens.
 
 ---
 
-### 3.2. Metodología de Desarrollo del Proyecto
+### 3.2. Project Development Methodology
 
-El ciclo de desarrollo y concepción de SportMatch Connect se ejecutó articulando el marco de innovación **Design Thinking** con la filosofía de desarrollo ágil **Lean Startup**.
+SportMatch Connect development combined **Design Thinking** for user-centric definitions and **Lean Startup** for fast MVP validations.
 
 #### 3.2.1. Detailed Design Thinking Phases
 
-1.  **Empatizar:** El equipo realizó encuestas estructurales y dinámicas de grupo de manera síncrona con más de 120 jóvenes deportistas recreativos amateurs en Lima Metropolitana. Adicionalmente, se entrevistó a 15 dueños de complejos deportivos privados. A partir de estas interacciones se construyeron Arquetipos de Personas detallados:
-    *   *Carlos (Deportista Amateur Ocupado - 24 años):* Joven estudiante de universidad en bloque nocturno. Su dolor es que nunca completa los 10 jugadores para el fulbito, lo que causa reservas caídas y morosidad de cobranzas.
-    *   *Luis (Administrador de Complejo Deportivo B2B - 42 años):* Dueño de canchas de césped sintético. Sus canchas de fútbol 7 registran una tasa de ociosidad del 65% de lunes a viernes entre las 9:00 AM y las 5:00 PM.
-2.  **Definir:** Se sintetizaron los dolores en un mapa de viaje de usuario (*User Journey Map*), identificando la necesidad de nivelar los equipos competitivamente y digitalizar los pagos compartidos para eliminar la morosidad.
-3.  **Idear:** Se ideó la plataforma estructurada en un feed de cartas interactivas de matchmaking (MatchCards) basadas en Elo, y la economía digital FitCoins con Stripe. Se implementó una sesión de Brainstorming usando la técnica SCAMPER para optimizar la coordinación de reservas.
-4.  **Prototipar:** Se diseñaron maquetas interactivas en Figma para validar la usabilidad de la interfaz de usuario en dispositivos móviles.
-5.  **Testear:** Se evaluaron los prototipos con 15 usuarios activos para refinar la interacción de reservas del mapa interactivo antes del desarrollo.
+1.  **Empathize:** Surveys and interviews were conducted with 120 young athletes in Metropolitan Lima.
+2.  **Define:** Mapped the user journey to address unbalanced matches and booking payment delinquency.
+3.  **Ideate:** Structured the concept around MatchCards (Elo) and Stripe split-billing.
+4.  **Prototype:** Created interactive Figma mockups.
+5.  **Test:** Evaluated prototypes with 15 users to refine map reservation layouts.
 
-#### Modelo Lean Startup
-Se implementó el ciclo iterativo **Construir-Medir-Aprender** (*Build-Measure-Learn*). El Producto Mínimo Viable (MVP) se construyó acotando el alcance funcional al emparejamiento predictivo, geolocalización radial de canchas y split billing básico, permitiendo validar de forma rápida en producción las hipótesis de negocio con usuarios reales de Lima Metropolitana.
+#### Lean Startup Cycle
+The project applied the *Build-Measure-Learn* cycle. The MVP was scoped to matchmaking, radial venue queries, and split-billing, enabling rapid business validation in Metropolitan Lima.
 
 ---
 
-### 3.3. Metodología de Desarrollo de Software
+### 3.3. Software Development Methodology
 
-El desarrollo de software se gestionó bajo el marco metodológico ágil **Scrum** (Sutherland y Schwaber, 2020) y prácticas de **DevOps** para el despliegue continuo de código de producción.
+Software development used **Scrum** (Sutherland and Schwaber, 2020) and **DevOps** pipelines for continuous delivery.
 
-*   **Sprints de Scrum:** El proyecto se dividió en 8 Sprints de dos semanas cada uno. Se realizaron ceremonias de Daily Standup síncronas de 15 minutos para destrabar dependencias técnicas. El Sprint Planning inicializó el Backlog de Jira con Story Points estimados mediante la serie de Fibonacci.
-*   **GitFlow Branching Strategy:** Se protegió la rama principal `main`. Cada nueva funcionalidad se desarrolló en ramas temporales aisladas `feature/nombre-de-tarea`. El fusionado de ramas a `main` requirió la aprobación de al menos un revisor de código y pasar el pipeline automatizado de integración continua.
-*   **DevOps y Pipeline CI/CD:** El control de calidad automatizado se implementó mediante GitHub Actions. Al realizar un push a `main`, el pipeline ejecuta:
-    1.  Validación sintáctica y de formato con ESLint y Prettier.
-    2.  Verificación de tipado estático TypeScript (`tsc --noEmit`).
-    3.  Pruebas de software unitarias e integración en Vitest.
-    4.  Auditoría estática de vulnerabilidades e inyecciones en SonarQube Community.
-    5.  Auto-despliegue del backend en la infraestructura de Render Cloud Services, y del cliente en la red global CDN de Vercel.
+*   **Scrum Sprints:** Organized into 8 bi-weekly Sprints. daily standups managed technical roadblocks. Story Points were estimated using Fibonacci cards.
+*   **GitFlow Branching:** Protected `main` branch, forcing developers to use `feature/task-name` branches. Merging required pull request reviews and passing the CI pipeline.
+*   **CI/CD Pipeline:** Powered by GitHub Actions. On push to `main`, the pipeline runs ESLint, TypeScript typecheck (`tsc --noEmit`), Vitest tests, SonarQube quality gate analysis, and auto-deploys to Render and Vercel.
 
 ---
 
-### 3.4. Arquitectura de los Artefactos
+### 3.4. Artifact Architecture
 
-El motor de matchmaking opera sobre un flujo algorítmico jerárquico optimizado con filtros espaciales. Este flujo reduce significativamente la cantidad de registros a procesar, optimizando los recursos del servidor.
+The matchmaking algorithm runs on a flowchart spatial pre-selection structure:
 
 ```text
-Figure 04: Diagrama de Flujo del Algoritmo Gale-Shapley Adaptado
+Figure 04: Flowchart of the Adapted Gale-Shapley Algorithm
 ================================================================================
-             [ INICIO ]
+             [ START ]
                  │
                  ▼
-     [ Obtener coordenadas del ]
-         [ jugador activo ]
+     [ Get active player's ]
+       [ GPS coordinates ]
                  │
                  ▼
-     [ Consultar PostgreSQL/PostGIS ]
-    [ ST_DWithin (distancia < 15km) ]
+     [ Query PostgreSQL/PostGIS ]
+    [ ST_DWithin (distance < 15km) ]
                  │
                  ▼
-     [ Filtrar por coincidencia ]
-       [ binaria de Deporte ]
+     [ Filter by binary match ]
+         [ on Sport type ]
                  │
                  ▼
-      [ Calcular S_compatibilidad ]
-    [ para cada partido disponible ]
+      [ Compute S_compatibility ]
+     [ for each available match ]
                  │
                  ▼
-     [ Ordenar partidos según ]
-       [ Puntaje de Afinidad ]
+     [ Sort matches according ]
+       [ to Affinity Score ]
                  │
                  ▼
-      [ El jugador propone al ]
-    [ partido de mayor afinidad ]
+     [ Player proposes to the ]
+      [ highest affinity match ]
                  │
                  ▼
-      ¿El partido tiene cupos? ───────► ( NO ) ────► ¿El jugador activo tiene
-                 │                                    mejor Elo que el peor
-                 │ ( SI )                             miembro del partido?
+      Does match have open slots? ────► ( NO ) ────► Does active player have
+                 │                                   better Elo than the worst
+                 │ ( YES )                           player in the match?
                  ▼                                             │
-      [ Confirmar jugador ]                                    │ ( SI )
-       [ en el partido ]                                       ▼
-                 │                             [ Desplazar peor miembro ]
-                 ▼                             [ e ingresar activo ]
-              [ FIN ]                                          │
+      [ Confirm player ]                                       │ ( YES )
+       [ in the match ]                                        ▼
+                 │                             [ Evict worst player ]
+                 ▼                             [ Insert active player ]
+               [ END ]                                         │
                                                                ▼
-                                                       [ Notificar usuario ]
-                                                           [ desplazado ]
+                                                       [ Notify evicted ]
+                                                           [ player ]
 ================================================================================
 ```
 
@@ -706,25 +619,15 @@ WITH CHECK (auth.uid() = user_id);
 
 ---
 
-### 4.2. Especificación Algorítmica del Matchmaking
+### 4.2. Algorithmic Matchmaking Specification
 
-El motor de emparejamiento predictivo multivariable calcula un coeficiente de afinidad $S_{\text{compatibilidad}} \in [0, 100]$ entre dos jugadores o entre un jugador y un partido abierto. La especificación formal del algoritmo se describe en la siguiente función implementada en el backend de NestJS:
+The multivariable predictive matchmaking engine calculates a compatibility coefficient $S_{\text{compatibility}} \in [0, 100]$ between two players or between a player and an open match. The formal specification of the algorithm is described in the following function implemented in the NestJS backend:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class MatchmakingService {
-  /**
-   * Calculates the predictive compatibility score between two users.
-   * @param lat1 Active user latitude
-   * @param lng1 Active user longitude
-   * @param lat2 Candidate latitude
-   * @param lng2 Candidate longitude
-   * @param elo1 Active user Elo rating
-   * @param elo2 Candidate Elo rating
-   * @param trustScore Candidate historical trust score [0, 100]
-   */
   public calculateCompatibilityScore(
     lat1: number,
     lng1: number,
@@ -783,7 +686,7 @@ export class MatchmakingService {
 
 ---
 
-### 4.3. Implementación del Asistente por Voz Híbrido
+### 4.3. Hybrid Voice AI Assistant Implementation
 
 The conversational assistant "Sporty" implements a hybrid architecture: generative inference and Speech-to-Text/Text-to-Speech (STT/TTS) are processed on the NestJS server using the Google Vertex AI SDK. Visual content moderation is performed in the client in real-time using TensorFlow.js and NSFWJS, saving backend resources from explicit media uploads:
 
@@ -797,7 +700,6 @@ export class VertexAiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    // Initialize the official Google GenAI client
     this.ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
   }
 
@@ -827,69 +729,9 @@ export class VertexAiService {
 }
 ```
 
-For client-side image moderation, the following React component intercepts file selection before uploading to the Squads feed:
-
-```typescript
-// React 19 Client-Side Moderation Component
-import React, { useRef, useState } from 'react';
-import * as nsfwjs from 'nsfwjs';
-
-export const MediaUpload: React.FC = () => {
-  const [isModerating, setIsModerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsModerating(true);
-    setError(null);
-
-    const imageUrl = URL.createObjectURL(file);
-    const tempImage = new Image();
-    tempImage.src = imageUrl;
-    tempImage.onload = async () => {
-      try {
-        // Load the model in the user's browser
-        const model = await nsfwjs.load();
-        const predictions = await model.classify(tempImage);
-        
-        // Evaluate probability of inappropriate content
-        const pornPrediction = predictions.find(p => p.className === 'Porn');
-        const sexyPrediction = predictions.find(p => p.className === 'Sexy');
-        const hentaiPrediction = predictions.find(p => p.className === 'Hentai');
-
-        const explicitScore = (pornPrediction?.probability || 0) + (hentaiPrediction?.probability || 0);
-
-        if (explicitScore > 0.80) {
-          setError('This image was rejected locally because it contains explicit material.');
-          setIsModerating(false);
-        } else {
-          // Upload file to server
-          console.log('Image approved by Edge AI moderation. Uploading...');
-          setIsModerating(false);
-        }
-      } catch (err) {
-        setError('An error occurred during local image moderation.');
-        setIsModerating(false);
-      }
-    };
-  };
-
-  return (
-    <div className="p-4 border rounded-lg bg-gray-900 text-white">
-      <h3 className="text-lg font-bold mb-2">Upload Match Photo</h3>
-      <input type="file" accept="image/*" onChange={handleImageChange} className="mb-2" />
-      {isModerating && <p className="text-blue-400">Analyzing image on your device...</p>}
-      {error && <p className="text-red-500 font-bold">{error}</p>}
-    </div>
-  );
-};
-```
-
 ---
 
-### 4.4. Integración de Pasarela y Split Billing
+### 4.4. Payment Gateway and Split Billing Integration
 
 The shared payment workflow is handled through Stripe Payment Intents managed in NestJS:
 
@@ -940,14 +782,9 @@ Communication between the React 19 client and the NestJS 11 backend is standardi
 #### Sports Venues and Booking Module (`/api/v1/venues`, `/api/v1/bookings`)
 *   `GET /api/v1/venues/search`: Radial spatial search of sports complexes. Query params: `latitude, longitude, radiusKm`. Response: `200 OK`.
 *   `GET /api/v1/venues/:id`: Complete venue detail, including hourly rates and schedules. Response: `200 OK`.
-*   `POST /api/v1/bookings/create`: Initializes a pending court reservation. Payload: `{ courtId, startTime, endTime, participantsCount }`. Response: `201 Created`.
+*   `POST /api/v1/bookings/create`: Initializes a pending court reservation. Payload: `{ courtId, startTime, endTime, totalCost }`. Response: `201 Created`.
 *   `POST /api/v1/bookings/:id/join`: Joins an open court booking, participating in split billing. Response: `200 OK`.
 *   `POST /api/v1/bookings/:id/cancel`: Cancels an active user reservation. Response: `200 OK`.
-
-#### Matchmaking and Squads Module (`/api/v1/matchmaking`, `/api/v1/squads`)
-*   `GET /api/v1/matchmaking/recommended`: Retrieves recommended match cards and nearby opponents. Response: `200 OK`.
-*   `POST /api/v1/squads/create`: Creates a sports squad. Payload: `{ name, sport }`. Response: `201 Created`.
-*   `POST /api/v1/squads/:id/members/invite`: Invites an athlete to join the squad. Payload: `{ userId }`. Response: `200 OK`.
 
 ---
 
@@ -975,12 +812,6 @@ interface VenueQueryResult {
 export class PostgisVenueSearchService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Performs radial spatial search of venues using PostGIS.
-   * @param lat Center latitude
-   * @param lng Center longitude
-   * @param radiusKm Search radius in kilometers
-   */
   public async searchVenuesRadial(
     lat: number,
     lng: number,
@@ -988,7 +819,6 @@ export class PostgisVenueSearchService {
   ): Promise<VenueQueryResult[]> {
     const radiusMeters = radiusKm * 1000;
 
-    // Parameterized raw query executed atomically in PostgreSQL
     return this.prisma.$queryRaw<VenueQueryResult[]>`
       SELECT 
         v.id, 
@@ -1046,7 +876,6 @@ export class ChatGateway {
     @MessageBody() data: { roomId: string; text: string; senderName: string },
     @ConnectedSocket() client: Socket
   ): void {
-    // Retransmits message to all room participants
     this.server.to(data.roomId).emit('new_msg', {
       senderName: data.senderName,
       text: data.text,
@@ -1231,9 +1060,7 @@ The results obtained in the validation of SportMatch Connect prove the feasibili
 
 First, spatial query response times using PostGIS and GiST indexes averaged **12 milliseconds**. This is a major improvement over the work of Martínez et al. (2023), whose MySQL-based calculations suffered performance degradation above 500 concurrent users due to on-the-fly Haversine computing in the backend. Our results validate using spatial indexing to reduce computational complexity to a log order $O(\log N)$, keeping latency optimal under concurrent load.
 
-Second, the hypothesis test confirmed a significant increase in weekly sports practice, rising from a baseline of **1.3 weekly matches** (via unstructured WhatsApp organization) to **2.8 weekly matches** through SportMatch Connect ($t = 10.58, p < 0.0001$). This confirms Stanford's model by Smith & Johnson (2024), which theorized that predictive matchmaking balancing skill and availability reduces frustration, encouraging sports continuity. Our platform takes this theory into a functional web deployment.
-
-Finally, the FitCoins digital economy and split billing through Stripe Connect reduced booking delinquency to **zero**. This contrasts with Vásquez & Quispe (2022) in Lima Norte, where manual collection via mobile wallets showed a persistent 15.2% delinquency rate, causing interpersonal tension.
+Second, the hypothesis test confirmed a significant increase in weekly sports practice, rising from a baseline of **1.3 weekly matches** (via unstructured WhatsApp organization) to **2.8 weekly matches** through SportMatch Connect ($t = 10.58, p < 0.0001$). This confirms Stanford's model by Smith & Johnson (2024), which theorized that predictive matchmaking balancing skill and availability reduces frustration, encouraging sports continuity.
 
 ---
 
@@ -1384,8 +1211,8 @@ For rigorous accounting validation, the following table details the monthly dist
 | **Accumulated Flow** | -S/. 74,388.82 | -S/. 44,168.82 | S/. 24,231.18 | S/. 132,031.18 |
 
 #### Financial Viability Indicators:
-*   **NPV (Net Present Value):** **S/. 84,250.00 PEN** (at 12% discount rate). Since it is positive, it confirms project viability.
-*   **IRR (Internal Rate of Return):** **38.4%**. Since it comfortably exceeds the Opportunity Cost of Capital, it confirms development profitability.
+*   **NPV (Net Present Value):** **S/. 84,250.00 PEN** (at 12% discount rate).
+*   **IRR (Internal Rate of Return):** **38.4%**.
 *   **Payback Period:** **14 months** from launch.
 
 ---
@@ -1423,7 +1250,7 @@ Development was planned and executed using Scrum over 8 bi-weekly Sprints spanni
 | **Sprint 6** | Weeks 13-14 | Jun 01 - Jun 14 | Squads and team Elo rating logic. B2B venue management dashboard. Playwright E2E automation suites. | Real-time Squads active, B2B admin panel, test suites passing. |
 | **Sprint 7** | Weeks 15-16 | Jun 15 - Jun 28 | QA and static analysis with SonarQube. Bundle size optimization. Production deployment v1.0.0 and Indecopi patent filing. | Production deploy on Render & Vercel, Quality Gate PASSED. |
 
-<a name="table-17"></a>
+<a name="tabla-17"></a>
 **Table 17: Research Project Milestones**
 
 | Milestone | Due Date | Acceptance Criteria |
@@ -1463,28 +1290,6 @@ To ensure full transparency in agile execution, the backlog and daily standup re
 *   **Sprint 7 (QA, Audit, and Production):**
     *   *Tasks:* SonarQube code quality and security gate scan. Production deployments to Render and Vercel CDN networks.
     *   *Standup Log (Week 15):* Edwin Flores confirms production build pipelines are clean with zero errors.
-
-```text
-Figure 06: Sprint Velocity Chart (Story Points)
-================================================================================
-  Story Points
-  100 ┼
-   90 ┼
-   80 ┼                                        ███ 
-   70 ┼                            ███   ███   ███   ███
-   60 ┼                      ███   ███   ███   ███   ███   ███
-   50 ┼                ███   ███   ███   ███   ███   ███   ███
-   40 ┼                ███   ███   ███   ███   ███   ███   ███
-   30 ┼                ███   ███   ███   ███   ███   ███   ███
-   20 ┼    ███   ███   ███   ███   ███   ███   ███   ███   ███
-   10 ┼    ███   ███   ███   ███   ███   ███   ███   ███   ███
-    0 ┼────███───███───███───███───███───███───███───███───███──
-          Sp.0  Sp.1  Sp.2  Sp.3  Sp.4  Sp.5  Sp.6  Sp.7  Goal
-================================================================================
-```
-
-#### Project Duration
-The project spanned exactly **112 business days (16 weeks)**, starting on March 9, 2026, and ending on June 28, 2026.
 
 ---
 
@@ -1579,8 +1384,6 @@ describe('MatchmakingService Unit Tests', () => {
     const trust = 100.00;
 
     const score = service.calculateCompatibilityScore(lat, lng, lat, lng, elo, elo, trust);
-    
-    // 0.35*100 (Geo) + 0.30*100 (Sport) + 0.20*100 (Elo) + 0.10*90 (Availability) + 0.05*100 (Trust) = 99
     expect(score).toBe(99);
   });
 
@@ -1593,9 +1396,6 @@ describe('MatchmakingService Unit Tests', () => {
     const trust = 100.00;
 
     const score = service.calculateCompatibilityScore(lat1, lng1, lat2, lng2, elo, elo, trust);
-    
-    // sGeo should be 0 due to distance > 50km
-    // 0.35*0 + 0.30*100 + 0.20*100 + 0.10*90 + 0.05*100 = 64
     expect(score).toBe(64);
   });
 });
@@ -1619,4 +1419,194 @@ SELECT uuid_generate_v4(), id, 'Multipurpose Court A (Basketball)', 'Básquetbol
 
 INSERT INTO public.courts (id, venue_id, name, sport, is_active)
 SELECT uuid_generate_v4(), id, 'Padel Glass Court 1', 'Pádel', TRUE FROM public.venues WHERE name = 'Complejo Miraflores Padel Club';
+```
+
+### Annex D: Complete FSD Frontend Directory Structure
+```text
+src/
+├── app/
+│   ├── providers/
+│   │   ├── with-router.tsx
+│   │   └── with-theme.tsx
+│   ├── styles/
+│   │   └── index.css
+│   └── app.tsx
+├── pages/
+│   ├── home/
+│   │   └── ui/home-page.tsx
+│   ├── map/
+│   │   └── ui/map-page.tsx
+│   ├── squads/
+│   │   └── ui/squads-page.tsx
+│   └── profile/
+│   │   └── ui/profile-page.tsx
+├── widgets/
+│   ├── navigation/
+│   │   └── ui/navbar.tsx
+│   ├── venue-map/
+│   │   └── ui/venue-map.tsx
+│   └── squad-list/
+│       └── ui/squad-list-widget.tsx
+├── features/
+│   ├── matchmaking/
+│   │   ├── model/use-matchmaking.ts
+│   │   └── ui/match-card.tsx
+│   ├── booking/
+│   │   ├── model/use-booking.ts
+│   │   └── ui/booking-button.tsx
+│   └── chat/
+│       ├── model/use-chat.ts
+│       └── ui/chat-window.tsx
+├── entities/
+│   ├── profile/
+│   │   ├── model/types.ts
+│   │   └── ui/profile-card.tsx
+│   ├── venue/
+│   │   ├── model/types.ts
+│   │   └── ui/venue-row.tsx
+│   └── squad/
+│       ├── model/types.ts
+│       └── ui/squad-card.tsx
+└── shared/
+    ├── api/
+    │   ├── supabase-client.ts
+    │   └── stripe-gateway.ts
+    ├── ui/
+    │   ├── button/button.tsx
+    │   ├── card/card.tsx
+    │   └── input/input.tsx
+    └── lib/
+        ├── haversine.ts
+        └── elo-calculator.ts
+```
+
+### Annex E: Venue Map Widget Component Implementation (`venue-map.tsx` in FSD)
+```typescript
+import React, { useEffect, useState, useTransition } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { PostgisVenueSearchService } from 'shared/api/postgis-search';
+import { Button } from 'shared/ui/button';
+import 'leaflet/dist/leaflet.css';
+
+interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  distance_meters: number;
+  hourly_rate: number;
+}
+
+export const VenueMap: React.FC = () => {
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+
+        startTransition(async () => {
+          const results = await PostgisVenueSearchService.getNearbyVenues(latitude, longitude, 10);
+          setVenues(results);
+        });
+      },
+      (err) => console.error('Error getting geolocation:', err)
+    );
+  }, []);
+
+  if (!userLocation) {
+    return <div className="text-white p-4">Loading sports complexes map...</div>;
+  }
+
+  return (
+    <div className="w-full h-[500px] rounded-xl overflow-hidden relative border border-gray-800">
+      {isPending && (
+        <div className="absolute inset-0 bg-black/50 z-[1000] flex items-center justify-center text-white">
+          Searching nearby sports complexes...
+        </div>
+      )}
+      <MapContainer center={[userLocation.lat, userLocation.lng]} zoom={13} className="w-full h-full">
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+        />
+        <Marker position={[userLocation.lat, userLocation.lng]}>
+          <Popup>You are here</Popup>
+        </Marker>
+        {venues.map((venue) => (
+          <Marker key={venue.id} position={[venue.latitude, venue.longitude]}>
+            <Popup>
+              <div className="text-gray-900 font-sans p-1">
+                <h4 className="font-bold text-sm">{venue.name}</h4>
+                <p className="text-xs text-gray-600 mb-1">{venue.address}</p>
+                <p className="text-xs font-semibold">Distance: {(venue.distance_meters / 1000).toFixed(2)} km</p>
+                <p className="text-xs font-bold text-green-600">Rate: S/. {venue.hourly_rate} / hour</p>
+                <Button className="mt-2 w-full text-xs py-1" onClick={() => console.log('Reserve', venue.id)}>
+                  Reserve Court
+                </Button>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+  );
+};
+```
+
+### Annex F: Stripe Service Backend Logic in NestJS (`stripe.service.ts`)
+```typescript
+import { Injectable, BadRequestException } from '@nestjs/common';
+import Stripe from 'stripe';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class StripeService {
+  private stripe: Stripe;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-01-16' as any,
+    });
+  }
+
+  public async createSplitPaymentIntent(
+    bookingId: string,
+    userId: string,
+    amountInSoles: number
+  ): Promise<{ clientSecret: string; paymentIntentId: string }> {
+    const amountInCents = Math.round(amountInSoles * 100);
+
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'pen',
+        payment_method_types: ['card'],
+        capture_method: 'manual', 
+        metadata: { bookingId, userId },
+      });
+
+      return {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Stripe Error: ${error.message}`);
+    }
+  }
+
+  public async capturePayment(paymentIntentId: string): Promise<boolean> {
+    try {
+      const intent = await this.stripe.paymentIntents.capture(paymentIntentId);
+      return intent.status === 'succeeded';
+    } catch (error) {
+      console.error(`Error capturing payment ${paymentIntentId}:`, error);
+      return false;
+    }
+  }
+}
 ```

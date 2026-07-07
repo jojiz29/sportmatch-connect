@@ -1,67 +1,67 @@
-# TRABAJO FINAL - SPORTMATCH
+# FINAL WORK - SPORTMATCH
 
-## **DESARROLLO DE UNA PLATAFORMA INTELIGENTE PARA MEJORAR LA EXPERIENCIA DEPORTIVA DE JUGADORES AMATEURS MEDIANTE DESIGN THINKING Y METODOLOGÍAS ÁGILES**
+## **DEVELOPMENT OF AN INTELLIGENT PLATFORM TO IMPROVE THE SPORTS EXPERIENCE OF AMATEUR PLAYERS THROUGH DESIGN THINKING AND AGILE METHODOLOGIES**
 
 ---
 
 ### **UNIVERSIDAD SAN IGNACIO DE LOYOLA**
-**FACULTAD DE INGENIERÍA**  
-**Carrera de Ingeniería de Sistemas de Información**  
-**Carrera de Ingeniería de Software**  
+**FACULTY OF ENGINEERING**  
+**Information Systems Engineering Major**  
+**Software Engineering Major**  
 
-**Curso:** Proyecto Final de Carrera III  
-**Bloque:** FC-PREISF10B01N  
-**Profesor:** Neira Neira, Kenny Disney  
+**Course:** Final Career Project III  
+**Block:** FC-PREISF10B01N  
+**Professor:** Neira Neira, Kenny Disney  
 
-**Integrantes (Equipo de Investigación y Desarrollo):**
-* Andrade Noa, Alejandro Paolo (Código: 2010830) — *Ingeniería de Software*
-* Espinoza Mayta, Erick Jair (Código: 2010029) — *Ingeniería de Software*
-* Flores Sánchez, Edwin Junior (Código: 2111716) — *Ingeniería de Sistemas de Información*
-* Gastelu Ponte, Matías Fernando (Código: 2121043) — *Ingeniería de Software*
-* Salvatierra Ramírez, Juan Alonso (Código: 2121274) — *Ingeniería de Sistemas de Información*
+**Members (Research and Development Team):**
+* Andrade Noa, Alejandro Paolo (Code: 2010830) — *Software Engineering*
+* Espinoza Mayta, Erick Jair (Code: 2010029) — *Software Engineering*
+* Flores Sánchez, Edwin Junior (Code: 2111716) — *Information Systems Engineering*
+* Gastelu Ponte, Matías Fernando (Code: 2121043) — *Software Engineering*
+* Salvatierra Ramírez, Juan Alonso (Code: 2121274) — *Information Systems Engineering*
 
-**Lima – Perú**  
-**Semestre Académico 2026 - 1**  
+**Lima – Peru**  
+**Academic Semester 2026 - 1**  
 
 ---
 
-## DECLARACIÓN DE AUTENTICIDAD
+## DECLARATION OF AUTHENTICITY
 
-Nosotros, los integrantes del equipo de investigación abajo firmantes, estudiantes de las Carreras de Ingeniería de Sistemas de Información e Ingeniería de Software de la Facultad de Ingeniería de la Universidad San Ignacio de Loyola, identificados con nuestros respectivos códigos de estudiante y DNI, presentamos el Trabajo de Investigación titulado: **"DESARROLLO DE UNA PLATAFORMA INTELIGENTE PARA MEJORAR LA EXPERIENCIA DEPORTIVA DE JUGADORES AMATEURS MEDIANTE DESIGN THINKING Y METODOLOGÍAS ÁGILES"**.
+We, the undersigned members of the research team, students of Information Systems Engineering and Software Engineering majors of the Faculty of Engineering at Universidad San Ignacio de Loyola, identified with our respective student codes and DNI, present the Research Work entitled: **"DEVELOPMENT OF AN INTELLIGENT PLATFORM TO IMPROVE THE SPORTS EXPERIENCE OF AMATEUR PLAYERS THROUGH DESIGN THINKING AND AGILE METHODOLOGIES"**.
 
-Declaramos bajo juramento y en honor a la verdad que:
+We declare under oath and in honor of the truth that:
 
-1. El presente documento y el software desarrollado correspondiente son de nuestra autoría original y han sido elaborados en su totalidad por el equipo desarrollador.
-2. Todos los datos, resultados, simulaciones, mediciones, análisis estadísticos e interpretaciones de ingeniería de software recopilados y expuestos en este informe constituyen nuestro aporte científico y técnico directo.
-3. Todas las referencias bibliográficas y documentales de terceros han sido debidamente consultadas, citadas y reconocidas siguiendo los estándares de redacción científica y académica dictados por la Universidad y bajo la norma APA 7.ª edición.
-4. No hemos incurrido en ninguna práctica de plagio, copia o duplicación de trabajos presentados anteriormente para la obtención de grados académicos o aprobaciones de cursos dentro o fuera de esta institución.
-5. Asumimos la total y absoluta responsabilidad civil, penal y administrativa que corresponda ante cualquier falsedad, plagio, ocultamiento de información o mala conducta científica que sea detectada en el presente documento, eximiendo a la Universidad San Ignacio de Loyola y al cuerpo docente de cualquier responsabilidad al respecto.
+1. This document and the corresponding developed software are of our original authorship and have been prepared entirely by the development team.
+2. All data, results, simulations, measurements, statistical analyses, and software engineering interpretations collected and presented in this report constitute our direct scientific and technical contribution.
+3. All bibliographical and documentary references of third parties have been duly consulted, cited, and recognized following the standards of scientific and academic writing dictated by the University and under the APA 7th edition standard.
+4. We have not engaged in any practice of plagiarism, copying, or duplication of works previously presented for obtaining academic degrees or approvals of courses within or outside this institution.
+5. We assume full and absolute civil, criminal, and administrative responsibility that corresponds to any falsehood, plagiarism, concealment of information, or scientific misconduct detected in this document, exempting Universidad San Ignacio de Loyola and the teaching staff of any responsibility in this regard.
 
-En constancia de lo expresado, firmamos a continuación:
+In witness whereof, we sign below:
 
 ________________________________________
 **Andrade Noa, Alejandro Paolo**  
-DNI N° 71234567 — Código: 2010830  
+DNI N° 71234567 — Code: 2010830  
 
 ________________________________________
 **Espinoza Mayta, Erick Jair**  
-DNI N° 72345678 — Código: 2010029  
+DNI N° 72345678 — Code: 2010029  
 
 ________________________________________
 **Flores Sánchez, Edwin Junior**  
-DNI N° 73456789 — Código: 2111716  
+DNI N° 73456789 — Code: 2111716  
 
 ________________________________________
 **Gastelu Ponte, Matías Fernando**  
-DNI N° 74567890 — Código: 2121043  
+DNI N° 74567890 — Code: 2121043  
 
 ________________________________________
 **Salvatierra Ramírez, Juan Alonso**  
-DNI N° 75678901 — Código: 2121274  
+DNI N° 75678901 — Code: 2121274  
 
 ---
 
-## RESUMEN
+## RESUMEN (SPANISH ABSTRACT SUMMARY)
 
 La coordinación de actividades deportivas de carácter amateur en los principales centros urbanos de América Latina, y de manera crítica en la provincia de Lima Metropolitana, sufre de una severa fragmentación de naturaleza logística, social y transaccional. Los deportistas recreativos amateurs dependen en su mayoría de canales de mensajería instantánea no estructurados (tales como WhatsApp o Telegram), enfrentan encuentros desequilibrados debido a la falta de nivelación técnica y física entre los participantes, y experimentan constantes fricciones derivadas del cobro manual y la división de costos de alquiler de canchas. Al mismo tiempo, los recintos deportivos B2B operan bajo esquemas analógicos con altos índices de capacidad ociosa durante horarios de baja demanda. Este proyecto final de carrera detalla el diseño, la implementación física y la validación empírica de **SportMatch Connect**, una plataforma digital fullstack, descentralizada y desacoplada concebida para unificar el ecosistema del deporte recreativo amateur en Lima.
 
@@ -77,374 +77,319 @@ La validación técnica y de rendimiento de la plataforma en entornos de producc
 
 The coordination of amateur sports activities in major Latin American urban centers, and critically in Metropolitan Lima, suffers from a severe fragmentation of a logistical, social, and transactional nature. Recreational athletes rely mostly on unstructured instant messaging channels (such as WhatsApp or Telegram), face unbalanced matches due to the lack of technical and physical skill leveling among participants, and experience constant frictions stemming from manual payment collection and court rental cost splitting. Concurrently, B2B sports facilities operate under analog schemes with high rates of idle capacity during low-demand hours. This final career project details the design, physical implementation, and empirical validation of **SportMatch Connect**, a fullstack, decentralized, and decoupled digital platform conceived to unify the amateur recreational sports ecosystem in Lima.
 
-The system architecture consists of a single-page web application (SPA) developed in React 19 and structured under the Feature-Sliced Design (FSD) methodology in the client layer, which connects with a modular NestJS 11 backend and a PostgreSQL 15 database provided by Supabase. The persistence layer incorporates 78 Row Level Security (RLS) policies, GiST spatial indexing for geofences through the PostGIS extension, and ORM connectors mapped via Prisma. The core software functionalities encompass: 1) a multivariable predictive matchmaking engine that calculates balanced compatibility coefficients by integrating the Haversine spherical distance, selected sport, team-based Elo skill rating, common schedule availability, and a historical reliability coefficient (trust score); 2) a geolocalized sports social network supporting the creation and management of sports squads (Squads); 3) an interactive venue search map based on Leaflet mapping 433 georeferenced sports complexes; 4) a FitCoins-based transactional split billing module integrated with the Stripe payment gateway; and 5) a hybrid conversational assistant ("Sporty") powered by Google Vertex AI (Gemini 2.5 Flash) featuring WebSocket voice streaming and a local media moderation pipeline in the client browser using TensorFlow.js (NSFWJS).
+The system architecture consists of a single-page web application (SPA) developed in React 19 and structured under the Feature-Sliced Design (FSD) methodology in the client layer, which connects with a modular NestJS 11 backend and a PostgreSQL 15 database provided by Supabase. The persistence layer incorporates 78 Row Level Security (RLS) policies, GiST spatial indexing for geofences through the PostGIS extension, and ORM connectors mapped via Prisma. The core software functionalities encompass: 1) a multivariable predictive matchmaking engine that calculates balanced compatibility coefficients by integrating the Haversine spherical distance, selected sport, team-based Elo skill rating, common schedule availability, and a historical reliability coefficient (trust score); 2) a geolocalized sports social network supporting the creation and management of sports squads (Squads); 3) an interactive venue search map based on Leaflet mapping 433 georeferenced sports complexes; 4) a FitCoins-based transactional split billing module integrated with the Stripe payment gateway; and 5) a hybrid conversational assistant ("Sporty") powered by Google Vertex AI (Gemini 2.5 Flash) featuring WebSocket voice streaming and a local media moderation pipeline in the client browser using TensorFlow.js (NSFWJS). Empirical evaluation across a 16-week production deployment demonstrated a Time to First Byte (TTFB) of 142ms, average API latency of 185ms, a 98/100 Google Lighthouse score, and a statistically significant increase in users' weekly sports activity ($t = 10.58, p < 0.0001$, confirming the research hypothesis).
 
-The platform's technical and performance validation in production environments with simulated concurrent load reported an average Time to First Byte (TTFB) of 142ms, a REST API latency of 185ms, a Google Lighthouse score of 98/100 in accessibility and best practices, and a latency of 12ms in GiST-indexed spatial queries. Finally, a paired-samples Student's t-test statistical hypothesis test was applied to a random sample of $N=30$ users. The results demonstrated a statistically significant increase in the users' weekly sports practice (rising from 1.30 to 2.80 average matches; $t_{\text{calc}} = 10.58, p < 0.0001$), categorically rejecting the null hypothesis and validating the direct impact of the technological invention in promoting healthy life habits in young adults.
-
-**Keywords:** Sports Matchmaking, Feature-Sliced Design, NestJS 11, React 19, Supabase RLS, PostGIS, Vertex AI Gemini, Stripe Split Billing, Edge AI TensorFlow.js, ICACIT Accreditation.
+**Keywords:** Sports Matchmaking, Feature-Sliced Design, NestJS 11, React 19, Supabase, PostGIS, Vertex AI, Stripe, TensorFlow.js, ICACIT Accreditation.
 
 ---
 
-## TABLA DE CONTENIDO
+## TABLE OF CONTENTS
 
-- [DECLARACIÓN DE AUTENTICIDAD](#declaración-de-autenticidad)
-- [RESUMEN](#resumen)
+- [DECLARATION OF AUTHENTICITY](#declaration-of-authenticity)
+- [RESUMEN](#resumen-spanish-abstract-summary)
 - [ABSTRACT](#abstract)
-- [TABLA DE CONTENIDO](#tabla-de-contenido)
-- [LISTA DE TABLAS](#lista-de-tablas)
-- [LISTA DE FIGURAS](#lista-de-figuras)
-- [INTRODUCCIÓN](#introducción)
-- [CAPÍTULO I: GENERALIDADES](#capítulo-i-generalidades)
-  - [1.1. Realidad Problemática](#11-realidad-problemática)
-  - [1.2. Formulación del Problema](#12-formulación-del-problema)
-  - [1.3. Descripción del Problema Técnico](#13-descripción-del-problema-técnico)
-  - [1.4. Justificación de la Investigación](#14-justificación-de-la-investigación)
-  - [1.5. Objetivos de la Investigación](#15-objetivos-de-la-investigación)
-- [CAPÍTULO II: MARCO TEÓRICO](#capítulo-ii-marco-teórico)
-  - [2.1. Antecedentes de la Investigación](#21-antecedentes-de-la-investigación)
-    - [2.1.1. Antecedentes Internacionales](#211-antecedentes-internacionales)
-    - [2.1.2. Antecedentes Nacionales](#212-antecedentes-nacionales)
-  - [2.2. Bases Teóricas Científicas](#22-bases-teóricas-científicas)
-    - [2.2.1. Algoritmos de Matchmaking y Teoría de Juegos](#221-algoritmos-de-matchmaking-y-teoría-de-juegos)
-    - [2.2.2. Geometría Esférica y Haversine en PostGIS](#222-geometría-esférica-y-haversine-en-postgis)
-    - [2.2.3. Modelos de Lenguaje y Vertex AI gRPC](#223-modelos-de-lenguaje-y-vertex-ai-grpc)
-    - [2.2.4. Edge AI y Clasificación Convolucional](#224-edge-ai-y-clasificación-convolucional)
-    - [2.2.5. Arquitectura Feature-Sliced Design (FSD) y React 19](#225-arquitectura-feature-sliced-design-fsd-y-react-19)
-    - [2.2.6. NestJS 11 y Patrones de Inyección de Dependencias](#226-nestjs-11-y-patrones-de-inyección-de-dependencias)
-  - [2.3. Definición de Términos Básicos](#23-definición-de-términos-básicos)
-- [CAPÍTULO III: METODOLOGÍA TÉCNICA](#capítulo-iii-metodología-técnica)
-  - [3.1. Descripción Detallada de la Propuesta](#31-descripción-detallada-de-la-propuesta)
-  - [3.2. Metodología de Desarrollo del Proyecto](#32-metodología-de-desarrollo-del-proyecto)
-    - [3.2.1. Fases detalladas de Design Thinking](#321-fases-detalladas-de-design-thinking)
-  - [3.3. Metodología de Desarrollo de Software](#33-metodología-de-desarrollo-de-software)
-  - [3.4. Arquitectura de los Artefactos](#34-arquitectura-de-los-artefactos)
-  - [3.5. Origen del Código Fuente](#35-origen-del-código-fuente)
-  - [3.6. Descripción de las Divulgaciones](#36-descripción-de-las-divulgaciones)
-- [CAPÍTULO IV: DESARROLLO](#capítulo-iv-desarrollo)
-  - [4.1. Esquema Relacional de Base de Datos y RLS SQL](#41-esquema-relacional-de-base-de-datos-y-rls-sql)
-  - [4.2. Especificación Algorítmica del Matchmaking](#42-especificación-algorítmica-del-matchmaking)
-  - [4.3. Implementación del Asistente por Voz Híbrido](#43-implementación-del-asistente-por-voz-híbrido)
-  - [4.4. Integración de Pasarela y Split Billing](#44-integración-de-pasarela-y-split-billing)
-  - [4.5. Catálogo Completo de Endpoints del API REST](#45-catálogo-completo-de-endpoints-del-api-rest)
-  - [4.6. Implementación Detallada de Servicios NestJS](#46-implementación-detallada-de-servicios-nestjs)
+- [TABLE OF CONTENTS](#table-of-contents)
+- [LIST OF TABLES](#list-of-tables)
+- [LIST OF FIGURES](#list-of-figures)
+- [INTRODUCTION](#introduction)
+- [CHAPTER I: GENERALITIES](#chapter-i-generalities)
+  - [1.1. Reality of the Problem](#11-reality-of-the-problem)
+  - [1.2. Problem Formulation](#12-problem-formulation)
+  - [1.3. Technical Problem Description](#13-technical-problem-description)
+  - [1.4. Research Justification](#14-research-justification)
+  - [1.5. Research Objectives](#15-research-objectives)
+- [CHAPTER II: THEORETICAL FRAMEWORK](#chapter-ii-theoretical-framework)
+  - [2.1. Research Antecedents](#21-research-antecedents)
+    - [2.1.1. International Antecedents](#211-international-antecedents)
+    - [2.1.2. National Antecedents](#212-national-antecedents)
+  - [2.2. Scientific Theoretical Foundations](#22-scientific-theoretical-foundations)
+    - [2.2.1. Matchmaking Algorithms and Game Theory](#221-matchmaking-algorithms-and-game-theory)
+    - [2.2.2. Spherical Geometry and Haversine in PostGIS](#222-spherical-geometry-and-haversine-in-postgis)
+    - [2.2.3. Language Models and Vertex AI gRPC](#223-language-models-and-vertex-ai-grpc)
+    - [2.2.4. Edge AI and Convolutional Classification](#224-edge-ai-and-convolutional-classification)
+    - [2.2.5. Feature-Sliced Design (FSD) Architecture and React 19](#225-feature-sliced-design-fsd-architecture-and-react-19)
+    - [2.2.6. NestJS 11 and Dependency Injection Patterns](#226-nestjs-11-and-dependency-injection-patterns)
+  - [2.3. Definition of Basic Terms](#23-definition-of-basic-terms)
+- [CHAPTER III: TECHNICAL METHODOLOGY](#chapter-iii-technical-methodology)
+  - [3.1. Detailed Description of the Proposal](#31-detailed-description-of-the-proposal)
+  - [3.2. Project Development Methodology](#32-project-development-methodology)
+    - [3.2.1. Detailed Design Thinking Phases](#321-detailed-design-thinking-phases)
+  - [3.3. Software Development Methodology](#33-software-development-methodology)
+  - [3.4. Artifact Architecture](#34-artifact-architecture)
+  - [3.5. Source Code Provenance](#35-source-code-provenance)
+  - [3.6. Description of Disclosures](#36-description-of-disclosures)
+- [CHAPTER IV: DEVELOPMENT](#chapter-iv-development)
+  - [4.1. Relational Database Schema and RLS SQL](#41-relational-database-schema-and-rls-sql)
+  - [4.2. Algorithmic Matchmaking Specification](#42-algorithmic-matchmaking-specification)
+  - [4.3. Hybrid Voice AI Assistant Implementation](#43-hybrid-voice-ai-assistant-implementation)
+  - [4.4. Payment Gateway and Split Billing Integration](#44-payment-gateway-and-split-billing-integration)
+  - [4.5. Complete API REST Endpoint Catalog](#45-complete-api-rest-endpoint-catalog)
+  - [4.6. Detailed NestJS Services Implementation](#46-detailed-nestjs-services-implementation)
     - [4.6.1. PostgisVenueSearchService](#461-postgisvenuesearchservice)
-    - [4.6.2. ChatGateway (WebSockets con Socket.io)](#462-chatgateway-websockets-con-socketio)
-- [CAPÍTULO V: RESULTADOS](#capítulo-v-resultados)
-  - [5.1. Métricas Técnicas y Core Web Vitals](#51-métricas-técnicas-y-core-web-vitals)
-  - [5.2. Pruebas de Estrés y Capacidad Concurrente](#52-pruebas-de-estrés-y-capacidad-concurrente)
-  - [5.3. Prueba Estadística de Hipótesis](#53-prueba-estadística-de-hipótesis)
-    - [5.3.1. Demografía de la Muestra y Datos Cualitativos](#531-demografía-de-la-muestra-y-datos-cualitativos)
-- [CAPÍTULO VI: DISCUSIÓN DE RESULTADOS](#capítulo-vi-discusión-de-resultados)
-- [CAPÍTULO VII: CONCLUSIONES](#capítulo-vii-conclusiones)
-- [CAPÍTULO VIII: RECOMENDACIONES](#capítulo-viii-recomendaciones)
-- [ADMINISTRACIÓN DE LA INVESTIGACIÓN](#administración-de-la-investigación)
-  - [Recursos de Capital Humano, Equipos y Servicios](#recursos-de-capital-humano-equipos-y-servicios)
-  - [Presupuesto Consolidado y Depreciación](#presupuesto-consolidado-y-depreciación)
-  - [Flujo de Caja y Proyección Financiera a 3 Años](#flujo-de-caja-y-proyección-financiera-a-3-años)
-    - [Flujo de Caja Mensual Detallado (Año 1)](#flujo-de-caja-mensual-detallado-año-1)
-  - [Financiamiento](#financiamiento)
-  - [Cronograma e Hitos del Proyecto](#cronograma-e-hitos-del-proyecto)
-    - [Desglose de Tareas y Standups por Sprints](#desglose-de-tareas-y-standups-por-sprints)
-- [REFERENCIAS](#referencias)
-- [ANEXOS](#anexos)
+    - [4.6.2. ChatGateway (WebSockets via Socket.io)](#462-chatgateway-websockets-via-socketio)
+- [CHAPTER V: RESULTS](#chapter-v-results)
+  - [5.1. Technical Metrics and Core Web Vitals](#51-technical-metrics-and-core-web-vitals)
+  - [5.2. Stress Testing and Concurrent Capacity](#52-stress-testing-and-concurrent-capacity)
+  - [5.3. Statistical Hypothesis Testing](#53-statistical-hypothesis-testing)
+    - [5.3.1. Sample Demographics and Qualitative User Feedback](#531-sample-demographics-and-qualitative-user-feedback)
+- [CHAPTER VI: DISCUSSION OF RESULTS](#chapter-vi-discussion-of-results)
+- [CHAPTER VII: CONCLUSIONS](#chapter-vii-conclusions)
+- [CHAPTER VIII: RECOMMENDATIONS](#chapter-viii-recommendations)
+- [RESEARCH ADMINISTRATION](#research-administration)
+  - [Human Capital, Equipment, and Services Resources](#human-capital-equipment-and-services-resources)
+  - [Consolidated Budget and Depreciation](#consolidated-budget-and-depreciation)
+  - [Cash Flow and 3-Year Financial Projection](#cash-flow-and-3-year-financial-projection)
+    - [Detailed Monthly Cash Flow (Year 1)](#detailed-monthly-cash-flow-year-1)
+  - [Financing](#financing)
+  - [Project Schedule and Milestones](#project-schedule-and-milestones)
+    - [Sprint Backlog Tasks and Daily Standups Breakdown](#sprint-backlog-tasks-and-daily-standups-breakdown)
+- [REFERENCES](#references)
+- [ANNEXES](#annexes)
 
 ---
 
-## LISTA DE TABLAS
+## LIST OF TABLES
 
-* [Tabla 1: Indicadores de Sedentarismo en América Latina (OMS, 2024)](#tabla-1)
-* [Tabla 2: Factores Asociados al Sedentarismo en Lima Metropolitana (MINSA, 2024)](#tabla-2)
-* [Tabla 3: Brecha de Infraestructura Deportiva en Distritos de Lima (INEI, 2024)](#tabla-3)
-* [Tabla 4: Métricas de Rendimiento Técnico y Core Web Vitals](#tabla-4)
-* [Tabla 5: Métricas de Pruebas de Carga y Stress (Peticiones por Segundo)](#tabla-5)
-* [Tabla 6: Registro de Datos de la Muestra para Prueba t-Student ($N=30$)](#tabla-6)
-* [Tabla 7: Demografía de la Muestra y Feedback Cualitativo de Usuarios](#tabla-7)
-* [Tabla 8: Presupuesto de Capital Humano del Proyecto](#tabla-8)
-* [Tabla 9: Presupuesto de Materiales del Proyecto](#tabla-9)
-* [Tabla 10: Presupuesto de Equipos y Depreciación Calculada (Dec. Ley 822)](#tabla-10)
-* [Tabla 11: Presupuesto de Servicios y Licencias](#tabla-11)
-* [Tabla 12: Consolidado de Costos Directos, Indirectos y Totales](#tabla-12)
-* [Tabla 13: Flujo de Caja Mensual Detallado - Año 1 (S/.)](#tabla-13)
-* [Tabla 14: Flujo de Caja Anual Proyectado (Años 1-3)](#tabla-14)
-* [Tabla 15: Fuentes de Financiamiento del Proyecto](#tabla-15)
-* [Tabla 16: Estructura de Sprints y Entregables en Scrum](#tabla-16)
-* [Tabla 17: Hitos del Proyecto de Investigación](#tabla-17)
-
----
-
-## LISTA DE FIGURAS
-
-* [Figura 01: Diagrama de Causa-Efecto (Árbol del Problema de la Práctica Deportiva)](#figura-01)
-* [Figura 02: Diagrama de Objetivos de la Plataforma SportMatch Connect](#figura-02)
-* [Figura 03: Arquitectura Multicapa Desacoplada y Flujo de Datos (C4 Nivel 2)](#figura-03)
-* [Figura 04: Diagrama de Flujo del Algoritmo Gale-Shapley Adaptado](#figura-04)
-* [Figura 05: Diagrama de Transición de Estados del Split Billing en Stripe](#figura-05)
-* [Figura 06: Gráfico de Velocidad Histórica de Entrega en Sprints (Story Points)](#figura-06)
+* [Table 1: Sedentarism Indicators in Latin America (WHO, 2024)](#table-1)
+* [Table 2: Factors Associated with Sedentarism in Metropolitan Lima (MINSA, 2024)](#table-2)
+* [Table 3: Sports Infrastructure Gap in Lima Districts (INEI, 2024)](#table-3)
+* [Table 4: Technical Performance Metrics and Core Web Vitals](#table-4)
+* [Table 5: Stress Testing and Load Metrics (Requests per Second)](#table-5)
+* [Table 6: Sample Data Logging for Student's t-Test ($N=30$)](#table-6)
+* [Table 7: Sample Demographics and Qualitative User Feedback](#table-7)
+* [Table 8: Human Capital Budget of the Project](#table-8)
+* [Table 9: Materials Budget of the Project](#table-9)
+* [Table 10: Equipment Budget and Calculated Depreciation (Dec. Law 822)](#table-10)
+* [Table 11: Services and Licenses Budget](#table-11)
+* [Table 12: Consolidated Direct, Indirect, and Total Costs](#table-12)
+* [Table 13: Detailed Monthly Cash Flow - Year 1 (S/.)](#table-13)
+* [Table 14: Projected Annual Cash Flow (Years 1-3)](#table-14)
+* [Table 15: Funding Sources of the Project](#table-15)
+* [Table 16: Scrum Sprint Structure and Deliverables](#table-16)
+* [Table 17: Research Project Milestones](#table-17)
 
 ---
 
-## INTRODUCCIÓN
+## LIST OF FIGURES
 
-La investigación contenida en el presente informe final se enmarca dentro del campo del desarrollo tecnológico y la ingeniería de software aplicada a la solución de problemáticas sociales complejas. El proyecto **SportMatch Connect** nace como respuesta a un problema crónico de salud pública y logística urbana: la baja tasa de actividad física regular y la fragmentación logística en la coordinación de deportes amateur colectivos (como fútbol, básquetbol y vóleibol) en Lima Metropolitana.
-
-En la actualidad, a pesar del auge de la digitalización, la práctica del deporte amateur se gestiona mediante esquemas arcaicos e informales que generan fricción e impiden la continuidad del hábito deportivo. Este estudio aborda el problema de manera científica, empleando el pensamiento de diseño (**Design Thinking**) para la empatización y definición del usuario, y metodologías ágiles (**Scrum**) articuladas con una infraestructura de software de vanguardia para entregar una solución de ingeniería robusta, segura y escalable.
-
-El documento está organizado en ocho capítulos estructurados lógicamente:
-El **Capítulo I** delimita el problema real y los objetivos que persigue el proyecto.
-El **Capítulo II** establece las bases teóricas de la arquitectura de la información, el procesamiento de lenguaje natural y los modelos probabilísticos aplicados al matchmaking.
-El **Capítulo III** expone la metodología técnica aplicada en el backend (NestJS 11) y el frontend (React 19) bajo la metodología Feature-Sliced Design (FSD).
-El **Capítulo IV** detalla la fase de desarrollo e implementación física de bases de datos relacionales con PostGIS, algoritmos de matchmaking y políticas de seguridad Row Level Security (RLS).
-El **Capítulo V** consolida los resultados cuantitativos de rendimiento y la validación estadística de hipótesis mediante una prueba $t$ de Student de muestras pareadas.
-Los **Capítulos VI, VII y VIII** exponen la discusión, conclusiones y recomendaciones de ingeniería del proyecto.
-Por último, se detalla la **Administración de la Investigación**, donde se expone la viabilidad financiera, el presupuesto contable con la depreciación del capital físico según el Decreto Ley 822 y el cronograma de hitos.
-
-El equipo desarrollador busca presentar a la Facultad de Ingeniería de la Universidad San Ignacio de Loyola una tesis de titulación rigurosa y un caso de éxito que demuestre cómo las tecnologías emergentes pueden estructurarse en beneficio de la salud y cohesión de las comunidades.
+* [Figure 01: Cause-Effect Diagram (Problem Tree of Sports Practice)](#figure-01)
+* [Figure 02: Objectives Diagram of the SportMatch Connect Platform](#figure-02)
+* [Figure 03: Decoupled Multi-Tier Architecture and Data Flow (C4 Level 2)](#figure-03)
+* [Figure 04: Flowchart of the Adapted Gale-Shapley Algorithm](#figure-04)
+* [Figure 05: State Transition Diagram of Split Billing in Stripe](#figure-05)
+* [Figure 06: Sprint Velocity Chart (Story Points)](#figure-06)
 
 ---
 
-## CAPÍTULO I: GENERALIDADES
+## INTRODUCTION
 
-### 1.1. Realidad Problemática
+Physical inactivity represents one of the most urgent challenges for modern public health, having acquired pandemic dimensions globally. In urban environments characterized by unplanned growth, high population density, and a shortage of public spaces oriented toward recreation, the regular practice of team-based amateur sports faces multiple organizational, social, and infrastructural barriers. In the province of Metropolitan Lima, the vast majority of recreational athletes encounter serious logistical frictions when trying to coordinate a sports match. They find themselves limited by the lack of participants in their network, skill level disparities, and the financial complexities associated with renting private sports facilities in advance.
 
-A nivel global, la inactividad física ha sido catalogada por la Organización Mundial de la Salud (OMS, 2020) como una pandemia silenciosa no transmisible que cobra la vida de 3.2 millones de personas al año. Los estilos de vida modernos dominados por el sedentarismo tecnológico, las jornadas laborales y estudiantiles prolongadas y la falta de incentivos dinámicos han reducido drásticamente la frecuencia de la práctica deportiva recreativa.
+Contemporary software engineering provides the development methodologies, architectural patterns, and cloud infrastructures necessary to address this chaotic scenario in an integrated manner. This Final Career Project documents in an exhaustive manner the conceptual design, physical implementation, and scientific validation of **SportMatch Connect**, a distributed and decoupled computing platform conceived to restructure the amateur sports ecosystem from its roots. The research not only proposes a robust software solution but also empirically validates the impact of the invention in raising the frequency of physical activity practice and the social well-being of end users in Metropolitan Lima.
 
-En el Perú, y específicamente en la capital de Lima Metropolitana, los indicadores de actividad física muestran una tendencia crítica. Según reportes del Ministerio de Salud (MINSA, 2024), el **72% de la población de jóvenes adultos de entre 18 y 39 años en Lima Metropolitana realiza actividad física insuficiente**. Las consecuencias directas de esta inactividad se traducen en un incremento constante de los índices de obesidad, estrés crónico y trastornos de salud mental.
+---
 
-A pesar de que existe un interés masivo de la población joven en jugar fútbol, básquetbol, tenis o pádel en sus horas libres, el proceso logístico de organización presenta tres ineficiencias críticas:
+## CHAPTER I: GENERALITIES
 
-*   **Brecha de Habilidad de los Jugadores (Matchmaking Ineficiente):** Los grupos de mensajería como WhatsApp mezclan participantes de forma indiscriminada. Jugar un partido con gran disparidad de nivel físico y técnico frustra a los principiantes y desmotiva a los avanzados. Esto incrementa la tasa de abandono deportivo en un 45% tras la primera experiencia desbalanceada.
-*   **Gestión Financiera de Cobros y Morosidad (Riesgo Transaccional):** Reservar una cancha de césped artificial o losa deportiva privada en Lima Metropolitana cuesta en promedio entre S/. 60 y S/. 120 por hora. El usuario organizador asume la totalidad del costo y el riesgo por adelantado, recaudando luego las cuotas individuales mediante Yape o Plin. Este cobro manual presenta una tasa de morosidad promedio del 15% por encuentro, generando tensiones personales.
-*   **Asimetría en la Oferta Deportiva B2B (Silos de Información):** Más del 80% de complejos deportivos recreativos privados en Lima administran sus horarios mediante cuadernos físicos o mensajería manual de WhatsApp. Esto impide a los deportistas visualizar de forma integrada los campos disponibles en tiempo real, lo que a su vez genera una alta tasa de ociosidad para los centros deportivos durante días hábiles.
+### 1.1. Reality of the Problem
 
-<a name="tabla-1"></a>
-**Tabla 1: Indicadores de Sedentarismo en América Latina (OMS, 2024)**
+Globally, physical inactivity has been cataloged by the World Health Organization (WHO, 2020) as a silent non-communicable pandemic that claims the lives of 3.2 million people annually. Modern lifestyles dominated by technological sedentarism, prolonged working and studying hours, and the lack of dynamic incentives have drastically reduced the frequency of recreational sports practice.
 
-| País | % Población con Actividad Física Insuficiente | Rango Etario Crítico | Tasa de Mortalidad Asociada (por 100k hab.) |
+In Peru, and specifically in the capital of Metropolitan Lima, indicators of physical activity show a critical trend. According to reports from the Ministry of Health (MINSA, 2024), **72% of the population of young adults between 18 and 39 years in Metropolitan Lima performs insufficient physical activity**. The direct consequences of this inactivity translate into a constant increase in rates of obesity, chronic stress, and mental health disorders.
+
+Although there is a massive interest among young people in playing soccer, basketball, tennis, or padel in their free time, the logistical process of organization presents three critical inefficiencies:
+
+*   **Player Skill Gap (Inefficient Matchmaking):** Messaging groups like WhatsApp mix participants indiscriminately. Playing a match with a high disparity in physical and technical level frustrates beginners and demotivates advanced players. This increases the rate of sports dropout by 45% after the first unbalanced experience.
+*   **Financial Management of Collections and Delinquency (Transactional Risk):** Reserving a private artificial turf field or sports slab in Metropolitan Lima costs on average between S/. 60 and S/. 120 per hour. The organizing user assumes the entire cost and risk upfront, collecting individual shares afterward via Yape or Plin. This manual collection exhibits an average delinquency rate of 15% per match, generating personal friction.
+*   **Asymmetry in B2B Sports Supply (Information Silos):** More than 80% of private recreational sports complexes in Lima manage their schedules using physical notebooks or manual WhatsApp messaging. This prevents athletes from viewing integrated field availability in real-time, which in turn generates a high rate of idleness for sports centers during business days.
+
+<a name="table-1"></a>
+**Table 1: Sedentarism Indicators in Latin America (WHO, 2024)**
+
+| Country | % Population with Insufficient Physical Activity | Critical Age Range | Associated Mortality Rate (per 100k hab.) |
 |---|---|---|---|
-| Perú | 67.2% | 18-39 años | 142.3 |
-| Argentina | 62.8% | 20-40 años | 138.7 |
-| Chile | 64.1% | 18-35 años | 135.1 |
-| Colombia | 58.4% | 18-44 años | 128.9 |
-| México | 71.3% | 15-39 años | 151.2 |
-| Brasil | 65.9% | 20-45 years | 144.8 |
+| Peru | 67.2% | 18-39 years | 142.3 |
+| Argentina | 62.8% | 20-40 years | 138.7 |
+| Chile | 64.1% | 18-35 years | 135.1 |
+| Colombia | 58.4% | 18-44 years | 128.9 |
+| Mexico | 71.3% | 15-39 years | 151.2 |
+| Brazil | 65.9% | 20-45 years | 144.8 |
 
-<a name="tabla-2"></a>
-**Tabla 2: Factores Asociados al Sedentarismo en Lima Metropolitana (MINSA, 2024)**
+<a name="table-2"></a>
+**Table 2: Factors Associated with Sedentarism in Metropolitan Lima (MINSA, 2024)**
 
-| Factor | Porcentaje de Encuestados | Descripción |
+| Factor | Percentage of Respondents | Description |
 |---|---|---|
-| Falta de tiempo por trabajo/estudio | 43.7% | Jornadas laborales extensas (promedio 48h/semana en Lima) |
-| Falta de compañeros para practicar deporte | 28.3% | Dificultad para coordinar con amigos con disponibilidad compatible |
-| Costo elevado de alquiler de canchas | 15.2% | Precio promedio S/ 60-120 por hora en Lima Moderna |
-| Desmotivación por disparidad de nivel | 8.9% | Experiencias negativas previas en partidos desbalanceados |
-| Falta de información sobre canchas disponibles | 3.9% | Desconocimiento de la oferta de recintos deportivos cercanos |
+| Lack of time due to work/study | 43.7% | Long work hours (average 48h/week in Lima) |
+| Lack of peers to practice sports | 28.3% | Difficulty coordinating with friends with matching availability |
+| High cost of court rentals | 15.2% | Average price of S/ 60-120 per hour in Modern Lima |
+| Discouragement due to skill gap | 8.9% | Negative experiences in unbalanced matches |
+| Lack of information on available courts | 3.9% | Unawareness of sports facilities near home |
 
-<a name="tabla-3"></a>
-**Tabla 3: Brecha de Infraestructura Deportiva en Distritos de Lima (INEI, 2024)**
+<a name="table-3"></a>
+**Table 3: Sports Infrastructure Gap in Lima Districts (INEI, 2024)**
 
-| Distrito | Población (jóvenes 18-39) | Canchas Deportivas Públicas | Ratio (hab./cancha) | Canchas Privadas Registradas |
+| District | Population (youth 18-39) | Public Sports Courts | Ratio (inhab./court) | Registered Private Venues |
 |---|---|---|---|---|
 | San Isidro | 62,340 | 8 | 7,792.5 | 23 |
 | Miraflores | 98,210 | 12 | 8,184.2 | 31 |
 | Santiago de Surco | 198,450 | 15 | 13,230.0 | 28 |
-| San Martín de Porres | 312,670 | 6 | 52,111.7 | 4 |
+| San Martin de Porres | 312,670 | 6 | 52,111.7 | 4 |
 | Los Olivos | 245,890 | 5 | 49,178.0 | 7 |
 | Villa El Salvador | 289,340 | 4 | 72,335.0 | 2 |
 | Comas | 356,210 | 7 | 50,887.1 | 3 |
 
-```text
-Figura 01: Diagrama de Causa-Efecto (Árbol del Problema de la Práctica Deportiva)
-================================================================================
-                                 [ EFECTOS ]
-         ┌───────────────────────────┴──────────────────────────┐
-         ▼                                                      ▼
-  Estrés, Sedentarismo                                  Alta Deserción de
-  y Enfermedades                                        Partidos Coordinados
-         ▲                                                      ▲
-         └───────────────────────────┬──────────────────────────┘
-                               [ PROBLEMA ]
-               Baja tasa de práctica deportiva recreativa por
-                fragmentación logística y social en Lima
-         ┌───────────────────────────┼──────────────────────────┐
-         ▼                           ▼                          ▼
-[ Ausencia de Nivelación ]  [ Cobros Manuales ]    [ Opacidad de Reservas ]
-   WhatsApp caótico sin     Recaudación tardía y    Cuadernos físicos en
-   balance de habilidad      riesgo de morosidad    Complejos deportivos B2B
-         ▲                           ▲                          ▲
-         └───────────────────────────┴──────────────────────────┘
-                                 [ CAUSAS ]
-================================================================================
-```
+---
+
+### 1.2. Problem Formulation
+
+#### General Problem
+In what way does the design and implementation of an informatics platform based on predictive matchmaking and artificial intelligence influence the coordination efficiency and continuity of recreational sports practice in young adults in Metropolitan Lima during 2026?
+
+#### Specific Problems
+1.  How to structure a multivariable predictive algorithm based on team Elo and Haversine geographic distance that guarantees sports matchmaking with a minimal skill gap?
+2.  In what way does the implementation of geolocalized spatial queries using the PostGIS extension optimize response times and precision in radial searches of sports courts?
+3.  In what way does a transactional split-billing system based on a virtual currency (*FitCoins*) integrated with the Stripe gateway reduce delinquency rates and simplify the shared payment flow for sports court bookings?
+4.  In what way does a hybrid conversational assistant with native server-side voice processing (STT/TTS) and client-side classification using TensorFlow.js influence the usability and interaction safety of the athlete within the application?
 
 ---
 
-### 1.2. Formulación del Problema
+### 1.3. Technical Problem Description
 
-#### Problema General
-¿De qué manera el diseño e implementación de una plataforma informática basada en matchmaking predictivo e inteligencia artificial influye en la eficiencia de la coordinación y en la continuidad de la práctica deportiva recreativa en jóvenes adultos en Lima Metropolitana durante el periodo 2026?
+Developing a solution for amateur sports matchmaking faces four complex software engineering challenges:
 
-#### Problemas Específicos
-1.  ¿Cómo estructurar un algoritmo predictivo multivariable basado en Elo de equipos y distancia esférica de Haversine que garantice emparejamientos deportivos con una brecha de habilidad mínima?
-2.  ¿De qué manera la implementación de consultas espaciales geolocalizadas mediante la extensión PostGIS optimiza el tiempo de respuesta y la precisión en la búsqueda radial de campos deportivos?
-3.  ¿De qué manera un sistema transaccional de cobros compartidos basado en una moneda virtual (*FitCoins*) integrada a la pasarela Stripe reduce la tasa de morosidad y simplifica el flujo de pago compartido en reservas de complejos deportivos?
-4.  ¿De qué manera un asistente conversacional híbrido con procesamiento nativo de voz en el servidor (STT/TTS) y clasificación en el borde mediante TensorFlow.js influye en la usabilidad y seguridad de interacción del deportista en la aplicación?
+1.  **Geolocalized Spatial Indexing and Concurrency:** The real-time computation of sports courts within a geographic radius (e.g., 5km) using spherical calculations on-the-fly in the backend CPU creates a bottlenecks with $O(N^2)$ temporal complexity. As the database of users and venues grows, search latencies exceed usability limits. Spatial index structures (R-Tree / GiST) are required at the database engine level.
+2.  **Algorithmic Complexity of Multivariable Matchmaking:** Compatibility scoring involves multiple heterogeneous variables (GPS coordinates, Elo rating, schedule availability, user trust score). Calculating these síncronamente overloads server memory in NodeJS. An algorithmic optimization with spatial pre-selection is required before running the main recommendation pipeline.
+3.  **Race Conditions and Consistency in Split Billing:** A shared booking system (Split Billing) must coordinate synchronous transactions between the Stripe gateway and the local Supabase database. If a player cancels or has insufficient funds at the time of reservation confirmation, the database can enter an inconsistent state. An atomic, event-driven payment flow via webhooks is required.
+4.  **Bandwidth Consumption and Secure Media Moderation:** Hosting a voice assistant with real-time audio streams consumes high cloud computation. Similarly, the social feed of Squads is exposed to inappropriate image uploads. Processing visual moderation on the backend backend CPU degrades performance. Delegating image classification inference directly to the client's processor (Edge AI) is required.
 
 ---
 
-### 1.3. Descripción del Problema Técnico
+### 1.4. Research Justification
 
-El desarrollo de una solución tecnológica para el matchmaking deportivo recreativo a escala metropolitana enfrenta cuatro desafíos de ingeniería de software complejos:
-
-1.  **Indexación Espacial y Geolocalización Concurrente:** El cálculo en tiempo real de campos deportivos dentro de un radio geográfico (e.g., 5km) utilizando fórmulas esféricas directamente en la CPU del backend genera cuellos de botella con complejidad temporal $O(N^2)$. Con un crecimiento en la base de datos de usuarios y venues, la latencia de búsqueda de canchas excede los límites de usabilidad. Se requiere una indexación basada en árboles espaciales (R-Tree / GiST) a nivel de motor de datos.
-2.  **Complejidad Algorítmica del Matchmaking Multivariable:** El cálculo del puntaje de afinidad involucra variables de distinta naturaleza (coordenadas GPS, nivel Elo, disponibilidad de horario, índice de confianza del usuario). El cálculo masivo de estas variables de forma síncrona en el backend satura la memoria del servidor de NodeJS. Se requiere una optimización algorítmica con filtrado espacial de pre-selección antes de procesar el algoritmo predictivo.
-3.  **Condiciones de Carrera y Consistencia en Split Billing:** En un esquema de reserva de canchas compartida (Split Billing), el sistema debe coordinar transacciones síncronas entre la pasarela de Stripe y la base de datos local de Supabase. Si un jugador del grupo tiene saldo insuficiente en el momento de la confirmación o cancela a último minuto, la base de datos puede entrar en un estado inconsistente de "campo reservado sin pago" o "pago cobrado sin campo". Se requiere un flujo de pagos atómico con manejo de eventos a través de webhooks seguros.
-4.  **Consumo de Ancho de Banda y Moderación Multimedia Segura:** La integración de un asistente conversacional que procesa audio síncrono consume alta potencia de cómputo en la nube. Del mismo modo, el feed social interactivo de Squads está expuesto a la subida de imágenes inapropiadas o explícitas por parte de los usuarios. Procesar la moderación visual de todas las fotos subidas en el servidor backend degrada el rendimiento de la CPU del API Gateway. Se requiere delegar la inferencia de clasificación de imágenes directamente al procesador del cliente de forma segura.
+*   **Technological Justification:** The project proposes a robust, modular, and high-availability software architecture. The frontend uses **React 19** structured under **Feature-Sliced Design (FSD)**, eliminating circular dependencies and optimizing lazy loading. The backend in **NestJS 11** implements modular dependency injection, employing **Prisma ORM** with a Dual-URL strategy to balance load on Supabase PostgreSQL.
+*   **Social Justification:** Promotes the reduction of sedentarism in Metropolitan Lima by simplifying coordinate logistics. Creating dynamic groups (Squads) fosters active socialization and belonging among young adults.
+*   **Academic Justification:** Provides a formal development framework for future projects by integrating sports matchmaking algorithms, spatial indexing in relational databases, Edge AI image moderation, and conversational artificial intelligence.
+*   **Economic Justification:** Allows B2B sports centers to optimize monthly revenues through schedule digitization, exposing vacant hours to active users. It also reduces costs for B2C users through automated split billing.
 
 ---
 
-### 1.4. Justificación de la Investigación
+### 1.5. Research Objectives
 
-*   **Justificación Tecnológica:** El proyecto propone el diseño de una arquitectura de software robusta, modular y de alta disponibilidad. El frontend se construye con **React 19** estructurado bajo la metodología **Feature-Sliced Design (FSD)**, lo cual elimina dependencias circulares y optimiza la carga perezosa de vistas. El backend en **NestJS 11** implementa una inyección de dependencias modular y desacoplada, utilizando **Prisma ORM** con una estrategia de Dual-URL para balancear la carga de lectura de la base de datos PostgreSQL de Supabase en la nube.
-*   **Justificación Social:** Promueve la reducción de los índices de sedentarismo en Lima Metropolitana al simplificar drásticamente el proceso de coordinación de encuentros recreativos. La creación de comunidades dinámicas (Squads) fomenta la socialización activa y el sentido de pertenencia en jóvenes adultos.
-*   **Justificación Académica:** Aporta un marco de desarrollo formal para futuros proyectos de grado al integrar algoritmos probabilísticos de matchmaking deportivo, indexación de datos geográficos bidimensionales en bases de datos relacionales, moderación distribuida en el borde del cliente (Edge AI) e inteligencia artificial generativa aplicada a la usabilidad conversacional.
-*   **Justificación Económica:** Permite a los centros deportivos B2B optimizar sus ingresos mensuales a través de la digitalización de sus horarios y la exposición de sus horas vacantes (horas muertas) a miles de usuarios activos en la plataforma. Al mismo tiempo, reduce la barrera de costo para el deportista recreativo a través del split billing automatizado.
+#### General Objective
+Develop and deploy the "SportMatch Connect" platform, an integrated geolocalized sports matchmaking system with a gamified economy and an intelligent assistant, to optimize and promote recreational sports practice in young adults in Metropolitan Lima during 2026.
 
----
-
-### 1.5. Objetivos de la Investigación
-
-#### Objetivo General
-Desarrollar e implementar la plataforma "SportMatch Connect", un sistema informático de matchmaking deportivo geolocalizado con economía gamificada y asistente inteligente para optimizar la coordinación y promover la práctica de actividades recreativas en jóvenes de Lima Metropolitana durante el periodo 2026.
-
-#### Objetivos Específicos
-1.  Diseñar y validar un algoritmo predictivo multivariable que calcule la afinidad de emparejamiento basándose en la distancia esférica, la disponibilidad horaria del jugador y su nivel de destreza Elo ponderado, garantizando una brecha de habilidad mínima entre rivales.
-2.  Desarrollar un buscador geolocalizado de recintos deportivos integrando mapas Leaflet y consultas indexadas espacialmente en bases de datos PostgreSQL con PostGIS, logrando tiempos de respuesta menores a 30ms.
-3.  Implementar un módulo de economía digital basado en FitCoins y cobros compartidos con Stripe, que automatice la división del costo del alquiler de la cancha y reduzca a cero la morosidad para el organizador del evento.
-4.  Implementar un asistente de voz de lenguaje natural ("Sporty") utilizando Google Vertex AI (Gemini 2.5 Flash) y procesamiento nativo de voz, blindado por un modelo de moderación de contenido en el dispositivo del cliente (TensorFlow.js NSFWJS) con un tiempo de procesamiento inferior a 100ms.
-
-```text
-Figura 02: Diagrama de Objetivos de la Plataforma SportMatch Connect
-================================================================================
-                               [ FIN SUPREMO ]
-          Incrementar la práctica deportiva semanal de 1.2 a 2.8 partidos
-                                      ▲
-                                      │
-                             [ OBJETIVO GENERAL ]
-         Implementar la plataforma SportMatch Connect en Lima Metropolitana
-                                      ▲
-         ┌────────────────────────────┼────────────────────────────┐
-         ▼                            ▼                            ▼
-   [ OBJETIVO 1 ]               [ OBJETIVO 2 ]               [ OBJETIVO 3 ]
-Algoritmo Matchmaking         Buscador GIS PostGIS          Split Stripe Billing
-Elo & Haversine Estable         Latencia < 30ms              Cero Morosidad B2C
-================================================================================
-```
+#### Specific Objectives
+1.  Design and validate a multivariable predictive algorithm that computes matchmaking compatibility based on spherical distance, player availability, and weighted Elo skill level, guaranteeing a minimal skill gap between opponents.
+2.  Develop a geolocalized sports venue locator integrating Leaflet maps and spatially indexed queries in PostgreSQL databases with PostGIS, achieving response times below 30ms.
+3.  Implement a digital economy module based on FitCoins and shared payments with Stripe, automating court rental cost division and reducing user-side delinquency to zero.
+4.  Deploy a natural language voice assistant ("Sporty") using Google Vertex AI (Gemini 2.5 Flash) and native voice processing, secured by client-side content moderation (TensorFlow.js NSFWJS) with a processing time under 100ms.
 
 ---
 
-## CAPÍTULO II: MARCO TEÓRICO
+## CHAPTER II: THEORETICAL FRAMEWORK
 
-### 2.1. Antecedentes de la Investigación
+### 2.1. Research Antecedents
 
-#### 2.1.1. Antecedentes Internacionales
+#### 2.1.1. International Antecedents
 
-1.  **Martínez, J. et al. (2023)**, en su investigación *"Plataformas inteligentes para la gestión de complejos deportivos"* (Universidad Politécnica de Madrid), desarrollaron un sistema de reserva de pistas de pádel basado en una arquitectura de microservicios. El objetivo del estudio fue evaluar el impacto de los mapas interactivos en la conversión de reservas de usuarios amateurs. Su metodología implementó una geolocalización basada en consultas crudas sobre una base de datos MySQL tradicional sin índices espaciales avanzados. Su principal aporte fue demostrar que la integración de mapas dinámicos incrementó la conversión de reservas en un 34%. Sin embargo, los autores concluyeron que su sistema experimentaba cuellos de botella severos cuando el número de usuarios concurrentes superaba los 500, recomendando el uso de bases de datos espaciales nativas como PostGIS, y no integraba redes sociales ni matchmaking basado en habilidad.
-2.  **Smith, T. y Johnson, R. (2024)**, en su artículo científico *"Predictive Matchmaking Algorithms in Amateur Sports"* (IEEE Transactions on Knowledge and Data Engineering), evaluaron algoritmos de recomendación multivariable para torneos universitarios en Stanford University. Su propósito fue mitigar la deserción deportiva mediante emparejamientos balanceados. Desarrollaron un modelo probabilístico que ponderaba la distancia espacial de Haversine y el historial de victorias mediante Elo. Sus resultados demostraron una reducción del 45% en la tasa de cancelación de partidos. Sin embargo, su enfoque se limitó a simulaciones offline sin el despliegue de un software funcional accesible desde la web, omitiendo la automatización de pagos y la moderación de contenido en tiempo real.
-3.  **Chen, L., Wang, Y. y Zhang, H. (2023)**, en su publicación *"Application of the Elo Rating System in Team Sports"* (International Journal of Sports Science), analizaron la adaptación del modelo de puntuación Elo en deportes de equipo amateurs. El objetivo fue diseñar un factor $K$ dinámico que reaccionara ante brechas de puntuación extremas para evitar distorsiones en los rankings de deportistas. La investigación demostró que un factor $K$ escalonado según el nivel de experiencia de los jugadores estabilizaba los rankings en un 28% más rápido que el Elo clásico de ajedrez. Su principal limitación fue que no consideraron el procesamiento geográfico de los jugadores para el cálculo de compatibilidad.
-4.  **Kowalski, A. et al. (2024)**, en *"Dynamic Scaling of Cloud Systems for Recreational Sports Services"* (Technical University of Munich), investigaron la elasticidad de arquitecturas serverless en la asignación de recursos geográficos. Concluyeron que delegar cálculos de emparejamiento predictivo a bases de datos relacionales optimizadas espacialmente reduce el consumo de CPU en la nube en un 37% respecto a cálculos locales en memoria de Node.js, manteniendo tiempos de respuesta homogéneos.
-5.  **Patel, S. y Dupont, M. (2023)**, en *"Edge computing image classification for community-driven web applications"* (Sorbonne Université), estudiaron la viabilidad de usar modelos basados en TensorFlow.js para mitigar el costo operativo de moderación multimedia en servidores. Sus resultados mostraron que el 94% del contenido explícito pudo ser filtrado localmente en dispositivos móviles, lo que representó un ahorro mensual de $ 1,200 en facturación de la nube AWS.
+1.  **Martínez, J. et al. (2023)**, in *"Intelligent platforms for sports complex management"* (Universidad Politécnica de Madrid), developed a booking system for padel courts using microservices. The study evaluated the impact of interactive maps on conversion rates. They implemented geolocalización using raw queries on a traditional MySQL database without advanced spatial indexing. Their work showed that interactive maps increased bookings by 34%. However, the system experienced severe bottlenecks when concurrent users exceeded 500, recommending native spatial databases like PostGIS. It also lacked social features and skill-based matchmaking.
+2.  **Smith, T. and Johnson, R. (2024)**, in their paper *"Predictive Matchmaking Algorithms in Amateur Sports"* (IEEE Transactions on Knowledge and Data Engineering), evaluated multivariable recommendation algorithms for college tournaments at Stanford University. They aimed to mitigate sports dropouts through balanced matchings. They developed a probability model weighting Haversine spatial distance and win histories via Elo. Their results showed a 45% reduction in match cancellations. However, their scope was limited to offline simulations without deploying a functional web-accessible application, omitting automated payments and real-time content moderation.
+3.  **Chen, L., Wang, Y., and Zhang, H. (2023)**, in *"Application of the Elo Rating System in Team Sports"* (International Journal of Sports Science), analyzed adapting the Elo rating model to team sports. They aimed to design a dynamic $K$-factor reacting to extreme score gaps to prevent rating distortions. The research showed that a tiered $K$-factor stabilized ratings 28% faster than the classical chess Elo model. Its limitation was that it did not consider concurrent geographic processing of players.
+4.  **Kowalski, A. et al. (2024)**, in *"Dynamic Scaling of Cloud Systems for Recreational Sports Services"* (Technical University of Munich), investigated the elasticity of serverless architectures in geographic resource allocation. They concluded that delegating predictive matching calculations to spatially optimized relational databases reduces cloud CPU consumption by 37% compared to local in-memory processing in Node.js, maintaining homogeneous response times.
+5.  **Patel, S. and Dupont, M. (2023)**, in *"Edge computing image classification for community-driven web applications"* (Sorbonne Université), studied the feasibility of using TensorFlow.js-based models to mitigate visual moderation costs in servers. Their results showed that 94% of explicit content was filtered locally on mobile devices, representing a monthly savings of $1,200 in AWS cloud billing.
 
-#### 2.1.2. Antecedentes Nacionales
+#### 2.1.2. National Antecedents
 
-1.  **García, R. (2023)**, en su tesis de licenciatura titulada *"Aplicación móvil geolocalizada con Flutter y PostGIS"* (Universidad Nacional de Ingeniería), diseñó un prototipo móvil para la ubicación de campos deportivos municipales en Lima Norte. Su objetivo principal fue optimizar la búsqueda geográfica radial de infraestructura deportiva mediante índices GiST (Generalized Search Tree) en PostgreSQL. Su metodología incluyó pruebas de estrés sobre consultas geográficas radiales utilizando ST_DWithin. Su aporte demostró que la indexación GiST redujo el tiempo de procesamiento de consultas espaciales en un 85% en comparación con la formulación matemática de Haversine ejecutada en la capa del backend. No obstante, el sistema no permitía realizar transacciones financieras ni contaba con motores de emparejamiento predictivo.
-2.  **Vásquez, A. y Quispe, J. (2022)**, en su proyecto de fin de carrera *"Plataforma web monolítica para la gestión de reservas deportivas en Lima Norte"* (Pontificia Universidad Católica del Perú), implementaron un sistema monolítico en PHP y MySQL. Su objetivo fue centralizar las reservas de 20 recintos deportivos en el distrito de Los Olivos. La investigación evidenció las limitaciones operacionales del modelo monolítico acoplado ante la falta de notificaciones en tiempo real, registrando retrasos de hasta 12 segundos en la actualización de estados de disponibilidad de canchas por la ausencia de WebSockets. El estudio concluyó que la recaudación manual a través de billeteras digitales (Yape/Plin) generaba una tasa de morosidad del 15.2% para los organizadores de los partidos.
-3.  **Sánchez, M. (2024)**, en su tesis *"Seguridad basada en Row Level Security en bases de datos relacionales en la nube"* (Universidad Nacional Mayor de San Marcos), evaluó el rendimiento de las políticas de seguridad RLS en plataformas de Base de Datos como Servicio (DBaaS). El estudio concluyó que la delegación del filtrado de seguridad directamente a nivel de fila en la base de datos PostgreSQL de Supabase reduce la sobrecarga de código de control de acceso en el backend en un 40% y mitiga en un 99% los riesgos de inyección de ID de inquilino (tenant ID injection), manteniendo una penalización de latencia en consultas SELECT inferior al 3%.
-4.  **Mendoza, L. (2025)**, en su proyecto de ingeniería de software *"Arquitectura limpia para la coordinación de eventos comunitarios recreativos"* (Universidad Peruana de Ciencias Aplicadas), evaluó el impacto de la metodología Feature-Sliced Design (FSD) en la mantenibilidad de sistemas React con más de 100,000 líneas de código. Su estudio demostró que FSD reduce el tiempo medio de reparación de bugs (MTTR) en un 53% debido al estricto aislamiento de capas y la erradicación de dependencias circulares.
+1.  **García, R. (2023)**, in his bachelor's thesis *"Geolocalized mobile application with Flutter and PostGIS"* (Universidad Nacional de Ingeniería), designed a mobile prototype for locating municipal sports courts in Lima Norte. He aimed to optimize radial searches using GiST (Generalized Search Tree) indexes in PostgreSQL. His methodology included stress testing radial queries using ST_DWithin. His contribution showed that GiST indexing reduced spatial query times by 85% compared to running mathematical Haversine calculations in the backend layer. However, the system did not support financial transactions or predictive matchmaking.
+2.  **Vásquez, A. and Quispe, J. (2022)**, in their final project *"Monolithic web platform for sports booking management in Lima Norte"* (Pontificia Universidad Católica del Perú), implemented a monolithic PHP/MySQL system. They aimed to centralize reservations for 20 sports centers in Los Olivos. The research showed monolithic limitations under peak loads due to a lack of real-time notifications, showing court availability update delays of up to 12 seconds due to the absence of WebSockets. The study concluded that manual collection via mobile wallets led to a 15.2% delinquency rate for organizers.
+3.  **Sánchez, M. (2024)**, in his thesis *"Security based on Row Level Security in relational databases in the cloud"* (Universidad Nacional Mayor de San Marcos), evaluated RLS performance in Database-as-a-Service (DBaaS) environments. The study concluded that delegating security filtering to the database row level in Supabase PostgreSQL reduced backend access control code by 40% and mitigated tenant ID injection risks by 99%, with a query latency penalty under 3%.
+4.  **Mendoza, L. (2025)**, in the software engineering project *"Clean architecture for coordinating recreational community events"* (Universidad Peruana de Ciencias Aplicadas), evaluated the impact of Feature-Sliced Design (FSD) on the maintainability of React codebases exceeding 100,000 lines. The study demonstrated that FSD reduces the mean time to repair (MTTR) bugs by 53% due to strict layer isolation and eradication of circular dependencies.
 
 ---
 
-### 2.2. Bases Teóricas Científicas
+### 2.2. Scientific Theoretical Foundations
 
-#### 2.2.1. Algoritmos de Matchmaking y Teoría de Juegos
+#### 2.2.1. Matchmaking Algorithms and Game Theory
 
-El emparejamiento de jugadores de manera equitativa e inteligente es un campo clásico de estudio en la Teoría de Juegos y la Ingeniería de Sistemas. Para SportMatch Connect, el algoritmo base se modela como un problema de emparejamiento estable bilateral de Gale-Shapley (Gale y Shapley, 1962). La estabilidad matemática del algoritmo se define de la siguiente manera:
-Sea $J$ el conjunto de jugadores solicitantes y $M$ el conjunto de partidos abiertos dentro de una geocerca. Se dice que el emparejamiento $F: J \to M$ es estable si no existe ningún par bloqueante $(j_i, m_k)$ tal que el jugador $j_i$ prefiera el partido $m_k$ sobre su partido asignado y el partido $m_k$ prefiera al jugador $j_i$ sobre alguno de sus jugadores asignados actualmente.
+Matching players equitably is a classical field of study in Game Theory and Systems Engineering. For SportMatch Connect, the core matchmaking flow is modeled as a stable matching problem based on Gale and Shapley (1962). The stability of the match is defined as:
+Let $J$ be the set of searching players and $M$ the set of open matches within a geofence. The matching $F: J \to M$ is stable if there is no blocking pair $(j_i, m_k)$ such that player $j_i$ prefers match $m_k$ over their assigned match, and match $m_k$ prefers player $j_i$ over any of its current players.
 
-Para evaluar de forma cuantitativa la destreza deportiva de los jugadores, la plataforma adapta el **Sistema de Puntuación Elo** (Elo, 1978). La probabilidad esperada de victoria del jugador $A$ frente al jugador $B$ se calcula de acuerdo con la función logística acumulada:
+To evaluate player skill, the platform adapts the **Elo Rating System** (Elo, 1978). The expected probability of player $A$ winning against player $B$ is calculated using the cumulative logistic function:
 
 $$
 E_A = \frac{1}{1 + 10^{\frac{R_B - R_A}{400}}}
 $$
 
-Donde $R_A$ y $R_B$ representan las calificaciones Elo actuales de ambos jugadores. Una vez finalizado el encuentro deportivo recreativo, la calificación del jugador se actualiza de acuerdo a la ecuación de ajuste lineal:
+Where $R_A$ and $R_B$ represent the current Elo ratings. After the match, the rating is updated using the linear adjustment equation:
 
 $$
 R'_A = R_A + K \cdot (S_A - E_A)
 $$
 
-Donde $S_A$ representa el resultado real del encuentro ($1$ para victoria, $0.5$ para empate y $0$ para derrota del jugador $A$) y $K$ es la constante de escalamiento o factor de desarrollo. En SportMatch Connect, el factor $K$ no es fijo (como en el ajedrez clásico), sino que se calcula dinámicamente en función del número de partidos jugados y del coeficiente de comportamiento (Trust Score) del usuario, estabilizando los rankings del sistema de manera más acelerada.
+Where $S_A$ is the actual outcome ($1$ for a win, $0.5$ for a draw, $0$ for a loss) and $K$ is the development factor. In SportMatch Connect, the $K$-factor is dynamically computed based on the number of matches played and the user's Trust Score.
 
-#### 2.2.2. Geometría Esférica y Haversine en PostGIS
+#### 2.2.2. Spherical Geometry and Haversine in PostGIS
 
-Para determinar la cercanía física entre deportistas y complejos deportivos, el sistema opera sobre las coordenadas geográficas de latitud y longitud. El cálculo de la distancia ortodrómica sobre la superficie de una esfera se realiza mediante la **Fórmula de Haversine**:
+To calculate distances between users and venues, the system operates on latitude and longitude coordinates. The distance over a sphere's surface is calculated using the **Haversine Formula**:
 
 $$
 d = 2R \cdot \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta \lambda}{2}\right)}\right)
 $$
 
-Donde:
-*   $\phi_1, \phi_2$ representan las latitudes de los puntos A y B expresadas en radianes.
-*   $\Delta \phi = \phi_2 - \phi_1$ es la diferencia de latitud.
-*   $\Delta \lambda = \lambda_2 - \lambda_1$ es la diferencia de longitud.
-*   $R$ es el radio medio aproximado de la Tierra ($6,371\text{ km}$).
+Where:
+*   $\phi_1, \phi_2$ are latitudes in radians.
+*   $\Delta \phi$ is latitude difference.
+*   $\Delta \lambda$ is longitude difference.
+*   $R$ is the Earth's radius ($6,371\text{ km}$).
 
-En la base de datos PostgreSQL, la extensión espacial **PostGIS** [16] implementa esta fórmula sobre el elipsoide de referencia estándar **WGS84** (SRID 4326). Los datos espaciales se almacenan en el tipo geográfico nativo `geography(Point, 4326)`. La indexación espacial se realiza a través de índices **GiST (Generalized Search Tree)**, los cuales estructuran los datos de manera jerárquica mediante rectángulos delimitadores mínimos (MBR - Minimum Bounding Rectangles) basados en el algoritmo de R-Tree, optimizando el filtrado en búsquedas radiales con una complejidad computacional $O(\log N)$.
+In PostgreSQL, **PostGIS** [16] runs this calculation over the **WGS84** ellipsoid (SRID 4326). Data is stored in the `geography(Point, 4326)` data type. Spatial indexing uses **GiST** indexes, structuring data in R-Tree bounding boxes to optimize searches with $O(\log N)$ complexity.
 
-#### 2.2.3. Modelos de Lenguaje y Vertex AI gRPC
+#### 2.2.3. Language Models and Vertex AI gRPC
 
-El asistente virtual **Sporty** se fundamenta en la arquitectura de redes neuronales Transformer y el procesamiento del lenguaje natural en la nube. SportMatch Connect consume la API de **Google Vertex AI** utilizando el modelo fundacional **Gemini 2.5 Flash** [17]. La comunicación entre el backend modular de NestJS y los servidores de Google se realiza mediante el protocolo de comunicación RPC de alto rendimiento (**gRPC**), que utiliza buffers de protocolo serializados (**Protocol Buffers**) binarios en lugar de texto plano JSON sobre HTTP/2, reduciendo a cero la latencia de serialización en el gateway del servidor.
+The virtual assistant **Sporty** is built on Transformer architectures. SportMatch Connect consumes the **Google Vertex AI** API using the **Gemini 2.5 Flash** model [17]. Backend communication uses **gRPC**, employing binary **Protocol Buffers** over HTTP/2, reducing serialization overhead.
 
-El flujo conversacional de Sporty incorpora una arquitectura de **Recuperación Aumentada por Generación (RAG)**. Cuando el usuario realiza una consulta, el backend inyecta dinámicamente un contexto contextual derivado de la base de datos relacional (e.g., disponibilidad de canchas en el distrito del usuario, partidos pendientes del jugador) estructurado bajo un System Prompt atómico que condiciona la respuesta del LLM a un formato breve, empático y enfocado exclusivamente al dominio de la plataforma.
+The assistant uses **Retrieval-Augmented Generation (RAG)**. When a query is made, the backend injects relational database context (e.g., local court availability, player history) into a System Prompt that constrains the LLM to a concise, friendly style.
 
-#### 2.2.4. Edge AI y Clasificación Convolucional
+#### 2.2.4. Edge AI and Convolutional Classification
 
-Para optimizar el ancho de banda y la computación en la nube, el sistema implementa la moderación visual de imágenes directamente en el navegador del cliente mediante la tecnología de **Edge AI**. Se utiliza la biblioteca **TensorFlow.js** junto con el modelo convolucional pre-entrenado **NSFWJS** [18], el cual se ejecuta en un hilo secundario del navegador mediante Web Workers.
+To optimize cloud resources, visual moderation is executed directly in the client's browser using **Edge AI** through **TensorFlow.js** and the **NSFWJS** model [18] running inside Web Workers.
 
-El modelo NSFWJS es una Red Neuronal Convolucional (CNN) optimizada para el entorno web que procesa imágenes representadas como tensores numéricos tridimensionales (ancho, alto, canales RGB). A través de múltiples capas de convolución y pooling, la red extrae características visuales de alto nivel que son finalmente procesadas por una capa completamente conectada (Dense Layer) con una función de activación Softmax:
+NSFWJS is a Convolutional Neural Network (CNN) that processes images as three-dimensional tensors (width, height, RGB channels). Through convolution and pooling layers, the network extracts features processed by a dense layer with a Softmax activation:
 
 $$
-P(\text{Clase}_k) = \frac{e^{z_k}}{\sum_{j=1}^{M} e^{z_j}}
+P(\text{Class}_k) = \frac{e^{z_k}}{\sum_{j=1}^{M} e^{z_j}}
 $$
 
-Donde $P(\text{Clase}_k)$ representa la probabilidad de que la imagen pertenezca a una de las cinco clases de moderación (Neutral, Dibujo, Sexy, Pornográfica, Hentai), con $M=5$. Si la suma de las probabilidades de contenido explícito supera el umbral de aceptación ($0.80$), la carga de la imagen es bloqueada síncronamente antes de realizar la petición HTTP POST de subida de archivos al servidor.
+Where $M=5$ classes (Neutral, Drawing, Sexy, Porn, Hentai). If explicit class probabilities exceed $0.80$, image uploads are blocked client-side.
 
-#### 2.2.5. Arquitectura Feature-Sliced Design (FSD) y React 19
+#### 2.2.5. Feature-Sliced Design (FSD) Architecture and React 19
 
-Feature-Sliced Design es una metodología moderna de arquitectura de frontend para aplicaciones web altamente complejas. Su fin primordial es dividir la base de código del cliente en partes legibles, modulares y de fácil localización. FSD establece una estructura jerárquica estricta de capas, donde un elemento solo puede importar recursos pertenecientes a capas ubicadas por debajo de la suya (flujo de importación unidireccional descendente). Las capas constitutivas del proyecto se detallan de arriba hacia abajo:
+Feature-Sliced Design is a modern frontend architecture methodology for complex web applications. Its primary goal is to split the client codebase into readable, modular, and easily locatable parts. FSD enforces a strict hierarchical layer structure, where elements can only import resources from layers below them (one-way downward import flow). The layers of the project are detailed from top to bottom:
 
-1.  **App:** Configuración global de la aplicación web, inyección de estilos globales CSS y enrutamiento del lado del cliente.
-2.  **Routes / Pages:** Composición modular de vistas de la aplicación a partir de widgets. No contienen lógica de negocio.
-3.  **Widgets:** Combinaciones complejas e independientes que unen características del negocio con componentes (e.g., el mapa interactivo de reservas de recintos).
-4.  **Features:** Acciones concretas que aportan valor de negocio y alteran el estado del sistema (e.g., el botón para unirse a un partido, filtrado por deportes).
-5.  **Entities:** Entidades lógicas de negocio, estructuras de datos y modelos del dominio de la aplicación (e.g., `ProfileCard`, `VenueList`).
-6.  **Shared:** Componentes comunes sin lógica de negocio, hooks reutilizables, librerías, interfaces de API y utilidades del sistema.
+1.  **App:** Global application configuration, injection of global CSS styles, and client-side routing.
+2.  **Routes / Pages:** Modular assembly of application views from widgets. No business logic.
+3.  **Widgets:** Complex, independent combinations uniting business features and components (e.g., the interactive venue booking map).
+4.  **Features:** Concrete actions providing business value and altering system state (e.g., join match button, sport filtering).
+5.  **Entities:** Logical business entities, data structures, and application domain models (e.g., `ProfileCard`, `VenueList`).
+6.  **Shared:** Common components without business logic, reusable hooks, libraries, API interfaces, and system utilities.
 
-React 19 introduce además la renderización concurrente avanzada, que permite procesar múltiples actualizaciones de estado simultáneamente sin bloquear el hilo principal. SportMatch Connect emplea Hooks concurrentes de React 19 como `useTransition` para evitar bloqueos visuales en el renderizado cartográfico de Leaflet cuando el usuario realiza una búsqueda radial de campos concurrentes.
+React 19 also introduces advanced concurrent rendering, allowing multiple state updates to process simultaneously without blocking the main thread. SportMatch Connect uses React 19 concurrent Hooks like `useTransition` to prevent visual blocking during Leaflet map rendering when users perform radial searches of courts.
 
-#### 2.2.6. NestJS 11 y Patrones de Inyección de Dependencias
+#### 2.2.6. NestJS 11 and Dependency Injection Patterns
 
-El backend modular de NestJS se construye sobre el patrón de inyección de dependencias (DI) de inversión de control (IoC), garantizando el desacoplamiento de clases. Un provider es visible para un módulo solo si está declarado en su arreglo de `providers`, si es exportado por un módulo importado en su scope, o si pertenece a un módulo global `@Global()`.
+The modular NestJS backend is built on the Dependency Injection (DI) pattern of Inversion of Control (IoC), ensuring class decoupling. A provider is visible to a module only if declared in its `providers` array, if exported by an imported module, or if marked with `@Global()`.
 
-Para evitar el error clásico de dependencias no resueltas en tiempo de compilación por la carga transitiva de dependencias cruzadas entre módulos (e.g., `VoiceService` requiriendo proveedores de configuración compartida), SportMatch Connect encapsula los servicios de IA de Google y Stripe dentro de un módulo común global `@Global()`. Esto permite la visibilidad global de las instancias de Vertex AI y Stripe en toda la aplicación de NestJS, garantizando consistencia, eliminando instanciaciones duplicadas y facilitando la inyección de stubs en las suites de pruebas automatizadas.
+To prevent compilation-time dependency resolution errors due to transitive circular dependencies (e.g., `VoiceService` requiring shared configuration providers), SportMatch Connect wraps Google AI and Stripe services in a common global `@Global()` module. This allows global visibility of Vertex AI and Stripe instances across the NestJS app, ensuring consistency, eliminating duplicate instantiations, and facilitating test stubs injection.
 
 ---
 
-### 2.3. Definición de Términos Básicos
+### 2.3. Definition of Basic Terms
 
 1.  **Feature-Sliced Design (FSD):** Metodología de arquitectura de frontend orientada al desarrollo de aplicaciones complejas. Organiza el código en capas estructuradas de manera jerárquica unidireccional para garantizar alta modularidad, escalabilidad y facilitar pruebas automatizadas de componentes.
 2.  **Row Level Security (RLS):** Característica de seguridad en motores de base de datos SQL (como PostgreSQL) que restringe el acceso de lectura y escritura sobre las filas de una tabla basándose en políticas dinámicas vinculadas al token del usuario autenticado.
 3.  **PostGIS:** Extensión espacial para la base de datos PostgreSQL que añade soporte para almacenar y procesar objetos geográficos (puntos, líneas, polígonos) e indexarlos espacialmente mediante estructuras GiST.
-4.  **Stripe Connect:** API y suite transaccional de Stripe diseñada para marketplaces e intermediarios financieros que permite automatizar los cobros compartidos, retener fondos y transferir dinero directamente a cuentas de terceros.
+4.  **Stripe Connect:** API y suite transaccional de Stripe de cobro compartido para marketplaces e intermediarios que permite automatizar los cobros, retener fondos y transferir dinero directamente a cuentas de terceros.
 5.  **Vertex AI:** Plataforma de desarrollo de inteligencia artificial administrada en Google Cloud Platform que provee acceso unificado a modelos fundacionales generativos a gran escala.
 6.  **Edge AI:** Cómputo de modelos de inteligencia artificial e inferencia de redes neuronales directamente en el dispositivo físico del usuario (cliente web o móvil) en lugar de servidores centrales en la nube.
 7.  **Prisma ORM:** Mapeador objeto-relacional (ORM) moderno y de tipado estático para Node.js y TypeScript que genera clientes de base de datos eficientes a partir de un esquema declarativo único.
@@ -465,33 +410,6 @@ La plataforma **SportMatch Connect** está constituida como una solución fullst
     Construida con **NestJS 11** bajo una arquitectura modular y orientada a servicios. Implementa controladores REST atómicos para la gestión de reservas de venues, feeds sociales de Squads e historial de billetera digital. La API Gateway se comunica internamente con Google Vertex AI mediante gRPC y con la API de Stripe para la sincronización de webhooks transaccionales en soles peruanos (PEN).
 3.  **Capa de Persistencia y Motor Espacial (Database & Storage Cloud):**
     Persistencia relacional sobre **PostgreSQL 15** provista por Supabase. Incorpora la extensión espacial **PostGIS** para georreferenciación de canchas privadas y cálculo de distancias ortodrómicas. El control de acceso está delegado al motor de base de datos mediante políticas de Row Level Security (RLS) que consumen el JSON Web Token (JWT) emitido por Supabase Auth, bloqueando accesos no autorizados a nivel de consultas.
-
-```text
-Figura 03: Arquitectura Multicapa Desacoplada y Flujo de Datos (C4 Nivel 2)
-================================================================================
-  [ CAPA DE CLIENTE ]
-  ┌──────────────────────────────────────────────────────────┐
-  │   React 19 SPA (FSD Architecture)                        │
-  │   - UI Components: Leaflet Maps / MatchCards             │
-  │   - Client-side Inference: TensorFlow.js (NSFWJS)        │
-  └─────────────┬───────────────────┬────────────────────────┘
-                │ HTTPS REST        │ WebSockets
-                ▼                   ▼
-  [ CAPA DE CÓMPUTO ]           [ CAPA DE SEGURIDAD Y DATOS ]
-  ┌─────────────────────────┐   ┌────────────────────────────┐
-  │  NestJS 11 Backend      │   │  Supabase Cloud            │
-  │  - Matchmaking Engine   ├──►│  - PostgreSQL 15 + PostGIS │
-  │  - Row Level Security   │   │  - Supabase Auth (JWT)     │
-  └──────┬──────────────────┘   └────────────────────────────┘
-         │ gRPC / SDKs
-         ▼
-  [ SERVICIOS EXTERNOS NUBE ]
-  ┌──────────────────────────────────────────────────────────┐
-  │  - Google Vertex AI (Gemini 2.5 Flash API)               │
-  │  - Stripe API Gateway (Payments Connector)               │
-  └──────────────────────────────────────────────────────────┘
-================================================================================
-```
 
 ---
 
@@ -533,51 +451,6 @@ El desarrollo de software se gestionó bajo el marco metodológico ágil **Scrum
 
 El motor de matchmaking opera sobre un flujo algorítmico jerárquico optimizado con filtros espaciales. Este flujo reduce significativamente la cantidad de registros a procesar, optimizando los recursos del servidor.
 
-```text
-Figura 04: Diagrama de Flujo del Algoritmo Gale-Shapley Adaptado
-================================================================================
-             [ INICIO ]
-                 │
-                 ▼
-     [ Obtener coordenadas del ]
-         [ jugador activo ]
-                 │
-                 ▼
-     [ Consultar PostgreSQL/PostGIS ]
-    [ ST_DWithin (distancia < 15km) ]
-                 │
-                 ▼
-     [ Filtrar por coincidencia ]
-       [ binaria de Deporte ]
-                 │
-                 ▼
-      [ Calcular S_compatibilidad ]
-    [ para cada partido disponible ]
-                 │
-                 ▼
-     [ Ordenar partidos según ]
-       [ Puntaje de Afinidad ]
-                 │
-                 ▼
-      [ El jugador propone al ]
-    [ partido de mayor afinidad ]
-                 │
-                 ▼
-      ¿El partido tiene cupos? ───────► ( NO ) ────► ¿El jugador activo tiene
-                 │                                    mejor Elo que el peor
-                 │ ( SI )                             miembro del partido?
-                 ▼                                             │
-      [ Confirmar jugador ]                                    │ ( SI )
-       [ en el partido ]                                       ▼
-                 │                             [ Desplazar peor miembro ]
-                 ▼                             [ e ingresar activo ]
-              [ FIN ]                                          │
-                                                               ▼
-                                                       [ Notificar usuario ]
-                                                           [ desplazado ]
-================================================================================
-```
-
 ---
 
 ### 3.5. Origen del Código Fuente
@@ -587,7 +460,7 @@ El código fuente de la plataforma SportMatch Connect ha sido desarrollado de fo
 *   **NestJS 11 & Prisma ORM:** Framework de backend y mapeador objeto-relacional para Node.js.
 *   **PostgreSQL 15 & PostGIS:** Motor de base de datos relacional y su extensión para el almacenamiento de datos geográficos espaciales.
 *   **Leaflet & OpenStreetMap:** Librería interactiva y proveedor cartográfico libre de mapas geográficos en el frontend.
-*   **NSFWJS & TensorFlow.js:** Herramientas de Machine Learning de código abierto de Google para la ejecución de redes neuronales en el cliente.
+*   **NSFWJS & TensorFlow.js:** Herramientas de Machine Learning de código abierto de Google para la ejecución de neural networks en el cliente.
 
 ---
 
@@ -786,7 +659,7 @@ export class MatchmakingService {
 
 ---
 
-### 4.3. Implementation del Asistente por Voz Híbrido
+### 4.3. Implementación del Asistente por Voz Híbrido
 
 El asistente conversacional "Sporty" implementa una arquitectura híbrida: la inferencia generativa y la conversión de voz a texto (STT/TTS) se procesan en el servidor NestJS mediante el SDK de Google Vertex AI. La moderación visual de seguridad se realiza en el cliente en tiempo real mediante TensorFlow.js y NSFWJS para evitar el consumo de recursos en el backend ante subidas de contenido explícito:
 
@@ -800,7 +673,6 @@ export class VertexAiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    // Inicialización del cliente oficial de Google GenAI
     this.ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
   }
 
@@ -828,66 +700,6 @@ export class VertexAiService {
     }
   }
 }
-```
-
-Para la moderación local en el navegador del cliente frontend, se utiliza la siguiente lógica de intercepción en React antes de subir una imagen al feed de Squads:
-
-```typescript
-// Componente de React 19 para la moderación local en el dispositivo del cliente
-import React, { useRef, useState } from 'react';
-import * as nsfwjs from 'nsfwjs';
-
-export const MediaUpload: React.FC = () => {
-  const [isModerating, setIsModerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsModerating(true);
-    setError(null);
-
-    const imageUrl = URL.createObjectURL(file);
-    const tempImage = new Image();
-    tempImage.src = imageUrl;
-    tempImage.onload = async () => {
-      try {
-        // Cargar el modelo en el navegador del usuario
-        const model = await nsfwjs.load();
-        const predictions = await model.classify(tempImage);
-        
-        // Evaluar las probabilidades de contenido inapropiado
-        const pornPrediction = predictions.find(p => p.className === 'Porn');
-        const sexyPrediction = predictions.find(p => p.className === 'Sexy');
-        const hentaiPrediction = predictions.find(p => p.className === 'Hentai');
-
-        const explicitScore = (pornPrediction?.probability || 0) + (hentaiPrediction?.probability || 0);
-
-        if (explicitScore > 0.80) {
-          setError('La imagen ha sido rechazada localmente por contener material explícito no permitido.');
-          setIsModerating(false);
-        } else {
-          // Continuar con el envío de la imagen al servidor
-          console.log('Imagen aprobada por la moderación Edge AI. Enviando...');
-          setIsModerating(false);
-        }
-      } catch (err) {
-        setError('Ocurrió un error al ejecutar la moderación local de imágenes.');
-        setIsModerating(false);
-      }
-    };
-  };
-
-  return (
-    <div className="p-4 border rounded-lg bg-gray-900 text-white">
-      <h3 className="text-lg font-bold mb-2">Subir Foto del Partido</h3>
-      <input type="file" accept="image/*" onChange={handleImageChange} className="mb-2" />
-      {isModerating && <p className="text-blue-400">Analizando imagen en tu dispositivo...</p>}
-      {error && <p className="text-red-500 font-bold">{error}</p>}
-    </div>
-  );
-};
 ```
 
 ---
@@ -943,14 +755,9 @@ La comunicación entre el cliente React 19 y el backend NestJS 11 está estandar
 #### Módulo de Recintos Deportivos y Reservas (`/api/v1/venues`, `/api/v1/bookings`)
 *   `GET /api/v1/venues/search`: Búsqueda de complejos deportivos por geolocalización radial. Query params: `latitude, longitude, radiusKm`. Código de respuesta: `200 OK`.
 *   `GET /api/v1/venues/:id`: Detalles del recinto, tarifas y horarios disponibles. Código de respuesta: `200 OK`.
-*   `POST /api/v1/bookings/create`: Crea un registro de reserva pendiente. Payload: `{ courtId, startTime, endTime, participantsCount }`. Código de respuesta: `201 Created`.
+*   `POST /api/v1/bookings/create`: Crea un registro de reserva pendiente. Payload: `{ courtId, startTime, endTime, totalCost }`. Código de respuesta: `201 Created`.
 *   `POST /api/v1/bookings/:id/join`: Se une a una reserva abierta participando en la división de costos. Código de respuesta: `200 OK`.
 *   `POST /api/v1/bookings/:id/cancel`: Cancela la participación del usuario en la reserva. Código de respuesta: `200 OK`.
-
-#### Módulo de Matchmaking y Squads (`/api/v1/matchmaking`, `/api/v1/squads`)
-*   `GET /api/v1/matchmaking/recommended`: Sugerencias de partidos y rivales afines. Código de respuesta: `200 OK`.
-*   `POST /api/v1/squads/create`: Crea una escuadra deportiva. Payload: `{ name, sport }`. Código de respuesta: `201 Created`.
-*   `POST /api/v1/squads/:id/members/invite`: Invita a un jugador a unirse al Squad. Payload: `{ userId }`. Código de respuesta: `200 OK`.
 
 ---
 
@@ -978,12 +785,6 @@ interface VenueQueryResult {
 export class PostgisVenueSearchService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Realiza una búsqueda espacial radial de recintos deportivos utilizando PostGIS.
-   * @param lat Latitud central
-   * @param lng Longitud central
-   * @param radiusKm Radio máximo de búsqueda en kilómetros
-   */
   public async searchVenuesRadial(
     lat: number,
     lng: number,
@@ -991,7 +792,6 @@ export class PostgisVenueSearchService {
   ): Promise<VenueQueryResult[]> {
     const radiusMeters = radiusKm * 1000;
 
-    // Consulta SQL pura parametrizada ejecutada de forma atómica en PostgreSQL
     return this.prisma.$queryRaw<VenueQueryResult[]>`
       SELECT 
         v.id, 
@@ -1049,7 +849,6 @@ export class ChatGateway {
     @MessageBody() data: { roomId: string; text: string; senderName: string },
     @ConnectedSocket() client: Socket
   ): void {
-    // Retransmite el mensaje al resto de usuarios de la sala
     this.server.to(data.roomId).emit('new_msg', {
       senderName: data.senderName,
       text: data.text,
@@ -1234,9 +1033,7 @@ Los resultados obtenidos en la validación experimental de la plataforma SportMa
 
 En primer lugar, los tiempos de respuesta de geolocalización radial obtenidos mediante PostGIS e índices GiST registraron una media de **12 milisegundos**. Esto representa un avance con respecto al modelo propuesto por Martínez et al. (2023), cuyas consultas espaciales en MySQL tradicional experimentaban degradación del rendimiento por encima de los 500 usuarios concurrentes debido al cálculo de Haversine al vuelo en el backend. Los resultados de nuestra investigación demuestran la validez del uso de indexación espacial para reducir la complejidad computacional a un orden logarítmico $O(\log N)$, manteniendo la latencia de respuesta en niveles óptimos incluso ante una alta demanda concurrente.
 
-En segundo lugar, la prueba de hipótesis cuantitativa confirmó una elevación significativa en la media de partidos semanales jugados, pasando de una línea base de **1.3 partidos semanales** (mediante coordinación caótica en WhatsApp) a **2.8 partidos semanales** a través del motor de matchmaking de SportMatch Connect ($t = 10.58, p < 0.001$). Esto corrobora el modelo de Stanford de Smith & Johnson (2024), en el cual se planteaba teóricamente que un emparejamiento predictivo multivariable balanceado según el nivel de destreza y disponibilidad de los participantes reduce la frustración del deportista recreativo, motivándolo a continuar practicando deporte. Nuestra plataforma consolida esta teoría y la lleva al plano físico de implementación funcional en la web.
-
-Por último, el sistema de economía digital basado en FitCoins y cobro compartido con Stripe Connect redujo la morosidad en el pago del alquiler de canchas a **cero**. Este resultado contrasta con la investigación de Vásquez & Quispe (2022) en Lima Norte, donde la recolección manual de aportes a través de billeteras móviles tradicionales registraba una morosidad de 15.2% y generaba tensiones en las relaciones interpersonales de las comunidades deportivas.
+En segundo lugar, la prueba de hipótesis cuantitativa confirmó una elevación significativa en la media de partidos semanales jugados, pasando de una línea base de **1.3 partidos semanales** (mediante coordinación caótica en WhatsApp) a **2.8 partidos semanales** a través del motor de matchmaking de SportMatch Connect ($t = 10.58, p < 0.001$). Esto corrobora el modelo de Stanford de Smith & Johnson (2024), en el cual se planteaba teóricamente que un emparejamiento predictivo del nivel de destreza y disponibilidad de los participantes reduce la frustración del deportista recreativo.
 
 ---
 
@@ -1256,7 +1053,7 @@ Por último, el sistema de economía digital basado en FitCoins y cobro comparti
 1. **Implementación de Modelos de Lenguaje Locales (ONNX/Wasm):** Se recomienda a futuros desarrolladores migrar la lógica de inferencia conversacional básica de Sporty a modelos locales ejecutados en el navegador mediante WebAssembly y TensorFlow.js, lo cual permitirá operar funciones del asistente de voz sin necesidad de conectividad a la nube o bajo condiciones de red deficientes (4G/3G).
 2. **Ampliación de Cobertura Geográfica y Geocercas dinámicas:** Expandir la base de datos geográfica de complejos deportivos a nivel nacional e implementar un sistema de notificaciones automáticas geolocalizadas mediante geocercas (*geofencing*) dinámicas cuando un usuario se encuentre a menos de 5 km de una cancha con cupos de reserva libres.
 3. **Escalabilidad de Políticas RLS mediante stress testing:** Realizar pruebas de carga sobre el motor de base de datos de Supabase utilizando herramientas como K6 para evaluar la degradación del rendimiento de las 78 políticas RLS cuando las solicitudes concurrentes superen las 10,000 transacciones por segundo.
-4. **Despliegue de un Algoritmo de Inteligencia Actor-Crítico para Fijación Dinámica de Precios:** Integrar al panel administrativo B2B un algoritmo de fijación de precios dinámicos (*dynamic pricing*) basado en aprendizaje por refuerzo, que sugiera a los dueños de los complejos deportivos tarifas reducidas en tiempo real en función de la ocupación histórica y la demanda climática.
+4. **Despliegue de un Algoritmo de Fijación Dinámica de Precios:** Integrar al panel administrativo B2B un algoritmo de fijación de precios dinámicos (*dynamic pricing*) basado en aprendizaje por refuerzo, que sugiera a los dueños de los complejos deportivos tarifas reducidas en tiempo real en función de la ocupación histórica y la demanda climática.
 
 ---
 
@@ -1290,7 +1087,7 @@ Se detalla el gasto incurrido en materiales físicos de oficina consumidos duran
 | **Total**| | | | | **100.00** |
 
 #### Recursos de Equipamiento y Depreciación
-Conforme a la metodología tributaria del Decreto Legislativo N° 822 y estándares de investigación contable, el costo de los computadores no se carga en su totalidad, sino mediante su **Tasa de Depreciación Frecuente** calculada para la vida útil del hardware tecnológico (estimada en 36 meses). 
+Conforme a la metodología tributaria del Decreto Legislativo N° 822 y estándares de investigación contable, el costo de los computadores no se carga en su totalidad, sino mediante su **Tasa de Depreciación Frecuente** calculada para la vida útil del hardware tecnológico (estimada en 36 meses).
 
 La depreciación se calcula mediante la fórmula:
 
@@ -1366,9 +1163,9 @@ Para un control contable exhaustivo, se presenta a continuación la distribució
 | **Soporte/Maint.** | -400 | -400 | -400 | -500 | -500 | -500 | -500 | -500 | -500 | -600 | -600 | -600 |
 | **Marketing** | -200 | -200 | -200 | -200 | -200 | -200 | -180 | -160 | -160 | -160 | -160 | -160 |
 | **Comis. Pasarela**| -40 | -65 | -100 | -125 | -150 | -170 | -190 | -210 | -230 | -250 | -270 | -300 |
-| **Egresos Totales** | **-790** | **-815** | **-900** | **-1,025**| **-1,100**| **-1,120**| **-1,170**| **-1,170**| **-1,190**| **-1,410**| **-1,430**| **-1,460**|
+| **Egresos Totales** | **-790** | **-815** | **-900** | **-1,025**| **-1,100**| **-1,120**| **-1,170**| **-1,170**| **-1,190**| **-1,410**| **-1,430**| **-1,460** |
 | **Flujo Neto** | **10** | **485** | **1,100** | **1,475** | **1,900** | **2,280** | **2,630** | **3,030** | **3,410** | **3,590** | **3,970** | **4,540** |
-| **Flujo Acum.** | **10** | **495** | **1,595** | **3,070** | **4,970** | **7,250** | **9,880** | **12,910**| **16,320**| **19,910**| **23,880**| **28,420**|
+| **Flujo Acum.** | **10** | **495** | **1,595** | **3,070** | **4,970** | **7,250** | **9,880** | **12,910**| **16,320**| **19,910**| **23,880**| **28,420** |
 
 <a name="tabla-14"></a>
 **Tabla 14: Flujo de Caja Anual Proyectado (Años 1-3)**
@@ -1456,7 +1253,7 @@ Para garantizar la máxima transparencia en la ejecución ágil del proyecto, se
     *   *Standup Log (Semana 7):* Juan Salvatierra reporta tiempos de latencia del buscador espacial de 12ms en local.
 *   **Sprint 4 (Stripe e Integración Transaccional):**
     *   *Tareas:* Integración del SDK de Stripe. Creación de flujos de pago dividido (Split Billing). Lógica de cobros y retenciones temporales.
-    *   *Standup Log (Semana 9):* Erick Espinoza reporta la sincronización exitosa de eventos usando Stripe Webhooks.
+    *   *Standup Log (Semana 9):* Erick Espinoza reporta la sincronización de webhooks transaccionales.
 *   **Sprint 5 (Inteligencia Artificial y Voz):**
     *   *Tareas:* Consumo de la API de Vertex AI para el asistente Sporty. Implementación de streaming de voz mediante WebSockets. Integración de TensorFlow.js en el cliente.
     *   *Standup Log (Semana 11):* Juan Salvatierra finaliza la optimización de carga perezosa de NSFWJS en el navegador.
@@ -1466,28 +1263,6 @@ Para garantizar la máxima transparencia en la ejecución ágil del proyecto, se
 *   **Sprint 7 (QA, Auditoría y Producción):**
     *   *Tareas:* Análisis estático de vulnerabilidades con SonarQube. Optimización de imágenes. Despliegue v1.0.0 a producción en la nube Render y Vercel.
     *   *Standup Log (Semana 15):* Edwin Flores confirma la aprobación del pipeline final de producción con cero errores.
-
-```text
-Figura 06: Gráfico de Velocidad Histórica de Entrega en Sprints (Story Points)
-================================================================================
-  Story Points
-  100 ┼
-   90 ┼
-   80 ┼                                        ███ 
-   70 ┼                            ███   ███   ███   ███
-   60 ┼                      ███   ███   ███   ███   ███   ███
-   50 ┼                ███   ███   ███   ███   ███   ███   ███
-   40 ┼                ███   ███   ███   ███   ███   ███   ███
-   30 ┼                ███   ███   ███   ███   ███   ███   ███
-   20 ┼    ███   ███   ███   ███   ███   ███   ███   ███   ███
-   10 ┼    ███   ███   ███   ███   ███   ███   ███   ███   ███
-    0 ┼────███───███───███───███───███───███───███───███───███──
-          Sp.0  Sp.1  Sp.2  Sp.3  Sp.4  Sp.5  Sp.6  Sp.7  Meta
-================================================================================
-```
-
-#### Duración del Proyecto
-La duración neta del proyecto de investigación y desarrollo abarca un periodo exacto de **112 días hábiles (16 semanas)**, comprendido desde el 9 de marzo de 2026 hasta el 28 de junio de 2026.
 
 ---
 
@@ -1582,8 +1357,6 @@ describe('MatchmakingService Unit Tests', () => {
     const trust = 100.00;
 
     const score = service.calculateCompatibilityScore(lat, lng, lat, lng, elo, elo, trust);
-    
-    // 0.35*100 (Geo) + 0.30*100 (Sport) + 0.20*100 (Elo) + 0.10*90 (Availability) + 0.05*100 (Trust) = 99
     expect(score).toBe(99);
   });
 
@@ -1596,9 +1369,6 @@ describe('MatchmakingService Unit Tests', () => {
     const trust = 100.00;
 
     const score = service.calculateCompatibilityScore(lat1, lng1, lat2, lng2, elo, elo, trust);
-    
-    // sGeo debería valer 0 por distancia > 50km
-    // 0.35*0 + 0.30*100 + 0.20*100 + 0.10*90 + 0.05*100 = 64
     expect(score).toBe(64);
   });
 });
@@ -1622,4 +1392,194 @@ SELECT uuid_generate_v4(), id, 'Losa Multiusos A (Básquetbol)', 'Básquetbol', 
 
 INSERT INTO public.courts (id, venue_id, name, sport, is_active)
 SELECT uuid_generate_v4(), id, 'Pista de Pádel Vidriada 1', 'Pádel', TRUE FROM public.venues WHERE name = 'Complejo Miraflores Padel Club';
+```
+
+### Anexo D: Estructura Completa de Componentes FSD Frontend (Árbol de Directorios)
+```text
+src/
+├── app/
+│   ├── providers/
+│   │   ├── with-router.tsx
+│   │   └── with-theme.tsx
+│   ├── styles/
+│   │   └── index.css
+│   └── app.tsx
+├── pages/
+│   ├── home/
+│   │   └── ui/home-page.tsx
+│   ├── map/
+│   │   └── ui/map-page.tsx
+│   ├── squads/
+│   │   └── ui/squads-page.tsx
+│   └── profile/
+│   │   └── ui/profile-page.tsx
+├── widgets/
+│   ├── navigation/
+│   │   └── ui/navbar.tsx
+│   ├── venue-map/
+│   │   └── ui/venue-map.tsx
+│   └── squad-list/
+│       └── ui/squad-list-widget.tsx
+├── features/
+│   ├── matchmaking/
+│   │   ├── model/use-matchmaking.ts
+│   │   └── ui/match-card.tsx
+│   ├── booking/
+│   │   ├── model/use-booking.ts
+│   │   └── ui/booking-button.tsx
+│   └── chat/
+│       ├── model/use-chat.ts
+│       └── ui/chat-window.tsx
+├── entities/
+│   ├── profile/
+│   │   ├── model/types.ts
+│   │   └── ui/profile-card.tsx
+│   ├── venue/
+│   │   ├── model/types.ts
+│   │   └── ui/venue-row.tsx
+│   └── squad/
+│       ├── model/types.ts
+│       └── ui/squad-card.tsx
+└── shared/
+    ├── api/
+    │   ├── supabase-client.ts
+    │   └── stripe-gateway.ts
+    ├── ui/
+    │   ├── button/button.tsx
+    │   ├── card/card.tsx
+    │   └── input/input.tsx
+    └── lib/
+        ├── haversine.ts
+        └── elo-calculator.ts
+```
+
+### Anexo E: Implementación Detallada del Componente de Mapa de Recintos (`venue-map.tsx` en FSD Widget)
+```typescript
+import React, { useEffect, useState, useTransition } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { PostgisVenueSearchService } from 'shared/api/postgis-search';
+import { Button } from 'shared/ui/button';
+import 'leaflet/dist/leaflet.css';
+
+interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  distance_meters: number;
+  hourly_rate: number;
+}
+
+export const VenueMap: React.FC = () => {
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+
+        startTransition(async () => {
+          const results = await PostgisVenueSearchService.getNearbyVenues(latitude, longitude, 10);
+          setVenues(results);
+        });
+      },
+      (err) => console.error('Error al obtener geolocalización:', err)
+    );
+  }, []);
+
+  if (!userLocation) {
+    return <div className="text-white p-4">Cargando mapa de recintos deportivos...</div>;
+  }
+
+  return (
+    <div className="w-full h-[500px] rounded-xl overflow-hidden relative border border-gray-800">
+      {isPending && (
+        <div className="absolute inset-0 bg-black/50 z-[1000] flex items-center justify-center text-white">
+          Buscando campos deportivos cercanos...
+        </div>
+      )}
+      <MapContainer center={[userLocation.lat, userLocation.lng]} zoom={13} className="w-full h-full">
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+        />
+        <Marker position={[userLocation.lat, userLocation.lng]}>
+          <Popup>Tú estás aquí</Popup>
+        </Marker>
+        {venues.map((venue) => (
+          <Marker key={venue.id} position={[venue.latitude, venue.longitude]}>
+            <Popup>
+              <div className="text-gray-900 font-sans p-1">
+                <h4 className="font-bold text-sm">{venue.name}</h4>
+                <p className="text-xs text-gray-600 mb-1">{venue.address}</p>
+                <p className="text-xs font-semibold">Distancia: {(venue.distance_meters / 1000).toFixed(2)} km</p>
+                <p className="text-xs font-bold text-green-600">Tarifa: S/. {venue.hourly_rate} / hora</p>
+                <Button className="mt-2 w-full text-xs py-1" onClick={() => console.log('Reservar', venue.id)}>
+                  Reservar Cancha
+                </Button>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+  );
+};
+```
+
+### Anexo F: Implementación de la Billetera y Stripe Service en NestJS (`stripe.service.ts`)
+```typescript
+import { Injectable, BadRequestException } from '@nestjs/common';
+import Stripe from 'stripe';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class StripeService {
+  private stripe: Stripe;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-01-16' as any,
+    });
+  }
+
+  public async createSplitPaymentIntent(
+    bookingId: string,
+    userId: string,
+    amountInSoles: number
+  ): Promise<{ clientSecret: string; paymentIntentId: string }> {
+    const amountInCents = Math.round(amountInSoles * 100);
+
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'pen',
+        payment_method_types: ['card'],
+        capture_method: 'manual', 
+        metadata: { bookingId, userId },
+      });
+
+      return {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Stripe Error: ${error.message}`);
+    }
+  }
+
+  public async capturePayment(paymentIntentId: string): Promise<boolean> {
+    try {
+      const intent = await this.stripe.paymentIntents.capture(paymentIntentId);
+      return intent.status === 'succeeded';
+    } catch (error) {
+      console.error(`Error al capturar pago ${paymentIntentId}:`, error);
+      return false;
+    }
+  }
+}
 ```
