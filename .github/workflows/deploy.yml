@@ -89,19 +89,12 @@ jobs:
         with:
           node-version: "24.x"
 
-      - name: Install Server Dependencies (Prisma v5.22.0)
+      - name: Run Prisma Database Migrations (pinned v5.22.0)
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: cd server && npm ci
-
-      - name: Run Prisma Database Migrations (v5 local)
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
-          echo "Deploying production database migrations via Prisma..."
-          cd server && npx --no-install prisma migrate deploy
+          echo "Deploying production database migrations via Prisma (pinned v5.22.0)..."
+          cd server && npx prisma@5.22.0 migrate deploy
 
       - name: Trigger Render Deploy Hook
         env:
