@@ -1257,8 +1257,8 @@ El cuestionario SUS se aplicó a 30 usuarios externos posterior a la sesión de 
 | Sprint 2 | E-02 Auth | Registro, login JWT, perfiles de usuario, onboarding de deportes | 63 | Alejandro Andrade (Fullstack) |
 | Sprint 3 | E-02 Matchmaking | Algoritmo Haversine + Elo, UI de tarjetas de matchmaking, filtros | 72 | Juan Salvatierra (Frontend/IA) |
 | Sprint 4 | E-03 Social | Feed de publicaciones, comentarios, reacciones, Squads | 75 | Alejandro Andrade (UI/UX) |
-| Sprint 5 | E-04 Reservas | Mapa Leaflet, booking flow, stripe integration MVP | 78 | Erick Espinoza (Backend) |
-| Sprint 6 | E-05 AI + E-04 | Sporty IA con Gemini, Split payments con Stripe, FitCoins wallet | 85 | Juan Salvatierra + Erick Espinoza |
+| Sprint 5 | E-04 Reservas | Mapa Leaflet, booking flow, stripe integration MVP | 78 | Erick Espinoza (Backend) + Edwin Flores (Base de Datos) |
+| Sprint 6 | E-05 AI + E-04 | Sporty IA con Gemini, Split payments con Stripe, FitCoins wallet | 85 | Juan Salvatierra + Edwin Flores (AI/Integración) |
 | Sprint 7 | E-06 QA | Vitest 78 tests, Playwright E2E, SonarQube, RLS 78 políticas | 78 | Matias Gastelu (QA/DevOps) |
 | Sprint 8 | E-07 Docs | Documentación técnica, ADRs, memoria descriptiva, video demo | 72 | Edwin Flores (Scrum Master) |
 
