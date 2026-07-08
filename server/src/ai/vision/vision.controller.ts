@@ -187,7 +187,7 @@ export class VisionController {
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
       throw new BadRequestException("Formato de imagen no soportado. Usa JPG, PNG o WebP.");
     }
-    const lang = (language === "pt" || language === "en" ? language : "es"); // S4325: redundant cast
+    const lang = language === "pt" || language === "en" ? language : "es"; // S4325: redundant cast
     return this.visionService.detectFakeProfile(file.buffer, file.mimetype, lang);
   }
 
@@ -245,7 +245,7 @@ export class VisionController {
     if (!ALLOWED_IMAGE_TYPES.includes(dniFile.mimetype)) {
       throw new BadRequestException("Formato de DNI no soportado. Usa JPG, PNG o WebP.");
     }
-    const lang = (language === "pt" || language === "en" ? language : "es"); // S4325: redundant cast
+    const lang = language === "pt" || language === "en" ? language : "es"; // S4325: redundant cast
     return this.visionService.verifyDniWithSelfie(
       selfie.buffer,
       selfie.mimetype,
@@ -284,7 +284,7 @@ export class VisionController {
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
       throw new BadRequestException("Formato de imagen no soportado. Usa JPG, PNG o WebP.");
     }
-    const lang = (language === "pt" || language === "en" ? language : "es"); // S4325: redundant cast
+    const lang = language === "pt" || language === "en" ? language : "es"; // S4325: redundant cast
     const userId = req.user.sub;
     return this.visionService.analyzeNutrition360(userId, file.buffer, file.mimetype, lang);
   }

@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ObservabilityService } from '../observability/observability.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { ObservabilityService } from "../observability/observability.service";
 
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
-  
+
   constructor(private readonly observabilityService: ObservabilityService) {}
 
   /**
@@ -12,9 +12,14 @@ export class BillingService {
    * @param stripeAccountId ID de la cuenta conectada del complejo deportivo (B2B)
    * @param amount Monto a transferir (neto del 10% de comisión de SportMatch Connect)
    */
-  async triggerStripePayout(stripeAccountId: string, amount: number): Promise<{ success: boolean; transferId: string }> {
+  async triggerStripePayout(
+    stripeAccountId: string,
+    amount: number,
+  ): Promise<{ success: boolean; transferId: string }> {
     const startTime = Date.now();
-    this.logger.log(`Iniciando dispersión de fondos (Payout) de S/. ${amount} a cuenta Stripe: ${stripeAccountId}`);
+    this.logger.log(
+      `Iniciando dispersión de fondos (Payout) de S/. ${amount} a cuenta Stripe: ${stripeAccountId}`,
+    );
 
     // Simulación del cobro y transferencia
     // En producción:
@@ -24,16 +29,16 @@ export class BillingService {
     //   destination: stripeAccountId,
     //   description: 'Dispersión de reserva de cancha SportMatch Connect',
     // });
-    
+
     // Simular latencia de red de la API de Stripe Connect
-    await new Promise((resolve) => setTimeout(resolve, 80)); 
-    
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
     const duration = Date.now() - startTime;
-    this.observabilityService.trackPerformance('StripeConnect Payout API Call', duration);
+    this.observabilityService.trackPerformance("StripeConnect Payout API Call", duration);
 
     const mockTransferId = `tr_mock_${Math.random().toString(36).substring(2, 15)}`;
     this.logger.log(`Dispersión exitosa. Transfer ID generado: ${mockTransferId}`);
-    
+
     return {
       success: true,
       transferId: mockTransferId,
@@ -51,7 +56,9 @@ export class BillingService {
     subtotal: number;
   }): Promise<{ success: boolean; invoiceNumber: string; qrUrl: string }> {
     const startTime = Date.now();
-    this.logger.log(`Enviando transacción de facturación a SUNAT (vía PSE) para: ${invoiceData.customerName}`);
+    this.logger.log(
+      `Enviando transacción de facturación a SUNAT (vía PSE) para: ${invoiceData.customerName}`,
+    );
 
     // Estructuración del JSON requerido por los PSE homologados en el Perú (ej. Nubefact, PSE.pe)
     const igvRate = 0.18;
@@ -59,22 +66,22 @@ export class BillingService {
     const total = Number((invoiceData.subtotal + igv).toFixed(2));
 
     const psePayload = {
-      operacion: 'generar_comprobante',
-      tipo_de_comprobante: invoiceData.rucOrDni.length === 11 ? 'FACTURA' : 'BOLETA',
-      serie: invoiceData.rucOrDni.length === 11 ? 'F001' : 'B001',
-      cliente_tipo_documento: invoiceData.rucOrDni.length === 11 ? '6' : '1', // 6 = RUC, 1 = DNI
+      operacion: "generar_comprobante",
+      tipo_de_comprobante: invoiceData.rucOrDni.length === 11 ? "FACTURA" : "BOLETA",
+      serie: invoiceData.rucOrDni.length === 11 ? "F001" : "B001",
+      cliente_tipo_documento: invoiceData.rucOrDni.length === 11 ? "6" : "1", // 6 = RUC, 1 = DNI
       cliente_numero_documento: invoiceData.rucOrDni,
       cliente_denominacion: invoiceData.customerName,
-      fecha_de_emision: new Date().toISOString().split('T')[0],
-      moneda: '1', // 1 = Soles (PEN)
+      fecha_de_emision: new Date().toISOString().split("T")[0],
+      moneda: "1", // 1 = Soles (PEN)
       porcentaje_de_igv: 18.0,
       total_igv: igv,
       total_gravada: invoiceData.subtotal,
       total: total,
       items: [
         {
-          unidad_de_medida: 'ZZ', // ZZ = Servicio
-          codigo: 'SERV001',
+          unidad_de_medida: "ZZ", // ZZ = Servicio
+          codigo: "SERV001",
           descripcion: invoiceData.concept,
           cantidad: 1,
           valor_unitario: invoiceData.subtotal,
@@ -92,7 +99,7 @@ export class BillingService {
     await new Promise((resolve) => setTimeout(resolve, 120));
 
     const duration = Date.now() - startTime;
-    this.observabilityService.trackPerformance('SUNAT PSE E-Invoice API Call', duration);
+    this.observabilityService.trackPerformance("SUNAT PSE E-Invoice API Call", duration);
 
     const mockInvoiceNumber = `F001-${Math.floor(100000 + Math.random() * 900000)}`;
     this.logger.log(`Comprobante electrónico emitido con éxito: ${mockInvoiceNumber}`);

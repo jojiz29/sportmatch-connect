@@ -240,7 +240,10 @@ export class PricingEngineService {
 
   private pickBestHour(occupancy: HourOccupancy[]): HourOccupancy | null {
     if (!occupancy || occupancy.length === 0) return null;
-    return occupancy.reduce((best, h) => (h.occupancyRate > best.occupancyRate ? h : best), occupancy[0]);
+    return occupancy.reduce(
+      (best, h) => (h.occupancyRate > best.occupancyRate ? h : best),
+      occupancy[0],
+    );
   }
 
   private isWeekend(date: string): boolean {

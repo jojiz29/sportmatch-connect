@@ -275,8 +275,7 @@ export class AiService {
     this.checkRateLimit(userId, "chat");
 
     const context = await this.getUserPersonalizedContext(userId);
-    const name =
-      context.name || (language === "en" ? "Athlete" : "Atleta"); // S3923: simplified redundant ternary
+    const name = context.name || (language === "en" ? "Athlete" : "Atleta"); // S3923: simplified redundant ternary
     const sportsText =
       context.preferredSports.length > 0
         ? context.preferredSports.map((s) => s.sport).join(", ")

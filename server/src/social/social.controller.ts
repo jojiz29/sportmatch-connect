@@ -106,7 +106,6 @@ export class SocialController {
     @Request() req: { user: { userId: string } },
   ) {
     await this.socialService.unfollow(req.user.userId, followingId);
-
   }
 
   // ==============================================================

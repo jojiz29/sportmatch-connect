@@ -1,5 +1,5 @@
-import { Module, Global } from '@nestjs/common';
-import { ObservabilityService, ObservabilityInterceptor } from './observability.service';
+import { Module, Global } from "@nestjs/common";
+import { ObservabilityService, ObservabilityInterceptor } from "./observability.service";
 
 @Global()
 @Module({

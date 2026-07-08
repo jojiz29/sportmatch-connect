@@ -127,7 +127,8 @@ export class PaymentsService {
         where: { user_id: userId },
       });
 
-      if (!subscription?.stripe_customer_id) { // S6582: optional chaining
+      if (!subscription?.stripe_customer_id) {
+        // S6582: optional chaining
         throw new BadRequestException(
           "No se encontró una suscripción de Stripe activa para este usuario.",
         );
@@ -155,11 +156,7 @@ export class PaymentsService {
     let event: StripeWebhookEvent;
 
     try {
-      event = this.stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        this.stripeWebhookSecret,
-      ); // S4325: redundant cast
+      event = this.stripe.webhooks.constructEvent(rawBody, signature, this.stripeWebhookSecret); // S4325: redundant cast
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Webhook signature verification failed: ${errorMsg}`);
@@ -257,23 +254,23 @@ export class PaymentsService {
     this.logger.log(`User ${userId} successfully upgraded to ${tier} tier.`);
   }
 
-  private async handleCheckoutCompleted(event: StripeWebhookEvent): Promise<void> { // S3776: extracted to reduce cognitive complexity
+  private async handleCheckoutCompleted(event: StripeWebhookEvent): Promise<void> {
+    // S3776: extracted to reduce cognitive complexity
     const session = event.data.object as StripeCheckoutSession;
     const userId = session.metadata?.userId;
     const tier = session.metadata?.tier || "INICIAL";
     const stripeCustomerId =
       typeof session.customer === "string" ? session.customer : session.customer?.id;
     const stripeSubscriptionId =
-      typeof session.subscription === "string"
-        ? session.subscription
-        : session.subscription?.id;
+      typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
 
     if (userId && stripeCustomerId && stripeSubscriptionId) {
       await this.upgradeUser(userId, stripeCustomerId, stripeSubscriptionId, tier, tier);
     }
   }
 
-  private async handleSubscriptionUpdated(event: StripeWebhookEvent): Promise<void> { // S3776: extracted to reduce cognitive complexity
+  private async handleSubscriptionUpdated(event: StripeWebhookEvent): Promise<void> {
+    // S3776: extracted to reduce cognitive complexity
     const subscription = event.data.object as StripeSubscription;
     const stripeSubscriptionId = subscription.id;
 
@@ -317,7 +314,8 @@ export class PaymentsService {
     );
   }
 
-  private async handleSubscriptionDeleted(event: StripeWebhookEvent): Promise<void> { // S3776: extracted to reduce cognitive complexity
+  private async handleSubscriptionDeleted(event: StripeWebhookEvent): Promise<void> {
+    // S3776: extracted to reduce cognitive complexity
     const subscription = event.data.object as StripeSubscription;
     const stripeSubscriptionId = subscription.id;
 

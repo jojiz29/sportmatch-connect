@@ -1,14 +1,16 @@
-import { Injectable, Logger, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Injectable, Logger, NestInterceptor, ExecutionContext, CallHandler } from "@nestjs/common";
+import { Observable } from "rxjs";
+import { tap } from "rxjs/operators";
 
 @Injectable()
 export class ObservabilityService extends Logger {
-  private readonly isProduction = process.env.NODE_ENV === 'production';
+  private readonly isProduction = process.env.NODE_ENV === "production";
 
   log(message: string, context?: string) {
     if (this.isProduction) {
-      console.log(JSON.stringify({ level: 'info', message, context, timestamp: new Date().toISOString() }));
+      console.log(
+        JSON.stringify({ level: "info", message, context, timestamp: new Date().toISOString() }),
+      );
     } else {
       super.log(message, context);
     }
@@ -16,7 +18,15 @@ export class ObservabilityService extends Logger {
 
   error(message: string, trace?: string, context?: string) {
     if (this.isProduction) {
-      console.error(JSON.stringify({ level: 'error', message, trace, context, timestamp: new Date().toISOString() }));
+      console.error(
+        JSON.stringify({
+          level: "error",
+          message,
+          trace,
+          context,
+          timestamp: new Date().toISOString(),
+        }),
+      );
     } else {
       super.error(message, trace, context);
     }
@@ -24,17 +34,18 @@ export class ObservabilityService extends Logger {
 
   warn(message: string, context?: string) {
     if (this.isProduction) {
-      console.warn(JSON.stringify({ level: 'warn', message, context, timestamp: new Date().toISOString() }));
+      console.warn(
+        JSON.stringify({ level: "warn", message, context, timestamp: new Date().toISOString() }),
+      );
     } else {
       super.warn(message, context);
     }
   }
 
   // APM OpenTelemetry / Sentry manual tracking stubs
-  captureException(exception: any, context?: string) {
-    this.error(`Captured Exception: ${exception.message || exception}`, exception.stack, context);
-    // Real Sentry Integration hook:
-    // Sentry.captureException(exception);
+  captureException(exception: unknown, context?: string) {
+    const err = exception instanceof Error ? exception : new Error(String(exception));
+    this.error(`Captured Exception: ${err.message}`, err.stack, context);
   }
 
   trackPerformance(metricName: string, durationMs: number) {
@@ -49,7 +60,7 @@ export class ObservabilityService extends Logger {
 export class ObservabilityInterceptor implements NestInterceptor {
   constructor(private readonly observabilityService: ObservabilityService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
     const { method, url } = request;
     const now = Date.now();

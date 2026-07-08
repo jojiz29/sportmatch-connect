@@ -69,16 +69,15 @@ export class PaymentsController {
     // We convert it back to buffer if it's an object/string, or use it directly if it is a Buffer.
     // S3358: extract nested ternary
     const rawBodyStr = typeof rawBody === "object" ? JSON.stringify(rawBody) : String(rawBody);
-    const webhookBody = Buffer.isBuffer(rawBody)
-      ? rawBody
-      : Buffer.from(rawBodyStr);
+    const webhookBody = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBodyStr);
 
     return this.paymentsService.handleWebhook(webhookBody, signature);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Post("mock-upgrade")
-  async mockUpgrade(@Req() req: PaymentRequest, @Body("tier") tier = "INICIAL") { // S7760: default param
+  async mockUpgrade(@Req() req: PaymentRequest, @Body("tier") tier = "INICIAL") {
+    // S7760: default param
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
       throw new BadRequestException("Usuario no autenticado");

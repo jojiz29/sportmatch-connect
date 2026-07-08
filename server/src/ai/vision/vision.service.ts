@@ -48,7 +48,10 @@ export class VisionService {
   }
 
   private stripCodeFences(text: string): string {
-    return text.replace(/```json/gi, "").replaceAll("```", "").trim();
+    return text
+      .replace(/```json/gi, "")
+      .replaceAll("```", "")
+      .trim();
   }
 
   private tryParseJson(text: string): Record<string, unknown> | null {
@@ -60,10 +63,7 @@ export class VisionService {
     }
   }
 
-  private extractBalancedObject(
-    text: string,
-    start: number,
-  ): Record<string, unknown> | null {
+  private extractBalancedObject(text: string, start: number): Record<string, unknown> | null {
     let depth = 0;
     let inString = false;
     let escaped = false;
@@ -109,11 +109,13 @@ export class VisionService {
     return this.extractBalancedObject(cleaned, start);
   }
 
-  private isRecord(value: unknown): value is Record<string, unknown> { // S1541: extracted type guard helper
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    // S1541: extracted type guard helper
     return typeof value === "object" && value !== null && !Array.isArray(value);
   }
 
-  private asBoolean(value: unknown, fallback: boolean): boolean { // S1541: extracted safe cast helper
+  private asBoolean(value: unknown, fallback: boolean): boolean {
+    // S1541: extracted safe cast helper
     if (typeof value === "boolean") return value;
     if (typeof value === "string") {
       const normalized = value.trim().toLowerCase();
@@ -123,7 +125,8 @@ export class VisionService {
     return fallback;
   }
 
-  private asNumber(value: unknown, fallback: number): number { // S1541: extracted safe cast helper
+  private asNumber(value: unknown, fallback: number): number {
+    // S1541: extracted safe cast helper
     if (typeof value === "number" && Number.isFinite(value)) return value;
     if (typeof value === "string") {
       const parsed = Number(value.replace("%", "").trim());
@@ -132,28 +135,33 @@ export class VisionService {
     return fallback;
   }
 
-  private clamp(value: number, min: number, max: number): number { // S1541: extracted clamp helper
+  private clamp(value: number, min: number, max: number): number {
+    // S1541: extracted clamp helper
     return Math.min(max, Math.max(min, value));
   }
 
-  private normalizeConfidence(value: unknown, fallback: number): number { // S1541: extracted normalize helper
+  private normalizeConfidence(value: unknown, fallback: number): number {
+    // S1541: extracted normalize helper
     const raw = this.asNumber(value, fallback);
     const normalized = raw > 1 && raw <= 100 ? raw / 100 : raw;
     return this.clamp(normalized, 0, 1);
   }
 
-  private extractMacroField(macros: unknown, field: string, fallback: number): number { // S1541: extracted macro field helper
+  private extractMacroField(macros: unknown, field: string, fallback: number): number {
+    // S1541: extracted macro field helper
     return macros && typeof macros === "object"
       ? this.asNumber((macros as Record<string, unknown>)[field], fallback)
       : fallback;
   }
 
-  private asStringArray(value: unknown): string[] { // S1541: extracted safe cast helper
+  private asStringArray(value: unknown): string[] {
+    // S1541: extracted safe cast helper
     if (!Array.isArray(value)) return [];
     return value.filter((item): item is string => typeof item === "string" && item.trim() !== "");
   }
 
-  private normalizeQuality(value: unknown): "poor" | "fair" | "good" | "excellent" { // S1541: extracted normalize helper
+  private normalizeQuality(value: unknown): "poor" | "fair" | "good" | "excellent" {
+    // S1541: extracted normalize helper
     if (typeof value !== "string") return "fair";
     const normalized = value.trim().toLowerCase();
     if (["poor", "fair", "good", "excellent"].includes(normalized)) {
@@ -166,18 +174,22 @@ export class VisionService {
     return "fair";
   }
 
-  private asString(value: unknown): string { // S1541: extracted safe cast helper
+  private asString(value: unknown): string {
+    // S1541: extracted safe cast helper
     return typeof value === "string" ? value.trim() : "";
   }
 
-  private containsAny(text: string, needles: string[]): boolean { // S1541: extracted helper
+  private containsAny(text: string, needles: string[]): boolean {
+    // S1541: extracted helper
     const lower = text.toLowerCase();
     return needles.some((needle) => lower.includes(needle));
   }
 
-  private joinParsedText(parsed: Record<string, unknown>, keys: string[]): string { // S1541: extracted helper
+  private joinParsedText(parsed: Record<string, unknown>, keys: string[]): string {
+    // S1541: extracted helper
     return keys
-      .flatMap((key) => { // S3599: flatMap replaces filter+map
+      .flatMap((key) => {
+        // S3599: flatMap replaces filter+map
         const value = parsed[key];
         if (typeof value === "string") return [value];
         if (Array.isArray(value)) {
@@ -189,11 +201,13 @@ export class VisionService {
       .toLowerCase();
   }
 
-  private getDniBlockingIssue(parsed: Record<string, unknown>): string { // S1541: extracted helper
+  private getDniBlockingIssue(parsed: Record<string, unknown>): string {
+    // S1541: extracted helper
     return this.asString(parsed.blockingIssue).toLowerCase();
   }
 
-  private isDniQualityBlocked(parsed: Record<string, unknown>): boolean { // S1541: extracted helper
+  private isDniQualityBlocked(parsed: Record<string, unknown>): boolean {
+    // S1541: extracted helper
     return ["poor_selfie", "poor_dni"].includes(this.getDniBlockingIssue(parsed));
   }
 
@@ -418,7 +432,8 @@ export class VisionService {
     return message;
   }
 
-  private normalizeDniDecision(parsed: Record<string, unknown>): { // S1541: extracted normalize helper
+  private normalizeDniDecision(parsed: Record<string, unknown>): {
+    // S1541: extracted normalize helper
     match: boolean;
     confidence: number;
   } {
@@ -934,7 +949,8 @@ export class VisionService {
     const rawMicros = parsed.micronutrients;
     let micronutrients: MicronutrientDto[] | undefined;
     if (Array.isArray(rawMicros)) {
-      micronutrients = rawMicros.flatMap((m) => { // S3599: flatMap replaces filter+map
+      micronutrients = rawMicros.flatMap((m) => {
+        // S3599: flatMap replaces filter+map
         if (typeof m !== "object" || m === null) return []; // S3512: early continue
         const micro = m as Record<string, unknown>;
         const name = this.asString(micro.name);
@@ -1054,32 +1070,38 @@ export class VisionService {
       };
     }
 
-    const mealPlan: DayPlanDto[] = (parsed.mealPlan as Array<Record<string, unknown>>).map((dayRaw) => {
-      const meals: MealItemDto[] = (Array.isArray(dayRaw.meals) ? dayRaw.meals : [])
-        .flatMap((m: unknown) => { // S3599: flatMap replaces filter+map
-          if (typeof m !== "object" || m === null) return [];
-          const meal = m as Record<string, unknown>;
-          return [{
-            name: this.asString(meal.name) || "Comida",
-            type: this.asString(meal.type) || "snack",
-            calories: Math.round(this.asNumber(meal.calories, 0)),
-            protein: Math.round(this.asNumber(meal.protein, 0)),
-            carbs: Math.round(this.asNumber(meal.carbs, 0)),
-            fat: Math.round(this.asNumber(meal.fat, 0)),
-            ingredients: this.asStringArray(meal.ingredients),
-            preparation: this.asString(meal.preparation) || "Sin instrucciones",
-          }];
-        });
+    const mealPlan: DayPlanDto[] = (parsed.mealPlan as Array<Record<string, unknown>>).map(
+      (dayRaw) => {
+        const meals: MealItemDto[] = (Array.isArray(dayRaw.meals) ? dayRaw.meals : []).flatMap(
+          (m: unknown) => {
+            // S3599: flatMap replaces filter+map
+            if (typeof m !== "object" || m === null) return [];
+            const meal = m as Record<string, unknown>;
+            return [
+              {
+                name: this.asString(meal.name) || "Comida",
+                type: this.asString(meal.type) || "snack",
+                calories: Math.round(this.asNumber(meal.calories, 0)),
+                protein: Math.round(this.asNumber(meal.protein, 0)),
+                carbs: Math.round(this.asNumber(meal.carbs, 0)),
+                fat: Math.round(this.asNumber(meal.fat, 0)),
+                ingredients: this.asStringArray(meal.ingredients),
+                preparation: this.asString(meal.preparation) || "Sin instrucciones",
+              },
+            ];
+          },
+        );
 
-      return {
-        day: this.asNumber(dayRaw.day, 1),
-        meals,
-        totalCalories: Math.round(this.asNumber(dayRaw.totalCalories, 0)),
-        totalProtein: Math.round(this.asNumber(dayRaw.totalProtein, 0)),
-        totalCarbs: Math.round(this.asNumber(dayRaw.totalCarbs, 0)),
-        totalFat: Math.round(this.asNumber(dayRaw.totalFat, 0)),
-      };
-    });
+        return {
+          day: this.asNumber(dayRaw.day, 1),
+          meals,
+          totalCalories: Math.round(this.asNumber(dayRaw.totalCalories, 0)),
+          totalProtein: Math.round(this.asNumber(dayRaw.totalProtein, 0)),
+          totalCarbs: Math.round(this.asNumber(dayRaw.totalCarbs, 0)),
+          totalFat: Math.round(this.asNumber(dayRaw.totalFat, 0)),
+        };
+      },
+    );
 
     const response: MealPlanResponseDto = {
       mealPlan,

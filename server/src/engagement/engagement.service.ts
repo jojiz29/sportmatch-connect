@@ -1117,7 +1117,7 @@ export class EngagementService {
 
   private asMetadata(value: Prisma.JsonValue): Record<string, unknown> {
     return value && typeof value === "object" && !Array.isArray(value)
-      ? (value) // S4325: redundant cast
+      ? value // S4325: redundant cast
       : {};
   }
 
@@ -1742,7 +1742,10 @@ export class EngagementService {
       metadata: { unlockCondition: "Registrar una accion deportiva durante la semana" },
     });
 
-    return cards.slice().sort((a, b) => b.score - a.score).slice(0, limit); // S4043: use non-mutating method
+    return cards
+      .slice()
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit); // S4043: use non-mutating method
   }
 
   /**
