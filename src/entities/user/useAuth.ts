@@ -321,7 +321,7 @@ export function useAuth() {
 
   const signIn = async (email?: string, password?: string) => {
     if (shouldUseMockLogin(email, password)) {
-      if (email && !password) {
+      if (email) {
         executeMockSignIn(email, store);
         return;
       }
