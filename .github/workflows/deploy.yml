@@ -81,26 +81,15 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.x"
-
-      - name: Run Prisma Database Migrations (pinned v5.22.0)
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          echo "Deploying production database migrations via Prisma (pinned v5.22.0)..."
-          cd server && npx prisma@5.22.0 migrate deploy
-
       - name: Trigger Render Deploy Hook
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           echo "Triggering Render Web Service Production Build..."
+          echo "Render build pipeline: cd server && npm install && npm run build"
+          echo "  - npm install (postinstall: prisma generate)"
+          echo "  - npm run build (tsc) -> postbuild: prisma migrate deploy"
+          echo "  - node dist/main.js"
           if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
             curl -X POST "$RENDER_DEPLOY_HOOK_URL"
           else
